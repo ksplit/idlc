@@ -53,8 +53,8 @@ CCSTFile* generate_client_source(Module* f)
       definitions.push_back(function_definition(callee_declaration(r_tmp)
 						, callee_body(r_tmp, f)));
     } else {
-      //   definitions.push_back(function_definition(function_declaration(r_tmp)
-      //					,caller_body(r_tmp, f)));
+      definitions.push_back(function_definition(function_declaration(r_tmp)
+                                                , caller_body(r_tmp, f)));
     }
   }
   
