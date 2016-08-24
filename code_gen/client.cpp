@@ -10,9 +10,16 @@ CCSTFile* generate_client_header(Module* f)
   
 }
 
-CCSTFile* generate_client_source(Module* f)
+CCSTFile* generate_client_source(Module* f, std::vector<Include*> includes)
 { 
   std::vector<CCSTExDeclaration*> definitions;
+
+  // Includes
+  for(std::vector<Include*>::iterator it = includes.begin(); it != includes.end(); it ++) {
+    Include *inc = *it;
+    definitions.push_back(new CCSTPreprocessor(inc->get_path(), inc->is_relative()));
+  }
+
 
   // declare globals
   std::vector<GlobalVariable*> globals = f->channels(); // if you odn't do this you get use after free heap issues

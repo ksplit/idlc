@@ -351,11 +351,14 @@ CCSTDeclaration* callee_declaration(Rpc* r)
 /*
  * generates the source file for the provided module/interface
  */
-CCSTFile* generate_server_source(Module *m)
+CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
 {
   std::vector<CCSTExDeclaration*> definitions;
 
-  // includes. todo
+  for(std::vector<Include*>::iterator it = includes.begin(); it != includes.end(); it ++) {
+    Include *inc = *it;
+    definitions.push_back(new CCSTPreprocessor(inc->get_path(), inc->is_relative()));
+  }
 
   // need to print containers. but scopes container possibly duplicate projections definitions.
 

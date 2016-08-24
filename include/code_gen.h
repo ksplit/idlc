@@ -8,8 +8,8 @@
 #define CONTAINER_OF "container_of"
 
 // server.cpp
-CCSTFile* generate_server_source(Module *m); // todo complete
-CCSTFile* generate_server_header(Module *m); // todo complete?
+CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes); // todo complete
+CCSTFile* generate_server_header(Module *m, std::vector<Include*> includes); // todo complete?
 
 CCSTCompoundStatement* callee_body(Rpc *r, Module *m); // todo complete  2 functions in the file.....
 
@@ -20,8 +20,8 @@ CCSTDeclaration* dispatch_function_declaration(); // todo complete
 
 // client.cpp
 
-CCSTFile* generate_client_header(Module *m); // todo empty, maybe unnecessary?
-CCSTFile* generate_client_source(Module *m); // todo complete
+CCSTFile* generate_client_header(Module *m, std::vector<Include*> includes); // todo empty, maybe unnecessary?
+CCSTFile* generate_client_source(Module *m, std::vector<Include*> includes); // todo complete
 
 CCSTCompoundStatement* caller_body(Rpc *r, Module *m); // todo complete
 

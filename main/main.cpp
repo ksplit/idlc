@@ -88,6 +88,8 @@ int main(int argc, char ** argv)
 	  
 
 	  std::vector<Module*> project_modules = tree->modules();
+	  std::vector<Include*> project_includes = tree->includes();
+
 	  for(std::vector<Module*>::iterator it = project_modules.begin(); it != project_modules.end(); it ++) {
 	    Module *m = *it;
 	    if (m == 0x0) {
@@ -108,7 +110,7 @@ int main(int argc, char ** argv)
 		// cleanup
 		exit(0);
 	      }
-	    CCSTFile* ccst_tree = generate_server_source(m);
+	    CCSTFile* ccst_tree = generate_server_source(m, project_includes);
 	    ccst_tree->write(of, 0);
 	    fclose(of);
 	  }
@@ -141,6 +143,8 @@ int main(int argc, char ** argv)
 	  printf("done doing all setup\n");
 	  
 	  std::vector<Module*> project_modules = tree->modules();
+	  std::vector<Include*> project_includes = tree->includes();
+
 	  for(std::vector<Module*>::iterator it = project_modules.begin(); it != project_modules.end(); it ++) {
 	    Module *m = *it;
 	    if (m == 0x0) {
@@ -161,7 +165,7 @@ int main(int argc, char ** argv)
 		// cleanup
 		exit(0);
 	      }
-	    CCSTFile* ccst_tree = generate_client_source(m);
+	    CCSTFile* ccst_tree = generate_client_source(m, project_includes);
 	    ccst_tree->write(of, 0);
 	    fclose(of);
 	  }
