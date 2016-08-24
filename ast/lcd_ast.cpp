@@ -584,6 +584,11 @@ std::vector<Module*> Project::modules()
   return this->project_modules_;
 }
 
+std::vector<Include*> Project::includes()
+{
+  return this->project_includes_;
+}
+
 unsigned int Project::get_next_tag()
 {
   this->last_tag_ += 1;

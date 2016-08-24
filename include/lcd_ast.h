@@ -666,7 +666,13 @@ class Include : public Base
   bool relative_; // true if "" false for <>
   const char *path_;
  public:
-  Include(bool relative, const char* path);
+  Include(bool relative, const char *path);
+  const char* get_path() {
+	  return this->path_;
+  }
+  bool is_relative() {
+	  return this->relative_;
+  }
 };
 
 class Project : public Base
@@ -690,6 +696,7 @@ class Project : public Base
   void set_copy_container_accessors();
   std::vector<Module*> modules();
   unsigned int get_next_tag();
+  std::vector<Include*> includes();
 };
 
 class TypeNameVisitor // generates CCSTTypeName for each type.
