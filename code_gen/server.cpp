@@ -425,8 +425,8 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
 						    , trampoline_function_body(r_tmp)));
        } else {
 	 printf("doing callee_declaration\n");
-	 //	 definitions.push_back( function_definition(callee_declaration(r_tmp)
-	 //					    ,callee_body(r_tmp, m)));
+	 definitions.push_back( function_definition(callee_declaration(r_tmp)
+						,callee_body(r_tmp, m)));
        }
      }
    
