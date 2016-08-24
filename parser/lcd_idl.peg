@@ -1,4 +1,4 @@
-	start-symbol: File
+start-symbol: File
 
 
 include: {{ #include "lcd_ast.h"
@@ -342,11 +342,11 @@ Type_Definitions =	Typedef | Projection {{ printf("done with projection\n"); }}
 		 	| Projection_constructor
 
 Include		 =	"include" Space+ "<" Spacing p:Pathname Spacing ">" Spacing{{
-			    value = new Include(true, (char*) p.getValue());
-			}} 
-		 	| "include" Space+ p:Pathname Spacing SEMI Spacing{{
-			    printf("parsed an include\n");
 			    value = new Include(false, (char*) p.getValue());
+			}} 
+			| "include" Space+ <ascii 34> Spacing p:Pathname Spacing <ascii 34> Spacing{{
+			    printf("parsed an include\n");
+			    value = new Include(true, (char*) p.getValue());
 			}}
 
 FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE {{
