@@ -1,4 +1,4 @@
-include <test>
+#include <test>
 
 module test(channel c) {
 
