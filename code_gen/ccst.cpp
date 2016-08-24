@@ -1761,6 +1761,27 @@ void CCSTInitializerList::write(FILE *f, int indent)
   
 }
 
+CCSTPreprocessor::CCSTPreprocessor(const char *path, bool relative)
+{
+  this->pathname = new std::string(path);
+  this->relative = relative;
+}
+
+void CCSTPreprocessor::write(FILE *f, int indent)
+{
+	fprintf(f, "#include ");
+	if (this->relative)
+		fprintf(f, "\"");
+	else
+		fprintf(f, "<");
+	fprintf(f, "%s", this->pathname->c_str());
+
+	if (this->relative)
+		fprintf(f, "\"\n");
+	else
+		fprintf(f, ">\n");
+}
+
 CCSTCompoundStatement::CCSTCompoundStatement(std::vector<CCSTDeclaration*> decs, std::vector<CCSTStatement*> s)
 {
   this->declarations_ = decs; 

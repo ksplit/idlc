@@ -482,6 +482,20 @@ class CCSTStatement : public CCSTBase
   virtual void write(FILE *f, int indent) = 0;
 };
 
+class CCSTPreprocessor : public CCSTExDeclaration
+{
+ /*
+  * control-line = include <pathname>
+  * 		| include "pathname"
+  */
+  std::string *pathname;
+  bool relative;
+ public:
+  CCSTPreprocessor(const char *path, bool relative);
+  virtual void write(FILE *f, int indent);
+};
+
+
 class CCSTExpression;
 
 class CCSTExprStatement : public CCSTStatement
