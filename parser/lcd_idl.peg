@@ -1,139 +1,140 @@
 start-symbol: File
 
-
-include: {{ #include "lcd_ast.h"
-	    #include "error.h"
-	    #include <vector>
-	    #include <stdlib.h>
-	    #include <string>
-	    #include <stdint.h> }}
+include: {{
+#include "lcd_ast.h"
+#include "error.h"
+#include <vector>
+#include <stdlib.h>
+#include <string>
+#include <stdint.h>
+}}
 
 code: {{
-      LexicalScope *current_scope = 0x0;
-      LexicalScope *current_module_scope = 0x0;
+LexicalScope *current_scope;
+LexicalScope *current_module_scope;
 
-      const char* container_name(const char* name)
-      {
-          int length = strlen(name);
-  	  int length2 = strlen("_container");
-  	  char *new_str = (char*) malloc(sizeof(char)*(length+length2+1));
+const char* container_name(const char* name)
+{
+    int length = strlen(name);
+    int length2 = strlen("_container");
+    char *new_str = (char*) malloc(sizeof(char)*(length+length2+1));
 
-  	  std::ostringstream total;
-  	  total << name << "_container";
-  	  strncpy(new_str, total.str().c_str(), length+length2+1);
-  	  return new_str;
-      }
+    std::ostringstream total;
+    total << name << "_container";
+    strncpy(new_str, total.str().c_str(), length+length2+1);
+    return new_str;
+}
 
-      void set_current_scope(LexicalScope *ls)
-      {
-          current_scope = ls;
-      }
+void set_current_scope(LexicalScope *ls)
+{
+    current_scope = ls;
+}
 
-      LexicalScope* get_current_scope()
-      {
-          return current_scope;
-      }
+LexicalScope* get_current_scope()
+{
+    return current_scope;
+}
 
-      void set_current_module_scope(LexicalScope *ls)
-      {
-          current_module_scope = ls;
-      }
+void set_current_module_scope(LexicalScope *ls)
+{
+    current_module_scope = ls;
+}
 
-      LexicalScope* get_current_module_scope()
-      {
-          return current_module_scope;
-      }
+LexicalScope* get_current_module_scope()
+{
+    return current_module_scope;
+}
 
-      Type * getType(const char* type)
-      {	   
-      	   int err;
-	   LexicalScope *ls = get_current_scope();
-	   if(!ls) {
-	       printf("current scope is null\n");
-	   }
-	   Type* val = ls->lookup(type, &err);
-	   
+Type * getType(const char* type)
+{
+    int err;
+    LexicalScope *ls = get_current_scope();
+    if(!ls) {
+        printf("current scope is null\n");
+    }
+    Type* val = ls->lookup(type, &err);
 
-	   if(!val)
-	   {	
-	   	printf("val is null\n");
-		val = new UnresolvedType(type);
-	   }
-	   return val;
-      }	
-      
-      Variable* getVariable(const char* id)
-      {
-          int err;
-	  LexicalScope *ls = get_current_scope();
-	  if(!ls) {
-	  	  printf("current scope is null!\n");
-	  }
-	  Variable *v = ls->lookup_variable(id, &err);
-	  if(!v) {
-	      printf("could not find variable %s\n", id);
-	      return 0x0;
-	  }
-	  return v;
-      }     
+    if(!val)
+    {
+        printf("val is null\n");
+        val = new UnresolvedType(type);
+    }
+    return val;
+}
 
-      int count_pointers(Value v)
-      {
-          int count = 0;
-	   for(Value::iterator it = v.getValues().begin(); it != v.getValues().end(); it++) {
-	       const Value & v2 = *it;
-	       char star = (char) (intptr_t) v2.getValue();
-	       printf("supposed to be a star is %c\n", star);
-	       if(star == '*') {
-	           count += 1;
-	       } else {
-	           printf("Not a star\n");
-	       }
-	   }
-	   return count;
-      }	
-      
-      void insertVariable(Variable *v)
-      {
-          LexicalScope *ls = get_current_scope();
-	  bool ret = ls->insert(v);
-	  if(! ret)
-	  {
-	      ErrorReport* er = ErrorReport::instance();
-	      er->set_error();
-	      printf("Error: variable by name %s already exists in current scope.\n", v->identifier());	  
-	  }
-      }		
+Variable* getVariable(const char* id)
+{
+    int err;
+    LexicalScope *ls = get_current_scope();
+    if(!ls) {
+        printf("current scope is null!\n");
+    }
+    Variable *v = ls->lookup_variable(id, &err);
 
-      void insertType(const char * sym, Type * val) // should this be void?
-      {
-	LexicalScope *ls = get_current_scope();
-	bool ret = ls->insert(sym, val);
-	if(!ret)
-	{
-	    ErrorReport* er = ErrorReport::instance();
-	    er->set_error();
-	    printf("Error: type by name %s already exists in current scope.\n", val->name());
-	}
-      }
+    if(!v) {
+        printf("could not find variable %s\n", id);
+        return 0x0;
+    }
+    return v;
+}
 
-      const char* returnVarName()
-      {
-	  char* name = "ret";
-	  while(get_current_scope()->contains_identifier(name)) {
-	      // append _ on end of name
-	      
-	      int len1 = strlen(name);	
-	      int len2 = strlen("_");
-	      char* new_name = (char*) malloc(sizeof(char)*(len1+len2+1));
+int count_pointers(Value v)
+{
+    int count = 0;
+    for(Value::iterator it = v.getValues().begin(); it != v.getValues().end(); it++) {
+        const Value & v2 = *it;
+        char star = (char) (intptr_t) v2.getValue();
+        printf("supposed to be a star is %c\n", star);
+        if(star == '*') {
+           count += 1;
+        } else {
+           printf("Not a star\n");
+        }
+    }
+    return count;
+}
 
-	      std::ostringstream total;
-	      total << name << "_";
-	      strncpy(new_name, total.str().c_str(), len1+len2+1);
-	      name = new_name;
-	  }
-	  return name;
-      }     	
+void insertVariable(Variable *v)
+{
+    LexicalScope *ls = get_current_scope();
+    bool ret = ls->insert(v);
+    if(! ret)
+    {
+        ErrorReport* er = ErrorReport::instance();
+        er->set_error();
+        printf("Error: variable by name %s already exists in current scope.\n", v->identifier());
+    }
+}
+
+void insertType(const char * sym, Type * val) // should this be void?
+{
+    LexicalScope *ls = get_current_scope();
+    bool ret = ls->insert(sym, val);
+    if(!ret)
+    {
+        ErrorReport* er = ErrorReport::instance();
+        er->set_error();
+        printf("Error: type by name %s already exists in current scope.\n", val->name());
+    }
+}
+
+const char* returnVarName()
+{
+    char* name = "ret";
+    while(get_current_scope()->contains_identifier(name)) {
+        // append _ on end of name
+
+        int len1 = strlen(name);
+        int len2 = strlen("_");
+        char* new_name = (char*) malloc(sizeof(char)*(len1+len2+1));
+
+        std::ostringstream total;
+        total << name << "_";
+        strncpy(new_name, total.str().c_str(), len1+len2+1);
+        name = new_name;
+    }
+    return name;
+}
 }}
 
 rules:
@@ -1308,7 +1309,7 @@ Type_form	=	"projection" Space+ n:Identifier Spacing {{
 			| "channel" Spacing {{  // todo
 			    value = new Channel();
 			}}
-			| type	
+			| type
 
 Spacing		=	Space*
 
