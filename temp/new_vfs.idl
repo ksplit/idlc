@@ -1,0 +1,284 @@
+typedef unsigned short umode_t;
+typedef __kernel_dev_t dev_t;
+typedef __u32 __kernel_dev_t;
+typedef unsigned int __u32;
+
+typedef __kernel_size_t size_t;
+typedef __kernel_ulong_t __kernel_size_t;
+typedef unsigned long long __kernel_ulong_t;
+
+typedef __kernel_loff_t loff_t;
+typedef long long __kernel_loff_t;
+
+typedef unsigned long long u64;
+
+module vfs (channel c)
+{
+    /*
+    grammar
+    Typedef  = Spacing "typedef" Space+ pt:PrimitiveTypes nt:Identifier SEMI Space+ {{
+                    value = new Typedef(pt.getValue(), nt.getValue());
+              }}
+    PrimitiveTypes = signed_type | unsigned_type | Identifier
+
+    */
+
+    // register_filesystem() | lcd -> vfs_proxy
+    {
+        // TODO: How to say that create a sync channel inside this function definition?
+
+        projection <struct file_system_type> fs {
+            projection <struct module> [alloc(callee), insert(caller)] *owner;
+            projection dentry* (*mount) (projection file_system_type [bind] *fs_type,
+                         int flags,
+                         const char *dev_name,
+                         void *data);
+            /* This is a fp defined inside a projection
+               in general, a rpc assumes that the function definition is on the 
+               callee side. However, if there is a function pointer, then it is
+               defined on the caller side. If there is a function pointer, that
+               is present as an argument inside this function pointer, it is
+               defined in the callee side. This goes on ...  
+            
+              + refer container_of(sb)
+              + r1 = fs->remote_ref ?? why? because it is contained within fs_container
+              + r2 = sb->remote_ref
+               
+             */
+            void (*kill_sb) (projection super_block *sb);
+        }
+        // Implicit exchange
+        // r0 -> fntype
+        // r1 ->fs_container->my_ref
+        // r2 ->owner->my_ref
+        rpc [sync] int register_filesystem(projection file_system_type [alloc(callee), insert(caller)] *fs);
+
+        // return from callee side
+        // r1 = return value
+        // r2 = fs_container->my_ref
+        // r3 = owner->my_ref
+        // These shall be stored in their_ref on the caller side
+        //  
+    }
+
+    // unregister_filesystem() | lcd -> vfs_proxy
+    {
+        projection <struct file_system_type> fs {
+            projection <struct module> [dealloc(callee)] *owner;
+        }
+        // caller side
+        // r1 -> fs->their_ref
+        // r2 -> owner->their_ref
+        // remove from cspace
+        rpc [async] int unregister_filesystem(projection file_system_type [dealloc(callee), remove(caller)] *fs);
+        
+        // callee side
+        // bind, call real function
+        // returns ret
+        // dealloc, remove from cspace
+    }
+
+    // bdi_init() | lcd -> vfs_proxy
+    {
+        projection <struct backing_dev_info> bdi {
+            [in] unsigned long ra_pages;
+            [in] unsigned int capabilities;
+        }
+
+        // Implicit exchange caller side
+        // r0 -> fntype
+        // r1 -> bdi->my_ref
+        // r2 -> ra_pages
+        // r2 -> capabilities
+        rpc [async] int bdi_init(projection backing_dev_info [alloc(callee), insert(caller)] *bdi);
+        // callee side
+
+        // return
+        // return value. if primitive pass it directly, else pass my_ref
+        // bdi->my_ref from callee side
+    }
+
+    // bdi_destroy() | lcd -> vfs_proxy
+    {
+        projection <struct backing_dev_info> bdi {
+        }
+        
+        // caller side exchange
+        // as dealloc internally means bind, dealloc, remove
+        // let's bind it first. for binding it looks up the cspace, sends
+        // r0 -> fn_type
+        // r1 -> bdi->their_ref to denote callee side ref pointer
+        rpc [async] void bdi_destroy(projection backing_dev_info [dealloc(callee), dealloc(caller)] *bdi);
+        // callee side
+
+        // return value. if primitive pass it directly, else pass my_ref
+        // no ret value here, since it is dealloc, no reference shall be passed back
+    }
+
+    // mount_nodev() | lcd -> vfs_proxy
+    {
+        // Does empty projection need to have {} or just ; at the end
+        projection <struct file_system_type> fs {
+        }
+
+        projection <struct dentry> dentry {
+        }
+        
+        projection <struct inode> inode {
+            
+        }
+
+        
+        projection <struct super_operations> sops {
+           	projection inode *(*alloc_inode)(projection super_block *sb);
+            void (*destroy_inode)(projection inode *inode);
+            void (*dirty_inode) (projection inode *, int flags);
+            void (*evict_inode) (projection inode *);
+            void (*put_super) (projection super_block *);
+        }
+
+        projection <struct super_block> super_block {
+            projection <struct super_operations> [alloc(callee)] *sops; 
+        }
+
+        // A function pointer in the argument means a container structure has to be
+        // created and allocated automatically when lcd calls this function
+        // [in,out] qualifier needs to supported in parameters too, if needed
+ 
+        // For instance, when a caller calls this function, it should pass
+        // fs_container->their_ref for [bind] fs_type
+        // flags [in]
+        // fill_super_container->my_ref as it is alloced just now
+
+        // Ref vfs_callee.c, vfs_caller.c
+        // 1 TODO: How to tell that fill_super_container (kfree) can be destroyed after
+        // the actual call in the callee side?
+
+// 2 TODO: How to tell that the return parameter of the original function
+// should be bounded?
+
+        // 3 TODO: Some functions require a sync call as well? how to tel which param
+        // needs sync call? in the below one, void *data needs to marshalled using
+        // synchronous ipc call. how do we tell?
+        // annotate arguments with sync if it needs a synchronous pass
+
+        // 4 TODO: How do we make it explicit that a func pointer needs a container on 
+        // the caller side, a container and a trampoline on the callee side?
+        // Make it implicit. If a function pointer is defined in function argument
+        // create trampolines on which side?
+        // Visit ast tree after generating and annotate which functions are to be
+        // defined where. for e.g.,
+        // foo(int (*bar)((*baz)));
+        // foo is defined on the callee
+        // bar is defined on the caller
+        // baz is defined on the callee
+        
+
+        /* caller side
+            + bind fs_type
+            + Ah, there is a function pointer, let's allocate memory for the func_pointer container and insert into cspace
+            As soon as the compiler parses this, it has to create a container struct with this function pointer
+            why? that's how we can marshal this parameter across lcd and lcd_proxy
+            + assign fill_super_container->fill_super = fill_super; // XXX: Is this implicit? 
+            r1 = fs_type->their_ref
+            r2 = flags
+            r3 = fill_super_container->my_ref
+            we need to specify the scope of this function pointer. At times, when an fp is passed, callee side stores it in its
+            internal data structure or global ds. this means, it can be called even in the future.
+            However, in case of fill_super, mount_nodev function in fs/super.c calls this function pointer and does *not* save this
+            anywhere. So, the scope of this function pointer (and its container) ends when this function returns.
+        */
+        /* callee side
+            + bind fs_type
+            + receive ref pointers
+            + receive flags
+            + setup fillsuper container and trampoline
+            + call original function
+            + return dentry - no specifier found. Since it is a return value,
+              retrieve the container_of in the callee side and send a remote ref to the caller
+              caller will just bind to it
+                
+        */
+        rpc [async] projection dentry* mount_nodev(projection file_system_type [bind] *fs_type,
+                [in] int flags,
+                [sync] void *data,
+                int (*fill_super)([alloc(callee), insert(caller)] projection super_block *sb, void *data, int));
+        rpc [async] void kill_anon_super(projection super_block *sb);
+    }
+    
+    // iget_locked() | lcd -> vfs_proxy
+    {
+        projection <struct super_block> super_block {
+        }
+
+        rpc [async] struct inode * iget_locked(
+                    projection super_block *sb,
+                    [in] unsigned long ino);
+    }
+
+    // unlock_new_inode() | lcd -> vfs_proxy
+    {
+        projection <struct file_operations> f_ops {
+	        loff_t (*llseek) (projection file *, loff_t, int);
+	        ssize_t (*read) (projection file *, char __user *, size_t, loff_t *);
+	        ssize_t (*write) (projection file *, const char __user *, size_t, loff_t *);
+	        ssize_t (*aio_read) (projection kiocb *, const projection iovec *, unsigned long, loff_t);
+	        ssize_t (*aio_write) (projection kiocb *, const projection iovec *, unsigned long, loff_t);
+	        int (*mmap) (projection file *, projection  vm_area_projection *);
+	        int (*open) (projection inode *, projection file *);
+	        int (*fsync) (projection file *, loff_t, loff_t, int datasync);
+	        int (*flush) (projection file *, projection files_struct *id);
+	        unsigned long (*get_unmapped_area)(projection file *, unsigned long, unsigned long, unsigned long, unsigned long);
+	        long (*unlocked_ioctl) (projection file *, unsigned int, unsigned long);
+            long (*fallocate)(projection file *file, int mode, loff_t offset,
+		              loff_t len);
+	        long (*compat_ioctl) (projection file *, unsigned int, unsigned long);
+
+	        int (*readdir) (projection file *,
+	                        void *,
+	                        int (*filldir_t)(void *, const char *, int, loff_t, u64, unsigned));
+        	int (*fsync) (projection file *, loff_t, loff_t, int datasync);
+        }
+
+        projection <struct inode_operations> inode_ops {
+        	projection posix_acl * (*get_acl)(projection inode *, int);
+            int (*setattr) (projection dentry *, projection iattr *);
+            int (*getattr) (projection vfsmount *mnt, projection dentry *, projection kstat *);
+
+	        int (*create) (projection inode *,projection dentry *, umode_t, bool);
+	        projection dentry * (*lookup) (projection inode *, projection dentry *, unsigned int);
+	        int (*link) (projection dentry *,projection inode *,projection dentry *);
+	        int (*unlink) (projection inode *,projection dentry *);
+	        int (*symlink) (projection inode *,projection dentry *,const char *);
+	        int (*mkdir) (projection inode *,projection dentry *,umode_t);
+	        int (*rmdir) (projection inode *,projection dentry *);
+	        int (*mknod) (projection inode *,projection dentry *,umode_t, dev_t);
+	        int (*rename) (projection inode *, projection dentry *,
+			        projection inode *, projection dentry *);
+
+	        int (*readlink) (projection dentry *, char *,int);
+	        void * (*follow_link) (projection dentry *, projection nameidata *);
+        }
+        
+        projection <struct inode> inode {
+            projection <struct inode_operations> *i_op;
+            projection <struct file_operations> *i_fop;
+        }
+
+        rpc [async] void unlock_new_inode(projection inode *inode);
+    }
+
+
+    // iget_failed() | lcd -> vfs_proxy
+    {
+        rpc [async] void iget_failed(projection inode *inode);
+    }
+
+    // d_make_root() | lcd -> vfs_proxy
+    { 
+        projection <struct dentry> dentry {
+        }
+
+        rpc projection dentry* [alloc(caller)] *d_make_root(projection inode *inode);
+    }
+}
