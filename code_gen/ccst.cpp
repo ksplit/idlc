@@ -20,10 +20,20 @@ void CCSTFile::write(FILE *f, int indent)
 
 CCSTFuncDef::CCSTFuncDef(std::vector<CCSTDecSpecifier*> specifiers, CCSTDeclarator *ret, std::vector<CCSTDeclaration*> decs, CCSTCompoundStatement *body)
 {
+  this->specifiers_ = specifiers;
+  this->ret_ = ret;
+  this->decs_ = decs;
+  this->body_ = body;
+  this->attributes_ = std::vector<CCSTMacro*> ();
+}
+
+CCSTFuncDef::CCSTFuncDef(std::vector<CCSTDecSpecifier*> specifiers, CCSTDeclarator *ret, std::vector<CCSTDeclaration*> decs, CCSTCompoundStatement *body, std::vector<CCSTMacro*> attribs)
+{
   this->specifiers_ = specifiers; 
   this->ret_ = ret; 
   this->decs_ = decs; 
   this->body_ = body;
+  this->attributes_ = attribs;
 }
 
 void CCSTFuncDef::write(FILE *f, int indent)
@@ -34,7 +44,13 @@ void CCSTFuncDef::write(FILE *f, int indent)
       ds->write(f, indent);
     }
   this->ret_->write(f, 0);
-  
+
+
+    for(std::vector<CCSTMacro*>::iterator it = attributes_.begin(); it != attributes_.end(); ++it) {
+      CCSTMacro *mac = *it;
+      mac->write(f, 0);
+    }
+
   for(std::vector<CCSTDeclaration*>::iterator it = decs_.begin(); it != decs_.end(); ++it)
     {
       CCSTDeclaration *ds = *it;
@@ -51,8 +67,18 @@ void CCSTFuncDef::write(FILE *f, int indent)
 
 CCSTDeclaration::CCSTDeclaration(std::vector<CCSTDecSpecifier*> specifier, std::vector<CCSTInitDeclarator*> decs)
 {
+  this->specifier_ = specifier;
+  this->decs_ = decs;
+  this->attributes_ = std::vector<CCSTMacro*> ();
+}
+
+CCSTDeclaration::CCSTDeclaration(std::vector<CCSTDecSpecifier*> specifier,
+			std::vector<CCSTMacro*> attribs,
+			std::vector<CCSTInitDeclarator*> decs)
+{
   this->specifier_ = specifier; 
   this->decs_ = decs;
+  this->attributes_ = attribs;
 }
 
 CCSTStoClassSpecifier::CCSTStoClassSpecifier(sto_class_t val)
@@ -1665,6 +1691,14 @@ void CCSTDeclaration::write(FILE *f, int indent)
       dec_spec->write(f, indent);
       //fprintf(f, " ");
     }
+
+
+  for(std::vector<CCSTMacro*>::iterator it = attributes_.begin(); it != attributes_.end(); ++it) {
+    CCSTMacro *mac = *it;
+    printf("--> Writing linkage attribute\n");
+    mac->write(f, 0);
+  }
+
   for(std::vector<CCSTInitDeclarator*>::iterator it = decs_.begin(); it != decs_.end(); ++it)
     {
       CCSTInitDeclarator *init_dec = *it;
@@ -2058,20 +2092,58 @@ void CCSTReturn::write(FILE *f, int indent)
     }
 }
 
+void CCSTMacro::write(FILE *f, int indent)
+{
+  std::vector<CCSTAssignExpr*> args = this->data_args;
+
+  fprintf(f, "%s(", this->macro_name->c_str());
+
+  if(!args.empty())
+    {
+      args.at(0)->write(f, 0);
+
+      for(std::vector<CCSTAssignExpr*>::iterator it = args.begin()+1; it != args.end(); ++it)
+	  {
+	    fprintf(f,", ");
+	    CCSTAssignExpr *arg = *it;
+	    arg->write(f, 0);
+	  }
+    }
+  if (this->is_terminal)
+	  fprintf(f, ");\n");
+  else
+	  fprintf(f, ")\n");
+}
+
 // FIXME: How to handle this efficiently for multiple
 // levels? Surely we cannot waste memory by allocating.
 // May be some macro magic?
+
+#define INDENT_LEVEL_MAX	9
+
+const char* indents[INDENT_LEVEL_MAX] = {
+" ",			    //0
+"\t",			    //1
+"\t\t",			    //2
+"\t\t\t",		    //3
+"\t\t\t\t",		    //4
+"\t\t\t\t\t",		//5
+"\t\t\t\t\t\t",		//6
+"\t\t\t\t\t\t\t",	//7
+"\t\t\t\t\t\t\t\t"	//8
+};
+
+const char *indentation(int level)
+{
+  if (level <= INDENT_LEVEL_MAX)
+    return indents[level];
+  else
+    return indents[INDENT_LEVEL_MAX];
+}
+
+#if 0
 const char* indentation(int level)
 {
-  switch (level) {
-    case 0:
-      return " ";
-    case 1:
-      return "\t";
-    case 2:
-      return "\t\t";
-  }
-#if 0
   int length = level*INDENT;
 
   char *spacing = (char*) malloc(sizeof(char)*(length+1));
@@ -2084,5 +2156,5 @@ const char* indentation(int level)
   }
   strncpy(spacing, total.str().c_str(), length+1);
   return spacing;
-#endif
 }
+#endif

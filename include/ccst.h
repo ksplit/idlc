@@ -102,6 +102,8 @@ class CCSTContinue;
 class CCSTBreak;
 class CCSTReturn;
 
+class CCSTMacro;
+
 #define INDENT 4
 
 const char* indentation(int level);
@@ -159,6 +161,20 @@ class CCSTDeclarator : public CCSTInitDeclarator // this seems incorrect
   virtual void write(FILE *f, int indent);
 };
 
+class CCSTMacro : public CCSTExDeclaration
+{
+  std::string *macro_name;
+  std::vector<CCSTAssignExpr*> data_args;
+  bool is_terminal;
+ public:
+  CCSTMacro(const char *name, std::vector<CCSTAssignExpr*> data_args, bool is_terminal) {
+	this->macro_name = new std::string(name);
+	this->data_args = data_args;
+	this->is_terminal = is_terminal;
+  }
+  virtual void write(FILE *f, int indent);
+};
+
 class CCSTFuncDef : public CCSTExDeclaration
 {
   /* <function-definition> ::= 
@@ -168,8 +184,10 @@ class CCSTFuncDef : public CCSTExDeclaration
   CCSTDeclarator *ret_;
   std::vector<CCSTDeclaration*> decs_;
   CCSTCompoundStatement *body_;
+  std::vector<CCSTMacro*> attributes_;
  public:
   CCSTFuncDef(std::vector<CCSTDecSpecifier*> specifiers, CCSTDeclarator *ret, std::vector<CCSTDeclaration*> decs, CCSTCompoundStatement *body); //{this->specifiers_ = specifiers; this->ret_ = ret; this->decs_ = decs; this->body_ = body;}
+  CCSTFuncDef(std::vector<CCSTDecSpecifier*> specifiers, CCSTDeclarator *ret, std::vector<CCSTDeclaration*> decs, CCSTCompoundStatement *body, std::vector<CCSTMacro*> attribs);
   virtual void write(FILE *f, int indent);
 };
 
@@ -182,7 +200,11 @@ class CCSTDeclaration : public CCSTExDeclaration
  public:
   std::vector<CCSTDecSpecifier*>specifier_;
   std::vector<CCSTInitDeclarator*> decs_;
+  std::vector<CCSTMacro*> attributes_;
   CCSTDeclaration(std::vector<CCSTDecSpecifier*> specifier, std::vector<CCSTInitDeclarator*> decs); //{this->specifier_ = specifier; this->decs_ = decs;}
+  CCSTDeclaration(std::vector<CCSTDecSpecifier*> specifier,
+			std::vector<CCSTMacro*> attribs,
+			std::vector<CCSTInitDeclarator*> decs);
   virtual void write(FILE *f, int indent);
 };
 
