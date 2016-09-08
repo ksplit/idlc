@@ -420,7 +420,9 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
 	 printf("doing function pointer def\n");
 	 definitions.push_back( function_definition(function_pointer_function_declaration(r_tmp)
 						    ,caller_body(r_tmp, m)));
-	 
+
+	 definitions.push_back( trampoline_data_macro(r_tmp));
+
 	 definitions.push_back( function_definition(trampoline_function_declaration(r_tmp)
 						    , trampoline_function_body(r_tmp)));
        } else {

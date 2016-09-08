@@ -51,8 +51,8 @@ CCSTFuncDef* function_definition(CCSTDeclaration* function_declaration, CCSTComp
   Assert(func != 0, "Error: dynamic cast from CCSTInitDeclarator to CCSTDeclarator has failed!");
   
   std::vector<CCSTDeclaration*> decs; // not sure what this is for. unnecessary?
-  
-  return new CCSTFuncDef(function_declaration->specifier_, func, decs, body);
+
+  return new CCSTFuncDef(function_declaration->specifier_, func, decs, body, function_declaration->attributes_);
 }
 
 CCSTParamTypeList* parameter_list(std::vector<Parameter*> params)

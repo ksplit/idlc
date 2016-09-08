@@ -6,6 +6,19 @@
  * 
  */
 
+CCSTExDeclaration* trampoline_data_macro(Rpc* r)
+{
+  std::vector<CCSTAssignExpr*> data_args;
+  data_args.push_back(new CCSTPrimaryExprId(trampoline_func_name(r->name())));
+  return new CCSTMacro("LCD_TRAMPOLINE_DATA", data_args, true);
+}
+
+CCSTMacro* trampoline_linkage_macro(Rpc* r)
+{
+  std::vector<CCSTAssignExpr*> data_args;
+  data_args.push_back(new CCSTPrimaryExprId(trampoline_func_name(r->name())));
+  return new CCSTMacro("LCD_TRAMPOLINE_LINKAGE", data_args, false);
+}
 
 /*
  * trampoline function declaration.
@@ -27,11 +40,14 @@ CCSTDeclaration* trampoline_function_declaration(Rpc* r)
   
   std::vector<Parameter*> parameters = r->parameters();
 
+  std::vector<CCSTMacro*> attributes;
+  attributes.push_back(trampoline_linkage_macro(r));
+
   decs.push_back(new CCSTDeclarator(pointer(r->return_variable()->pointer_count())
 				    , new CCSTDirectDecParamTypeList(new CCSTDirectDecId(trampoline_func_name(r->name()))
 								     , parameter_list(parameters))));
   printf("finishing tramp func dec\n");
-  return new CCSTDeclaration(specifier, decs);
+  return new CCSTDeclaration(specifier, attributes, decs);
 }
 
 /*

@@ -150,7 +150,7 @@ CCSTCompoundStatement* trampoline_function_body(Rpc *r); // complete.
 CCSTDeclaration* trampoline_function_declaration(Rpc *r); // has a bug +.
 CCSTCompoundStatement* alloc_init_hidden_args_struct(ProjectionType *pt, Variable *v, LexicalScope *ls, Variable *cspace); // complete
 std::vector<CCSTDeclaration*> declare_hidden_args_structures(ProjectionType *pt, LexicalScope *ls); // complete
-
+CCSTExDeclaration* trampoline_data_macro(Rpc* r);
 // end trampoline.cpp
 
 #endif
