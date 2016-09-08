@@ -355,42 +355,41 @@ FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* 
 			    Function *fp = new Function((char*) id.getValue(), new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
 			    	     	       		, *params, get_current_scope());
 			    
-			    // fix this naming conflict
-			    Parameter *p = new Parameter(fp, (char *) id.getValue(), 1);
+			    Parameter *_p = new Parameter(fp, (char *) id.getValue(), 1);
 
 			    if (s.getValue() != 0x0) {
 			        std::vector<bool>* specs = (std::vector<bool>*) s.getValue();
 			        if(specs->at(1)) {
-			            p->set_out(true);
+			            _p->set_out(true);
 			    	} if(specs->at(2)) {
-			            p->set_in(true);
+			            _p->set_in(true);
 			    	} if(specs->at(4)) {
-			            p->set_alloc_caller(true);
+			            _p->set_alloc_caller(true);
 			    	} if(specs->at(5)) {
-			            p->set_alloc_callee(true);
+			            _p->set_alloc_callee(true);
 			    	} if(specs->at(6) || specs->at(3)) {
-			            p->set_alloc_callee(true);
-				    p->set_alloc_caller(true);
+			            _p->set_alloc_callee(true);
+				    _p->set_alloc_caller(true);
 			    	} if(specs->at(7) || specs->at(10)) {
-				    p->set_dealloc_callee(true);
-				    p->set_dealloc_caller(true);
+				    _p->set_dealloc_callee(true);
+				    _p->set_dealloc_caller(true);
 				} if (specs->at(8)) {
-				    p->set_dealloc_caller(true);
+				    _p->set_dealloc_caller(true);
 				} if (specs->at(9)) {
-				    p->set_dealloc_callee(true);
+				    _p->set_dealloc_callee(true);
 				} if (specs->at(11)) {
-				    p->set_bind_caller(true);
-				    p->set_bind_callee(true);
+				    _p->set_bind_caller(true);
+				    _p->set_bind_callee(true);
 				} if (specs->at(12)) {
-				    p->set_bind_callee(true);	
+				    _p->set_bind_callee(true);
 				} if (specs->at(13)) {
-				    p->set_bind_caller(true);
+				    _p->set_bind_caller(true);
 				}
 				
 			    }
 			    
 			    set_current_scope(get_current_scope()->outer_scope());
-			    value = p;
+			    value = _p;
 			    
 			}}
 
