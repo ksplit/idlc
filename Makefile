@@ -10,7 +10,7 @@ CXXFLAGS += -MMD
 CXX = g++
 LDFLAGS = -fsanitize=address
 
-CPP_a = $(shell find . -type f -name "*.cpp") $(idl_cpp)
+CPP_a = $(shell find . -type f ! -path "./parser/vembyr-1.1/*" -name "*.cpp") $(idl_cpp)
 CPP = $(filter-out ./test/%,$(CPP_a))
 OBJ = $(patsubst %.cpp,%.o,$(CPP))
 DEP = $(patsubst %.cpp,%.d,$(CPP))

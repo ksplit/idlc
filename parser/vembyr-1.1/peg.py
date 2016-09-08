@@ -5,7 +5,7 @@
 # Optimizations (like chunks) and other inspiration: Rats!
 #   http://cs.nyu.edu/rgrimm/xtc/rats.html
 # By Jon Rafkind
-# License: GPL 2
+# License: BSD
 
 # Python BNF parser:
 # 1. 171397b / 45.216s = 3790.62721160651 b/s
@@ -22,12 +22,10 @@
 # Robert Grimm suggested "His Elkhound-generated C++ parsers do not free memory nor do they integrate GC. Instead, you just allocate from a dedicated region, copy out the AST after parsing, and kill the entire region in one operation."
 #
 
-from core import CodeGenerator, newResult, gensym, resetGensym, indent, special_char, newOut
+from core import CodeGenerator, newResult, gensym, resetGensym, indent, newOut
 from cpp_generator import CppGenerator
 from python_generator import PythonGenerator
-from ruby_generator import RubyGenerator
-from cpp_interpreter_generator import CppInterpreterGenerator
-import cpp_generator, python_generator, ruby_generator, cpp_header_generator
+import cpp_generator, python_generator
 
 # substitute variables in a string named by $foo
 # "$foo + $bar - $foo" with {foo:1, bar:2} => "1 + 2 - 1"
@@ -219,8 +217,8 @@ class PatternEnsure(Pattern):
     def isFixed(self):
         return self.next.isFixed()
 
-    def generate_bnf(self):
-        return "&" + self.next.generate_bnf()
+    def generate_bnf(self, code = True):
+        return "&" + self.next.generate_bnf(code)
 
     def generate_python(self, result, previous_result, stream, failure):
         return PythonGenerator().generate_ensure(self, result, previous_result, stream, failure)
@@ -260,8 +258,8 @@ class PatternNot(Pattern):
     def canBeEmpty(self, peg):
         return True
 
-    def generate_bnf(self):
-        return "!" + self.next.generate_bnf()
+    def generate_bnf(self, code = True):
+        return "!" + self.next.generate_bnf(code)
 
     def generate_python(self, result, previous_result, stream, failure):
         return PythonGenerator().generate_not(self, result, previous_result, stream, failure)
@@ -313,7 +311,7 @@ class PatternRule(Pattern):
         if not find(self.rule):
             print "*warning* could not find rule " + self.rule
 
-    def generate_bnf(self):
+    def generate_bnf(self, code = True):
         rules = ""
         values = ""
         if self.rules != None:
@@ -349,7 +347,7 @@ class PatternVoid(Pattern):
     def isFixed(self):
         return True
 
-    def generate_bnf(self):
+    def generate_bnf(self, code = True):
         return "<void>"
 
     def generate_v1(self, generator, result, previous_result, stream, failure):
@@ -382,7 +380,7 @@ class PatternEof(Pattern):
     def canBeEmpty(self, peg):
         return True
 
-    def generate_bnf(self):
+    def generate_bnf(self, code = True):
         return "<eof>"
 
     def isFixed(self):
@@ -434,8 +432,8 @@ class PatternSequence(Pattern):
         for pattern in self.patterns:
             pattern.ensureRules(find)
 
-    def generate_bnf(self):
-        return "%s" % " ".join([p.generate_bnf() for p in self.patterns])
+    def generate_bnf(self, code = True):
+        return "%s" % " ".join([p.generate_bnf(code) for p in self.patterns])
 
     def generate_v1(self, generator, result, previous_result, stream, failure):
         return generator.generate_sequence(self, result, previous_result, stream, failure)
@@ -470,7 +468,7 @@ class PatternCallRule(Pattern):
     def isFixed(self):
         return False
     
-    def generate_bnf(self):
+    def generate_bnf(self, code = True):
         rules = ""
         values = ""
         if self.rules != None:
@@ -509,8 +507,8 @@ class PatternRepeatOnce(Pattern):
     def canBeEmpty(self, peg):
         return False
 
-    def generate_bnf(self):
-        return self.parens(self.next, self.next.generate_bnf()) + "+"
+    def generate_bnf(self, code = True):
+        return self.parens(self.next, self.next.generate_bnf(code)) + "+"
 
     def generate_v1(self, generator, result, previous_result, stream, failure):
         return generator.generate_repeat_once(self, result, previous_result, stream, failure)
@@ -558,8 +556,11 @@ class PatternCode(Pattern):
     def generate_v3(self, generator, rule, peg):
         return generator.generate_code(self, rule, peg)
 
-    def generate_bnf(self):
-        return """{{%s}}""" % (self.code)
+    def generate_bnf(self, code = True):
+        if code:
+            return """{{%s}}""" % (self.code)
+        else:
+            return ""
 
     def generate_python(self, result, previous_result, stream, failure):
         return PythonGenerator().generate_code(self, result, previous_result, stream, failure)
@@ -597,8 +598,8 @@ class PatternRepeatMany(Pattern):
     def generate_v3(self, generator, rule, peg):
         return generator.generate_repeat_many(self, rule, peg)
 
-    def generate_bnf(self):
-        return self.parens(self.next, self.next.generate_bnf()) + "*"
+    def generate_bnf(self, code = True):
+        return self.parens(self.next, self.next.generate_bnf(code)) + "*"
 
     def generate_python(self, result, previous_result, stream, failure):
         return PythonGenerator().generate_repeat_many(self, result, previous_result, stream, failure)
@@ -615,7 +616,7 @@ class PatternAny(Pattern):
             return [self]
         return []
 
-    def generate_bnf(self):
+    def generate_bnf(self, code = True):
         return "."
 
     def ensureRules(self, find):
@@ -669,8 +670,8 @@ class PatternMaybe(Pattern):
     def generate_v3(self, generator, rule, peg):
         return generator.generate_maybe(self, rule, peg)
 
-    def generate_bnf(self):
-        return self.parens(self.pattern, self.pattern.generate_bnf()) + "?"
+    def generate_bnf(self, code = True):
+        return self.parens(self.pattern, self.pattern.generate_bnf(code)) + "?"
 
     def generate_python(self, result, previous_result, stream, failure):
         return PythonGenerator().generate_maybe(self, result, previous_result, stream, failure)
@@ -693,7 +694,7 @@ class PatternOr(Pattern):
     def isFixed(self):
         return reduce(lambda ok, pattern: ok and pattern.isFixed(), self.patterns, True)
 
-    def generate_bnf(self):
+    def generate_bnf(self, code = True):
         return "or"
 
     def generate_python(self, result, previous_result, stream, failure):
@@ -741,8 +742,8 @@ class PatternBind(Pattern):
     def generate_cpp(self, peg, result, stream, failure, tail, peg_args):
         return CppGenerator().generate_bind(self, peg, result, stream, failure, tail, peg_args)
         
-    def generate_bnf(self):
-        return "%s:%s" % (self.variable, self.pattern.generate_bnf())
+    def generate_bnf(self, code = True):
+        return "%s:%s" % (self.variable, self.pattern.generate_bnf(code))
 
     def generate_python(self, result, previous_result, stream, failure):
         return PythonGenerator().generate_bind(self, result, previous_result, stream, failure)
@@ -772,7 +773,7 @@ class PatternRange(Pattern):
     def canBeEmpty(self, peg):
         return False
 
-    def generate_bnf(self):
+    def generate_bnf(self, code = True):
         return "[%s]" % self.range
 
     def generate_v2(self, generator, peg):
@@ -814,7 +815,7 @@ class PatternLine(Pattern):
     def canBeEmpty(self, peg):
         return True
 
-    def generate_bnf(self):
+    def generate_bnf(self, code = True):
         return '<item>'
 
     def generate_v1(self, generator, result, previous_result, stream, failure):
@@ -855,7 +856,7 @@ class PatternPredicate(Pattern):
     def contains(self):
         return 1
 
-    def generate_bnf(self):
+    def generate_bnf(self, code = True):
         return '<predicate %s> {{%s}}"' % (self.variable, self.code)
 
     def generate_v1(self, generator, result, previous_result, stream, failure):
@@ -897,7 +898,7 @@ class PatternVerbatim(Pattern):
     def contains(self):
         return 1
 
-    def generate_bnf(self):
+    def generate_bnf(self, code = True):
         if type(self.letters) == type('x'):
             return '"%s"' % self.letters
         elif type(self.letters) == type(0):
@@ -939,13 +940,13 @@ class Rule:
                 # print "%s is now inlined" % self.name
                 self.inline = True
 
-    def generate_bnf(self):
+    def generate_bnf(self, code = True):
         total_length = len(self.name)
         if self.inline:
             total_length += len('inline ')
         data = """
 %s = %s
-""" % (self.name, (('\n%s | ') % (' ' * total_length)).join([p.generate_bnf() for p in self.patterns]))
+""" % (self.name, (('\n%s | ') % (' ' * total_length)).join([p.generate_bnf(code) for p in self.patterns]))
         if self.inline:
             return "inline " + data.strip() + "\n"
         return data.strip() + "\n"
@@ -956,6 +957,7 @@ class Rule:
 
     def generate_ruby(self):
         def newPattern(pattern, stream, position):
+            import ruby_generator
             result = newResult()
             rule_id = "RULE_%s" % self.name
 
@@ -969,7 +971,7 @@ begin
     return %s
 rescue PegError
 end
-            """ % (result, position, indent(pattern.generate_v1(RubyGenerator(), result, None, stream, fail).strip()), stream, rule_id, position, result, result)
+            """ % (result, position, indent(pattern.generate_v1(ruby_generator.RubyGenerator(), result, None, stream, fail).strip()), stream, rule_id, position, result, result)
             return data
 
 
@@ -1008,6 +1010,20 @@ end
     def generate_test(self, generator, peg):
         return self.choosePattern().generate_v2(generator, peg)
 
+    def generate_lua(self, peg):
+        def newPattern(pattern):
+            import lua_generator
+            return pattern.generate_v3(lua_generator.LuaGenerator(), self, peg)
+
+        data = """
+function %(rule)s()
+  %(patterns)s
+end
+"""
+        return data % {'rule': self.name,
+                       'patterns' : '\n'.join([newPattern(pattern) for pattern in self.patterns])
+                       }
+
     def generate_python(self):
         def newPattern(pattern, stream, position):
             result = newResult()
@@ -1025,6 +1041,7 @@ except PegError:
             """ % (result, position, indent(pattern.generate_python(result, None, stream, fail).strip()), stream, "RULE_%s" % self.name, position, result, result)
             return data
 
+        resetGensym()
         stream = "stream"
         position = "position"
         rule_parameters = ""
@@ -1074,7 +1091,8 @@ if (%s != 0 && %s.calculated()){
             else:
                 return ""
 
-        generator = CppInterpreterGenerator()
+        import cpp_interpreter_generator
+        generator = cpp_interpreter_generator.CppInterpreterGenerator()
         patterns = "\n".join(["expressions->push_back(%s);" % pattern.generate_v3(generator, self, peg) for pattern in self.patterns])
         extra = '\n'.join(generator.extra_codes)
         data = """
@@ -1131,6 +1149,11 @@ Result rule_%s(Stream & stream, int position, Value ** arguments){
         rule_number = "RULE_%s" % self.name
         stream = "stream"
         position = "position"
+        stateVariable = ""
+        trace = gensym("trace")
+        # Don't waste a gensym
+        if peg.transactions:
+            stateVariable = gensym('state')
         # tail_loop = [gensym("tail")]
         tail_loop = [False]
         debug = "debug1" in peg.options
@@ -1196,19 +1219,41 @@ goto %s;
                 debugging = ""
                 debug_result = ""
                 if debug:
-                    debugging = """std::cout << "Trying rule %s at " << %s << " '" << %s.get(%s.getPosition()) << "' alternative: %s" << std::endl;""" % (self.name, position, stream, result, special_escape(pattern.generate_bnf()).replace("\n", "\\n"))
+                    debugging = """%s.setName("%s(%s)"); std::cout << "Trying rule '" << %s.makeBacktrace() << "' at position: " << %s << " input: '" << %s.get(%s.getPosition()) << "'" << std::endl;""" % (trace, self.name, special_escape(pattern.generate_bnf(code = False)).replace("\n", "\\n"), stream, position, stream, result)
                 if 'debug2' in peg.options:
-                    debug_result = """std::cout << "Succeeded rule %s at position " << %s.getPosition() << " alternative: %s" << std::endl;""" % (self.name, result, special_escape(pattern.generate_bnf()).replace("\n", "\\n"))
+                    debug_result = """std::cout << "Succeeded rule %s at position: " << %s.getPosition() << " alternative: %s" << std::endl;""" % (self.name, result, special_escape(pattern.generate_bnf(code = False)).replace("\n", "\\n"))
                 do_memo = peg.memo and self.rules == None and self.parameters == None
+                start_transaction = ""
+                if peg.transactions:
+                    start_transaction = "%(variable)s = %(stream)s.startTransaction();" % {'variable': stateVariable,
+                                         'stream': stream}
+                commit_transaction = ""
+                if peg.transactions:
+                    commit_transaction = "%(result)s.setState(%(variable)s);" % {'variable': stateVariable, 'result': result}
+                abort_transaction = ""
+                if peg.transactions:
+                    abort_transaction = "%(stream)s.abortTransaction(%(variable)s);" % {'variable': stateVariable, 'stream': stream}
                 data = """
-Result %s(%s);
-%s
-%s
-%s
-%s
-return %s;
-%s
-            """ % (result, position, debugging, pattern.generate_cpp(peg, result, stream, failure, None, invalid_arg).strip(), updateChunk(result, columnVar, do_memo), debug_result, result, label(out[0]))
+Result %(result)s(%(position)s);
+%(debugging)s
+%(start-transaction)s
+%(code)s
+%(commit-transaction)s
+%(update-memo)s
+%(debug-result)s
+return %(result)s;
+%(out)s
+%(abort-transaction)s
+            """ % {'result': result,
+                   'position': position,
+                   'debugging': debugging,
+                   'start-transaction': start_transaction,
+                   'code': pattern.generate_cpp(peg, result, stream, failure, None, invalid_arg).strip(),
+                   'update-memo': updateChunk(result, columnVar, do_memo),
+                   'debug-result': debug_result,
+                   'commit-transaction': commit_transaction,
+                   'out': label(out[0]),
+                   'abort-transaction': abort_transaction}
 
             return data
 
@@ -1226,10 +1271,6 @@ return %s;
 
         vars = "\n".join([declareVar(v) for v in self.findVars(peg)])
         my_position = "myposition"
-
-        fail_code = ""
-        if self.fail != None:
-            fail_code = self.fail
 
         def label(n):
             if n != False:
@@ -1257,15 +1298,25 @@ try{
 }
 """ % (body, self.fail)
 
+        declare_state = ""
+        if peg.transactions:
+            declare_state = "State * %s = NULL;" % stateVariable;
+
+        debug_fail = ""
+        if 'debug2' in peg.options:
+            debug_fail = """std::cout << "Failed rule %s at position: " << %s << std::endl;""" % (self.name, my_position)
+
         data = """
 Result rule_%s(Stream & %s, const int %s%s%s){
+    %s
     %s
     RuleTrace %s(%s, "%s");
     int %s = %s;
     %s
+    %s
     return errorResult;
 }
-        """ % (self.name, stream, position, rule_parameters, parameters, indent(hasChunk(do_memo)), gensym("trace"), stream, self.name, my_position, position, indent(body))
+        """ % (self.name, stream, position, rule_parameters, parameters, indent(hasChunk(do_memo)), declare_state, trace, stream, self.name, my_position, position, indent(body), debug_fail)
 
         return data
     
@@ -1279,12 +1330,18 @@ class Peg:
         self.options = options
         # Whether to memoize or not
         self.memo = True
+        # Default number of rules to store in a chunk struct
+        self.chunks = 5
+        # Whether to keep global state
+        self.transactions = False
         if options == None:
             self.options = []
         if self.module == None:
             self.module = ['Parser']
         if 'no-memo' in self.options:
             self.memo = False
+        if 'state' in self.options:
+            self.transactions = True
         # Default error length
         self.error_size = 15
         for option in self.options:
@@ -1293,6 +1350,11 @@ class Peg:
             match = length.match(option)
             if match:
                 self.error_size = int(match.group(1))
+
+            chunks = re.compile('chunks (\d+)')
+            match = chunks.match(option)
+            if match:
+                self.chunks = int(match.group(1)) + 1
 
         if self.getRule(self.start) == None:
             raise Exception("No start rule with the name '%s'" % self.start)
@@ -1395,7 +1457,7 @@ value = (void *) 2;
     peg = Peg("Peg", "s", rules)
     print cpp_generator.generate(peg)
 
-def create_peg(peg):
+def create_peg(peg, kind = 'file'):
     # import imp
     # module = imp.new_module(peg.namespace)
     # exec peg.generate_python() in module.__dict__
@@ -1405,10 +1467,17 @@ def create_peg(peg):
     out = open(name + ".py", 'w')
     out.write(python_generator.generate(peg))
     out.close()
+    import sys
+    sys.path.append('.')
     module = __import__(name, globals(), locals(), ['parse'])
     # print module
     # print dir(module)
-    return module.parseFile
+    if kind == 'file':
+        return module.parseFile
+    elif kind == 'string':
+        return module.parseString
+    else:
+        raise Exception("Unknown kind '%s'. Give 'file' or 'string'" % kind)
 
 def test2():
     start_code_abc = """
@@ -1531,8 +1600,20 @@ for option in ([option1] + option_rest):
 value = 'debug%s' % number
 """),
                 ]),
+            PatternVerbatim('state'),
             PatternVerbatim('no-memo'),
-            PatternRule('error_option')
+            PatternRule('error_option'),
+            PatternRule('chunks')
+            ]),
+        Rule('chunks', [
+            PatternSequence([
+                PatternVerbatim('chunks'),
+                PatternRule('whitespace'),
+                PatternBind('number', PatternRule("number")),
+                PatternCode("""
+value = 'chunks %s' % number
+""")
+                ]),
             ]),
         Rule('error_option', [
             PatternSequence([
@@ -1976,7 +2057,7 @@ def createUtf8Pattern(pattern):
             byte4 = 128 + ((unicode / 4096) % 64)
             byte5 = 128 + ((unicode / 64) % 64)
             byte6 = 128 + (unicode % 64)
-            return [byte1, byte2, byte3, byte4, byte5, byet6]
+            return [byte1, byte2, byte3, byte4, byte5, byte6]
         raise Exception("Could not decode utf8 '%s'" % hex)
 
     return PatternSequence([PatternVerbatim(x) for x in toUtf8(pattern)])
@@ -2103,6 +2184,7 @@ def help():
     print "--bnf : Generate BNF description (grammar language)"
     print "--ruby : Generate Ruby parser"
     print "--python : Generate Python parser"
+    print "--lua : Generate Lua parser"
     print "--cpp,--c++ : Generate C++ parser"
     print "--h : Generate C++ header for the C++ functions"
     # print "--c++-interpreter : Generate a C++ parser that uses an interpreter"
@@ -2134,13 +2216,18 @@ if __name__ == '__main__':
     for arg in sys.argv[1:]:
         if arg == '--bnf':
             doit.append(lambda p: p.generate_bnf())
+        elif arg == "--lua":
+            import lua_generator
+            doit.append(lambda p: lua_generator.generate(p))
         elif arg == '--cpp' or arg == '--c++':
             doit.append(lambda p: cpp_generator.generate(p, parallel[0], separate[0]))
         elif arg == '--h':
+            import cpp_header_generator
             doit.append(lambda p: cpp_header_generator.generate(p))
         #elif arg == '--c++-interpreter':
         #    doit.append(lambda p: p.generate_cpp_interpreter())
         elif arg == '--ruby':
+            import ruby_generator
             doit.append(lambda p: ruby_generator.generate(p))
         elif arg == '--python':
             doit.append(lambda p: python_generator.generate(p))

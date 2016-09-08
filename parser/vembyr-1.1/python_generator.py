@@ -102,9 +102,12 @@ class Stream:
             left = 0
         if right > len(self.all):
             right = len(self.all)
-        print "Read up till line %d, column %d" % (line, column)
-        print "'%s'" % special_escape(self.all[left:right])
-        print "%s^" % (' ' * (self.furthest - left))
+        out = "Read up till line %d, column %d" % (line, column)
+        out += "\\n"
+        out += "'%s'" % special_escape(self.all[left:right])
+        out += "\\n"
+        out += "%s^" % (' ' * (self.furthest - left))
+        return out
 
     def update(self, rule, position, result):
         if result != None and result.getPosition() > self.furthest:
@@ -241,7 +244,6 @@ if %s == None:
     def generate_repeat_once(me, pattern, result, previous_result, stream, failure):
         my_fail = lambda : "raise PegError"
         my_result = newResult()
-        my_result2 = newResult()
         data = """
 try:
     while True:
@@ -295,15 +297,15 @@ else:
     # this breaks when the sub-pattern is a PatternSequence, todo: fix it
     def generate_maybe(me, pattern, result, previous_result, stream, failure):
         save = gensym("save")
-        fail = lambda : """
-%s = Result(%s)
-%s.setValue(None)
-""" % (result, save, result)
-
+        fail = lambda : """raise PegError"""
         data = """
-%s = %s.getPosition()
-%s
-""" % (save, result, pattern.pattern.generate_python(result, previous_result, stream, fail))
+try:
+    %s = %s.getPosition()
+    %s
+except PegError:
+    %s = Result(%s)
+    %s.setValue(None)
+""" % (save, result, indent(pattern.pattern.generate_python(result, previous_result, stream, fail)), result, save, result)
         return data
 
     def generate_or(me, pattern, result, previous_result, stream, failure):
@@ -311,7 +313,6 @@ else:
         fail = failure
         save = gensym("save")
         for next_pattern in pattern.patterns[::-1]:
-            my_result = newResult()
             data = """
 %s = Result(%s)
 %s
@@ -349,6 +350,12 @@ else:
                 length = 1
             import re
             letters = re.sub(r"'", "\\'", pattern.letters)
+            if letters == "\n":
+                letters = "\\n"
+            if letters == "\r":
+                letters = "\\r"
+            if letters == "\t":
+                letters = "\\t"
             data = """
 if '%s' == %s.get(%s.getPosition(), %s):
     %s.nextPosition(%s)
@@ -403,8 +410,7 @@ def doParse(stream):
     done = rule_%s(stream, 0)
     if done == None:
         # print "Error parsing " + file
-        stream.reportError()
-        return None
+        raise Exception(stream.reportError())
     else:
         return done.getValues()
 

@@ -1,6 +1,100 @@
 import core
 from core import newResult, indent, gensym, special_char, newOut, Accessor
 
+result_code = """
+class Result{
+public:
+    Result():
+    position(-2)%(initialize-state)s{
+    }
+
+    Result(const int position):
+    position(position)%(initialize-state)s{
+    }
+
+    Result(const Result & r):
+    position(r.position),
+    value(r.value)%(copy-state-r)s{
+    }
+
+    Result & operator=(const Result & r){
+        position = r.position;
+        value = r.value;
+        %(assign-state-r)s
+        return *this;
+    }
+
+    void reset(){
+        value.reset();
+    }
+
+    void setPosition(int position){
+        this->position = position;
+    }
+
+    inline int getPosition() const {
+        return position;
+    }
+
+    inline bool error(){
+        return position == -1;
+    }
+
+    inline bool calculated(){
+        return position != -2;
+    }
+
+    %(get/set-state)s
+    inline void nextPosition(){
+        position += 1;
+    }
+
+    void setError(){
+        position = -1;
+    }
+
+    inline void setValue(const Value & value){
+        this->value = value;
+    }
+
+    /*
+    Value getLastValue() const {
+        if (value.isList()){
+            if (value.values.size() == 0){
+                std::cout << "[peg] No last value to get!" << std::endl;
+            }
+            return value.values[value.values.size()-1];
+        } else {
+            return value;
+        }
+    }
+    */
+
+    inline int matches() const {
+        if (value.isList()){
+            return this->value.values.size();
+        } else {
+            return 1;
+        }
+    }
+
+    inline const Value & getValues() const {
+        return this->value;
+    }
+
+    void addResult(const Result & result){
+        std::list<Value> & mine = this->value.values;
+        mine.push_back(result.getValues());
+        this->position = result.getPosition();
+        this->value.which = 1;
+    }
+
+private:
+    int position;
+    Value value;
+    %(state-id)s
+};"""
+
 start_cpp_code = """
 struct Value{
     typedef std::list<Value>::const_iterator iterator;
@@ -82,97 +176,9 @@ struct Value{
     std::list<Value> values;
 };
 
-class Result{
-public:
-    Result():
-    position(-2){
-    }
-
-    Result(const int position):
-    position(position){
-    }
-
-    Result(const Result & r):
-    position(r.position),
-    value(r.value){
-    }
-
-    Result & operator=(const Result & r){
-        position = r.position;
-        value = r.value;
-        return *this;
-    }
-
-    void reset(){
-        value.reset();
-    }
-
-    void setPosition(int position){
-        this->position = position;
-    }
-
-    inline int getPosition() const {
-        return position;
-    }
-
-    inline bool error(){
-        return position == -1;
-    }
-
-    inline bool calculated(){
-        return position != -2;
-    }
-
-    inline void nextPosition(){
-        position += 1;
-    }
-
-    void setError(){
-        position = -1;
-    }
-
-    inline void setValue(const Value & value){
-        this->value = value;
-    }
-
-    /*
-    Value getLastValue() const {
-        if (value.isList()){
-            if (value.values.size() == 0){
-                std::cout << "[peg] No last value to get!" << std::endl;
-            }
-            return value.values[value.values.size()-1];
-        } else {
-            return value;
-        }
-    }
-    */
-
-    inline int matches() const {
-        if (value.isList()){
-            return this->value.values.size();
-        } else {
-            return 1;
-        }
-    }
-
-    inline const Value & getValues() const {
-        return this->value;
-    }
-
-    void addResult(const Result & result){
-        std::list<Value> & mine = this->value.values;
-        mine.push_back(result.getValues());
-        this->position = result.getPosition();
-        this->value.which = 1;
-    }
-
-private:
-    int position;
-    Value value;
-};
-
-%s
+%(state-class)s
+%(result-class)s
+%(chunks)s
 
 class ParseException: std::exception {
 public:
@@ -247,7 +253,7 @@ public:
 
         line_info[-1] = LineInfo(1, 1);
 
-        createMemo();
+        setup();
     }
 
     /* for null-terminated strings */
@@ -258,7 +264,7 @@ public:
     last_line_info(-1){
         max = strlen(buffer);
         line_info[-1] = LineInfo(1, 1);
-        createMemo();
+        setup();
     }
 
     /* user-defined length */
@@ -269,6 +275,11 @@ public:
     last_line_info(-1){
         max = length;
         line_info[-1] = LineInfo(1, 1);
+        setup();
+    }
+
+    void setup(){
+        %(initialize-state-counter)s
         createMemo();
     }
 
@@ -280,11 +291,6 @@ public:
          * not allocating columns at all.
          */
         memset(memo, 0, sizeof(Column*) * memo_size);
-        /*
-        for (int i = 0; i < memo_size; i++){
-            memo[i] = new Column();
-        }
-        */
     }
 
     int length(){
@@ -324,12 +330,6 @@ public:
         // std::cout << "Read char '" << buffer[position] << "'" << std::endl;
 
         return buffer[position];
-        /*
-        char z;
-        stream.seekg(position, std::ios_base::beg);
-        stream >> z;
-        return z;
-        */
     }
 
     bool find(const char * str, const int position){
@@ -342,14 +342,16 @@ public:
     void growMemo(){
         int newSize = memo_size * 2;
         Column ** newMemo = new Column*[newSize];
+        /* Copy old memo table */
         memcpy(newMemo, memo, sizeof(Column*) * memo_size);
+
+        /* Zero out new entries */
         memset(&newMemo[memo_size], 0, sizeof(Column*) * (newSize - memo_size));
-        /*
-        for (int i = memo_size; i < newSize; i++){
-            newMemo[i] = new Column();
-        }
-        */
+
+        /* Delete old memo table */
         delete[] memo;
+
+        /* Set up new memo table */
         memo = newMemo;
         memo_size = newSize;
     }
@@ -406,7 +408,7 @@ public:
                 column += 1;
             }
         }
-        int context = %d;
+        int context = %(error-size)d;
         int left = farthest - context;
         int right = farthest + context;
         if (left < 0){
@@ -444,15 +446,19 @@ public:
         }
         out << "^" << std::endl;
         out << "Last successful rule trace" << std::endl;
-        out << makeBacktrace() << std::endl;
+        out << makeBacktrace(last_trace) << std::endl;
         throw ParseException(out.str(), line, column);
     }
 
     std::string makeBacktrace(){
+        return makeBacktrace(rule_backtrace);
+    }
+
+    std::string makeBacktrace(const std::vector<std::string> & trace){
         std::ostringstream out;
 
         bool first = true;
-        for (std::vector<std::string>::iterator it = last_trace.begin(); it != last_trace.end(); it++){
+        for (std::vector<std::string>::const_iterator it = trace.begin(); it != trace.end(); it++){
             if (!first){
                 out << " -> ";
             } else {
@@ -482,13 +488,15 @@ public:
         }
     }
 
-    void push_rule(const char * name){
+    void push_rule(const std::string & name){
         rule_backtrace.push_back(name);
     }
 
     void pop_rule(){
         rule_backtrace.pop_back();
     }
+
+    %(state-functions)s
 
     ~Stream(){
         delete[] temp;
@@ -510,6 +518,7 @@ private:
     std::vector<std::string> last_trace;
     int last_line_info;
     std::map<int, LineInfo> line_info;
+    %(current-state)s
 };
 
 static int getCurrentLine(const Value & value){
@@ -526,6 +535,11 @@ class RuleTrace{
 public:
     RuleTrace(Stream & stream, const char * name):
     stream(stream){
+        stream.push_rule(name);
+    }
+
+    void setName(const std::string & name){
+        stream.pop_rule();
         stream.push_rule(name);
     }
 
@@ -552,8 +566,46 @@ static inline bool compareCharCase(const char a, const char b){
 }
 """
 
+state_stuff = """
+/* Holds arbitrary global state as defined by the user. The user
+ * should create a subclass of State and make createState() return
+ * an instance of that subclass.
+ */
+class State{
+public:
+    /* Each state gets a unique id */
+    State(unsigned int id, State * parent):
+    parent(parent),
+    child(NULL),
+    id(id){
+    }
 
-# all the self parameters are named me because the code was originally
+    bool operator==(const State & state) const {
+        return getId() == state.getId();
+    }
+
+    void setNextState(State * state){
+        child = state;
+    }
+
+    unsigned int getId() const {
+        return id;
+    }
+
+    /* must be defined by the user */
+    static State * createState(State * parent);
+
+    virtual ~State(){
+    }
+private:
+    State * parent;
+    State * child;
+
+    /* id for this state */
+    unsigned int id;
+};"""
+
+# all the self parameters are named 'me' because the code was originally
 # copied from another class and to ensure that copy/paste errors don't
 # occur I have changed the name from 'self' to 'me'
 # that is, 'self' in the original code is now the parameter 'pattern'
@@ -569,21 +621,28 @@ class CppGenerator(core.CodeGenerator):
         my_result = newResult()
         my_fail = lambda : "goto %s;" % not_label
         data = """
-Result %s(%s);
-%s
-%s
-%s:
-%s.setValue(Value((void*)0));
-        """ % (my_result, result, pattern.next.generate_cpp(peg, my_result, stream, my_fail, None, peg_args).strip(), failure(), not_label, result)
+Result %(new-result)s(%(result)s);
+%(code)s
+%(fail)s
+%(not)s:
+%(result)s.setValue(Value((void*)0));
+        """ % {'new-result': my_result,
+               'result': result,
+               'code': pattern.next.generate_cpp(peg, my_result, stream, my_fail, None, peg_args).strip(),
+               'fail': failure(),
+               'not': not_label,
+               'result': result}
 
         return data
 
     def generate_ensure(me, pattern, peg, result, stream, failure, tail, peg_args):
         my_result = newResult()
         data = """
-Result %s(%s.getPosition());
-%s
-""" % (my_result, result, pattern.next.generate_cpp(peg, my_result, stream, failure, None, peg_args).strip())
+Result %(new-result)s(%(result)s.getPosition());
+%(code)s
+""" % {'new-result': my_result,
+       'result': result,
+       'code': pattern.next.generate_cpp(peg, my_result, stream, failure, None, peg_args).strip()}
         return data
 
     def generate_call_rule(me, pattern, peg, result, stream, failure, tail, peg_args):
@@ -608,24 +667,33 @@ Result %s(%s.getPosition());
         cast = "Result (*)(Stream &, const int%s%s)" % (argify('void *', pattern.rules), argify('Value', pattern.values))
 
         data = """
-%s = ((%s) %s)(%s, %s.getPosition()%s%s);
-if (%s.error()){
-    %s
+%(result)s = ((%(cast)s) %(name)s)(%(stream)s, %(result)s.getPosition()%(rule-parameters)s%(parameters)s);
+if (%(result)s.error()){
+    %(fail)s
 }
-""" % (result, cast, pattern.name, stream, result, rule_parameters, parameters, result, indent(failure()))
+""" % {'result': result,
+       'cast': cast,
+       'name': pattern.name,
+       'stream': stream,
+       'rule-parameters': rule_parameters,
+       'parameters': parameters,
+       'result': result,
+       'fail': indent(failure())}
 
         return data
 
     def generate_predicate(me, pattern, peg, result, stream, failure, tail, peg_args):
         data = """
 {
-    bool %s = true;
-    %s
-    if (!%s){
-        %s
+    bool %(variable)s = true;
+    %(code)s
+    if (!%(variable)s){
+        %(fail)s
     }
 }
-""" % (pattern.variable, me.fixup_cpp(indent(pattern.code.strip()), peg_args), pattern.variable, failure())
+""" % {'variable': pattern.variable,
+       'code': me.fixup_cpp(indent(pattern.code.strip()), peg_args),
+       'fail': failure()}
         return data
 
     def generate_rule(me, pattern, peg, result, stream, failure, tail, peg_args):
@@ -635,7 +703,7 @@ if (%s.error()){
             if tail != None:
                 raise Exception("Do not combine inlined rules that use tail recursion")
             def newPattern(pattern, stream, result, success):
-                my_result = newResult()
+                # my_result = newResult()
                 previous_position = gensym('position')
                 out = [False]
                 def label(n):
@@ -647,35 +715,31 @@ if (%s.error()){
                     if out[0] == False:
                         out[0] = newOut()
                     return "%s.setPosition(%s);\ngoto %s;" % (result, previous_position, out[0])
-                pattern_result = pattern.generate_cpp(peg, my_result, stream, fail, tail, peg_args).strip()
-
-                old_data = """
-{
-Result %s(%s.getPosition());
-%s
-%s = %s;
-}
-%s
-%s
-                """ % (my_result, result, pattern_result, result, my_result, success, label(out[0]))
+                # pattern_result = pattern.generate_cpp(peg, my_result, stream, fail, tail, peg_args).strip()
 
                 data = """
 {
-    int %s = %s.getPosition();
-    %s
+    int %(previous)s = %(result)s.getPosition();
+    %(code)s
 }
-%s
-%s
-""" % (previous_position, result, indent(pattern.generate_cpp(peg, result, stream, fail, tail, peg_args)), success, label(out[0]))
+%(success)s
+%(label)s
+""" % {'previous': previous_position,
+       'result': result,
+       'code': indent(pattern.generate_cpp(peg, result, stream, fail, tail, peg_args)),
+       'success': success,
+       'label': label(out[0])}
                 return data
 
             success_out = gensym('success')
             data = """
-%s
-%s
-%s:
+%(code)s
+%(fail)s
+%(success)s:
 ;
-""" % ('\n'.join([newPattern(pattern, stream, result, "goto %s;" % success_out).strip() for pattern in rule.patterns]), failure(), success_out)
+""" % {'code': '\n'.join([newPattern(pattern, stream, result, "goto %s;" % success_out).strip() for pattern in rule.patterns]),
+       'fail': failure(),
+       'success': success_out}
             return data
         else:
             # TODO: add rule parameters here
@@ -701,11 +765,16 @@ Result %s(%s.getPosition());
                     parameters = ", %s" % ", ".join([me.fixup_cpp(p, peg_args) for p in pattern.parameters])
                     # parameters = ", %s" % fix_param(pattern.parameters)
                 data = """
-%s = rule_%s(%s, %s.getPosition()%s%s);
-if (%s.error()){
-    %s
+%(result)s = rule_%(rule)s(%(stream)s, %(result)s.getPosition()%(rule-parameters)s%(parameters)s);
+if (%(result)s.error()){
+    %(fail)s
 }
-""" % (result, pattern.rule, stream, result, rule_parameters, parameters, result, indent(failure()))
+""" % {'result': result,
+       'rule': pattern.rule,
+       'stream': stream,
+       'rule-parameters': rule_parameters,
+       'parameters': parameters,
+       'fail': indent(failure())}
 
                 return data
 
@@ -714,13 +783,15 @@ if (%s.error()){
 
     def generate_eof(me, pattern, peg, result, stream, failure, tail, peg_args):
         data = """
-if ('\\0' == %s.get(%s.getPosition())){
-    %s.nextPosition();
-    %s.setValue(Value((void *) '\\0'));
+if ('\\0' == %(stream)s.get(%(result)s.getPosition())){
+    %(result)s.nextPosition();
+    %(result)s.setValue(Value((void *) '\\0'));
 } else {
-    %s
+    %(fail)s
 }
-""" % (stream, result, result, result, indent(failure()))
+""" % {'stream': stream,
+       'result': result,
+       'fail': indent(failure())}
         return data
 
     def generate_sequence(me, pattern, peg, result, stream, failure, tail, peg_args):
@@ -767,17 +838,21 @@ if ('\\0' == %s.get(%s.getPosition())){
         my_fail = lambda : "goto %s;" % loop_done
         my_result = newResult()
         data = """
-%s.reset();
+%(result)s.reset();
 do{
-    Result %s(%s.getPosition());
-    %s
-    %s.addResult(%s);
+    Result %(new-result)s(%(result)s.getPosition());
+    %(code)s
+    %(result)s.addResult(%(new-result)s);
 } while (true);
-%s:
-if (%s.matches() == 0){
-    %s
+%(loop-done)s:
+if (%(result)s.matches() == 0){
+    %(fail)s
 }
-""" % (result, my_result, result, indent(pattern.next.generate_cpp(peg, my_result, stream, my_fail, tail, peg_args).strip()), result, my_result, loop_done, result, indent(failure()))
+""" % {'result': result,
+       'new-result': my_result,
+       'code': indent(pattern.next.generate_cpp(peg, my_result, stream, my_fail, tail, peg_args).strip()),
+       'loop-done': loop_done,
+       'fail': indent(failure())}
 
         return data
 
@@ -785,52 +860,62 @@ if (%s.matches() == 0){
         data = """
 {
     Value value((void*) 0);
-    %s
-    %s.setValue(value);
+    %(code)s
+    %(result)s.setValue(value);
 }
-        """ % (me.fixup_cpp(indent(pattern.code.strip()), peg_args), result)
+        """ % {'code': me.fixup_cpp(indent(pattern.code.strip()), peg_args),
+               'result': result}
 
         return data
 
     def generate_repeat_many(me, pattern, peg, result, stream, failure, tail, peg_args):
         loop_done = gensym("loop")
-        my_fail = lambda : "goto %s;" % loop_done
+        my_fail = lambda: "goto %s;" % loop_done
         my_result = newResult()
         data = """
-%s.reset();
+%(result)s.reset();
 do{
-    Result %s(%s.getPosition());
-    %s
-    %s.addResult(%s);
+    Result %(new-result)s(%(result)s.getPosition());
+    %(code)s
+    %(result)s.addResult(%(new-result)s);
 } while (true);
-%s:
+%(loop-done)s:
 ;
-        """ % (result, my_result, result, indent(pattern.next.generate_cpp(peg, my_result, stream, my_fail, tail, peg_args).strip()), result, my_result, loop_done)
+        """ % {'result': result,
+               'new-result': my_result,
+               'code': indent(pattern.next.generate_cpp(peg, my_result, stream, my_fail, tail, peg_args).strip()),
+               'loop-done': loop_done}
         return data
 
     def generate_any(me, pattern, peg, result, stream, failure, tail, peg_args):
-        temp = gensym()
         data = """
-char %s = %s.get(%s.getPosition());
-if (%s != '\\0'){
-    %s.setValue(Value((void*) (long) %s));
-    %s.nextPosition();
+char %(temp)s = %(stream)s.get(%(result)s.getPosition());
+if (%(temp)s != '\\0'){
+    %(result)s.setValue(Value((void*) (intptr_t) %(temp)s));
+    %(result)s.nextPosition();
 } else {
-    %s
+    %(fail)s
 }
-""" % (temp, stream, result, temp, result, temp, result, indent(failure()))
+""" % {'temp': gensym(),
+       'stream': stream,
+       'result': result,
+       'fail': indent(failure())}
         return data
 
     def generate_maybe(me, pattern, peg, result, stream, failure, tail, peg_args):
         save = gensym("save")
-        fail = lambda : """
-%s = Result(%s);
-%s.setValue(Value((void*) 0));
-""" % (result, save, result)
+        fail = lambda: """
+%(result)s = Result(%(save)s);
+%(result)s.setValue(Value((void*) 0));
+""" % {'result': result,
+       'save': save}
+
         data = """
-int %s = %s.getPosition();
-%s
-""" % (save, result, pattern.pattern.generate_cpp(peg, result, stream, fail, tail, peg_args))
+int %(save)s = %(result)s.getPosition();
+%(code)s
+""" % {'save': save,
+       'result': result,
+       'code': pattern.pattern.generate_cpp(peg, result, stream, fail, tail, peg_args)}
         return data
 
     def generate_or(me, pattern, peg, result, stream, failure, tail, peg_args):
@@ -845,13 +930,17 @@ int %s = %s.getPosition();
                 fail = failure
             data += """
 {
-Result %s(%s.getPosition());
-%s
-%s = %s;
+Result %(new-result)s(%(result)s.getPosition());
+%(code)s
+%(result)s = %(new-result)s;
 }
-goto %s;
-%s:
-""" % (my_result, result, pattern.generate_cpp(peg, my_result, stream, fail, tail, peg_args).strip(), result, my_result, success, out)
+goto %(success)s;
+%(out)s:
+""" % {'new-result': my_result,
+       'result': result,
+       'code': pattern.generate_cpp(peg, my_result, stream, fail, tail, peg_args).strip(),
+       'success': success,
+       'out': out}
         data += "%s:\n" % success
         return data
 
@@ -859,27 +948,36 @@ goto %s;
         if pattern.pattern.isLineInfo():
             name = gensym("line_info");
             data = """
-Stream::LineInfo %s = %s.getLineInfo(%s.getPosition());
-%s = &%s;
-""" % (name, stream, result, pattern.variable, name)
+Stream::LineInfo %(name)s = %(stream)s.getLineInfo(%(result)s.getPosition());
+%(variable)s = &%(name)s;
+""" % {'name': name,
+       'stream': stream,
+       'result': result,
+       'variable': pattern.variable}
         else:
             data = """
-%s
-%s = %s.getValues();
-""" % (pattern.pattern.generate_cpp(peg, result, stream, failure, tail, peg_args).strip(), pattern.variable, result)
+%(code)s
+%(variable)s = %(result)s.getValues();
+""" % {'code': pattern.pattern.generate_cpp(peg, result, stream, failure, tail, peg_args).strip(),
+       'variable': pattern.variable,
+       'result': result}
         return data
 
     def generate_range(me, pattern, peg, result, stream, failure, tail, peg_args):
         letter = gensym("letter")
         data = """
-char %s = %s.get(%s.getPosition());
-if (%s != '\\0' && strchr("%s", %s) != NULL){
-    %s.nextPosition();
-    %s.setValue(Value((void*) (long) %s));
+char %(letter)s = %(stream)s.get(%(result)s.getPosition());
+if (%(letter)s != '\\0' && strchr("%(range)s", %(letter)s) != NULL){
+    %(result)s.nextPosition();
+    %(result)s.setValue(Value((void*) (intptr_t) %(letter)s));
 } else {
-    %s
+    %(failure)s
 }
-""" % (letter, stream, result, letter, pattern.range, letter, result, result, letter, indent(failure()))
+""" % {'letter': letter,
+       'stream': stream,
+       'result': result,
+       'range': pattern.range,
+       'failure': indent(failure())}
         return data
 
     def generate_verbatim(me, pattern, peg, result, stream, failure, tail, peg_args):
@@ -891,26 +989,35 @@ if (%s != '\\0' && strchr("%s", %s) != NULL){
             if pattern.options == "{case}":
                 comparison = "compareCharCase"
             data = """
-%s.setValue(Value((void*) "%s"));
-for (int i = 0; i < %d; i++){
-    if (%s("%s"[i], %s.get(%s.getPosition()))){
-        %s.nextPosition();
+%(result)s.setValue(Value((void*) "%(string)s"));
+for (int i = 0; i < %(length)d; i++){
+    if (%(compare)s("%(string)s"[i], %(stream)s.get(%(result)s.getPosition()))){
+        %(result)s.nextPosition();
     } else {
-        %s
+        %(failure)s
     }
 }
-    """ % (result, pattern.letters.replace('"', '\\"'), length, comparison, pattern.letters.replace('"', '\\"'), stream, result, result, indent(indent(failure())))
+    """ % {'result': result,
+           'string': pattern.letters.replace('"', '\\"'),
+           'length': length,
+           'compare': comparison,
+           'stream': stream,
+           'failure': indent(indent(failure()))}
+
             return data
         def doAscii():
             data = """
-%s.setValue(Value((void*) %s));
-if ((unsigned char) %s.get(%s.getPosition()) == (unsigned char) %s){
-    %s.nextPosition();
+%(result)s.setValue(Value((void*) %(string)s));
+if ((unsigned char) %(stream)s.get(%(result)s.getPosition()) == (unsigned char) %(string)s){
+    %(result)s.nextPosition();
 } else {
-    %s
+    %(failure)s
 }
 """
-            return data % (result, pattern.letters, stream, result, pattern.letters, result, indent(failure()))
+            return data % {'result': result,
+                           'string': pattern.letters,
+                           'stream': stream,
+                           'failure': indent(failure())}
 
         if type(pattern.letters) == type('x'):
             return doString()
@@ -946,7 +1053,7 @@ def generate(self, parallel = False, separate = None, directory = '.', main = Fa
     def makeChunks(rules):
         import math
 
-        values_per_chunk = 5
+        values_per_chunk = self.chunks
         #values_per_chunk = int(math.sqrt(len(rules)))
         #if values_per_chunk < 5:
         #    values_per_chunk = 5
@@ -960,10 +1067,12 @@ def generate(self, parallel = False, separate = None, directory = '.', main = Fa
             chunk_accessors.extend([Accessor(".%s" % name.lower(), "->chunk_%s" % rule.name, name, rule) for rule in values])
 
             value_data = """
-struct %s{
-%s
+struct %(name)s{
+%(items)s
 };
-""" % (name, indent("\n".join(["Result chunk_%s;" % rule.name for rule in values])))
+""" % {'name': name,
+       'items': indent("\n".join(["Result chunk_%s;" % rule.name for rule in values]))}
+
             all.append(name)
             pre += value_data
 
@@ -978,27 +1087,32 @@ struct %s{
         hit_count = "0"
 
         data = """
-%s
+%(pre)s
 struct Column{
-Column():
-    %s{
-}
+    Column():
+    %(initializers)s{
+    }
 
-%s
+    %(members)s
 
-int hitCount(){
-    return %s;
-}
+    int hitCount(){
+        return %(hit-count)s;
+    }
 
-int maxHits(){
-    return %s;
-}
+    int maxHits(){
+        return %(rules)s;
+    }
 
-~Column(){
-    %s
-}
+    ~Column(){
+        %(deletes)s
+    }
 };
-""" % (pre, indent(indent("\n,".join(["%s(0)" % x.lower() for x in all]))), indent("\n".join(["%s * %s;" % (x, x.lower()) for x in all])), hit_count, len(rules), indent(indent("\n".join(["delete %s;" % x.lower() for x in all]))))
+""" % {'pre': pre,
+       'initializers': indent(indent("\n,".join(["%s(0)" % x.lower() for x in all]))),
+       'members': indent("\n".join(["%s * %s;" % (x, x.lower()) for x in all])),
+       'hit-count': hit_count,
+       'rules': len(rules),
+       'deletes': indent(indent("\n".join(["delete %s;" % x.lower() for x in all])))}
 
         return data
 
@@ -1014,10 +1128,99 @@ int maxHits(){
     namespace_start = self.cppNamespaceStart()
     namespace_end = self.cppNamespaceEnd()
 
-    def singleFile():
-        data = """
-%s
+    maybe_state_stuff = ""
+    if self.transactions:
+        maybe_state_stuff = state_stuff
 
+    maybe_state_id = ""
+    if self.transactions:
+        maybe_state_id = 'State * state;';
+
+    def singleFile():
+        result_strings = {'initialize-state': '',
+                          'copy-state-r': '',
+                          'assign-state-r': '',
+                          'get/set-state': '',
+                          'state-id': ''}
+        if self.transactions:
+            result_strings = {'initialize-state': ',\n    stateId(0)',
+                              'copy-state-r': ',\n    stateId(r.stateId)',
+                              'assign-state-r': 'stateId = r.stateId;',
+                              'get/set-state': indent("""State * getState() const {
+    return state;
+}
+
+void setState(State * state){
+    this->state = state;
+}
+                              """),
+                              'state-id': maybe_state_id
+                             }
+
+        result_class = result_code % result_strings
+
+        current_state = ''
+        if self.transactions:
+            current_state = indent("""State * currentState;
+unsigned int stateId;""")
+
+        state_functions = ''
+        if self.transactions:
+            state_functions = indent("""
+State * getCurrentState(){
+    return currentState;
+}
+
+State * startTransaction(){
+    State * newState = State::createState(current);
+    current->setNextState(newState);
+    return newState;
+}
+
+void abortTransaction(State * state){
+    State * parent = state->getParent();
+    /* The state should always have a parent because the top most state
+     * will never be aborted.
+     */
+    if (parent != NULL){
+        parent->setNextState(NULL);
+        currentState = parent;
+    }
+}
+
+void commitTransaction(State * state){
+}
+
+unsigned int newId(){
+    unsigned int use = counter;
+    counter += 1;
+    return use;
+}""")
+                                                   
+        maybe_initialize_state_counter = ''
+        if self.transactions:
+            maybe_initialize_state_counter = indent("""stateId = 0;
+    currentState = State::createState(NULL);""")
+
+        strings = {'top-code': top_code,
+                   'namespace-start': namespace_start,
+                   'start-code': start_cpp_code % {'result-class': result_class,
+                                                   'chunks': chunks,
+                                                   'initialize-state-counter': maybe_initialize_state_counter,
+                                                   'state-class': maybe_state_stuff,
+                                                   'state-functions': state_functions,
+                                                   'current-state': current_state,
+                                                   'error-size': self.error_size},
+                   'rules': '\n'.join([prototype(rule) for rule in use_rules]),
+                   'more-code': more_code,
+                   'generated': '\n'.join([rule.generate_cpp(self, findAccessor(rule)) for rule in use_rules]),
+                   'start': self.start,
+                   'namespace-end': namespace_end}
+
+        data = """
+%(top-code)s
+
+#include <stdint.h>
 #include <list>
 #include <string>
 #include <vector>
@@ -1027,58 +1230,58 @@ int maxHits(){
 #include <iostream>
 #include <string.h>
 
-%s
-%s
+%(namespace-start)s
+%(start-code)s
 
 std::string ParseException::getReason() const {
-return message;
+    return message;
 }
 
 int ParseException::getLine() const {
-return line;
+    return line;
 }
 
 int ParseException::getColumn() const {
-return column;
+    return column;
 }
 
 Result errorResult(-1);
 
-%s
+%(rules)s
 
-%s
+%(more-code)s
 
-%s
+%(generated)s
 
 static const void * doParse(Stream & stream, bool stats, const std::string & context){
-errorResult.setError();
-Result done = rule_%s(stream, 0);
-if (done.error()){
-    stream.reportError(context);
-}
-if (stats){
-    stream.printStats();
-}
-return done.getValues().getValue();
+    errorResult.setError();
+    Result done = rule_%(start)s(stream, 0);
+    if (done.error()){
+        stream.reportError(context);
+    }
+    if (stats){
+        stream.printStats();
+    }
+    return done.getValues().getValue();
 }
 
 const void * parse(const std::string & filename, bool stats = false){
-Stream stream(filename);
-return doParse(stream, stats, filename);
+    Stream stream(filename);
+    return doParse(stream, stats, filename);
 }
 
 const void * parse(const char * in, bool stats = false){
-Stream stream(in);
-return doParse(stream, stats, "memory");
+    Stream stream(in);
+    return doParse(stream, stats, "memory");
 }
 
 const void * parse(const char * in, int length, bool stats = false){
-Stream stream(in, length);
-return doParse(stream, stats, "memory");
+    Stream stream(in, length);
+    return doParse(stream, stats, "memory");
 }
 
-%s
-    """ % (top_code, namespace_start, start_cpp_code % (chunks, self.error_size), '\n'.join([prototype(rule) for rule in use_rules]), more_code, '\n'.join([rule.generate_cpp(self, findAccessor(rule)) for rule in use_rules]), self.start, namespace_end)
+%(namespace-end)s
+    """ % strings
         return data
 
     def multipleFiles(name):
@@ -1147,30 +1350,30 @@ return message;
 Result errorResult(-1);
 
 static const void * doParse(Stream & stream, bool stats, const std::string & context){
-errorResult.setError();
-Result done = rule_%s(stream, 0);
-if (done.error()){
-    stream.reportError(context);
-}
-if (stats){
-    stream.printStats();
-}
-return done.getValues().getValue();
+    errorResult.setError();
+    Result done = rule_%s(stream, 0);
+    if (done.error()){
+        stream.reportError(context);
+    }
+    if (stats){
+        stream.printStats();
+    }
+    return done.getValues().getValue();
 }
 
 const void * parse(const std::string & filename, bool stats = false){
-Stream stream(filename);
-return doParse(stream, stats, filename);
+    Stream stream(filename);
+    return doParse(stream, stats, filename);
 }
 
 const void * parse(const char * in, bool stats = false){
-Stream stream(in);
-return doParse(stream, stats, "memory");
+    Stream stream(in);
+    return doParse(stream, stats, "memory");
 }
 
 const void * parse(const char * in, int length, bool stats = false){
-Stream stream(in, length);
-return doParse(stream, stats, "memory");
+    Stream stream(in, length);
+    return doParse(stream, stats, "memory");
 }
 
 %s
