@@ -503,7 +503,9 @@ FirstParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers
 			    
 			    value = p;
 			}}
-			| FP_Parameter Spacing COMMA Spacing
+			| fp_param:FP_Parameter Spacing COMMA Spacing {{
+			    value = fp_param;
+			}}
 
 Arrow_or_Dot	= "->" | "."
 
@@ -679,7 +681,9 @@ LastParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 			
 			    value = p;
 			}}
-			| FP_Parameter Spacing
+			| fp_param:FP_Parameter Spacing {{
+			    value = fp_param;
+			}}
 
 FP_LastParam	=	t:Type_form s:Specification? pointers:star* Spacing {{
 			    FPParameter *fp = new FPParameter((Type*) t.getValue(), count_pointers(pointers));
