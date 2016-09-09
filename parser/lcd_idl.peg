@@ -1259,7 +1259,7 @@ signed_type	=	"int" Spacing {{
 			    printf("matched int type\n");
 			    value = getType("int");
 			}}
-			| "char" {{ 
+			| "char" Spacing {{
 			    value = getType("char"); 
 			}}   
 			| "capability" Spacing {{ 
