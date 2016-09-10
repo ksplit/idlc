@@ -177,11 +177,10 @@ int main(int argc, char ** argv)
 	}
       return 0;
     }
-  catch (const Parser::ParseException e)
+  catch (const Parser::ParseException & e)
     {
-      printf("caught a parser exception\n");
-      //  printf("e is: %s\n", e.getReason().c_str());
-      
+      std::cerr << "\n\nALERT!!! - Caught parser exception" << std::endl;
+      std::cerr << e.getReason() << std::endl;
       exit(0);
     }
 }
