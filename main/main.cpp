@@ -99,7 +99,7 @@ int main(int argc, char ** argv)
 
 	    char* of_name = (char*) malloc(sizeof(char)*(strlen(m->identifier())+10));
 	    std::ostringstream total;
-	    total << m->identifier() << "_server.c";
+	    total << m->identifier() << "_callee.c";
 	    strncpy(of_name, total.str().c_str(), strlen(m->identifier())+10);
 
 	    FILE *of = fopen(of_name, "w");
@@ -154,7 +154,7 @@ int main(int argc, char ** argv)
 
 	    char* of_name = (char*) malloc(sizeof(char)*(strlen(m->identifier())+10));
 	    std::ostringstream total;
-	    total << m->identifier() << "_client.c";
+	    total << m->identifier() << "_caller.c";
 	    strncpy(of_name, total.str().c_str(), strlen(m->identifier())+10);
 
 	    FILE *of = fopen(of_name, "w");
