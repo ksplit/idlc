@@ -286,7 +286,13 @@ CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const char* 
 
   /* kzalloc structure */
   std::vector<CCSTAssignExpr*> kzalloc_args;
-  kzalloc_args.push_back(new CCSTUnaryExprSizeOf(access(v->container())));
+
+  TypeNameVisitor *worker = new TypeNameVisitor();
+  CCSTTypeName *type_name = v->container()->type()->accept(worker);
+
+  // For allocating memory for struct foo *foo1;
+  // Use sizeof(struct foo) instead of sizeof(foo1)
+  kzalloc_args.push_back(new CCSTUnaryExprSizeOf(type_name));
   kzalloc_args.push_back(new CCSTEnumConst("GFP_KERNEL"));
 
   /* this is ok because container is always a single pointer. */
