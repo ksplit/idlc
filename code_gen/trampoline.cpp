@@ -65,7 +65,6 @@ CCSTCompoundStatement* trampoline_function_body(Rpc* r)
   std::vector<CCSTStatement*> statements;
   
   /* start new function pointer declaration */
-
   std::vector<CCSTDecSpecifier*> new_fp_return_type = type2(r->return_variable()->type());
 
   /* loop through rpc parameters and add them to the parameters for the new fp*/
@@ -95,10 +94,13 @@ CCSTCompoundStatement* trampoline_function_body(Rpc* r)
   pointer_type_qualifier.push_back(volatile_t);
 
   std::vector<CCSTInitDeclarator*> new_fp_declaration;
-  new_fp_declaration.push_back(new CCSTDeclarator(0x0
-						  , new CCSTDirectDecParamTypeList(new CCSTDirectDecDec(new CCSTDeclarator(new CCSTPointer(pointer_type_qualifier)
-															   , new CCSTDirectDecId("new_fp"))) // todo
-										   , new CCSTParamList(func_pointer_params))));
+  new_fp_declaration.push_back(new CCSTDeclarator(NULL,
+				new CCSTDirectDecParamTypeList(
+				new CCSTDirectDecDec(
+				new CCSTDeclarator(
+				new CCSTPointer(pointer_type_qualifier),
+				new CCSTDirectDecId(fp_name(r->name())))),
+				new CCSTParamList(func_pointer_params))));
 
   declarations.push_back(new CCSTDeclaration(new_fp_return_type, new_fp_declaration));
   
@@ -117,7 +119,7 @@ CCSTCompoundStatement* trampoline_function_body(Rpc* r)
 
   // set new function pointer equal to glue code for function pointer
   // new_filep = new_file;
-  statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("new_fp"), equals(), new CCSTPrimaryExprId(r->name()))));
+  statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId(fp_name(r->name())), equals(), new CCSTPrimaryExprId(r->name()))));
 
   // return call from new function pointer
   std::vector<CCSTAssignExpr*> new_fp_args;
@@ -154,7 +156,7 @@ CCSTCompoundStatement* trampoline_function_body(Rpc* r)
 
   
 
-  statements.push_back(new CCSTReturn(function_call("new_fp", new_fp_args)));
+  statements.push_back(new CCSTReturn(function_call(fp_name(r->name()), new_fp_args)));
 
   return new CCSTCompoundStatement(declarations, statements);
 }
