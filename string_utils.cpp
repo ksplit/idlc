@@ -127,6 +127,15 @@ const char* parameter_name(const char* name)
 }
 
 /*
+ * returns a new string with _p on the end.
+ */
+const char* fp_name(const char* name)
+{
+  return new_name(name, "_fp");
+}
+
+
+/*
  * returns a new string with _container on the end.
  */
 const char* trampoline_func_name(const char* name)

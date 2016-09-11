@@ -17,6 +17,7 @@ const char* group_name(const char* name);
 const char* glue_name(const char* name);
 const char* hidden_args_name(const char* name);
 const char* parameter_name(const char* name);
+const char* fp_name(const char* name);
 const char* trampoline_func_name(const char* name);
 const char* string_to_upper(const char* str);
 const char* append_strings(const char* delimiter, std::vector<const char*> strs);
