@@ -60,9 +60,7 @@ void CCSTFuncDef::write(FILE *f, int indent)
   fprintf(f, "\n");
   fprintf(f, "{\n");
   this->body_->write(f, indent+1);
-  fprintf(f, "\n");
-  fprintf(f, "}");
-  fprintf(f, "\n");
+  fprintf(f, "\n}\n\n");
 }
 
 CCSTDeclaration::CCSTDeclaration(std::vector<CCSTDecSpecifier*> specifier, std::vector<CCSTInitDeclarator*> decs)
@@ -186,12 +184,12 @@ void CCSTStructUnionSpecifier::write(FILE *f, int indent)
     case struct_t:
       {
 	//  <struct-or-union> <identifier> what about this case
-	fprintf(f, "%s %s", "struct", this->id_);
+	fprintf(f, "%s%s %s ", indentation(indent), "struct", this->id_);
 	break;
       }
     case union_t:
       {
-	fprintf(f, "%s %s", "union", this->id_);
+	fprintf(f, "%s%s %s ", indentation(indent), "union", this->id_);
 	break;
       }
     default:
@@ -2122,7 +2120,7 @@ void CCSTMacro::write(FILE *f, int indent)
 #define INDENT_LEVEL_MAX	9
 
 const char* indents[INDENT_LEVEL_MAX] = {
-" ",			    //0
+"",			    //0
 "\t",			    //1
 "\t\t",			    //2
 "\t\t\t",		    //3
