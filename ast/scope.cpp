@@ -95,6 +95,10 @@ GlobalScope::GlobalScope()
   this->type_definitions_.insert(std::pair<std::string, Type*>("thc_channel",
 			  new ProjectionType("thc_channel", "thc_channel", thc_channel_fields)));
 
+  // struct trampoline_hidden_args
+  std::vector<ProjectionField*> trampoline_hidden_args_fields;
+  this->type_definitions_.insert(std::pair<std::string, Type*>("trampoline_hidden_args",
+			  new ProjectionType("trampoline_hidden_args", "trampoline_hidden_args", trampoline_hidden_args_fields)));
 }
 
 GlobalScope* GlobalScope::instance()
