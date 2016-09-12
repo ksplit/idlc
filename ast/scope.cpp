@@ -47,9 +47,7 @@ GlobalScope::GlobalScope()
   // cptr_t
   std::vector<ProjectionField*> fields2;
   ProjectionField *cptr = new ProjectionField(this->lookup("unsigned long", &err), "cptr", 0); // unsigned long cptr;
-  if(err == 0) {
-    printf("COULD NOT FIND UNSIGNED LONG\N");
-  }
+
   cptr->set_in(true);
   cptr->set_out(true);
   fields2.push_back(cptr);
