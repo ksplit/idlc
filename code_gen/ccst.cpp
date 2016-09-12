@@ -45,7 +45,6 @@ void CCSTFuncDef::write(FILE *f, int indent)
     }
   this->ret_->write(f, 0);
 
-
     for(std::vector<CCSTMacro*>::iterator it = attributes_.begin(); it != attributes_.end(); ++it) {
       CCSTMacro *mac = *it;
       mac->write(f, 0);
@@ -2084,7 +2083,7 @@ void CCSTReturn::write(FILE *f, int indent)
     }
   else
     {
-      fprintf(f, "%sreturn", indentation(indent));
+      fprintf(f, "%sreturn ", indentation(indent));
       this->expr_->write(f, 0);
       fprintf(f, ";\n");
     }
@@ -2094,7 +2093,7 @@ void CCSTMacro::write(FILE *f, int indent)
 {
   std::vector<CCSTAssignExpr*> args = this->data_args;
 
-  fprintf(f, "%s(", this->macro_name->c_str());
+  fprintf(f, "%s%s(", indentation(indent), this->macro_name->c_str());
 
   if(!args.empty())
     {
