@@ -599,8 +599,11 @@ void ProjectionType::create_trampoline_structs(LexicalScope *ls)
       int err;
       trampoline_fields.push_back(new ProjectionField(ls->lookup(container_name(this->name()), &err)
 						      ,"container", 1)); // container field
+      trampoline_fields.push_back(new ProjectionField(ls->lookup("void", &err), "struct_container", 1));
       trampoline_fields.push_back(new ProjectionField(ls->lookup("cspace", &err), "cspace", 1)); // dstore field
       trampoline_fields.push_back(new ProjectionField(ls->lookup("lcd_trampoline_handle", &err), "t_handle", 1)); // lcd_trampoline handle field
+      trampoline_fields.push_back(new ProjectionField(ls->lookup("thc_channel", &err), "async_chnl", 1));
+      trampoline_fields.push_back(new ProjectionField(ls->lookup("cptr_t", &err), "sync_ep", 0));
 
       const char* trampoline_struct_name = hidden_args_name(f->name());
       ls->insert(trampoline_struct_name, new ProjectionType(trampoline_struct_name, trampoline_struct_name, trampoline_fields));
