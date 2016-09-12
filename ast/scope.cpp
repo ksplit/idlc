@@ -89,6 +89,12 @@ GlobalScope::GlobalScope()
   std::vector<ProjectionField*> lcd_sync_channel_group_fields;
   this->type_definitions_.insert(std::pair<std::string, Type*>("lcd_sync_channel_group"
 							       , new ProjectionType("lcd_sync_channel_group", "lcd_sync_channel_group", lcd_sync_channel_group_fields)));
+
+  // struct thc_channel
+  std::vector<ProjectionField*> thc_channel_fields;
+  this->type_definitions_.insert(std::pair<std::string, Type*>("thc_channel",
+			  new ProjectionType("thc_channel", "thc_channel", thc_channel_fields)));
+
 }
 
 GlobalScope* GlobalScope::instance()
