@@ -289,7 +289,7 @@ CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const char* 
 
   TypeNameVisitor *worker = new TypeNameVisitor();
   CCSTTypeName *type_name = v->container()->type()->accept(worker);
-
+  delete worker;
   // For allocating memory for struct foo *foo1;
   // Use sizeof(struct foo) instead of sizeof(foo1)
   kzalloc_args.push_back(new CCSTUnaryExprSizeOf(type_name));
