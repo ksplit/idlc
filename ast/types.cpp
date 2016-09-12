@@ -1,5 +1,8 @@
 #include "lcd_ast.h"
 #include "utils.h"
+#include <iostream>
+
+using namespace std;
 
 FloatType::FloatType()
 {
@@ -189,22 +192,15 @@ Rpc* Function::to_rpc(ProjectionType *pt)
   std::vector<Parameter*> new_parameters;
   // new_parameters.insert(new_parameters.end(), this->parameters_.begin(), this->parameters_.end());
   int err;
-  Type *cspace = this->current_scope_->lookup("cspace", &err);
-  if(cspace == 0x0) {
-    printf("Error: dstore is not in scope\n");
-  }
-  new_parameters.push_back(new Parameter(cspace, "cspace", 1));
 
-  const char* c_name = container_name(pt->name());
-  Type *container = this->current_scope_->lookup(c_name, &err);
-  if(container == 0x0) {
-    printf("Error: container is not in scope\n");
+  Type *tramp_hidden_args = this->current_scope_->lookup("trampoline_hidden_args", &err);
+
+  if (!tramp_hidden_args) {
+    cerr << "Error: trampoline_hidden_args is not in scope\n";
   }
 
-  Parameter *container_param = new Parameter(container, c_name, 1);
-  container_param->set_in(true);
+  new_parameters.push_back(new Parameter(tramp_hidden_args, "hidden_args", 1));
 
-  new_parameters.push_back(container_param);
 
   Rpc* tmp = new Rpc(this->return_var_, this->identifier_, this->parameters_, this->current_scope_);
   tmp->set_function_pointer_defined(true);

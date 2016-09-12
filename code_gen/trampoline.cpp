@@ -133,28 +133,7 @@ CCSTCompoundStatement* trampoline_function_body(Rpc* r)
   int err;
   ProjectionType *hidden_args_param = dynamic_cast<ProjectionType*>(r->current_scope()->lookup(hidden_args_name(r->name()), &err));
 
-  // create a tmp variable to do access.
-  Parameter *tmp_hidden_args = new Parameter(hidden_args_param, "hidden_args", 1);
-
-  Assert(hidden_args_param != 0x0, "Error: dynamic cast to Projection type failed!\n");
-
-  ProjectionField *cspace_field = hidden_args_param->get_field("cspace");
-  if(cspace_field != 0x0) {
-    Variable *save_accessor = cspace_field->accessor();
-    cspace_field->set_accessor(tmp_hidden_args);
-    new_fp_args.push_back(access(cspace_field));
-    cspace_field->set_accessor(save_accessor);
-  }
-
-  ProjectionField *container_field = hidden_args_param->get_field("container");
-  if(container_field != 0x0) {
-    Variable *save_accessor = container_field->accessor();
-    container_field->set_accessor(tmp_hidden_args);
-    new_fp_args.push_back(access(container_field));
-    container_field->set_accessor(save_accessor);
-  }
-
-  
+  new_fp_args.push_back(new CCSTPrimaryExprId("hidden_args"));
 
   statements.push_back(new CCSTReturn(function_call(fp_name(r->name()), new_fp_args)));
 
