@@ -1,5 +1,6 @@
 start-symbol: File
 
+
 include: {{
 #include "lcd_ast.h"
 #include "error.h"
@@ -10,8 +11,54 @@ include: {{
 }}
 
 code: {{
+
+typedef enum {
+    IN = 0x1,
+    OUT = 0x2,
+    ALLOC_CALLER = 0x4,
+    ALLOC_CALLEE = 0x8,
+    DEALLOC_CALLER = 0x10,
+    DEALLOC_CALLEE = 0x20,
+    BIND_CALLER = 0x40,
+    BIND_CALLEE = 0x80,
+} spec_t;
+
 LexicalScope *current_scope;
 LexicalScope *current_module_scope;
+
+void set_specs(Variable &v, const Value s)
+{
+    // return if NULL
+    if (!s.getValue())
+        return;
+
+    int spec = *((int*) s.getValue());
+
+    if (spec & IN) {
+        v.set_in(true);
+    }
+    if (spec & OUT) {
+        v.set_out(true);
+    }
+    if (spec & ALLOC_CALLER) {
+        v.set_alloc_caller(true);
+    }
+    if (spec & ALLOC_CALLEE) {
+        v.set_alloc_callee(true);
+    }
+    if (spec & DEALLOC_CALLER) {
+        v.set_dealloc_caller(true);
+    }
+    if (spec & DEALLOC_CALLEE) {
+        v.set_dealloc_callee(true);
+    }
+    if (spec & BIND_CALLER) {
+        v.set_bind_caller(true);
+    }
+    if (spec & BIND_CALLEE) {
+        v.set_bind_callee(true);
+    }
+}
 
 const char* container_name(const char* name)
 {
@@ -356,38 +403,7 @@ FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* 
 			    	     	       		, *params, get_current_scope());
 			    
 			    Parameter *_p = new Parameter(fp, (char *) id.getValue(), 1);
-
-			    if (s.getValue() != 0x0) {
-			        std::vector<bool>* specs = (std::vector<bool>*) s.getValue();
-			        if(specs->at(1)) {
-			            _p->set_out(true);
-			    	} if(specs->at(2)) {
-			            _p->set_in(true);
-			    	} if(specs->at(4)) {
-			            _p->set_alloc_caller(true);
-			    	} if(specs->at(5)) {
-			            _p->set_alloc_callee(true);
-			    	} if(specs->at(6) || specs->at(3)) {
-			            _p->set_alloc_callee(true);
-				    _p->set_alloc_caller(true);
-			    	} if(specs->at(7) || specs->at(10)) {
-				    _p->set_dealloc_callee(true);
-				    _p->set_dealloc_caller(true);
-				} if (specs->at(8)) {
-				    _p->set_dealloc_caller(true);
-				} if (specs->at(9)) {
-				    _p->set_dealloc_callee(true);
-				} if (specs->at(11)) {
-				    _p->set_bind_caller(true);
-				    _p->set_bind_callee(true);
-				} if (specs->at(12)) {
-				    _p->set_bind_callee(true);
-				} if (specs->at(13)) {
-				    _p->set_bind_caller(true);
-				}
-				
-			    }
-			    
+			    set_specs(*_p, s);
 			    set_current_scope(get_current_scope()->outer_scope());
 			    value = _p;
 			    
@@ -400,34 +416,7 @@ FirstParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers
 
 			    int p_count = count_pointers(pointers);
 			    Parameter *p = new Parameter(it, (char *) id.getValue(), p_count); 
-			    if (s.getValue() != 0x0) {
-			        std::vector<bool>* specs = (std::vector<bool>*) s.getValue();
-			        if(specs->at(1)) {
-			            p->set_out(true);
-			    	} if(specs->at(2)) {
-			            p->set_in(true);
-			    	} if(specs->at(4)) {
-			            p->set_alloc_caller(true);
-			    	} if(specs->at(5)) {
-			            p->set_alloc_callee(true);
-			    	} if(specs->at(6) || specs->at(3)) {
-			            p->set_alloc_callee(true);
-				    p->set_alloc_caller(true);
-			    	} if(specs->at(7) || specs->at(10)) {
-				    p->set_dealloc_callee(true);
-				    p->set_dealloc_caller(true);
-				} if (specs->at(8)) {
-				    p->set_dealloc_caller(true);
-				} if (specs->at(9)) {
-				    p->set_dealloc_callee(true);
-				} if (specs->at(11)) {
-				    p->set_bind_caller(true);	
-				    p->set_bind_callee(true);
-				} if (specs->at(12)) {
-				    p->set_bind_callee(true);
-				} if (specs->at(13)) {
-				    p->set_bind_caller(true);
-				}
+			    set_specs(*p, s);
 
 				if (p->alloc_callee()) {
 				   p->set_in(true);
@@ -447,7 +436,6 @@ FirstParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers
 				} if (p->bind_caller()) {
 				   p->set_in(true);
 				}
-			    }
 			    
 			    value = p;    
 			}}	
@@ -455,35 +443,7 @@ FirstParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers
  		|	  t:Type_form s:Specification? pointers:star* Spacing id:Identifier Spacing COMMA Spacing {{
 			    int p_count = count_pointers(pointers);
 			    Parameter *p = new Parameter((Type *) t.getValue(), (char *) id.getValue(), p_count); 
-			    
-			    if (s.getValue() != 0x0) {
-			        std::vector<bool>* specs = (std::vector<bool>*) s.getValue();
-			        if(specs->at(1)) {
-			            p->set_out(true);
-			    	} if(specs->at(2)) {
-			            p->set_in(true);
-			    	} if(specs->at(4)) {
-			            p->set_alloc_caller(true);
-			    	} if(specs->at(5)) {
-			            p->set_alloc_callee(true);
-			    	} if(specs->at(6) || specs->at(3)) {
-			            p->set_alloc_callee(true);
-				    p->set_alloc_caller(true);
-			    	} if(specs->at(7) || specs->at(10)) {
-				    p->set_dealloc_callee(true);
-				    p->set_dealloc_caller(true);
-				} if (specs->at(8)) {
-				    p->set_dealloc_caller(true);
-				} if (specs->at(9)) {
-				    p->set_dealloc_callee(true);
-				} if (specs->at(11)) {
-				    p->set_bind_caller(true);
-				    p->set_bind_callee(true);
-				} if (specs->at(12)) {
-				    p->set_bind_callee(true);	
-				} if (specs->at(13)) {
-				    p->set_bind_caller(true);
-				}
+			    set_specs(*p, s);
 
 				if (p->alloc_callee()) {
 				   p->set_in(true);
@@ -499,7 +459,6 @@ FirstParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers
 				} if (p->bind_caller()) {
 				   p->set_in(true);
 				}
-			    }
 			    
 			    value = p;
 			}}
@@ -519,34 +478,7 @@ Access		= a1:Access_Start a2:Access_End* {{
 
 FP_FirstParam	=	t:Type_form s:Specification? pointers:star* Spacing COMMA Spacing {{
 			    FPParameter *fp = new FPParameter((Type*) t.getValue(), count_pointers(pointers));
-			    if (s.getValue() != 0x0) {
-			        std::vector<bool>* specs = (std::vector<bool>*) s.getValue();
-			        if(specs->at(1)) {
-			            fp->set_out(true);
-			    	} if(specs->at(2)) {
-			            fp->set_in(true);
-			    	} if(specs->at(4)) {
-			            fp->set_alloc_caller(true);
-			    	} if(specs->at(5)) {
-			            fp->set_alloc_callee(true);
-			    	} if(specs->at(6) || specs->at(3)) {
-			            fp->set_alloc_callee(true);
-				    fp->set_alloc_caller(true);
-			    	} if(specs->at(7) || specs->at(10)) {
-				    fp->set_dealloc_callee(true);
-				    fp->set_dealloc_caller(true);
-				} if (specs->at(8)) {
-				    fp->set_dealloc_caller(true);
-				} if (specs->at(9)) {
-				    fp->set_dealloc_callee(true);
-				} if (specs->at(11)) {
-				    fp->set_bind_caller(true);	
-				    fp->set_bind_callee(true);
-				} if (specs->at(12)) {
-				    fp->set_bind_callee(true);
-				} if (specs->at(13)) {
-				    fp->set_bind_caller(true);
-				}
+			    set_specs(*fp, s);
 
 				if (fp->alloc_callee()) {
 				   fp->set_in(true);
@@ -562,7 +494,6 @@ FP_FirstParam	=	t:Type_form s:Specification? pointers:star* Spacing COMMA Spacin
 				} if (fp->bind_caller()) {
 				   fp->set_in(true);
 				}
-			    }
 			    
 			    value = fp;  
 			}}
@@ -582,34 +513,7 @@ LastParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 
 			    int p_count = count_pointers(pointers);
 			    Parameter *p = new Parameter(it, (char *) id.getValue(), p_count); 
-			    if (s.getValue() != 0x0) {
-			        std::vector<bool>* specs = (std::vector<bool>*) s.getValue();
-			        if(specs->at(1)) {
-			            p->set_out(true);
-			    	} if(specs->at(2)) {
-			            p->set_in(true);
-			    	} if(specs->at(4)) {
-			            p->set_alloc_caller(true);
-			    	} if(specs->at(5)) {
-			            p->set_alloc_callee(true);
-			    	} if(specs->at(6) || specs->at(3)) {
-			            p->set_alloc_callee(true);
-				    p->set_alloc_caller(true);
-			    	} if(specs->at(7) || specs->at(10)) {
-				    p->set_dealloc_callee(true);
-				    p->set_dealloc_caller(true);
-				} if (specs->at(8)) {
-				    p->set_dealloc_caller(true);
-				} if (specs->at(9)) {
-				    p->set_dealloc_callee(true);
-				} if (specs->at(11)) {
-				    p->set_bind_caller(true);
-				    p->set_bind_callee(true);
-				} if (specs->at(12)) {
-				    p->set_bind_callee(true);
-				} if (specs->at(13)) {
-				    p->set_bind_caller(true);
-				}
+			    set_specs(*p, s);
 
 				if (p->alloc_callee()) {
 				   p->set_in(true);
@@ -625,7 +529,6 @@ LastParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 				} if (p->bind_caller()) {
 				   p->set_in(true);
 				}
-			    }
 			    
 			    value = p;    
 			}}	
@@ -633,35 +536,7 @@ LastParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
  		|   t:Type_form s:Specification? pointers:star* Spacing id:Identifier Spacing {{
 			    int p_count = count_pointers(pointers);
 			    Parameter *p = new Parameter((Type *) t.getValue(), (char *) id.getValue(), p_count); 
-			    			    
-			    if (s.getValue() != 0x0) {
-			        std::vector<bool>* specs = (std::vector<bool>*) s.getValue();
-			    	if(specs->at(1)) {
-			            p->set_out(true);
-			    	} if(specs->at(2)) {
-			            p->set_in(true);
-			    	} if(specs->at(4)) {
-			            p->set_alloc_caller(true);
-			    	} if(specs->at(5)) {
-			            p->set_alloc_callee(true);
-			    	} if(specs->at(6) || specs->at(3)) {
-			            p->set_alloc_callee(true);
-				    p->set_alloc_caller(true);
-			    	} if(specs->at(7) || specs->at(10)) {
-				    p->set_dealloc_callee(true);
-				    p->set_dealloc_caller(true);
-				} if (specs->at(8)) {
-				    p->set_dealloc_caller(true);
-				} if (specs->at(9)) {
-				    p->set_dealloc_callee(true);
-				} if (specs->at(11)) {
-				    p->set_bind_caller(true);
-				    p->set_bind_callee(true);
-				} if (specs->at(12)) {
-				    p->set_bind_callee(true);
-				} if (specs->at(13)) {
-				    p->set_bind_caller(true);
-				}
+			    set_specs(*p, s);
 
 				if (p->alloc_callee()) {
 				   p->set_in(true);
@@ -677,7 +552,6 @@ LastParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 				} if (p->bind_caller()) {
 				   p->set_in(true);
 				}
-			    }
 			
 			    value = p;
 			}}
@@ -687,34 +561,7 @@ LastParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 
 FP_LastParam	=	t:Type_form s:Specification? pointers:star* Spacing {{
 			    FPParameter *fp = new FPParameter((Type*) t.getValue(), count_pointers(pointers));
-			    if(s.getValue() != 0x0) {
-			        std::vector<bool>* specs = (std::vector<bool>*) s.getValue();
-			        if(specs->at(1)) {
-			            fp->set_out(true);
-			    	} if(specs->at(2)) {
-			            fp->set_in(true);
-			    	} if(specs->at(4)) {
-			            fp->set_alloc_caller(true);
-			    	} if(specs->at(5)) {
-			            fp->set_alloc_callee(true);
-			    	} if(specs->at(6) || specs->at(3)) {
-			            fp->set_alloc_callee(true);
-				    fp->set_alloc_caller(true);
-			    	} if(specs->at(7) || specs->at(10)) {
-				    fp->set_dealloc_callee(true);
-				    fp->set_dealloc_caller(true);
-				} if (specs->at(8)) {
-				    fp->set_dealloc_caller(true);
-				} if (specs->at(9)) {
-				    fp->set_dealloc_callee(true);
-				} if (specs->at(11)) {
-				    fp->set_bind_caller(true);
-				    fp->set_bind_callee(true);
-				} if (specs->at(12)) {
-				    fp->set_bind_callee(true);
-				} if (specs->at(13)) {
-				    fp->set_bind_caller(true);
-				}
+			    set_specs(*fp, s);
 
 				if (fp->alloc_callee()) {
 				   fp->set_in(true);
@@ -730,7 +577,6 @@ FP_LastParam	=	t:Type_form s:Specification? pointers:star* Spacing {{
 				} if (fp->bind_caller()) {
 				   fp->set_in(true);
 				}
-			    }
 
 			    value = fp;
 			}}
@@ -945,65 +791,54 @@ Proj_type	=  	"struct" Space+ id:Identifier Spacing {{
 			value = id;}}
 
 Keyword		=     	"out" {{ 
-			    int * x = (int *) malloc(sizeof(int));
-			    *x = 1;
+			    int * x = new int(OUT);
 			    value = x; 
 			}}
 			| "in" {{ 
-			    int * x = (int *) malloc(sizeof(int));
-			    *x = 2; 
+			    int * x = new int(IN);
 			    value = x; 
 			}}
 			| "alloc" Spacing OPEN Spacing "caller" Spacing CLOSE {{
-			    int *x = (int*) malloc(sizeof(int));
-			    *x = 4;
+			    int *x = new int(ALLOC_CALLER);
 			    value = x;
 			}}
 			| "alloc" Spacing OPEN Spacing "callee" Spacing CLOSE {{
-			    int *x = (int*) malloc(sizeof(int));
-			    *x = 5;
+			    int *x = new int(ALLOC_CALLEE);
 			    value = x;
 			}}
 			| "alloc" {{
-			    int *x = (int *) malloc(sizeof(int));
-			    *x = 3;
+			    int *x = new int(ALLOC_CALLER | ALLOC_CALLEE);
 			    value = x; 
 			}}
 			| "dealloc" Spacing OPEN Spacing "caller" Spacing CLOSE {{
-			    int *x = (int*) malloc(sizeof(int));
-			    *x = 8;
+			    int *x = new int(DEALLOC_CALLER);
 			    value = x;
 			}}
 			| "dealloc" Spacing OPEN Spacing "callee" Spacing CLOSE {{
-			    int *x = (int*) malloc(sizeof(int));
-			    *x = 9;
+			    int *x = new int(DEALLOC_CALLEE);
 			    value = x;
 			}}
 			| "dealloc" {{
-			    int *x = (int*) malloc(sizeof(int));
-			    *x = 10;
+			    int *x = new int(DEALLOC_CALLEE | DEALLOC_CALLER);
 			    value = x;
-			}}	 
+			}}
 			| "bind" Spacing OPEN Spacing "callee" Spacing CLOSE {{
-			    int *x = (int*) malloc(sizeof(int));
-			    *x = 12;
+			    int *x = new int(BIND_CALLEE);
 			    value = x;
 			}}
 			| "bind" Spacing OPEN Spacing "caller" Spacing CLOSE {{
-			    int *x = (int*) malloc(sizeof(int));
-			    *x = 13;
+			    int *x = new int(BIND_CALLER);
 			    value = x;
 			}}
 			| "bind" {{
-			    int *x = (int*) malloc(sizeof(int));
-			    *x = 11;
-			    value = x;	
+			    int *x = new int(BIND_CALLER | BIND_CALLEE);
+			    value = x;
 			}}
-			
+
 Start		=	k:Keyword Spacing COMMA Spacing {{ value = k; }}
 
 Specification	=	OPENS Spacing s:Start* l:Last CLOSES Spacing {{
-			    std::vector<bool>* specs = new std::vector<bool>(14, false);
+			    unsigned int *spec = new unsigned int();
 			    for(Value::iterator it = s.getValues().begin(); it != s.getValues().end(); it ++) {		    
 			    const Value & v = *it;
 			    int* x = (int*) v.getValue();
@@ -1011,14 +846,14 @@ Specification	=	OPENS Spacing s:Start* l:Last CLOSES Spacing {{
 			        printf("error x is null\n");
 				exit(0);       
 			    }
-			    specs->at(*x) = true;
-			}
+			    *spec |= *x;
+			    }
 			    int * y = (int *) l.getValue();
 			    if(!y) { 
 			        printf("error y is null\n"); exit(0); 
 			    }
-			    specs->at(*y) = true;
-			    value = specs; 
+			    *spec |= *y;
+			    value = spec;
 			}}
 
 FirstProjArg    =      "channel" Space+ id:Identifier Spacing COMMA Spacing {{
@@ -1048,34 +883,7 @@ ProjArgs        =       f:FirstProjArg* l:LastProjArg {{
 ChanField       =       "channel" Space+ s:Specification? Spacing id:Identifier Spacing SEMI Spacing {{
 			    ProjectionField *pf = new ProjectionField(getType("cptr_t"), (char*) id.getValue(), 0);
 			    insertVariable(pf);
-			    if (s.getValue() != 0x0) {
-			        std::vector<bool>* specs = (std::vector<bool>*) s.getValue();
-			        if(specs->at(1)) {
-			            pf->set_out(true);
-			    	} if(specs->at(2)) {
-			            pf->set_in(true);
-			    	} if(specs->at(4)) {
-			            pf->set_alloc_caller(true);
-			    	} if(specs->at(5)) {
-			            pf->set_alloc_callee(true);
-			    	} if(specs->at(6) || specs->at(3)) {
-			            pf->set_alloc_callee(true);
-				    pf->set_alloc_caller(true);
-			    	} if(specs->at(7) || specs->at(10)) {
-				    pf->set_dealloc_callee(true);
-				    pf->set_dealloc_caller(true);
-				} if (specs->at(8)) {
-				    pf->set_dealloc_caller(true);
-				} if (specs->at(9)) {
-				    pf->set_dealloc_callee(true);
-				} if (specs->at(11)) {
-				    pf->set_bind_caller(true);
-				    pf->set_bind_callee(true);	
-				} if (specs->at(12)) {
-				    pf->set_bind_callee(true);
-				} if (specs->at(13)) {
-				    pf->set_bind_caller(true);
-				}
+			    set_specs(*pf, s);
 
 				if (pf->alloc_callee()) {
 				   pf->set_in(true);
@@ -1091,44 +899,15 @@ ChanField       =       "channel" Space+ s:Specification? Spacing id:Identifier 
 				} if (pf->bind_caller()) {
 				   pf->set_in(true);
 				}
-			    }
 
 			    value = pf;
 			}}
 
 ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:star* Spacing field_id:Identifier Spacing OPEN Spacing args:Arguments Spacing CLOSE Spacing SEMI Spacing {{
 			    std::vector<Variable*> *arguments = (std::vector<Variable*>*) args.getValue();
-		            InitializeType *it = new InitializeType(getType((char*) id.getValue()), *arguments);
+	            InitializeType *it = new InitializeType(getType((char*) id.getValue()), *arguments);
 			    ProjectionField *pf = new ProjectionField(it, (char*) field_id.getValue(), count_pointers(pointers));
-			    
-			    if (s.getValue() != 0x0) {
-			        std::vector<bool>* specs = (std::vector<bool>*) s.getValue();
-			        if(specs->at(1)) {
-			            pf->set_out(true);
-			    	} if(specs->at(2)) {
-			            pf->set_in(true);
-			    	} if(specs->at(4)) {
-			            pf->set_alloc_caller(true);
-			    	} if(specs->at(5)) {
-			            pf->set_alloc_callee(true);
-			    	} if(specs->at(6) || specs->at(3)) {
-			            pf->set_alloc_callee(true);
-				    pf->set_alloc_caller(true);
-			    	} if(specs->at(7) || specs->at(10)) {
-				    pf->set_dealloc_callee(true);
-				    pf->set_dealloc_caller(true);
-				} if (specs->at(8)) {
-				    pf->set_dealloc_caller(true);
-				} if (specs->at(9)) {
-				    pf->set_dealloc_callee(true);
-				} if (specs->at(11)) {
-				    pf->set_bind_caller(true);
-				    pf->set_bind_callee(true);	
-				} if (specs->at(12)) {
-				    pf->set_bind_callee(true);
-				} if (specs->at(13)) {
-				    pf->set_bind_caller(true);
-				}
+			    set_specs(*pf, s);
 
 				if (pf->alloc_callee()) {
 				   pf->set_in(true);
@@ -1144,7 +923,6 @@ ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 				} if (pf->bind_caller()) {
 				   pf->set_in(true);
 				}
-			    }
 
 			    std::vector<ProjectionField*> *fields = new std::vector<ProjectionField*>();
 			    fields->push_back(pf);
@@ -1154,35 +932,7 @@ ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 			| t:Type_form Spacing s:Specification? pointers:star* Spacing id:Identifier Spacing SEMI Spacing {{ 
 
 			    ProjectionField *pf = new ProjectionField((Type *) t.getValue(), (char *) id.getValue(), count_pointers(pointers));
-
-			    if (s.getValue() != 0x0) {
-			        std::vector<bool>* specs = (std::vector<bool>*) s.getValue();
-			        if(specs->at(1)) {
-			            pf->set_out(true);
-			    	} if(specs->at(2)) {
-			            pf->set_in(true);
-			    	} if(specs->at(4)) {
-			            pf->set_alloc_caller(true);
-			    	} if(specs->at(5)) {
-			            pf->set_alloc_callee(true);
-			    	} if(specs->at(6) || specs->at(3)) {
-			            pf->set_alloc_callee(true);
-				    pf->set_alloc_caller(true);
-			    	} if(specs->at(7) || specs->at(10)) {
-				    pf->set_dealloc_callee(true);
-				    pf->set_dealloc_caller(true);
-				} if (specs->at(8)) {
-				    pf->set_dealloc_caller(true);
-				} if (specs->at(9)) {
-				    pf->set_dealloc_callee(true);
-				} if (specs->at(11)) {
-				    pf->set_bind_caller(true);
-				    pf->set_bind_callee(true);	
-				} if (specs->at(12)) {
-				    pf->set_bind_callee(true);	
-				} if (specs->at(13)) {
-				    pf->set_bind_caller(true);
-				}
+			    set_specs(*pf, s);
 
 				if (pf->alloc_callee()) {
 				   pf->set_in(true);
@@ -1198,7 +948,6 @@ ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 				} if (pf->bind_caller()) {
 				   pf->set_in(true);
 				}
-			    }
 			    
 			    std::vector<ProjectionField*> *fields = new std::vector<ProjectionField*>();
 			    fields->push_back(pf);
@@ -1210,36 +959,7 @@ ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 			    Function *fp = new Function((char*) id.getValue(), new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
 			                               , *params, get_current_scope());
 			    ProjectionField *pf = new ProjectionField(fp, (char*) id.getValue(), 1);
-
-			    if (s.getValue() != 0x0) {
-			        std::vector<bool> *specs = (std::vector<bool>*) s.getValue();
-			        if(specs->at(1)) {
-			            pf->set_out(true);
-			    	} if(specs->at(2)) {
-			            pf->set_in(true);
-			    	} if(specs->at(4)) {
-			            pf->set_alloc_caller(true);
-			    	} if(specs->at(5)) {
-			            pf->set_alloc_callee(true);
-			    	} if(specs->at(6) || specs->at(3)) {
-			            pf->set_alloc_callee(true);
-				    pf->set_alloc_caller(true);
-			    	} if(specs->at(7) || specs->at(10)) {
-				    pf->set_dealloc_callee(true);
-				    pf->set_dealloc_caller(true);
-				} if (specs->at(8)) {
-				    pf->set_dealloc_caller(true);
-				} if (specs->at(9)) {
-				    pf->set_dealloc_callee(true);
-				} if (specs->at(11)) {
-				    pf->set_bind_caller(true);
-				    pf->set_bind_callee(true);
-				} if (specs->at(12)) {
-				    pf->set_bind_callee(true);
-				} if (specs->at(13)) {
-				    pf->set_bind_caller(true);
-				}
-			    }
+			    set_specs(*pf, s);
 
 			    std::vector<ProjectionField*> *fields = new std::vector<ProjectionField*>();
 			    fields->push_back(pf);
