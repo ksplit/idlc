@@ -8,12 +8,12 @@ std::vector<CCSTSpecifierQual*> type(Type *t)
   int num = t->num();
   switch(num)
     {
-    case 1:
+    case TYPEDEF_TYPE:
       {
 	specifier.push_back(new CCSTTypedefName(t->name()));
 	break;
       }
-    case 2: // int type case
+    case INTEGER_TYPE: // int type case
       {
 	IntegerType *it = dynamic_cast<IntegerType*>(t);
 	Assert(it != 0x0, "Error: dynamic cast failed!\n");
@@ -57,61 +57,61 @@ std::vector<CCSTSpecifierQual*> type(Type *t)
 	  }
 	return specifier;
       }
-    case 4: // struct
+    case PROJECTION_TYPE: // struct
       {
 	ProjectionType *pt = dynamic_cast<ProjectionType*>(t);
 	Assert(pt != 0x0, "Error: dynamic cast failed!\n");
 	specifier.push_back(new CCSTStructUnionSpecifier(struct_t, pt->real_type()));
 	return specifier;
       }
-    case 5:
+    case VOID_TYPE:
       {
 	// void type
 	// todo
 	specifier.push_back(new CCSTSimpleTypeSpecifier(void_t));
 	return specifier;
       }
-    case 6:
+    case CHANNEL_TYPE:
       {
 	// channel type
 	// cptr_t define this somewhere for easy change
 	specifier.push_back(new CCSTTypedefName("cptr_t"));
 	return specifier;
       }
-    case 7:
+    case FUNCTION_TYPE:
       {
 	// function pointer type
 	// todo
 	// where is support in grammar
 	break;
       }
-    case 8:
+    case UNRESOLVED_TYPE:
       {
 	Assert(1 == 0, "Error: unresolved type\n");
 	break;
       }
-    case 9: // struct
+    case PROJECTION_CONSTRUCTOR_TYPE: // struct
       {
 	ProjectionType *pt = dynamic_cast<ProjectionType*>(t);
 	Assert(pt != 0x0, "Error: dynamic cast failed!\n");
 	specifier.push_back(new CCSTStructUnionSpecifier(struct_t, pt->real_type()));
 	return specifier;
       }
-    case 10:
+    case INITIALIZE_TYPE:
       {
 	Assert(1 == 0, "Error: initialize type\n");
       }
-    case 11:
+    case BOOL_TYPE:
       {
 	specifier.push_back(new CCSTSimpleTypeSpecifier(bool_t));
 	return specifier;
       }
-    case 12:
+    case DOUBLE_TYPE:
       {
 	specifier.push_back(new CCSTSimpleTypeSpecifier(double_t));
 	return specifier;
       }
-    case 13:
+    case FLOAT_TYPE:
       {
 	specifier.push_back(new CCSTSimpleTypeSpecifier(float_t));
 	return specifier;
@@ -137,20 +137,20 @@ CCSTTypeName* type_cast(Type *t, int pointer_count)
 
   switch(t->num())
     {
-    case 1: // typedef
+    case TYPEDEF_TYPE: // typedef
       {
 	Typedef *td = dynamic_cast<Typedef*>(t);
 	const char* name = td->alias();
 	spec_quals.push_back( new CCSTTypedefName(name) );
 	break;
       }
-      case 2: // integer
+      case INTEGER_TYPE: // integer
       {
 	IntegerType *it = dynamic_cast<IntegerType*>(t);
 	spec_quals = integer_type_cast(it);
 	break;
       }
-    case 4: // projection
+    case PROJECTION_TYPE: // projection
       {
 	printf("here in type cast\n");
 	ProjectionType *pt = dynamic_cast<ProjectionType*>(t);
@@ -160,23 +160,23 @@ CCSTTypeName* type_cast(Type *t, int pointer_count)
 	spec_quals.push_back( new CCSTStructUnionSpecifier(struct_t, name) );
 	break;
       }
-    case 5: // void
+    case VOID_TYPE: // void
       { // does this even happen?
 	printf("Warning: casting something as void\n");
 	spec_quals.push_back(new CCSTSimpleTypeSpecifier(void_t) );
 	break;
       }
-    case 11:
+    case BOOL_TYPE:
       {
 	spec_quals.push_back(new CCSTSimpleTypeSpecifier(bool_t));
 	break;
       }
-    case 12:
+    case DOUBLE_TYPE:
       {
 	spec_quals.push_back(new CCSTSimpleTypeSpecifier(double_t));
 	break;
       }
-    case 13:
+    case FLOAT_TYPE:
       {
 	spec_quals.push_back(new CCSTSimpleTypeSpecifier(float_t));
 	break;
@@ -260,12 +260,12 @@ std::vector<CCSTDecSpecifier*> type2(Type *t)
   std::vector<CCSTDecSpecifier*>specifier;
   int num = t->num();
   switch(num)  {
-  case 1:
+  case TYPEDEF_TYPE:
     {
       // typdef 
       // todo
     }
-  case 2: // int type case
+  case INTEGER_TYPE: // int type case
     {
       IntegerType *it = dynamic_cast<IntegerType*>(t);
       Assert(it != 0x0, "Error: dynamic cast failed!\n");
@@ -309,39 +309,39 @@ std::vector<CCSTDecSpecifier*> type2(Type *t)
 	}
       return specifier;
     }
-  case 4: // struct
+  case PROJECTION_TYPE: // struct
     {
       ProjectionType *pt = dynamic_cast<ProjectionType*>(t);
       Assert(pt != 0x0, "Error: dynamic cast failed!\n");
       specifier.push_back(new CCSTStructUnionSpecifier(struct_t, pt->real_type()));
       return specifier;
     }
-  case 5:
+  case VOID_TYPE:
     {
       specifier.push_back(new CCSTSimpleTypeSpecifier(void_t));
       return specifier;
     }
-  case 6:
+  case CHANNEL_TYPE:
     {
       specifier.push_back(new CCSTTypedefName("cptr_t"));
       return specifier;
     }
-  case 7:
+  case FUNCTION_TYPE:
     {
       // function pointer type
       // todo
     }
-  case 11:
+  case BOOL_TYPE:
     {
       specifier.push_back(new CCSTSimpleTypeSpecifier(bool_t));
       return specifier;
     }
-  case 12:
+  case DOUBLE_TYPE:
     {
       specifier.push_back(new CCSTSimpleTypeSpecifier(double_t));
       return specifier;
     }
-  case 13:
+  case FLOAT_TYPE:
     {
       specifier.push_back(new CCSTSimpleTypeSpecifier(float_t));
       return specifier;

@@ -40,7 +40,7 @@ std::vector<Variable*> Rpc::marshal_projection_parameters(ProjectionType *pt, co
 	|| (strcmp(direction, "inout") == 0 && pf->in() && pf->out())
 	|| strcmp(direction, "") == 0) {
 
-      if (pf->type()->num() == 4 || pf->type()->num() == 9) {
+      if (pf->type()->num() == PROJECTION_TYPE || pf->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
 	ProjectionType *pt_tmp = dynamic_cast<ProjectionType*>(pf->type());
 	Assert(pt_tmp != 0x0, "Error: dynamic cast to Projection type failed.\n");
 	std::vector<Variable*> tmp_params = marshal_projection_parameters(pt_tmp, direction);
@@ -56,7 +56,7 @@ std::vector<Variable*> Rpc::marshal_projection_parameters(ProjectionType *pt, co
 	    || (strcmp(direction, "inout") == 0 && con->in() && pf->out())
 	    || strcmp(direction, "") == 0) {
 	  
-	  if (con->type()->num() == 4 || con->type()->num() == 9) {
+	  if (con->type()->num() == PROJECTION_TYPE || con->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
 	    ProjectionType *pt_tmp = dynamic_cast<ProjectionType*>(con->type());
 	    Assert(pt_tmp != 0x0, "Error: dynamic cast to Projection type failed.\n");
 	    std::vector<Variable*> tmp_params = marshal_projection_parameters(pt_tmp, direction);
@@ -155,7 +155,7 @@ void Rpc::prepare_marshal()
     printf("parameter we are going to marshal is %s\n", p->identifier());
     if(p->in() && !p->out()) {
       in_params.push_back(p);
-      if(p->type()->num() == 4 || p->type()->num() == 9) {
+      if(p->type()->num() == PROJECTION_TYPE || p->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
 	ProjectionType *pt = dynamic_cast<ProjectionType*>(p->type());
 	Assert(pt != 0x0, "Error: dynamic cast to projection failed\n");
 	std::vector<Variable*> tmp = this->marshal_projection_parameters(pt, "in");
@@ -163,7 +163,7 @@ void Rpc::prepare_marshal()
       }
     } else if (!p->in() && p->out()) {
       out_params.push_back(p);
-      if(p->type()->num() == 4 || p->type()->num() == 9) {
+      if(p->type()->num() == PROJECTION_TYPE || p->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
 	ProjectionType *pt = dynamic_cast<ProjectionType*>(p->type());
 	Assert(pt != 0x0, "Error: dynamic cast to projection failed\n");
 	std::vector<Variable*> tmp = this->marshal_projection_parameters(pt, "out");
@@ -171,7 +171,7 @@ void Rpc::prepare_marshal()
       }
     } else if (p->in() && p->out()) {
       in_out_params.push_back(p);
-      if(p->type()->num() == 4 || p->type()->num() == 9) {
+      if(p->type()->num() == PROJECTION_TYPE || p->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
 	ProjectionType *pt = dynamic_cast<ProjectionType*>(p->type());
 	Assert(pt != 0x0, "Error: dynamic cast to projection failed\n");
 	// in 
@@ -196,7 +196,7 @@ void Rpc::prepare_marshal()
       
       if(container->in() && !container->out()) {
 	in_params.push_back(container);
-	if(container->type()->num() == 4 || container->type()->num() == 9) {
+	if(container->type()->num() == PROJECTION_TYPE || container->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
 	  ProjectionType *pt = dynamic_cast<ProjectionType*>(container->type());
 	  Assert(pt != 0x0, "Error: dynamic cast to projection failed\n");
 	  std::vector<Variable*> tmp = this->marshal_projection_parameters(pt, "in");
@@ -204,7 +204,7 @@ void Rpc::prepare_marshal()
 	}
       } else if (!container->in() && container->out()) {
 	out_params.push_back(container);
-	if(container->type()->num() == 4 || container->type()->num() == 9) {
+	if(container->type()->num() == PROJECTION_TYPE || container->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
 	  ProjectionType *pt = dynamic_cast<ProjectionType*>(container->type());
 	  Assert(pt != 0x0, "Error: dynamic cast to projection failed\n");
 	  std::vector<Variable*> tmp = this->marshal_projection_parameters(pt, "out");
@@ -212,7 +212,7 @@ void Rpc::prepare_marshal()
 	}
       } else if (container->in() && container->out()) {
 	in_out_params.push_back(container);
-	if(container->type()->num() == 4 || container->type()->num() == 9) {
+	if(container->type()->num() == PROJECTION_TYPE || container->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
 	  ProjectionType *pt = dynamic_cast<ProjectionType*>(container->type());
 	  Assert(pt != 0x0, "Error: dynamic cast to projection failed\n");
 	  // in 
@@ -235,7 +235,7 @@ void Rpc::prepare_marshal()
 
   // assign register(s) to return value
   out_params.push_back(this->explicit_return_);
-  if(this->explicit_return_->type()->num() == 4 || this->explicit_return_->type()->num() == 9) {
+  if(this->explicit_return_->type()->num() == PROJECTION_TYPE || this->explicit_return_->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(this->explicit_return_->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection failed\n");
     // in 
@@ -353,7 +353,7 @@ void Rpc::create_trampoline_structs()
 {
   for(std::vector<Parameter*>::iterator it = this->parameters_.begin(); it != this->parameters_.end(); it ++) {
     Parameter* p = *it;
-    if (p->type()->num() == 7) {
+    if (p->type()->num() == FUNCTION_TYPE) {
       Function *f = dynamic_cast<Function*>(p->type());
       Assert(f != 0x0, "Error: dynamic cast to function type failed!\n");
 

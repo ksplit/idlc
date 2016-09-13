@@ -149,7 +149,7 @@ CCSTCompoundStatement* alloc_init_hidden_args_struct(ProjectionType *pt, Variabl
   std::vector<ProjectionField*> fields = pt->fields();
   for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
     ProjectionField *pf = *it;
-    if(pf->type()->num() == 7 && pf->alloc_callee()) {
+    if(pf->type()->num() == FUNCTION_TYPE && pf->alloc_callee()) {
       // allocate hidden args structure 
       statements.push_back(kzalloc_structure(hidden_args_name(pf->type()->name())
 					     ,hidden_args_name(append_strings("_"
@@ -245,7 +245,7 @@ CCSTCompoundStatement* alloc_init_hidden_args_struct(ProjectionType *pt, Variabl
 
       t_handle_field->set_accessor(accessor_save);
       // end of this if statement.
-    } else if (pf->type()->num() == 4 || pf->type()->num() == 9) {
+    } else if (pf->type()->num() == PROJECTION_TYPE || pf->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
       // recurse
       ProjectionType *pt_tmp = dynamic_cast<ProjectionType*>(pf->type());
       statements.push_back(alloc_init_hidden_args_struct(pt_tmp, pf, ls, cspace));
@@ -263,7 +263,7 @@ std::vector<CCSTDeclaration*> declare_hidden_args_structures(ProjectionType *pt,
   for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
     ProjectionField *pf = *it;
     
-    if(pf->type()->num() == 7) { // function
+    if(pf->type()->num() == FUNCTION_TYPE) { // function
       // declare
       const char* hidden_args_struct_name = hidden_args_name(pf->type()->name());
       const char* var_name = hidden_args_name(append_strings("_"
@@ -273,7 +273,7 @@ std::vector<CCSTDeclaration*> declare_hidden_args_structures(ProjectionType *pt,
 							, var_name
 							, ls));
 
-    } else if (pf->type()->num() == 4 || pf->type()->num() == 9) {
+    } else if (pf->type()->num() == PROJECTION_TYPE || pf->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
       // recrurse
       ProjectionType *pf_pt = dynamic_cast<ProjectionType*>(pf->type());
       Assert(pf_pt != 0x0, "Error: dynamic cast to projection type failed\n");

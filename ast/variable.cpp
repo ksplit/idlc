@@ -70,7 +70,7 @@ void GlobalVariable::set_accessor(Variable *v)
     this->container_->set_accessor(0x0);
   }
 
-  if(this->type_->num() == 4 || this->type_->num() == 9) {
+  if(this->type_->num() == PROJECTION_TYPE || this->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(this->type_);
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
 
@@ -114,16 +114,16 @@ void GlobalVariable::resolve_types(LexicalScope *ls)
   Type *last = this->type_;
   Type *tmp = this->type_;
   
-  if(this->type_->num() == 10) {
+  if(this->type_->num() == INITIALIZE_TYPE) {
     Type *tmp = this->type_;
     InitializeType *it = 0x0;
-    while(tmp->num() == 10) {
+    while(tmp->num() == INITIALIZE_TYPE) {
       it = dynamic_cast<InitializeType*>(tmp);
       Assert(it != 0x0, "Error: dynamic cast to initialize type failed\n");
       tmp = it->type_;
     }
     
-    if(tmp->num() != 8) {
+    if(tmp->num() != UNRESOLVED_TYPE) {
       return;
     }
 
@@ -140,7 +140,7 @@ void GlobalVariable::resolve_types(LexicalScope *ls)
   } else {
 
     // check if unresolved
-    if(this->type_->num() != 8) {
+    if(this->type_->num() != UNRESOLVED_TYPE) {
       return;
     }
     
@@ -159,13 +159,13 @@ void GlobalVariable::resolve_types(LexicalScope *ls)
 
 void GlobalVariable::initialize_type()
 {
-  if ( this->type_->num() == 10 ) {
+  if ( this->type_->num() == INITIALIZE_TYPE ) {
     InitializeType *it = dynamic_cast<InitializeType*>(this->type_);
     Assert(it != 0x0, "Error: dynamic cast to Initialize type failed\n");
     
     it->initialize();
     this->type_ = it->type_;
-  } else if (this->type_->num() == 4 || this->type_->num() == 9) {
+  } else if (this->type_->num() == PROJECTION_TYPE || this->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(this->type_);
     Assert(pt != 0x0, "Error: dynamic cast to Projection type failed\n");
 
@@ -175,20 +175,20 @@ void GlobalVariable::initialize_type()
 
 void GlobalVariable::create_container_variable(LexicalScope *ls)
 {
-  if(this->pointer_count() <= 0 || (this->type_->num() != 4 && this->type_->num() != 9 && this->type_->num() != 10)) {
+  if(this->pointer_count() <= 0 || (this->type_->num() != PROJECTION_TYPE && this->type_->num() != PROJECTION_CONSTRUCTOR_TYPE && this->type_->num() != INITIALIZE_TYPE)) {
     return;
   }
   Type *tmp = this->type_;
 
-  if(this->type_->num() == 10) { // initialize type
-    while(tmp->num() == 10) {
+  if(this->type_->num() == INITIALIZE_TYPE) { // initialize type
+    while(tmp->num() == INITIALIZE_TYPE) {
       InitializeType *it = dynamic_cast<InitializeType*>(tmp);
       Assert(it != 0x0, "Error: dynamic cast to initialize type failed\n");
 
       tmp = it->type_;
     }
 
-    if(tmp->num() != 4 && tmp->num() != 9) {
+    if(tmp->num() != PROJECTION_TYPE && tmp->num() != PROJECTION_CONSTRUCTOR_TYPE) {
       return;
     }
   }
@@ -372,20 +372,20 @@ Parameter::Parameter(const Parameter& other)
 
 void Parameter::create_container_variable(LexicalScope *ls)
 {
-  if(this->pointer_count() <= 0 || (this->type_->num() != 4 && this->type_->num() != 9 && this->type_->num() != 10) || (!this->bind_caller() && !this->bind_callee() && !this->alloc_caller() && !this->alloc_callee())) {
+  if(this->pointer_count() <= 0 || (this->type_->num() != PROJECTION_TYPE && this->type_->num() != PROJECTION_CONSTRUCTOR_TYPE && this->type_->num() != INITIALIZE_TYPE) || (!this->bind_caller() && !this->bind_callee() && !this->alloc_caller() && !this->alloc_callee())) {
     return;
   }
   Type *tmp = this->type_;
 
-  if(this->type_->num() == 10) { // initialize type
-    while(tmp->num() == 10) {
+  if(this->type_->num() == INITIALIZE_TYPE) { // initialize type
+    while(tmp->num() == INITIALIZE_TYPE) {
       InitializeType *it = dynamic_cast<InitializeType*>(tmp);
       Assert(it != 0x0, "Error: dynamic cast to initialize type failed\n");
 
       tmp = it->type_;
     }
 
-    if(tmp->num() != 4 && tmp->num() != 9) {
+    if(tmp->num() != PROJECTION_TYPE && tmp->num() != PROJECTION_CONSTRUCTOR_TYPE) {
       return;
     }
   }
@@ -469,7 +469,7 @@ void Parameter::set_accessor(Variable *v)
     this->container_->set_accessor(0x0);
   }
   
-  if(this->type_->num() == 4 || this->type_->num() == 9) {
+  if(this->type_->num() == PROJECTION_TYPE || this->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(this->type_);
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
     
@@ -502,16 +502,16 @@ void Parameter::resolve_types(LexicalScope *ls)
   Type *last = this->type_;
   Type *tmp = this->type_;
   
-  if(this->type_->num() == 10) {
+  if(this->type_->num() == INITIALIZE_TYPE) {
     Type *tmp = this->type_;
     InitializeType *it = 0x0;
-    while(tmp->num() == 10) {
+    while(tmp->num() == INITIALIZE_TYPE) {
       it = dynamic_cast<InitializeType*>(tmp);
       Assert(it != 0x0, "Error: dynamic cast to initialize type failed\n");
       tmp = it->type_;
     }
     
-    if(tmp->num() != 8) {
+    if(tmp->num() != UNRESOLVED_TYPE) {
       return;
     }
 
@@ -528,7 +528,7 @@ void Parameter::resolve_types(LexicalScope *ls)
   } else {
 
     // check if unresolved
-    if(this->type_->num() != 8) {
+    if(this->type_->num() != UNRESOLVED_TYPE) {
       return;
     }
     
@@ -547,13 +547,13 @@ void Parameter::resolve_types(LexicalScope *ls)
 
 void Parameter::initialize_type()
 {
-  if ( this->type_->num() == 10 ) {
+  if ( this->type_->num() == INITIALIZE_TYPE ) {
     InitializeType *it = dynamic_cast<InitializeType*>(this->type_);
     Assert(it != 0x0, "Error: dynamic cast to Initialize type failed\n");
     
     it->initialize();
     this->type_ = it->type_;
-  } else if (this->type_->num() == 4 || this->type_->num() == 9) {
+  } else if (this->type_->num() == PROJECTION_TYPE || this->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(this->type_);
     Assert(pt != 0x0, "Error: dynamic cast to Projection type failed\n");
 
@@ -690,21 +690,21 @@ ReturnVariable::ReturnVariable(const ReturnVariable& other)
 
 void ReturnVariable::create_container_variable(LexicalScope *ls)
 {
-    if(this->pointer_count() <= 0 || (this->type_->num() != 4 && this->type_->num() != 9 && this->type_->num() != 10)) {
+    if(this->pointer_count() <= 0 || (this->type_->num() != PROJECTION_TYPE && this->type_->num() != PROJECTION_CONSTRUCTOR_TYPE && this->type_->num() != INITIALIZE_TYPE)) {
     return;
   }
   Type *tmp = this->type_;
 
-  if(this->type_->num() == 10) { // initialize type
+  if(this->type_->num() == INITIALIZE_TYPE) { // initialize type
 
-    while(tmp->num() == 10) {
+    while(tmp->num() == INITIALIZE_TYPE) {
       InitializeType *it = dynamic_cast<InitializeType*>(tmp);
       Assert(it != 0x0, "Error: dynamic cast to initialize type failed\n");
 
       tmp = it->type_;
     }
 
-    if(tmp->num() != 4 && tmp->num() != 9) {
+    if(tmp->num() != PROJECTION_TYPE && tmp->num() != PROJECTION_CONSTRUCTOR_TYPE) {
       return;
     }
   }
@@ -785,7 +785,7 @@ void ReturnVariable::set_accessor(Variable *v)
     this->container_->set_accessor(0x0);
   }
 
-  if(this->type_->num() == 4 || this->type_->num() == 9) {
+  if(this->type_->num() == PROJECTION_TYPE || this->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(this->type_);
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
     
@@ -813,16 +813,16 @@ void ReturnVariable::resolve_types(LexicalScope *ls)
   Type *last = this->type_;
   Type *tmp = this->type_;
   
-  if(this->type_->num() == 10) {
+  if(this->type_->num() == INITIALIZE_TYPE) {
     Type *tmp = this->type_;
     InitializeType *it = 0x0;
-    while(tmp->num() == 10) {
+    while(tmp->num() == INITIALIZE_TYPE) {
       it = dynamic_cast<InitializeType*>(tmp);
       Assert(it != 0x0, "Error: dynamic cast to initialize type failed\n");
       tmp = it->type_;
     }
     
-    if(tmp->num() != 8) {
+    if(tmp->num() != UNRESOLVED_TYPE) {
       return;
     }
 
@@ -839,7 +839,7 @@ void ReturnVariable::resolve_types(LexicalScope *ls)
   } else {
 
     // check if unresolved
-    if(this->type_->num() != 8) {
+    if(this->type_->num() != UNRESOLVED_TYPE) {
       return;
     }
     
@@ -858,13 +858,13 @@ void ReturnVariable::resolve_types(LexicalScope *ls)
 
 void ReturnVariable::initialize_type()
 {
-  if ( this->type_->num() == 10 ) {
+  if ( this->type_->num() == INITIALIZE_TYPE ) {
     InitializeType *it = dynamic_cast<InitializeType*>(this->type_);
     Assert(it != 0x0, "Error: dynamic cast to Initialize type failed\n");
     
     it->initialize();
     this->type_ = it->type_;
-  } else if (this->type_->num() == 4 || this->type_->num() == 9) {
+  } else if (this->type_->num() == PROJECTION_TYPE || this->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(this->type_);
     Assert(pt != 0x0, "Error: dynamic cast to Projection type failed\n");
 
@@ -1018,20 +1018,20 @@ ProjectionField::ProjectionField(const ProjectionField& other)
 
 void ProjectionField::create_container_variable(LexicalScope *ls)
 {
-  if(this->pointer_count() <= 0 || (this->type_->num() != 4 && this->type_->num() != 9 && this->type_->num() != 10) || (!this->bind_caller() && !this->bind_callee() && !this->alloc_caller() && !this->alloc_callee())) {
+  if(this->pointer_count() <= 0 || (this->type_->num() != PROJECTION_TYPE && this->type_->num() != PROJECTION_CONSTRUCTOR_TYPE && this->type_->num() != INITIALIZE_TYPE) || (!this->bind_caller() && !this->bind_callee() && !this->alloc_caller() && !this->alloc_callee())) {
     return;
   }
   Type *tmp = this->type_;
   
-  if(this->type_->num() == 10) { // initialize type
-    while(tmp->num() == 10) {
+  if(this->type_->num() == INITIALIZE_TYPE) { // initialize type
+    while(tmp->num() == INITIALIZE_TYPE) {
       InitializeType *it = dynamic_cast<InitializeType*>(tmp);
       Assert(it != 0x0, "Error: dynamic cast to initialize type failed\n");
       
       tmp = it->type_;
     }
 
-    if(tmp->num() != 4 && tmp->num() != 9) {
+    if(tmp->num() != PROJECTION_TYPE && tmp->num() != PROJECTION_CONSTRUCTOR_TYPE) {
       return;
     }
   }
@@ -1113,7 +1113,7 @@ void ProjectionField::set_accessor(Variable *v)
     this->container_->set_accessor(0x0);
   }
   
-  if(this->type_->num() == 4 || this->type_->num() == 9) {
+  if(this->type_->num() == PROJECTION_TYPE || this->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(this->type_);
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
     
@@ -1146,16 +1146,16 @@ void ProjectionField::resolve_types(LexicalScope *ls)
   Type *last = this->type_;
   Type *tmp = this->type_;
   
-  if(this->type_->num() == 10) {
+  if(this->type_->num() == INITIALIZE_TYPE) {
     Type *tmp = this->type_;
     InitializeType *it = 0x0;
-    while(tmp->num() == 10) {
+    while(tmp->num() == INITIALIZE_TYPE) {
       it = dynamic_cast<InitializeType*>(tmp);
       Assert(it != 0x0, "Error: dynamic cast to initialize type failed\n");
       tmp = it->type_;
     }
     
-    if(tmp->num() != 8) {
+    if(tmp->num() != UNRESOLVED_TYPE) {
       return;
     }
 
@@ -1172,7 +1172,7 @@ void ProjectionField::resolve_types(LexicalScope *ls)
   } else {
 
     // check if unresolved
-    if(this->type_->num() != 8) {
+    if(this->type_->num() != UNRESOLVED_TYPE) {
       return;
     }
     
@@ -1191,13 +1191,13 @@ void ProjectionField::resolve_types(LexicalScope *ls)
 
 void ProjectionField::initialize_type()
 {
-  if ( this->type_->num() == 10 ) {
+  if ( this->type_->num() == INITIALIZE_TYPE ) {
     InitializeType *it = dynamic_cast<InitializeType*>(this->type_);
     Assert(it != 0x0, "Error: dynamic cast to Initialize type failed\n");
     
     it->initialize();
     this->type_ = it->type_;
-  } else if (this->type_->num() == 4 || this->type_->num() == 9) {
+  } else if (this->type_->num() == PROJECTION_TYPE || this->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(this->type_);
     Assert(pt != 0x0, "Error: dynamic cast to Projection type failed\n");
 
@@ -1312,20 +1312,20 @@ FPParameter::FPParameter(const FPParameter& other)
 
 void FPParameter::create_container_variable(LexicalScope *ls)
 {
-  if(this->pointer_count() <= 0 || (this->type_->num() != 4 && this->type_->num() != 9 && this->type_->num() != 10)) {
+  if(this->pointer_count() <= 0 || (this->type_->num() != PROJECTION_TYPE && this->type_->num() != PROJECTION_CONSTRUCTOR_TYPE && this->type_->num() != INITIALIZE_TYPE)) {
     return;
   }
   Type *tmp = this->type_;
   
-  if(this->type_->num() == 10) { // initialize type
-    while(tmp->num() == 10) {
+  if(this->type_->num() == INITIALIZE_TYPE) { // initialize type
+    while(tmp->num() == INITIALIZE_TYPE) {
       InitializeType *it = dynamic_cast<InitializeType*>(tmp);
       Assert(it != 0x0, "Error: dynamic cast to initialize type failed\n");
 
       tmp = it->type_;
     }
 
-    if(tmp->num() != 4 && tmp->num() != 9) {
+    if(tmp->num() != PROJECTION_TYPE && tmp->num() != PROJECTION_CONSTRUCTOR_TYPE) {
       return;
     }
   }
@@ -1414,16 +1414,16 @@ void FPParameter::resolve_types(LexicalScope *ls)
   Type *last = this->type_;
   Type *tmp = this->type_;
   
-  if(this->type_->num() == 10) {
+  if(this->type_->num() == INITIALIZE_TYPE) {
     Type *tmp = this->type_;
     InitializeType *it = 0x0;
-    while(tmp->num() == 10) {
+    while(tmp->num() == INITIALIZE_TYPE) {
       it = dynamic_cast<InitializeType*>(tmp);
       Assert(it != 0x0, "Error: dynamic cast to initialize type failed\n");
       tmp = it->type_;
     }
     
-    if(tmp->num() != 8) {
+    if(tmp->num() != UNRESOLVED_TYPE) {
       return;
     }
 
@@ -1440,7 +1440,7 @@ void FPParameter::resolve_types(LexicalScope *ls)
   } else {
 
     // check if unresolved
-    if(this->type_->num() != 8) {
+    if(this->type_->num() != UNRESOLVED_TYPE) {
       return;
     }
     
@@ -1459,13 +1459,13 @@ void FPParameter::resolve_types(LexicalScope *ls)
 
 void FPParameter::initialize_type()
 {
-  if ( this->type_->num() == 10 ) {
+  if ( this->type_->num() == INITIALIZE_TYPE ) {
     InitializeType *it = dynamic_cast<InitializeType*>(this->type_);
     Assert(it != 0x0, "Error: dynamic cast to Initialize type failed\n");
     
     it->initialize();
     this->type_ = it->type_;
-  } else if (this->type_->num() == 4 || this->type_->num() == 9) {
+  } else if (this->type_->num() == PROJECTION_TYPE || this->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(this->type_);
     Assert(pt != 0x0, "Error: dynamic cast to Projection type failed\n");
 

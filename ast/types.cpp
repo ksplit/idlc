@@ -25,7 +25,7 @@ CCSTStatement* FloatType::accept(TypeVisitor *worker, Variable *v)
 
 int FloatType::num()
 {
-  return 13;
+  return FLOAT_TYPE;
 }
 
 const char* FloatType::name()
@@ -64,7 +64,7 @@ CCSTStatement* DoubleType::accept(TypeVisitor *worker, Variable *v)
 
 int DoubleType::num()
 {
-  return 12;
+  return DOUBLE_TYPE;
 }
 
 const char* DoubleType::name()
@@ -103,7 +103,7 @@ CCSTStatement* BoolType::accept(TypeVisitor *worker, Variable *v)
 
 int BoolType::num()
 {
-  return 11;
+  return BOOL_TYPE;
 }
 
 const char* BoolType::name()
@@ -167,7 +167,7 @@ CCSTStatement* Function::accept(TypeVisitor *worker, Variable *v)
 
 int Function::num()
 {
-  return 7;
+  return FUNCTION_TYPE;
 }
 
 const char* Function::name()
@@ -239,7 +239,7 @@ Marshal_type* UnresolvedType::accept(MarshalPrepareVisitor *worker)
 
 int UnresolvedType::num()
 {
-  return 8;
+  return UNRESOLVED_TYPE;
 }
 
 const char* UnresolvedType::name()
@@ -284,7 +284,7 @@ const char* Channel::name()
 }
 int Channel::num()
 {
-  return 6;
+  return CHANNEL_TYPE;
 }
 
 void Channel::resolve_types(LexicalScope *ls)
@@ -352,7 +352,7 @@ Type* Typedef::type()
 
 int Typedef::num()
 {
-  return 1;
+  return TYPEDEF_TYPE;
 }
 
 const char* Typedef::name()
@@ -401,7 +401,7 @@ CCSTStatement* VoidType::accept(TypeVisitor *worker, Variable *v)
 
 int VoidType::num()
 {
-  return 5;
+  return VOID_TYPE;
 }
 
 const char* VoidType::name()
@@ -464,7 +464,7 @@ bool IntegerType::is_unsigned()
 
 int IntegerType::num()
 {
-  return 2;
+  return INTEGER_TYPE;
 }
 
 const char* IntegerType::name()
@@ -561,7 +561,7 @@ std::vector<ProjectionField*> ProjectionType::fields()
 
 int ProjectionType::num()
 {
-  return 4;
+  return PROJECTION_TYPE;
 }
 
 const char* ProjectionType::name()
@@ -587,7 +587,7 @@ void ProjectionType::create_trampoline_structs(LexicalScope *ls)
 {
   for(std::vector<ProjectionField*>::iterator it = this->fields_.begin(); it != this->fields_.end(); it ++) {
     ProjectionField *pf = (ProjectionField*) *it;
-    if (pf->type()->num() == 7) { // function pointer
+    if (pf->type()->num() == FUNCTION_TYPE) { // function pointer
       Function *f = dynamic_cast<Function*>(pf->type());
       Assert(f != 0x0, "Error: dynamic cast to function type failed!\n");
       
@@ -681,7 +681,7 @@ ProjectionConstructorType::ProjectionConstructorType(const ProjectionConstructor
 
 int ProjectionConstructorType::num()
 {
-  return 9;
+  return PROJECTION_CONSTRUCTOR_TYPE;
 }
 
 void ProjectionConstructorType::initialize(std::vector<Variable*> chans)
@@ -756,7 +756,7 @@ CCSTStatement* InitializeType::accept(TypeVisitor *worker, Variable *v)
 
 int InitializeType::num()
 {
-  return 10;
+  return INITIALIZE_TYPE;
 }
 
 const char* InitializeType::name()
@@ -782,7 +782,7 @@ void InitializeType::create_trampoline_structs(LexicalScope *ls)
 void InitializeType::initialize()
 {
   // check that type is a projectionconstructor
-  Assert(this->type_->num() == 9, "Error: cannot initialize a non-projection constructor type\n");
+  Assert(this->type_->num() == PROJECTION_CONSTRUCTOR_TYPE, "Error: cannot initialize a non-projection constructor type\n");
   
   ProjectionConstructorType *pct = dynamic_cast<ProjectionConstructorType*>(this->type_);
   Assert(pct != 0x0, "Error: dynamic cast to projection constructor type failed\n");

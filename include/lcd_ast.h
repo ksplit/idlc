@@ -28,6 +28,21 @@ class Project;
 enum PrimType {pt_char_t, pt_short_t, pt_int_t, pt_long_t, pt_longlong_t, pt_capability_t};
 enum type_k {};
 
+typedef enum {
+  TYPEDEF_TYPE = 1,
+  INTEGER_TYPE,
+  PROJECTION_TYPE,
+  VOID_TYPE,
+  CHANNEL_TYPE,
+  FUNCTION_TYPE,
+  UNRESOLVED_TYPE,
+  PROJECTION_CONSTRUCTOR_TYPE,
+  INITIALIZE_TYPE,
+  BOOL_TYPE,
+  DOUBLE_TYPE,
+  FLOAT_TYPE,
+} types_t;
+
 template<class T, class T2>
 class ASTVisitor;
 

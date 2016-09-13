@@ -76,7 +76,7 @@ std::vector<CCSTDeclaration*> declare_containers(Variable *v)
     declarations.push_back(declare_variable(v->container()));
   }
 
-  if(v->type()->num() == 4 || v->type()->num() == 9) {
+  if(v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed.\n");
 
@@ -135,7 +135,7 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   for(std::vector<Parameter*>::iterator it = params.begin(); it != params.end(); it ++) {
     Parameter *p = *it;
     
-    if(p->type_->num() == 4 || p->type_->num() == 9) { // if a projection
+    if(p->type_->num() == PROJECTION_TYPE || p->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) { // if a projection
       ProjectionType *pt = dynamic_cast<ProjectionType*>(p->type_);
       Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
       std::vector<CCSTStatement*> tmp_statements = caller_allocate_channels(pt);
@@ -147,7 +147,7 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   for(std::vector<Parameter*>::iterator it = params.begin(); it != params.end(); it ++) {
     Parameter *p = *it;
     
-    if((p->type_->num() == 4 || p->type_->num() == 9) && p->alloc_caller()) {
+    if((p->type_->num() == PROJECTION_TYPE || p->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) && p->alloc_caller()) {
       ProjectionType *pt = dynamic_cast<ProjectionType*>(p->type_);
       Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
       std::vector<CCSTStatement*> tmp_statements = caller_initialize_channels(pt);
@@ -202,7 +202,7 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   /* unmarshal appropriate parameters and return value */
   for(std::vector<Parameter*>::iterator it = parameters.begin(); it != parameters.end(); it ++) {
     Parameter *p = *it;
-    if(p->type()->num() != 5) {
+    if(p->type()->num() != VOID_TYPE) {
       if(p->out()) {
 	std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_caller(p);
 	statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
@@ -236,7 +236,7 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   /* Todo:  clear capability registers? */
 
   /* return value to caller */
-  if(r->return_variable()->type()->num() != 5) {
+  if(r->return_variable()->type()->num() != VOID_TYPE) {
     // declare return var.
     declarations.push_back(declare_variable(r->return_variable()));
 

@@ -17,7 +17,7 @@ CCSTStatement* marshal_variable(Variable *v, const char* direction)
     statements.push_back(marshal_variable(v->container(), direction));
   }
   
-  if (v->type()->num() == 4 || v->type()->num() == 9) { // projection
+  if (v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) { // projection
     // loop through fields
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection failed!\n");
@@ -51,7 +51,7 @@ std::vector<CCSTStatement*> marshal_variable_callee(Variable *v)
     }
   }
 
-  if (v->type()->num() == 4 || v->type()->num() == 9) { // projection
+  if (v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) { // projection
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
 
@@ -81,7 +81,7 @@ std::vector<CCSTStatement*> marshal_variable_no_check(Variable *v)
     statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
   }
 
-  if (v->type()->num() == 4 || v->type()->num() == 9) { // projection
+  if (v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) { // projection
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
 

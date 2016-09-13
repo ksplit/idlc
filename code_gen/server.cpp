@@ -182,7 +182,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   // declare hidden args structures;
   for(std::vector<Parameter*>::iterator it = params.begin(); it != params.end(); it ++) {
     Parameter *p = *it;
-    if( p->type()->num() == 4 || p->type()->num() == 9) {
+    if( p->type()->num() == PROJECTION_TYPE || p->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
       ProjectionType *pt = dynamic_cast<ProjectionType*>(p->type());
       Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
       
@@ -191,7 +191,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
       
       // allocate hidden args structures
       Variable* cspace;
-      if(p->type()->num() == 9) {
+      if(p->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
 	ProjectionConstructorType *pct = dynamic_cast<ProjectionConstructorType*>(p->type());
 	Assert(pct != 0x0, "Error: dynamic cast to projection constructor failed\n");
 
@@ -235,7 +235,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   }
 
   // declare return variable
-  if(r->return_variable()->type()->num() != 5) {
+  if(r->return_variable()->type()->num() != VOID_TYPE) {
     std::vector<CCSTDeclaration*> tmp_decs = declare_variables_callee(r->return_variable());
     declarations.insert(declarations.end(), tmp_decs.begin(), tmp_decs.end());
   }
@@ -246,7 +246,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   statements.push_back(allocate_non_container_variables(r->return_variable()));
   
   // real call
-  if(r->return_variable()->type()->num() == 5) {
+  if(r->return_variable()->type()->num() == VOID_TYPE) {
     statements.push_back(new CCSTExprStatement(function_call(r->name()
 							     , real_call_params)));
   } else {
@@ -273,7 +273,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   }
 
   // marshal return val;
-  if(r->return_variable()->type()->num() != 5) {
+  if(r->return_variable()->type()->num() != VOID_TYPE) {
     std::vector<CCSTStatement*> tmp_stmts = marshal_variable_no_check(r->return_variable());
     statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
   }
@@ -369,15 +369,14 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
   for(std::map<std::string, Type*>::iterator it = module_types.begin(); it != module_types.end(); it ++) {
     Type *t = (Type*) it->second;
 
-    if(t->num() == 4 || t->num() == 9) {
+    if(t->num() == PROJECTION_TYPE || t->num() == PROJECTION_CONSTRUCTOR_TYPE) {
       ProjectionType *pt = dynamic_cast<ProjectionType*>(t);
       Assert(pt != 0x0, "Error: dynamic cast to projection type failed!\n");
       
       if(module_types.find(container_name(pt->name())) != module_types.end()) { // found the container
-	
 	ProjectionType *pt_container = dynamic_cast<ProjectionType*>(module_types[container_name(pt->name())]);
 	Assert(pt_container != 0x0, "Error: dynamic cast to projection type failed\n");
-	
+
 	std::vector<CCSTDecSpecifier*> specifier;
 	specifier.push_back(struct_declaration(pt_container));
 	std::vector<CCSTInitDeclarator*> empty;

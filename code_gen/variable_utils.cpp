@@ -45,7 +45,7 @@ std::vector<CCSTDeclaration*> declare_variables_callee(Variable *v)
     declarations.push_back(declare_variable(v));
   }
 
-  if(v->type()->num() == 4 || v->type()->num() == 9) {
+  if(v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
 
@@ -67,7 +67,7 @@ std::vector<CCSTDeclaration*> declare_containers_only_callee(Variable *v)
     declarations.push_back(declare_variable(v->container()));
   }
   
-  if(v->type()->num() == 4 || v->type()->num() == 9) {
+  if(v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
     

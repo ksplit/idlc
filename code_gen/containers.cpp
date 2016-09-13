@@ -23,7 +23,7 @@ std::vector<CCSTStatement*> container_of(Variable *v, const char* cspace)
 								  , equals()
 								  , function_call("container_of", container_of_args( access(v), struct_name(v->container()->type()->name()), v->type()->name())))));
   
-  if (v->type()->num() == 4 || v->type()->num() == 9) {
+  if (v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast failed\n");
 
@@ -120,7 +120,7 @@ CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const ch
     }
   }
 
-  if( v->type()->num() == 4 || v->type()->num() == 9) {
+  if( v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
 
@@ -210,7 +210,7 @@ CCSTStatement* allocate_non_container_variables(Variable *v)
       return alloc_variable(v);
     }
     
-    if (v->type()->num() == 4 || v->type()->num() == 9) {
+    if (v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
       ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
       Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
 
@@ -238,7 +238,7 @@ CCSTStatement* allocate_non_container_variables(Variable *v)
 	}
       }
     }
-  } else if (v->type()->num() == 4 || v->type()->num() == 9) { // may need to allocate some fields
+  } else if (v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) { // may need to allocate some fields
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
 
@@ -358,7 +358,7 @@ CCSTCompoundStatement* alloc_link_container_caller(Variable *v, const char* cspa
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
   // simple case. v is not a projection
-  if(v->type()->num() != 4) {
+  if(v->type()->num() != PROJECTION_TYPE) {
     if(v->alloc_caller()) {
       return alloc_insert_variable_container(v, cspace);
     } else {
@@ -443,7 +443,7 @@ std::vector<CCSTStatement*> caller_allocate_channels(ProjectionType *pt)
   // recurse on fields.
   for(std::vector<ProjectionField*>::iterator it = pt->fields_.begin(); it != pt->fields_.end(); it ++) {
     ProjectionField *pf = *it;
-    if(pf->type_->num() == 4 || pf->type_->num() == 9) {
+    if(pf->type_->num() == PROJECTION_TYPE || pf->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) {
       ProjectionType *tmp = dynamic_cast<ProjectionType*>(pf->type_);
       Assert(tmp != 0x0, "Error: dynamic cast to projection type failed\n");
       
@@ -459,7 +459,7 @@ std::vector<CCSTStatement*> caller_initialize_channels(ProjectionType *pt)
 {
   std::vector<CCSTStatement*> statements;
   
-  if(pt->num() == 9) {
+  if(pt->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionConstructorType *pct = dynamic_cast<ProjectionConstructorType*>(pt);
     Assert(pct != 0x0, "Error: dynamic cast to projection constructor type failed\n");
 
@@ -489,7 +489,7 @@ std::vector<CCSTStatement*> caller_initialize_channels(ProjectionType *pt)
   // recurse on fields.
   for(std::vector<ProjectionField*>::iterator it = pt->fields_.begin(); it != pt->fields_.end(); it ++) {
     ProjectionField *pf = *it;
-    if((pf->type_->num() == 4 || pf->type_->num() == 9) && pf->alloc_caller()) {
+    if((pf->type_->num() == PROJECTION_TYPE || pf->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) && pf->alloc_caller()) {
       ProjectionType *tmp = dynamic_cast<ProjectionType*>(pf->type_);
       Assert(tmp != 0x0, "Error: dynamic cast to projection type failed\n");
       
@@ -546,7 +546,7 @@ std::vector<CCSTStatement*> dealloc_containers_callee(Variable *v, const char* c
       statements.push_back(new CCSTExprStatement( function_call("cap_remove", cap_remove_args)));
 
       // remove all channels we received
-      if(v->type()->num() == 9) {
+      if(v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
 	ProjectionConstructorType *pct = dynamic_cast<ProjectionConstructorType*>(v->type());
 	Assert(pct != 0x0, "Error: dynamic cast to projection constructor type failed\n");
 
@@ -562,7 +562,7 @@ std::vector<CCSTStatement*> dealloc_containers_callee(Variable *v, const char* c
     }
   }
   
-  if(v->type()->num() == 4 || v->type()->num() == 9) {
+  if(v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *tmp = dynamic_cast<ProjectionType*>(v->type());
     Assert(tmp != 0x0, "Error: dynamic cast to projection type failed\n");
 
@@ -583,7 +583,7 @@ std::vector<CCSTStatement*> dealloc_containers_callee(Variable *v, const char* c
     for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
       ProjectionField *pf = *it;
 
-      if(pf->type()->num() == 7 && v->container() != 0x0 && v->dealloc_callee()) {
+      if(pf->type()->num() == FUNCTION_TYPE && v->container() != 0x0 && v->dealloc_callee()) {
 	// set our hidden args struct equal to thing
 	ProjectionType *v_container_type = dynamic_cast<ProjectionType*>(v->container()->type());
 	Assert(v_container_type != 0x0, "Error: dynamic cast to projection type failed\n");
@@ -673,7 +673,7 @@ std::vector<CCSTStatement*> dealloc_containers_caller(Variable *v, const char* c
       statements.push_back(new CCSTExprStatement( function_call("cap_remove", cap_remove_args)));
 
       // remove all channels we recieved
-      if(v->type()->num() == 9) {
+      if(v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
 	ProjectionConstructorType *pct = dynamic_cast<ProjectionConstructorType*>(v->type());
 	Assert(pct != 0x0, "Error: dynamic cast to projection constructor type failed\n");
 	
@@ -689,7 +689,7 @@ std::vector<CCSTStatement*> dealloc_containers_caller(Variable *v, const char* c
     }
   }
   
-  if(v->type()->num() == 4 || v->type()->num() == 9) {
+  if(v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *tmp = dynamic_cast<ProjectionType*>(v->type());
     Assert(tmp != 0x0, "Error: dynamic cast to projection type failed\n");
 
@@ -709,7 +709,7 @@ std::vector<CCSTStatement*> dealloc_containers_caller(Variable *v, const char* c
     for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
       ProjectionField *pf = *it;
       
-      if(pf->type()->num() == 7 && v->container() != 0x0 && v->dealloc_caller())  {
+      if(pf->type()->num() == FUNCTION_TYPE && v->container() != 0x0 && v->dealloc_caller())  {
 	// set our hidden args struct equal to thing
 	ProjectionType *v_container_type = dynamic_cast<ProjectionType*>(v->container()->type());
 	Assert(v_container_type != 0x0, "Error: dynamic cast to projection type failed\n");
