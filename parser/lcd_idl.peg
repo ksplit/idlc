@@ -182,6 +182,23 @@ const char* returnVarName()
     }
     return name;
 }
+
+void create_container(const Value &id, std::vector<ProjectionField*> &container_fields)
+{
+    const char *_id = (char*) id.getValue();
+
+    container_fields.push_back(new ProjectionField(getType(_id), _id, 0));
+
+    ProjectionField *other_ref = new ProjectionField(getType("cptr_t"), "other_ref", 0);
+    other_ref->set_out(true);
+    container_fields.push_back(other_ref);
+
+    ProjectionField *my_ref = new ProjectionField(getType("cptr_t"), "my_ref", 0);
+    my_ref->set_in(true);
+
+    container_fields.push_back(my_ref);
+}
+
 }}
 
 rules:
@@ -406,7 +423,6 @@ FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* 
 			    set_specs(*_p, s);
 			    set_current_scope(get_current_scope()->outer_scope());
 			    value = _p;
-			    
 			}}
 
 FirstParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:star* Spacing field_id:Identifier Spacing OPEN Spacing args:Arguments Spacing CLOSE Spacing COMMA Spacing {{
@@ -714,24 +730,19 @@ Projection_constructor =    s:Projection_constructor_special Spacing "<" Spacing
 				}
 
 				ProjectionConstructorType *val = new ProjectionConstructorType((char*) id.getValue(), (char*) t.getValue(), fields, chan_fields, channels);	
-				
+
 				// creating container
-			    	std::vector<ProjectionField*> container_fields;
-			    	container_fields.push_back(new ProjectionField(getType((char*)id.getValue()), (char*)id.getValue(), 0));
-				ProjectionField *other_ref = new ProjectionField(getType("cptr_t"), "other_ref", 0);
-				other_ref->set_out(true);
-			    	container_fields.push_back(other_ref);
-				ProjectionField *my_ref = new ProjectionField(getType("cptr_t"), "my_ref", 0);
-				my_ref->set_in(true);
-				container_fields.push_back(my_ref);
+                std::vector<ProjectionField*> container_fields;
+                create_container(id, container_fields);
+
 				container_fields.insert(container_fields.end(), channels.begin(), channels.end());
 				container_fields.insert(container_fields.end(), chan_fields.begin(), chan_fields.end());
 			
-			    	const char *container_name_str = container_name((char*)id.getValue());
-			    	ProjectionType * container = new ProjectionType(container_name_str, container_name_str, container_fields);
+                const char *container_name_str = container_name((char*)id.getValue());
+                ProjectionType * container = new ProjectionType(container_name_str, container_name_str, container_fields);
 				printf("inserting container with name %s \n", container_name_str);
 			    	
-			    	// finished creating constructor
+                // finished creating constructor
  				set_current_scope(get_current_scope()->outer_scope()); // leaving current scope
 				insertType((char*) id.getValue(), val); // insert projection constructor
 				insertType(container_name_str, container); // insert container
@@ -767,14 +778,9 @@ Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id
 			    insertType((char*)id.getValue(), val);
 
 			    // creating constructor
-			    std::vector<ProjectionField*> container_fields;
-			    container_fields.push_back(new ProjectionField(getType((char*)id.getValue()), (char*)id.getValue(), 0));
-			    ProjectionField *other_ref = new ProjectionField(getType("cptr_t"), "other_ref", 0);
-			    other_ref->set_out(true);
-			    container_fields.push_back(other_ref);
-			    ProjectionField *my_ref = new ProjectionField(getType("cptr_t"), "my_ref", 0);
-			    my_ref->set_in(true);
-			    container_fields.push_back(my_ref);
+                std::vector<ProjectionField*> container_fields;
+                create_container(id, container_fields);
+
 			    container_fields.insert(container_fields.end(), channels.begin(), channels.end());	    
 
 			    const char *container_name_str = container_name((char*)id.getValue());
