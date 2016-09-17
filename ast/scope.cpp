@@ -5,9 +5,6 @@ GlobalScope* GlobalScope::instance_ = 0;
 
 GlobalScope::GlobalScope()
 {
-   // init builtin int types
-  this->outer_scope_ = 0x0; // global scope 
-
   // move this code to wherever we create the root scope.
   // instert for each builtin in type, add size to type if not done alreayd
 
@@ -117,9 +114,9 @@ void GlobalScope::set_outer_scope(LexicalScope *ls)
 /* -------------------------------------------------------------- */
 
 
-LexicalScope::LexicalScope()
+LexicalScope::LexicalScope() :
+	outer_scope_(NULL)
 {
-  this->outer_scope_ = 0x0;
 }
 
 LexicalScope::LexicalScope(LexicalScope *outer_scope)
@@ -232,7 +229,7 @@ bool LexicalScope::insert(const char *symbol, Type *type)
 {
   std::string temp(symbol); 
   std::pair<std::map<std::string,Type*>::iterator,bool> ret;
-  ret = type_definitions_.insert(std::pair<std::string, Type*>(temp, type));
+  ret = this->type_definitions_.insert(std::pair<std::string, Type*>(temp, type));
   printf("In insert pointer for type %s is %p\n", symbol, type);
   return ret.second;
 }
