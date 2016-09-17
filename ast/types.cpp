@@ -590,11 +590,9 @@ void ProjectionType::create_trampoline_structs(LexicalScope *ls)
     if (pf->type()->num() == FUNCTION_TYPE) { // function pointer
       Function *f = dynamic_cast<Function*>(pf->type());
       Assert(f != 0x0, "Error: dynamic cast to function type failed!\n");
-      
+
       std::vector<ProjectionField*> trampoline_fields;
       int err;
-      trampoline_fields.push_back(new ProjectionField(ls->lookup(container_name(this->name()), &err)
-						      ,"container", 1)); // container field
       trampoline_fields.push_back(new ProjectionField(ls->lookup("void", &err), "struct_container", 1));
       trampoline_fields.push_back(new ProjectionField(ls->lookup("cspace", &err), "cspace", 1)); // dstore field
       trampoline_fields.push_back(new ProjectionField(ls->lookup("lcd_trampoline_handle", &err), "t_handle", 1)); // lcd_trampoline handle field
