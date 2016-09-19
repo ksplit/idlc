@@ -1,11 +1,9 @@
 #include "ccst.h"
 #include "code_gen.h"
 
-
-
 CCSTExDeclaration* construct_enum(Module *f)
 {
-  const char* enum_name = "todo";
+  const char* enum_name = "dispatch_t";
   std::vector<Rpc*> rpcs = f->rpc_definitions();
   CCSTEnumeratorList *el = construct_enumlist(rpcs);
   CCSTEnumSpecifier *e = new CCSTEnumSpecifier(enum_name, el);
@@ -17,12 +15,6 @@ CCSTExDeclaration* construct_enum(Module *f)
   return declaration;
 }
 
-const char* enum_name(const char *name)
-{
-  return "todo";
-}
-
-
 CCSTEnumeratorList* construct_enumlist(std::vector<Rpc *> rps)
 {
   // list of functions to put in enum.
@@ -30,10 +22,9 @@ CCSTEnumeratorList* construct_enumlist(std::vector<Rpc *> rps)
   for(std::vector<Rpc*>::iterator it = rps.begin(); it != rps.end(); it ++)
     {
       Rpc *r = *it;
-      const char* upper_name = string_to_upper(r->name());
-      char* enum_name = (char*)malloc((sizeof(upper_name)+9+1)*sizeof(char));
-      sprintf(enum_name, "%s_CALLEE_T", upper_name);
-      list->push_back(new CCSTEnumerator(enum_name));
+      std::string *enum_str = new std::string(r->name());
+      std_string_toupper(*enum_str);
+      list->push_back(new CCSTEnumerator(enum_str->c_str()));
     }
   CCSTEnumeratorList *enum_list = new CCSTEnumeratorList(list);
   return enum_list;
