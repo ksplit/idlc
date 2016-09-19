@@ -224,7 +224,7 @@ module vfs (channel c)
 	        ssize_t (*write) (projection file *, const char __user *, size_t, loff_t *);
 	        ssize_t (*aio_read) (projection kiocb *, const projection iovec *, unsigned long, loff_t);
 	        ssize_t (*aio_write) (projection kiocb *, const projection iovec *, unsigned long, loff_t);
-	        int (*mmap) (projection file *, projection  vm_area_projection *);
+	        int (*mmap) (projection file *, projection  vm_area_struct *);
 	        int (*open) (projection inode *, projection file *);
 	        int (*fsync) (projection file *, loff_t, loff_t, int datasync);
 	        int (*flush) (projection file *, projection files_struct *id);
