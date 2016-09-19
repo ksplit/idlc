@@ -19,12 +19,12 @@ const char* hidden_args_name(const char* name);
 const char* parameter_name(const char* name);
 const char* fp_name(const char* name);
 const char* trampoline_func_name(const char* name);
-const char* string_to_upper(const char* str);
 const char* append_strings(const char* delimiter, std::vector<const char*> strs);
 bool dealloc_caller(Variable *v, const char* side);
 bool dealloc_callee(Variable *v, const char* side);
 bool in(Variable *v, const char* side);
 bool out(Variable *v, const char* side);
 
+void std_string_toupper(std::string &input);
 
 #endif

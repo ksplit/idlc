@@ -1,4 +1,7 @@
 #include "code_gen.h"
+#include <iostream>
+#include <algorithm>
+#include <string>
 
 const char* new_name(const char* name, const char* suffix)
 {
@@ -144,19 +147,12 @@ const char* trampoline_func_name(const char* name)
 }
 
 /*
- * returns a new string of all uppercase chars.
+ * converts input string to uppercase
  */
-const char* string_to_upper(const char* str)
+void std_string_toupper(std::string &input)
 {
-  char* ret = (char*) malloc((sizeof(str)+1)*sizeof(char));
-  int i;
-  for(i = 0; i < sizeof(str); i ++)
-    {
-      char tmp = str[i];
-      ret[i] = toupper(tmp);
-    }
-  ret[i] = '\0';
-  return ret;
+  std::transform(input.begin(), input.end(), input.begin(),
+      std::ptr_fun<int, int>(std::toupper));
 }
 
 /*
