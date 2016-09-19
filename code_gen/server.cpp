@@ -327,10 +327,31 @@ CCSTDeclaration* callee_declaration(Rpc* r)
   
   std::vector<CCSTDecSpecifier*> s;
   s.push_back(new  CCSTSimpleTypeSpecifier(void_t));
+
   CCSTParamDeclaration *parameter = new CCSTParamDeclaration(s);
-  
+  int err;
   std::vector<CCSTParamDeclaration*> p_decs; // = new std::vector<CCSTParamDeclaration*>();
-  p_decs.push_back(parameter);
+  p_decs.push_back(
+      new CCSTParamDeclaration(
+          type2(r->current_scope()->lookup("fipc_message", &err)),
+          new CCSTDeclarator(new CCSTPointer(),
+              new CCSTDirectDecId("request"))));
+  p_decs.push_back(
+      new CCSTParamDeclaration(
+          type2(r->current_scope()->lookup("thc_channel", &err)),
+          new CCSTDeclarator(new CCSTPointer(),
+              new CCSTDirectDecId("channel"))));
+  p_decs.push_back(
+      new CCSTParamDeclaration(
+          type2(r->current_scope()->lookup("cspace", &err)),
+          new CCSTDeclarator(new CCSTPointer(),
+              new CCSTDirectDecId("cspace"))));
+  p_decs.push_back(
+      new CCSTParamDeclaration(
+          type2(r->current_scope()->lookup("cptr_t", &err)),
+          new CCSTDeclarator(NULL,
+              new CCSTDirectDecId("sync_ep"))));
+
   CCSTParamList *param_list = new CCSTParamList(p_decs);
 
   CCSTDirectDecParamTypeList *params = new CCSTDirectDecParamTypeList(id, param_list); 
