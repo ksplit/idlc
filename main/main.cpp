@@ -121,10 +121,28 @@ int main(int argc, char ** argv)
       std::cout << "Completed callee source writing\n";
     } else if (!strcmp(argv[1], "-clientheader")) {
       /*
-       CCSTFile* ccst_tree = generate_client_header(tree);
-       ccst_tree->write(of);
        */
-      std::cout << "TODO: caller header\n";
+       std::vector<Module*> project_modules = tree->modules();
+       tree->function_pointer_to_rpc();
+       for (std::vector<Module*>::iterator it = project_modules.begin();
+           it != project_modules.end(); it++) {
+         Module *m = *it;
+         std::string fname (m->identifier());
+         fname.append("_caller.h");
+
+         FILE *of = fopen(fname.c_str(), "w");
+         CCSTFile* ccst_tree = generate_client_header(m);
+
+         std::string hdr_macro("__");
+         hdr_macro.append(m->identifier());
+         hdr_macro.append("_caller_h__");
+         std_string_toupper(hdr_macro);
+
+         fprintf(of, "#ifndef %s\n", hdr_macro.c_str());
+         fprintf(of, "#define %s\n\n", hdr_macro.c_str());
+         ccst_tree->write(of, 0);
+         fprintf(of, "\n#endif /* %s */\n", hdr_macro.c_str());
+       }
     } else if (!strcmp(argv[1], "-clientsource")) {
       // Caller code
       tree->create_trampoline_structs();
