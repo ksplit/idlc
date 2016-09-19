@@ -96,6 +96,12 @@ GlobalScope::GlobalScope()
   std::vector<ProjectionField*> trampoline_hidden_args_fields;
   this->type_definitions_.insert(std::pair<std::string, Type*>("trampoline_hidden_args",
 			  new ProjectionType("trampoline_hidden_args", "trampoline_hidden_args", trampoline_hidden_args_fields)));
+
+  std::vector<ProjectionField*> fipc_message_fields;
+  this->type_definitions_.insert(
+      std::pair<std::string, Type*>("fipc_message",
+          new ProjectionType("fipc_message", "fipc_message",
+              fipc_message_fields)));
 }
 
 GlobalScope* GlobalScope::instance()
