@@ -20,7 +20,7 @@ CCSTDeclaration* dispatch_function_declaration(); // todo complete
 
 // client.cpp
 
-CCSTFile* generate_client_header(Module *m, std::vector<Include*> includes); // todo empty, maybe unnecessary?
+CCSTFile* generate_client_header(Module *m); //, std::vector<Include*> includes); // todo empty, maybe unnecessary?
 CCSTFile* generate_client_source(Module *m, std::vector<Include*> includes); // todo complete
 
 CCSTCompoundStatement* caller_body(Rpc *r, Module *m); // todo complete

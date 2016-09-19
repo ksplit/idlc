@@ -4,10 +4,25 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <iostream>
 
-CCSTFile* generate_client_header(Module* f)
+CCSTFile* generate_client_header(Module* mod)
 {
-  
+  std::vector<CCSTExDeclaration*> definitions;
+  if (mod->rpc_definitions().empty()) {
+    return NULL;
+  }
+  std::vector<Rpc*> rpcs = mod->rpc_definitions();
+  for (std::vector<Rpc*>::iterator it = rpcs.begin(); it != rpcs.end();
+      it++) {
+    Rpc *r = *it;
+    // print definitions of callee functions, all other functions are
+    // already declared in the kernel
+    if (r->function_pointer_defined()) {
+      definitions.push_back(callee_declaration(r));
+    }
+  }
+  return new CCSTFile(definitions);
 }
 
 CCSTFile* generate_client_source(Module* f, std::vector<Include*> includes)
@@ -250,10 +265,3 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   
   return new CCSTCompoundStatement(declarations, statements);  
 }
-
-
-
-
-
-
-
