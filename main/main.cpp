@@ -48,12 +48,30 @@ int main(int argc, char ** argv)
     if (!strcmp(argv[1], "-serverheader")) {
       /*
        MarshalVisitor* mv = new MarshalVisitor();
-       tree->accept(mv, 0x0);
+       tree->accept(mv, 0x0);*/
+      std::vector<Module*> project_modules = tree->modules();
+      // convert func pointer to rpc so that we can generate enums
+      tree->function_pointer_to_rpc();
 
-       CCSTFile* ccst_tree = generate_server_header(tree);
-       ccst_tree->write(of);
-       */
-      std::cout << "TODO: callee header\n";
+      for (std::vector<Module*>::iterator it = project_modules.begin();
+          it != project_modules.end(); it++) {
+        Module *m = *it;
+        std::string fname (m->identifier());
+        fname.append("_callee.h");
+
+        FILE *of = fopen(fname.c_str(), "w");
+        CCSTFile* ccst_tree = generate_server_header(m);
+
+        std::string hdr_macro("__");
+        hdr_macro.append(m->identifier());
+        hdr_macro.append("_callee_h__");
+        std_string_toupper(hdr_macro);
+
+        fprintf(of, "#ifndef %s\n", hdr_macro.c_str());
+        fprintf(of, "#define %s\n\n", hdr_macro.c_str());
+        ccst_tree->write(of, 0);
+        fprintf(of, "\n#endif /* %s */\n", hdr_macro.c_str());
+      }
     } else if (!strcmp(argv[1], "-serversource")) {
       // Callee code
       tree->resolve_types();
