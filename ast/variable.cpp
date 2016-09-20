@@ -3,20 +3,21 @@
 
 /* global variable */
 
-GlobalVariable::GlobalVariable(Type *type, const char *id, int pointer_count)
+GlobalVariable::GlobalVariable(Type *type, const char *id, int pointer_count) :
+  type_(type),
+  id_(id),
+  pointer_count_(pointer_count),
+  container_(NULL),
+  accessor_(NULL),
+  marshal_info_(NULL)
 {
-  this->type_ = type;
-  this->id_ = id;
-  this->pointer_count_ = pointer_count;
-  this->container_ = 0x0;
-  this->accessor_ = 0x0;
 }
 
 GlobalVariable::GlobalVariable(const GlobalVariable& other)
 {
   // copy type
   this->type_ = other.type_->clone();
-
+  this->pointer_count_ = other.pointer_count_;
   this->accessor_ = other.accessor_;
   
   // copy id
@@ -319,35 +320,45 @@ bool GlobalVariable::bind_callee()
 /* end */
 
 /* parameter */
-
-Parameter::Parameter()
+Parameter::Parameter() :
+  in_(false),
+  out_(false),
+  alloc_callee_(false),
+  alloc_caller_(false),
+  dealloc_callee_(false),
+  dealloc_caller_(false),
+  bind_callee_(false),
+  bind_caller_(false),
+  type_(NULL),
+  name_(NULL),
+  marshal_info_(NULL),
+  accessor_(NULL),
+  pointer_count_(0),
+  container_(NULL)
 {
-  this->type_ = 0x0;
-  this->name_ = "";
-  this->pointer_count_ = 0;
-  this->in_ = false;
-  this->out_ = false;
-  this->alloc_callee_ = false;
-  this->alloc_caller_ = false;
-  this->dealloc_callee_ = false;
-  this->dealloc_caller_ = false;
-  this->container_ = 0x0;
 }
 
-Parameter::Parameter(Type* type, const char* name, int pointer_count)
+Parameter::Parameter(Type* type, const char* name, int pointer_count) :
+  in_(false),
+  out_(false),
+  alloc_callee_(false),
+  alloc_caller_(false),
+  dealloc_callee_(false),
+  dealloc_caller_(false),
+  bind_callee_(false),
+  bind_caller_(false),
+  type_(type),
+  name_(name),
+  marshal_info_(NULL),
+  accessor_(NULL),
+  pointer_count_(pointer_count),
+  container_(NULL)
 {
-  this->type_ = type;
-  this->name_ = name;
-  this->pointer_count_ = pointer_count;
-  this->in_ = false;
-  this->out_ = false;
-  this->alloc_callee_ = false;
-  this->alloc_caller_ = false;
-  this->dealloc_callee_ = false;
-  this->dealloc_caller_ = false;
 }
 
-Parameter::Parameter(const Parameter& other)
+Parameter::Parameter(const Parameter& other) :
+  marshal_info_(NULL),
+  accessor_(NULL)
 {
   this->type_ = other.type_->clone();
 
@@ -362,6 +373,8 @@ Parameter::Parameter(const Parameter& other)
   this->alloc_caller_ = other.alloc_caller_;
   this->dealloc_callee_ = other.dealloc_callee_;
   this->dealloc_caller_ = other.dealloc_caller_;
+  this->bind_callee_ = other.bind_callee_;
+  this->bind_caller_ = other.bind_caller_;
 
   if(other.container_ != 0x0) {
     this->container_ = other.container_->clone();
@@ -662,19 +675,15 @@ bool Parameter::bind_callee()
 /* end */
 
 /* Return Variable */
-
-
-ReturnVariable::ReturnVariable()
+ReturnVariable::ReturnVariable(Type *return_type, int pointer_count,
+  const char* id) :
+  name_(id),
+  type_(return_type),
+  marshal_info_(NULL),
+  accessor_(NULL),
+  pointer_count_(pointer_count),
+  container_(NULL)
 {
-
-}
-
-ReturnVariable::ReturnVariable(Type *return_type, int pointer_count, const char* id)
-{
-  this->type_ = return_type;
-  this->name_ = id;
-  this->pointer_count_ = pointer_count;
-  this->container_ = 0x0;
 }
 
 ReturnVariable::ReturnVariable(const ReturnVariable& other)
@@ -987,18 +996,23 @@ bool ReturnVariable::bind_callee()
 
 /* projection field */
 
-ProjectionField::ProjectionField(Type* field_type, const char* field_name, int pointer_count)
+ProjectionField::ProjectionField(Type* field_type, const char* field_name,
+  int pointer_count) :
+  in_(false),
+  out_(false),
+  alloc_callee_(false),
+  alloc_caller_(false),
+  dealloc_callee_(false),
+  dealloc_caller_(false),
+  bind_callee_(false),
+  bind_caller_(false),
+  type_(field_type),
+  field_name_(field_name),
+  marshal_info_(NULL),
+  accessor_(NULL),
+  pointer_count_(pointer_count),
+  container_(NULL)
 {
-  this->in_ = false; 
-  this->out_ = false;
-  this->alloc_callee_ = false;
-  this->alloc_caller_ = false;
-  this->dealloc_callee_ = false;
-  this->dealloc_caller_ = false;
-  this->type_ = field_type; 
-  this->field_name_ = field_name;
-  this->pointer_count_ = pointer_count;
-  this->container_ = 0x0;
 }
 
 ProjectionField::ProjectionField(const ProjectionField& other)
@@ -1009,6 +1023,9 @@ ProjectionField::ProjectionField(const ProjectionField& other)
   this->alloc_caller_ = other.alloc_caller_;
   this->dealloc_callee_ = other.dealloc_callee_;
   this->dealloc_caller_ = other.dealloc_caller_;
+  this->bind_callee_ = other.bind_callee_;
+  this->bind_caller_ = other.bind_caller_;
+
   // copy Type
   this->type_ = other.type_->clone();
   // copy field name
@@ -1304,11 +1321,12 @@ bool ProjectionField::bind_callee()
   return this->bind_callee_;
 }
 
-FPParameter::FPParameter(Type *type, int pointer_count)
+FPParameter::FPParameter(Type *type, int pointer_count) :
+  type_(type),
+  pointer_count_(pointer_count),
+  container_(NULL),
+  marshal_info_(NULL)
 {
-  this->type_ = type;
-  this->pointer_count_ = pointer_count;
-  this->container_ = 0x0;
 }
 
 FPParameter::FPParameter(const FPParameter& other)
