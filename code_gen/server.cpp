@@ -476,3 +476,19 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
    std::cout << "in server source gen\n";
    return c_file;
 }
+
+CCSTFile *generate_callee_lds(Module *mod)
+{
+  std::vector<Rpc*> rpcs = mod->rpc_definitions();
+  std::vector<CCSTExDeclaration*> statements;
+  for (std::vector<Rpc*>::iterator it = rpcs.begin(); it != rpcs.end(); it++) {
+    Rpc *r = *it;
+    if (r->function_pointer_defined()) {
+      std::vector<CCSTAssignExpr*> data_args;
+      data_args.push_back(new CCSTPrimaryExprId(trampoline_func_name(r->name())));
+      statements.push_back(
+          new CCSTMacro("LCD_TRAMPOLINE_LINKER_SECTION", data_args, false));
+    }
+  }
+  return new CCSTFile(statements);
+}
