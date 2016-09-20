@@ -14,7 +14,7 @@ void CCSTFile::write(FILE *f, int indent)
   for(std::vector<CCSTExDeclaration*>::iterator it = defs_.begin(); it != defs_.end(); ++it)
     {
       CCSTExDeclaration *ex_dec = *it;
-      ex_dec->write(f, 0);
+      ex_dec->write(f, indent);
     }
 }
 
