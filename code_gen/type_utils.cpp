@@ -361,12 +361,45 @@ std::vector<CCSTDecSpecifier*> type2(Type *t)
 CCSTStructUnionSpecifier* struct_declaration(ProjectionType *pt)
 {
   std::vector<CCSTStructDeclaration*> field_decs;
-
+  std::vector<CCSTInitDeclarator*> decs;
+  std::vector<CCSTSpecifierQual*>specifier;
+  std::vector<Parameter*> parameters;
+  std::vector<CCSTStructDeclarator*> struct_decs;
   std::vector<ProjectionField*> fields = pt->fields();
+  std::vector<CCSTParamDeclaration*> func_pointer_params;
+
   for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
     ProjectionField *pf = (ProjectionField*) *it;
-    field_decs.push_back(new CCSTStructDeclaration( type(pf->type())
-						    , new CCSTStructDeclarator( new CCSTDeclarator( pointer(pf->pointer_count()), new CCSTDirectDecId(pf->identifier())))));
+    if (pf->type()->num() == FUNCTION_TYPE) {
+      Function *f = dynamic_cast<Function*>(pf->type());
+      std::vector<CCSTDecSpecifier*> new_fp_return_type = type2(f->return_var_->type());
+      specifier.push_back(new CCSTSimpleTypeSpecifier(int_t)); //type2(f->return_var_->type());
+      //specifier = new_fp_return_type;
+      parameters = f->parameters_;
+
+      for(std::vector<Parameter*>::iterator it = parameters.begin(); it != parameters.end(); it ++) {
+        Parameter *p = *it;
+        std::vector<CCSTDecSpecifier*> fp_param_tmp = type2(p->type());
+        func_pointer_params.push_back(new CCSTParamDeclaration(fp_param_tmp
+                     , new CCSTDeclarator(pointer(p->pointer_count()), new CCSTDirectDecId(""))));
+      }
+      struct_decs.push_back(new CCSTStructDeclarator(
+            new CCSTDeclarator(NULL,
+            new CCSTDirectDecParamTypeList(
+            new CCSTDirectDecDec(
+            new CCSTDeclarator(
+            new CCSTPointer(),
+            new CCSTDirectDecId(f->name()))),
+            new CCSTParamList(func_pointer_params)))));
+
+      field_decs.push_back( new CCSTStructDeclaration(specifier, new CCSTStructDecList(struct_decs)));
+    } else {
+      field_decs.push_back(new CCSTStructDeclaration( type(pf->type())
+                  , new CCSTStructDeclarator(
+                      new CCSTDeclarator(
+                          pointer(pf->pointer_count()),
+                          new CCSTDirectDecId(pf->identifier())))));
+    }
   }
   
   return new CCSTStructUnionSpecifier(struct_t, pt->name(), field_decs);
