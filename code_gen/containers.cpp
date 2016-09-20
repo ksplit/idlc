@@ -50,13 +50,20 @@ std::vector<CCSTStatement*> container_of(Variable *v, const char* cspace)
     insert_args.push_back(new CCSTUnaryExprCastExpr(reference()
 						    , access(my_ref_field))); // & container->my_ref
 
-    ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
-    Assert(pt != 0x0, "Error: dynamic cast to projection type failed.\n");
+    if (v->type()->num() == FUNCTION_TYPE) {
+      Function *f = dynamic_cast<Function*>(v->type());
+      Assert(f!= 0x0, "Error: dynamic cast to projection type failed.\n");
+      statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("err")
+                     , equals()
+                     , function_call(insert_name(f->name()), insert_args))));
+    } else {
+      ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
+      Assert(pt != 0x0, "Error: dynamic cast to projection type failed.\n");
 
-    statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("err")
-								   , equals()
-								   , function_call(insert_name(pt->real_type()), insert_args))));
-
+      statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("err")
+                     , equals()
+                     , function_call(insert_name(pt->real_type()), insert_args))));
+    }
     /* do error checking */
     statements.push_back(if_cond_fail(new CCSTPrimaryExprId("err")
 				      , "lcd insert"));
@@ -319,6 +326,7 @@ CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const char* 
   insert_args.push_back(new CCSTUnaryExprCastExpr(reference()
 						  , access(my_ref_field))); // & container->my_ref
 
+  if (v->type()->num() != FUNCTION_TYPE) {
   ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
   Assert(pt != 0x0, "Error: dynamic cast to projection type failed.\n");
 
@@ -329,7 +337,7 @@ CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const char* 
   /* do error checking */
   statements.push_back(if_cond_fail(new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId("err"))
 				    , "lcd insert"));
-  
+  }
   return new CCSTCompoundStatement(declarations, statements);
 }
 
@@ -358,7 +366,7 @@ CCSTCompoundStatement* alloc_link_container_caller(Variable *v, const char* cspa
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
   // simple case. v is not a projection
-  if(v->type()->num() != PROJECTION_TYPE) {
+  if(v->type()->num() != PROJECTION_TYPE && v->type()->num() != FUNCTION_TYPE) {
     if(v->alloc_caller()) {
       return alloc_insert_variable_container(v, cspace);
     } else {
@@ -370,6 +378,8 @@ CCSTCompoundStatement* alloc_link_container_caller(Variable *v, const char* cspa
     // else it is the projection case.
     statements.push_back(alloc_insert_variable_container(v, cspace));
 
+    if (v->type()->num() == FUNCTION_TYPE)
+      goto done;
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
     
@@ -411,7 +421,7 @@ CCSTCompoundStatement* alloc_link_container_caller(Variable *v, const char* cspa
   } else {
     return new CCSTCompoundStatement(declarations, container_of(v, cspace));
   }
-  
+done:
   return new CCSTCompoundStatement(declarations, statements);
 }
 

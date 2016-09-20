@@ -372,7 +372,13 @@ Parameter::Parameter(const Parameter& other)
 
 void Parameter::create_container_variable(LexicalScope *ls)
 {
-  if(this->pointer_count() <= 0 || (this->type_->num() != PROJECTION_TYPE && this->type_->num() != PROJECTION_CONSTRUCTOR_TYPE && this->type_->num() != INITIALIZE_TYPE) || (!this->bind_caller() && !this->bind_callee() && !this->alloc_caller() && !this->alloc_callee())) {
+  if (this->pointer_count() <= 0 ||
+        (this->type_->num() != PROJECTION_TYPE &&
+            this->type_->num() != PROJECTION_CONSTRUCTOR_TYPE &&
+              this->type_->num() != INITIALIZE_TYPE &&
+                this->type_->num() != FUNCTION_TYPE) ||
+        (!this->bind_caller() && !this->bind_callee() &&
+            !this->alloc_caller() && !this->alloc_callee())) {
     return;
   }
   Type *tmp = this->type_;
@@ -396,6 +402,7 @@ void Parameter::create_container_variable(LexicalScope *ls)
   printf("Just looked up container %s\n", container_name(tmp->name()));
   Assert(container_t != 0x0, "Error: could not find container in scope\n");
 
+  if (this->type_->num() == PROJECTION_TYPE) {
   ProjectionType *container = dynamic_cast<ProjectionType*>(container_t);
   Assert(container != 0x0, "Error: could not dynamically cast to projection\n");
 
@@ -419,6 +426,18 @@ void Parameter::create_container_variable(LexicalScope *ls)
   for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
     ProjectionField *pf = *it;
     pf->create_container_variable(ls);
+  }
+  } else if (this->type_->num() == FUNCTION_TYPE) {
+    ProjectionType *container = dynamic_cast<ProjectionType*>(container_t);
+    Assert(container != 0x0, "Error: could not dynamically cast to projection\n");
+    const char* name = container_name(append_strings("_", construct_list_vars(this)));
+
+    Parameter *container_var = new Parameter(container, name, 1);
+    container_var->set_in(this->in());
+    container_var->set_out(this->out());
+
+    // save.
+    this->container_ = container_var;
   }
 }
 

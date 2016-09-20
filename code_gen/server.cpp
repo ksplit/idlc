@@ -403,6 +403,19 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
 	std::vector<CCSTInitDeclarator*> empty;
 	definitions.push_back(new CCSTDeclaration(specifier, empty));
       }
+    } else if (t->num() == FUNCTION_TYPE) {
+      Function *f = dynamic_cast<Function*>(t);
+      Assert(f != 0x0, "Error: dynamic cast to projection type failed!\n");
+
+      if(module_types.find(container_name(f->name())) != module_types.end()) { // found the container
+  ProjectionType *pt_container = dynamic_cast<ProjectionType*>(module_types[container_name(f->name())]);
+  Assert(pt_container != 0x0, "Error: dynamic cast to projection type failed\n");
+  std::vector<CCSTDecSpecifier*> specifier;
+  specifier.push_back(struct_declaration(pt_container));
+  std::vector<CCSTInitDeclarator*> empty;
+  definitions.push_back(new CCSTDeclaration(specifier, empty));
+
+      }
     }
   }
   
