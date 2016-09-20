@@ -78,7 +78,7 @@ int Registers::allocate_next_free_register()
 	  return i;
 	}
     }
-  printf("add Assert();");
+  std::cout << "add Assert();";
   return -1;
 }
 
@@ -208,13 +208,13 @@ Marshal_type* MarshalPrepareVisitor::visit(UnresolvedType *ut)
 
 Marshal_type* MarshalPrepareVisitor::visit(Channel *c)
 {
-  printf("marshal prepare visitor channel todo!\n");
+  std::cout << "marshal prepare visitor channel todo!\n";
   return 0x0;
 }
 
 Marshal_type* MarshalPrepareVisitor::visit(Function *fp)
 {
-  printf("Error: cannot allocate a register for functino pointer\n");
+  std::cout << "Error: cannot allocate a register for functino pointer\n";
   return 0x0;
 }
 
@@ -226,7 +226,7 @@ Marshal_type* MarshalPrepareVisitor::visit(Typedef *td)
 
 Marshal_type* MarshalPrepareVisitor::visit(VoidType *vt)
 {
-  printf("Error: cannot allocate a register for void type\n");
+  std::cout << "Error: cannot allocate a register for void type\n";
   return new Marshal_void();
 }
 

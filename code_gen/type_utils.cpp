@@ -118,7 +118,7 @@ std::vector<CCSTSpecifierQual*> type(Type *t)
       }
     default:
       {
-	printf("Received %s with name %s instead of struct or integer\n", type_number_to_name(num), t->name());
+	std::cout << "Received " << type_number_to_name(num) << " with name " <<  t->name() << std::endl;
 	Assert(1 == 0, "Error: Not a struct or integer type. \n");
       }
     }
@@ -127,12 +127,12 @@ std::vector<CCSTSpecifierQual*> type(Type *t)
 
 CCSTTypeName* type_cast(Type *t, int pointer_count)
 {
-  printf("in type+cast\n");
+  std::cout << "in type+cast\n";
   CCSTAbstDeclarator *pointers = new CCSTAbstDeclarator( pointer(pointer_count), 0x0);
   std::vector<CCSTSpecifierQual*> spec_quals;
 
   if(t == 0x0) {
-    printf("t is null\n");
+    std::cout << "t is null\n";
   }
 
   switch(t->num())
@@ -152,17 +152,17 @@ CCSTTypeName* type_cast(Type *t, int pointer_count)
       }
     case PROJECTION_TYPE: // projection
       {
-	printf("here in type cast\n");
+	std::cout << "here in type cast\n";
 	ProjectionType *pt = dynamic_cast<ProjectionType*>(t);
 	const char* name = pt->real_type();
 
-	printf("projection name: %s\n", name);
+	std::cout << "projection name: " <<  name << std::endl;
 	spec_quals.push_back( new CCSTStructUnionSpecifier(struct_t, name) );
 	break;
       }
     case VOID_TYPE: // void
       { // does this even happen?
-	printf("Warning: casting something as void\n");
+	std::cout << "Warning: casting something as void\n";
 	spec_quals.push_back(new CCSTSimpleTypeSpecifier(void_t) );
 	break;
       }
@@ -233,7 +233,7 @@ std::vector<CCSTSpecifierQual*> integer_type_cast(IntegerType *it)
       }
     default:
       {
-	printf("todo\n");
+	std::cout << "todo\n";
       }
     }
   return spec_quals;
@@ -348,7 +348,7 @@ std::vector<CCSTDecSpecifier*> type2(Type *t)
     }
   default:
     {
-      printf("Received %s instead of struct or integer\n", type_number_to_name(num));
+      std::cout << "Received " <<  type_number_to_name(num) << " instead of struct or integer" << std::endl;
       Assert(1 == 0, "Error: Not a struct or integer type.\n");
     }
   }
@@ -413,7 +413,7 @@ CCSTDeclaration* struct_pointer_declaration(const char* struct_name, const char*
 {
   int err;
   Type *struct_tmp = ls->lookup(struct_name, &err); // fix
-  printf("Looking up %s in environtment", struct_name);
+  std::cout << "Looking up " <<  struct_name << " in environment" << std::endl;
   Assert(struct_tmp != 0x0, "Error: could not find container in environment\n");
   ProjectionType *struct_ = dynamic_cast<ProjectionType*>(struct_tmp);
   Assert(struct_ != 0x0, "Error: dynamic cast to Projection type failed!\n");

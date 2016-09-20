@@ -163,7 +163,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   for(std::vector<Parameter*>::iterator it = params.begin(); it != params.end(); it ++)
     {
       Parameter *p = *it; // allocs and lookups but doesn't link yet.
-      printf("Parameter is %s\n", p->identifier());
+      std::cout << "Parameter is " <<  p->identifier() << std::endl;
       statements.push_back(allocate_and_link_containers_callee(p
 							       , m->cspaces_.at(0)->identifier()));
     }
@@ -303,7 +303,7 @@ CCSTFile* generate_server_header(Module *file)
   // check if there are rpcs
   if(!file->rpc_definitions().empty())
     {
-      printf("rpc not empty\n");
+      std::cout << "rpc not empty\n";
       definitions.push_back(construct_enum(file));
       // function callee function declarations
       std::vector<Rpc*> rpcs = file->rpc_definitions();
@@ -455,7 +455,7 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
      {
        Rpc* r_tmp = (Rpc*) *it;
        if(r_tmp->function_pointer_defined()) {
-	 printf("doing function pointer def\n");
+	 std::cout << "doing function pointer def\n";
 	 definitions.push_back( function_definition(function_pointer_function_declaration(r_tmp)
 						    ,caller_body(r_tmp, m)));
 
@@ -464,7 +464,7 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
 	 definitions.push_back( function_definition(trampoline_function_declaration(r_tmp)
 						    , trampoline_function_body(r_tmp)));
        } else {
-	 printf("doing callee_declaration\n");
+	 std::cout << "doing callee_declaration\n";
 	 definitions.push_back( function_definition(callee_declaration(r_tmp)
 						,callee_body(r_tmp, m)));
        }
@@ -473,6 +473,6 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
   //  definitions.push_back( function_definition(dispatch_function_declaration()
   //						   , dispatch_loop_body(rps)));
    CCSTFile *c_file = new CCSTFile(definitions);
-   printf("in server source gen\n");
+   std::cout << "in server source gen\n";
    return c_file;
 }

@@ -33,7 +33,7 @@ CCSTDeclaration* trampoline_function_declaration(Rpc* r)
   */
   std::vector<CCSTDecSpecifier*>specifier = type2(r->return_variable()->type());
   
-  printf("done calling type2 tramp func dec\n");
+  std::cout << "done calling type2 tramp func dec\n";
   std::vector<CCSTInitDeclarator*> decs;
 
   std::vector<CCSTParamDeclaration*> tramp_func_params;
@@ -46,7 +46,7 @@ CCSTDeclaration* trampoline_function_declaration(Rpc* r)
   decs.push_back(new CCSTDeclarator(pointer(r->return_variable()->pointer_count())
 				    , new CCSTDirectDecParamTypeList(new CCSTDirectDecId(trampoline_func_name(r->name()))
 								     , parameter_list(parameters))));
-  printf("finishing tramp func dec\n");
+  std::cout << "finishing tramp func dec\n";
   return new CCSTDeclaration(specifier, attributes, decs);
 }
 

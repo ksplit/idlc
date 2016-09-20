@@ -97,13 +97,13 @@ Type * getType(const char* type)
     int err;
     LexicalScope *ls = get_current_scope();
     if(!ls) {
-        printf("current scope is null\n");
+        std::cout << "current scope is null\n";
     }
     Type* val = ls->lookup(type, &err);
 
     if(!val)
     {
-        printf("val is null\n");
+        std::cout << "val is null\n";
         val = new UnresolvedType(type);
     }
     return val;
@@ -114,12 +114,12 @@ Variable* getVariable(const char* id)
     int err;
     LexicalScope *ls = get_current_scope();
     if(!ls) {
-        printf("current scope is null!\n");
+        std::cout << "current scope is null!\n";
     }
     Variable *v = ls->lookup_variable(id, &err);
 
     if(!v) {
-        printf("could not find variable %s\n", id);
+        std::cout << "could not find variable " <<  id << std::endl;
         return 0x0;
     }
     return v;
@@ -131,11 +131,11 @@ int count_pointers(Value v)
     for(Value::iterator it = v.getValues().begin(); it != v.getValues().end(); it++) {
         const Value & v2 = *it;
         char star = (char) (intptr_t) v2.getValue();
-        printf("supposed to be a star is %c\n", star);
+        std::cout << "supposed to be a star is " <<  star << std::endl;
         if(star == '*') {
            count += 1;
         } else {
-           printf("Not a star\n");
+           std::cout << "Not a star\n";
         }
     }
     return count;
@@ -149,7 +149,8 @@ void insertVariable(Variable *v)
     {
         ErrorReport* er = ErrorReport::instance();
         er->set_error();
-        printf("Error: variable by name %s already exists in current scope.\n", v->identifier());
+        std::cout << "Error: variable by name " <<  v->identifier()
+                    <<  " already exists in current scope" << std::endl;
     }
 }
 
@@ -161,7 +162,8 @@ void insertType(const char * sym, Type * val) // should this be void?
     {
         ErrorReport* er = ErrorReport::instance();
         er->set_error();
-        printf("Error: type by name %s already exists in current scope.\n", val->name());
+        std::cout << "Error: type by name " <<  val->name()
+                    <<  " already exists in current scope" << std::endl;
     }
 }
 
@@ -227,7 +229,8 @@ GlobalScopeDefinitions =      d:Type_Definitions* {{
 			    	      Type *type = (Type*) v2.getValue();
 			    	      bool err = GlobalScope::instance()->insert(type->name(), type);
 				      if(!err) {
-				          printf("Error: definition already exists for a type of name %s in global scope.\n", type->name());
+				          std::cout << "Error: definition already exists for a type of name "
+				            <<  type->name() << " in global scope" << std::endl;
 				      }
 				  } 
 			      }}
@@ -299,7 +302,7 @@ pc_unnamed_scope_special = Spacing OPENC Spacing {{
 
 
 pc_unnamed_scope=	s:pc_unnamed_scope_special d:Type_Definitions* p:ProjField* Spacing CLOSEC Spacing {{	
-			    printf("matched a pc unnamed scope\n");
+			    std::cout << "matched a pc unnamed scope\n";
 			    std::vector<ProjectionField*> *fields = new std::vector<ProjectionField*>();
 			    for(Value::iterator it = p.getValues().begin(); it != p.getValues().end(); it ++) {
 			        const Value & v = *it;
@@ -403,14 +406,14 @@ String		=	<ascii 34> l:any_letter+ <ascii 34> {{
 
 any_letter	=	[_.,/?<>'; =:%`!@#$^&*()-+{}|\\ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789]
 
-Type_Definitions =	Typedef | Projection {{ printf("done with projection\n"); }}
+Type_Definitions =	Typedef | Projection {{ std::cout << "done with projection\n"; }}
 		 	| Projection_constructor
 
 Include		 =	"include" Space+ "<" Spacing p:Pathname Spacing ">" Spacing{{
 			    value = new Include(false, (char*) p.getValue());
 			}} 
 			| "include" Space+ <ascii 34> Spacing p:Pathname Spacing <ascii 34> Spacing{{
-			    printf("parsed an include\n");
+			    std::cout << "parsed an include\n";
 			    value = new Include(true, (char*) p.getValue());
 			}}
 
@@ -685,7 +688,7 @@ Channels        = f:FirstChannel* l:LastChannel {{
 		}}		  
 
 FP_Parameters	=	f:FP_FirstParam* l:FP_LastParam {{
-		            printf("matched fp parameters\n");
+		            std::cout << "matched fp parameters\n";
 			    std::vector<FPParameter* > *params = new std::vector<FPParameter*>();
 			    for(Value::iterator it = f.getValues().begin(); it != f.getValues().end(); it ++) { 
 			
@@ -712,11 +715,11 @@ Rpc		=	rpc_special Space+ t:Type_form pointers:star* Spacing id1:Identifier Spac
 			    Rpc* r = new Rpc(new ReturnVariable((Type *) t.getValue(), count_pointers(pointers), returnVarName())
 			                                       , (char *) id1.getValue(), params_, get_current_scope());
 			    
-			    printf("creating an rpc\n");
+			    std::cout << "creating an rpc\n";
 			    /*
 			    int err = get_current_scope()->insert(r);
 			    if(!err) {
-			        printf("Error rpc already in scope with this name %s.\n", r->name());
+			        std::cout << "Error rpc already in scope with this name " <<  r->name() << std::endl;
 		            }
 			    */
 
@@ -754,7 +757,7 @@ Projection_constructor =    s:Projection_constructor_special Spacing "<" Spacing
 			
                 const char *container_name_str = container_name((char*)id.getValue());
                 ProjectionType * container = new ProjectionType(container_name_str, container_name_str, container_fields);
-				printf("inserting container with name %s \n", container_name_str);
+				std::cout << "inserting container with name " <<  container_name_str << std::endl;
 			    	
                 // finished creating constructor
  				set_current_scope(get_current_scope()->outer_scope()); // leaving current scope
@@ -799,7 +802,7 @@ Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id
 
 			    const char *container_name_str = container_name((char*)id.getValue());
 			    ProjectionType * container = new ProjectionType(container_name_str, container_name_str, container_fields);
-			    printf("inserting projection type with name %s", container_name_str);
+			    std::cout << "inserting projection type with name " <<  container_name_str << std::endl;
 			    insertType(container_name_str, container);
 			    // finished creating constructor
  
@@ -863,14 +866,14 @@ Specification	=	OPENS Spacing s:Start* l:Last CLOSES Spacing {{
 			    const Value & v = *it;
 			    int* x = (int*) v.getValue();
 			    if(!x) {
-			        printf("error x is null\n");
+			        std::cout << "error x is null\n";
 				exit(0);       
 			    }
 			    *spec |= *x;
 			    }
 			    int * y = (int *) l.getValue();
 			    if(!y) { 
-			        printf("error y is null\n"); exit(0); 
+			        std::cout << "error y is null\n"; exit(0); 
 			    }
 			    *spec |= *y;
 			    value = spec;
@@ -996,7 +999,7 @@ Option		=	"projection"
 star 		= 	[*]
 
 signed_type	=	"int" Spacing {{ 
-			    printf("matched int type\n");
+			    std::cout << "matched int type\n";
 			    value = getType("int");
 			}}
 			| "char" Spacing {{

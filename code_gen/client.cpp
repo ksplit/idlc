@@ -71,7 +71,7 @@ CCSTFile* generate_client_source(Module* f, std::vector<Include*> includes)
   for(std::vector<Rpc*>::iterator it = rpcs.begin(); it != rpcs.end(); it ++) {
     Rpc *r_tmp = (Rpc*) *it;
     if(r_tmp->function_pointer_defined()) {
-      printf("function pointer defined function\n");
+      std::cout << "function pointer defined function\n";
       definitions.push_back(function_definition(callee_declaration(r_tmp)
 						, callee_body(r_tmp, f)));
     } else {
@@ -181,7 +181,7 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   for(std::vector<Parameter*>::iterator it = parameters.begin(); it != parameters.end(); it ++) {
     Parameter *p = *it;
     if(p->in()) {
-      printf("going to marshal variable %s for function %s\n", p->identifier(), r->name());
+      std::cout << "going to marshal variable " << p->identifier() <<  " for function " <<  r->name() << std::endl;
       statements.push_back(marshal_variable(p, "in"));    
     }
   }
@@ -192,7 +192,7 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
     for(std::vector<Parameter*>::iterator it = hidden_args.begin(); it != hidden_args.end(); it ++) {
       Parameter *p = *it;
       if(p->in()) {
-	printf("going to marshal hdiden arg %s for function %s\n", p->identifier(), r->name());
+	std::cout << "going to marshal hidden arg " << p->identifier() << " for function " <<  r->name() << std::endl;
 	statements.push_back(marshal_variable(p, "in"));
       }
     }

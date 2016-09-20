@@ -38,10 +38,10 @@ std::vector<CCSTDeclaration*> declare_variables_callee(Variable *v)
   std::vector<CCSTDeclaration*> declarations;
 
   if(v->container() != 0x0) {
-    printf("declaring container %s\n", v->container()->identifier());
+    std::cout << "declaring container " <<  v->container()->identifier() << std::endl;
     declarations.push_back(declare_variable(v->container()));
   } else {
-    printf("declaring variable %s\n", v->identifier());
+    std::cout << "declaring variable " <<  v->identifier() << std::endl;
     declarations.push_back(declare_variable(v));
   }
 

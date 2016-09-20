@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 #include <sstream>
+#include <iostream>
 #include <stdio.h>
 #include "marshal_op.h"
 #include "symbol_table.h"
@@ -511,7 +512,7 @@ class IntegerType : public Type
   bool is_unsigned();
   virtual int num();
   virtual void resolve_types(LexicalScope *ls);
-  ~IntegerType(){printf("inttype destructor\n");}
+  ~IntegerType(){ std::cout << "inttype destructor\n"; }
   virtual void create_trampoline_structs(LexicalScope *ls);
 };
 
@@ -592,7 +593,7 @@ class ProjectionType : public Type // complex type
   std::vector<ProjectionField*> fields();
   virtual int num();
   virtual void resolve_types(LexicalScope *ls);
-  ~ProjectionType(){printf("projection type destructor\n");}
+  ~ProjectionType(){ std::cout << "projection type destructor\n"; }
   virtual void create_trampoline_structs(LexicalScope *ls);
   ProjectionField* get_field(const char* field_name);
   void initialize_type();

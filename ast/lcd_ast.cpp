@@ -74,7 +74,7 @@ std::vector<Variable*> Rpc::marshal_projection_parameters(ProjectionType *pt, co
 void Rpc::create_container_variables()
 {
   // for each parameter that is a pointer, need to create a container variable
-  printf("in create container variables for %s\n", this->name_);
+  std::cout << "in create container variables for " <<  this->name_ << std::endl;
   for(std::vector<Parameter*>::iterator it = this->parameters_.begin(); it != this->parameters_.end(); it ++) {
     Parameter *p = *it;
     p->create_container_variable(this->current_scope());
@@ -152,7 +152,7 @@ void Rpc::prepare_marshal()
   // sort our parameters
   for(std::vector<Parameter*>::iterator it = all_params.begin(); it != all_params.end(); it ++) {
     Parameter *p = *it;
-    printf("parameter we are going to marshal is %s\n", p->identifier());
+    std::cout << "parameter we are going to marshal is " <<  p->identifier() << std::endl;
     if(p->in() && !p->out()) {
       in_params.push_back(p);
       if(p->type()->num() == PROJECTION_TYPE || p->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
@@ -192,7 +192,7 @@ void Rpc::prepare_marshal()
     // have to do it for container too!!!
     if(p->container() != 0x0) {
       Variable *container = p->container();
-      printf("parameter container we are going to marshal is %s\n", p->container()->identifier());
+      std::cout << "parameter container we are going to marshal is " <<  p->container()->identifier() << std::endl;
       
       if(container->in() && !container->out()) {
 	in_params.push_back(container);

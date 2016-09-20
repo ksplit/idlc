@@ -84,7 +84,7 @@ void GlobalVariable::set_accessor(Variable *v)
 
 Variable* GlobalVariable::accessor()
 {
-  printf("Error this operation is not allowed\n");
+  std::cout << "Error this operation is not allowed\n";
   return 0x0;
 }
 
@@ -130,7 +130,7 @@ void GlobalVariable::resolve_types(LexicalScope *ls)
     int err;
     Type *t = ls->lookup(tmp->name(), &err);
     if(t == 0x0) {
-      printf("Error: could not resolve type %s\n", tmp->name());
+      std::cout << "Error: could not resolve type " <<  tmp->name() << std::endl;
       return;
     }
 
@@ -147,7 +147,7 @@ void GlobalVariable::resolve_types(LexicalScope *ls)
     int err;
     Type *t = ls->lookup(this->type_->name(), &err);
     if(t == 0x0) {
-      printf("Error: could not resolve type %s\n", this->type_->name());
+      std::cout << "Error: could not resolve type " <<  this->type_->name() << std::endl;
       return;
     } 
     
@@ -224,66 +224,66 @@ void GlobalVariable::create_container_variable(LexicalScope *ls)
 
 void GlobalVariable::set_in(bool b)
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
 }
 
 void GlobalVariable::set_out(bool b)
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
 }
 
 void GlobalVariable::set_alloc_caller(bool b)
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
 }
 
 void GlobalVariable::set_alloc_callee(bool b)
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
 }
 
 void GlobalVariable::set_dealloc_caller(bool b)
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
 }
 
 void GlobalVariable::set_dealloc_callee(bool b)
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
 }
 
 bool GlobalVariable::in()
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
   return false;
 }
 
 bool GlobalVariable::out()
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
   return false;
 }
 
 bool GlobalVariable::alloc_caller()
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
   return false;
 }
 bool GlobalVariable::alloc_callee()
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
   return false;
 }
 
 bool GlobalVariable::dealloc_caller()
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
   return false;
 }
 
 bool GlobalVariable::dealloc_callee()
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
   return false;
 }
 
@@ -294,23 +294,23 @@ Variable* GlobalVariable::container()
 
 void GlobalVariable::set_bind_caller(bool b)
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
 }
 
 void GlobalVariable::set_bind_callee(bool b)
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
 }
 
 bool GlobalVariable::bind_caller()
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
   return false;
 }
 
 bool GlobalVariable::bind_callee()
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
   return false;
 }
 
@@ -399,7 +399,7 @@ void Parameter::create_container_variable(LexicalScope *ls)
   // lookup in scope the container for its type. 
   int err;
   Type *container_t = ls->lookup(container_name(tmp->name()), &err);
-  printf("Just looked up container %s\n", container_name(tmp->name()));
+  std::cout << "Just looked up container " <<  container_name(tmp->name()) << std::endl;
   Assert(container_t != 0x0, "Error: could not find container in scope\n");
 
   if (this->type_->num() == PROJECTION_TYPE) {
@@ -537,7 +537,7 @@ void Parameter::resolve_types(LexicalScope *ls)
     int err;
     Type *t = ls->lookup(tmp->name(), &err);
     if(t == 0x0) {
-      printf("Error: could not resolve type %s\n", tmp->name());
+      std::cout << "Error: could not resolve type " <<  tmp->name() << std::endl;
       return;
     }
 
@@ -554,7 +554,7 @@ void Parameter::resolve_types(LexicalScope *ls)
     int err;
     Type *t = ls->lookup(this->type_->name(), &err);
     if(t == 0x0) {
-      printf("Error: could not resolve type %s\n", this->type_->name());
+      std::cout << "Error: could not resolve type " <<  this->type_->name() << std::endl;
       return;
     } 
     
@@ -848,7 +848,7 @@ void ReturnVariable::resolve_types(LexicalScope *ls)
     int err;
     Type *t = ls->lookup(tmp->name(), &err);
     if(t == 0x0) {
-      printf("Error: could not resolve type %s\n", tmp->name());
+      std::cout << "Error: could not resolve type " <<  tmp->name() << std::endl;
       return;
     }
 
@@ -865,7 +865,7 @@ void ReturnVariable::resolve_types(LexicalScope *ls)
     int err;
     Type *t = ls->lookup(this->type_->name(), &err);
     if(t == 0x0) {
-      printf("Error: could not resolve type %s\n", this->type_->name());
+      std::cout << "Error: could not resolve type " <<  this->type_->name() << std::endl;
       return;
     } 
     
@@ -898,88 +898,88 @@ Variable* ReturnVariable::accessor()
 
 void ReturnVariable::set_in(bool b)
 {
-  printf("error this operation not allowed\n");
+  std::cout << "error this operation not allowed\n";
 }
 
 void ReturnVariable::set_out(bool b)
 {
-  printf("error this operation not allowed\n");
+  std::cout << "error this operation not allowed\n";
 }
 
 void ReturnVariable::set_alloc_caller(bool b)
 {
-  printf("error this operation not allowed\n");
+  std::cout << "error this operation not allowed\n";
 }
 
 void ReturnVariable::set_alloc_callee(bool b)
 {
-  printf("error this operation not allowed\n");
+  std::cout << "error this operation not allowed\n";
 }
 
 void ReturnVariable::set_dealloc_caller(bool b)
 {
-  printf("error this operation not allowed\n");
+  std::cout << "error this operation not allowed\n";
 }
 
 void ReturnVariable::set_dealloc_callee(bool b)
 {
-  printf("error this operation not allowed\n");
+  std::cout << "error this operation not allowed\n";
 }
 
 bool ReturnVariable::in()
 {
-  printf("error this operation not allowed\n");
+  std::cout << "error this operation not allowed\n";
   return false;
 }
 
 bool ReturnVariable::out()
 {
-  printf("error this operation not allowed\n");
+  std::cout << "error this operation not allowed\n";
   return false;
 }
 
 bool ReturnVariable::alloc_caller()
 {
-  printf("error this operation not allowed\n");
+  std::cout << "error this operation not allowed\n";
   return false;
 }
 bool ReturnVariable::alloc_callee()
 {
-  printf("error this operation not allowed\n");
+  std::cout << "error this operation not allowed\n";
   return false;
 }
 
 bool ReturnVariable::dealloc_caller()
 {
-  printf("error this operation not allowed\n");
+  std::cout << "error this operation not allowed\n";
   return false;
 }
 
 bool ReturnVariable::dealloc_callee()
 {
-  printf("error this operation not allowed\n");
+  std::cout << "error this operation not allowed\n";
   return false;
 }
 
 void ReturnVariable::set_bind_caller(bool b)
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
 }
 
 void ReturnVariable::set_bind_callee(bool b)
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
 }
 
 bool ReturnVariable::bind_caller()
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
   return false;
 }
 
 bool ReturnVariable::bind_callee()
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
   return false;
 }
 
@@ -1058,7 +1058,7 @@ void ProjectionField::create_container_variable(LexicalScope *ls)
   // lookup in scope the container for its type. 
   int err;
   Type *container_t = ls->lookup(container_name(tmp->name()), &err);
-  printf("looking up container %s in pf\n", container_name(tmp->name()));
+  std::cout << "looking up container " <<  container_name(tmp->name()) << std::endl;
   Assert(container_t != 0x0, "Error: could not find container in scope\n");
 
   ProjectionType *container = dynamic_cast<ProjectionType*>(container_t);
@@ -1181,7 +1181,7 @@ void ProjectionField::resolve_types(LexicalScope *ls)
     int err;
     Type *t = ls->lookup(tmp->name(), &err);
     if(t == 0x0) {
-      printf("Error: could not resolve type %s\n", tmp->name());
+      std::cout << "Error: could not resolve type " <<  tmp->name() << std::endl;
       return;
     }
 
@@ -1198,7 +1198,7 @@ void ProjectionField::resolve_types(LexicalScope *ls)
     int err;
     Type *t = ls->lookup(this->type_->name(), &err);
     if(t == 0x0) {
-      printf("Error: could not resolve type %s\n", this->type_->name());
+      std::cout << "Error: could not resolve type " <<  this->type_->name() << std::endl;
       return;
     } 
     
@@ -1449,7 +1449,7 @@ void FPParameter::resolve_types(LexicalScope *ls)
     int err;
     Type *t = ls->lookup(tmp->name(), &err);
     if(t == 0x0) {
-      printf("Error: could not resolve type %s\n", tmp->name());
+      std::cout << "Error: could not resolve type " <<  tmp->name() << std::endl;
       return;
     }
 
@@ -1466,7 +1466,7 @@ void FPParameter::resolve_types(LexicalScope *ls)
     int err;
     Type *t = ls->lookup(this->type_->name(), &err);
     if(t == 0x0) {
-      printf("Error: could not resolve type %s\n", this->type_->name());
+      std::cout << "Error: could not resolve type " <<  this->type_->name() << std::endl;
       return;
     } 
     
@@ -1494,88 +1494,88 @@ void FPParameter::initialize_type()
 
 void FPParameter::set_in(bool b)
 {
-  printf("this operation is now allowed\n");
+  std::cout << "this operation is now allowed\n";
 }
 
 void FPParameter::set_out(bool b)
 {
-  printf("this operation is now allowed\n");
+  std::cout << "this operation is now allowed\n";
 }
 
 void FPParameter::set_alloc_caller(bool b)
 {
-  printf("this operation is now allowed\n");
+  std::cout << "this operation is now allowed\n";
 }
 
 void FPParameter::set_alloc_callee(bool b)
 {
-  printf("this operation is now allowed\n");
+  std::cout << "this operation is now allowed\n";
 }
 
 void FPParameter::set_dealloc_caller(bool b)
 {
-  printf("this operation is now allowed\n");
+  std::cout << "this operation is now allowed\n";
 }
 
 void FPParameter::set_dealloc_callee(bool b)
 {
-  printf("this operation is now allowed\n");
+  std::cout << "this operation is now allowed\n";
 }
 
 bool FPParameter::in()
 {
-  printf("this operation is now allowed\n");
+  std::cout << "this operation is now allowed\n";
   return false;
 }
 
 bool FPParameter::out()
 {
-  printf("this operation is now allowed\n");
+  std::cout << "this operation is now allowed\n";
   return false;
 }
 
 bool FPParameter::alloc_caller()
 {
-  printf("this operation is now allowed\n");
+  std::cout << "this operation is now allowed\n";
   return false;
 }
 bool FPParameter::alloc_callee()
 {
-  printf("this operation is now allowed\n");
+  std::cout << "this operation is now allowed\n";
   return false;
 }
 
 bool FPParameter::dealloc_caller()
 {
-  printf("this operation is now allowed\n");
+  std::cout << "this operation is now allowed\n";
   return false;
 }
 
 bool FPParameter::dealloc_callee()
 {
-  printf("this operation is now allowed\n");
+  std::cout << "this operation is now allowed\n";
   return false;
 }
 
 void FPParameter::set_bind_caller(bool b)
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
 }
 
 void FPParameter::set_bind_callee(bool b)
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
 }
 
 bool FPParameter::bind_caller()
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
   return false;
 }
 
 bool FPParameter::bind_callee()
 {
-  printf("this operation is not allowed\n");
+  std::cout << "this operation is not allowed\n";
   return false;
 }
 

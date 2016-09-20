@@ -8,14 +8,15 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string>
+#include <iostream>
 
 /* taken from Scott Bauer 
  */
 static inline void AssertionFailure(std::string exp, std::string file, int line, const char* format, ...)
 //static void AssertionFailure(char *exp, char *file, int line, const char* format, ... )
 {
-  printf("Assertion '%s' failed at line %d of file %s\n", exp.c_str(), line, file.c_str());
-  printf("Error is %s\n", strerror(errno));
+  std::cout << "Assertion '" << exp.c_str() << "' failed at line " << line << " of file " << file.c_str() << std::endl;
+  std::cout << "Error is " <<  strerror(errno) << std::endl;
   va_list args;
   va_start(args, format);
   vfprintf(stdout, format, args);

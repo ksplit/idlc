@@ -469,7 +469,7 @@ int IntegerType::num()
 
 const char* IntegerType::name()
 {
-  printf("todo integer type name function.\n");
+  std::cout << "todo integer type name function.\n";
   return "";
 }
 
@@ -684,7 +684,7 @@ int ProjectionConstructorType::num()
 
 void ProjectionConstructorType::initialize(std::vector<Variable*> chans)
 {
-  printf("calling initialize on a pct\n");
+  std::cout << "calling initialize on a pct\n";
   // check that chans is correct length;
   if(chans.size() != this->channel_params_.size()) {
     Assert(1 == 0, "Error: required number of params and provided number do not match\n");

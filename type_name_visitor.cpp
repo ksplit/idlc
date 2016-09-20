@@ -40,7 +40,7 @@ CCSTTypeName* TypeNameVisitor::visit(Typedef *td)
 
 CCSTTypeName* TypeNameVisitor::visit(Channel *c)
 {
-  printf(" type name visitor channel todo!\n");
+  std::cout << " type name visitor channel todo!\n";
   return 0x0;
 }
 
@@ -104,7 +104,7 @@ CCSTTypeName* TypeNameVisitor::visit(ProjectionType *proj)
 
 CCSTTypeName* TypeNameVisitor::visit(Function *fp)
 {
-  printf("type name visitor function pointer todo\n");
+  std::cout << "type name visitor function pointer todo\n";
   return 0x0;
 }
 

@@ -13,7 +13,7 @@ CCSTStatement* marshal_variable(Variable *v, const char* direction)
   
   if (v->container() != 0x0) {
     // marshal container
-    printf("trying to marshal container %s\n", v->container()->identifier());
+    std::cout << "trying to marshal container " <<  v->container()->identifier() << std::endl;
     statements.push_back(marshal_variable(v->container(), direction));
   }
   
@@ -32,7 +32,7 @@ CCSTStatement* marshal_variable(Variable *v, const char* direction)
     }
     
   } else {
-    printf("marshalling variable %s\n", v->identifier());
+    std::cout << "marshalling variable " <<  v->identifier() << std::endl;
     Assert(v->marshal_info() != 0x0, "Error: marshalling info is null\n");
     statements.push_back( marshal(access(v), v->marshal_info()->get_register()));
   }

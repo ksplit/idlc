@@ -113,7 +113,7 @@ GlobalScope* GlobalScope::instance()
 
 void GlobalScope::set_outer_scope(LexicalScope *ls)
 {
-  printf("error:  attempt to set outer scope of global scope\n");
+  std::cout << "error:  attempt to set outer scope of global scope\n";
   return;
 }
 
@@ -192,7 +192,7 @@ Variable* LexicalScope::lookup_variable(const char *sym, int* err)
 
 std::vector<Rpc*> LexicalScope::rpc_in_scope()
 {
-  printf("rpc in scope lexical scope todo\n");
+  std::cout << "rpc in scope lexical scope todo\n";
   std::vector<Rpc*> empty;
   return empty;
 }
@@ -226,7 +226,7 @@ Type* LexicalScope::lookup(const char *symbol, int *err)
   }
   else {
     *err = 1;
-    printf("In lookup for type %s is %p\n", symbol, type_definitions_[temp]);
+    std::cout << "In lookup for type " <<  symbol << " is " << std::hex << type_definitions_[temp] << std::dec << std::endl;
     return type_definitions_[temp];
   }
 }
@@ -236,7 +236,7 @@ bool LexicalScope::insert(const char *symbol, Type *type)
   std::string temp(symbol); 
   std::pair<std::map<std::string,Type*>::iterator,bool> ret;
   ret = this->type_definitions_.insert(std::pair<std::string, Type*>(temp, type));
-  printf("In insert pointer for type %s is %p\n", symbol, type);
+  std::cout << "In insert pointer for type " <<  symbol << " is " << type << std::endl;
   return ret.second;
 }
 

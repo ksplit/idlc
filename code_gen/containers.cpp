@@ -477,7 +477,7 @@ std::vector<CCSTStatement*> caller_initialize_channels(ProjectionType *pt)
       std::pair<Variable*,Variable*> pair = *it;
         
       if(pair.second == 0x0) {
-	printf("pair.second is null, pair.first id is %s\n", pair.first->identifier());
+	std::cout << "pair.second is null, pair.first id is " <<  pair.first->identifier() << std::endl;
       }
       /*
 	lcd_sync_channel_group_item_init(&fs_operations_container->chnl,

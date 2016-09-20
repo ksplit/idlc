@@ -192,7 +192,7 @@ void CCSTStructUnionSpecifier::write(FILE *f, int indent)
 	break;
       }
     default:
-      printf("error");
+      std::cout << "error";
       exit(0);
       break;
     }
@@ -304,7 +304,7 @@ void CCSTDeclarator::write(FILE *f, int indent)
     }
   if(this->d_dec_ == NULL)
     {
-      printf("error");
+      std::cout << "error";
       exit(0);
     }
   this->d_dec_->write(f, 0);
@@ -375,7 +375,7 @@ void CCSTDirectDecDec::write(FILE *f, int indent)
 {
   if(this->dec_ == NULL)
     {
-      printf("Error\n");
+      std::cout << "Error\n";
       exit(0);
     }
   fprintf(f, "%s( ", indentation(indent)); // are there actually supposed to be parens?
@@ -399,7 +399,7 @@ void CCSTDirectDecConstExpr::write(FILE *f, int indent)
 {
   if(this->direct_dec_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   this->direct_dec_->write(f, indent);
@@ -421,14 +421,14 @@ void CCSTDirectDecParamTypeList::write(FILE *f, int indent)
 {
   if(this->direct_dec_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   this->direct_dec_->write(f, indent);
   fprintf(f, "(");
   if(this->p_t_list_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   this->p_t_list_->write(f, 0);
@@ -445,7 +445,7 @@ void CCSTDirectDecIdList::write(FILE *f, int indent)
 {
   if(this->direct_dec_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   fprintf(f, "%s( ", indentation(indent));
@@ -460,7 +460,7 @@ void CCSTDirectDecIdList::write(FILE *f, int indent)
 
 CCSTCondExpr::CCSTCondExpr()
 {
-  // printf("incomplete cond expr\n"); 
+  // std::cout << "incomplete cond expr\n"; 
   //todo
 }
 
@@ -473,7 +473,7 @@ CCSTCondExpr::CCSTCondExpr(CCSTLogicalOrExpr *log_or_expr, CCSTExpression *expr,
 
 void CCSTCondExpr::write(FILE *f, int indent)
 {
-  printf("incomplete cond expr\n");
+  std::cout << "incomplete cond expr\n";
   //todo
 }
 
@@ -486,7 +486,7 @@ void CCSTConstExpr::write(FILE *f, int indent)
 {
   if(this->cond_expr_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   fprintf(f, "const todo");
@@ -511,7 +511,7 @@ void CCSTLogicalOrExpr::write(FILE *f, int indent)
     {
       if(this->and_ == NULL)
 	{
-	  printf("error\n");
+	  std::cout << "error\n";
 	  exit(0);
 	}
       fprintf(f, "%s( ", indentation(indent));
@@ -546,7 +546,7 @@ void CCSTLogicalAndExpr::write(FILE *f, int indent)
     {
       if(this->or_ == NULL)
 	{
-	  printf("error\n");
+	  std::cout << "error\n";
 	  exit(0);
 	}
       fprintf(f, "%s( ", indentation(indent));
@@ -582,7 +582,7 @@ void CCSTInclusiveOrExpr::write(FILE *f, int indent)
     {
       if(this->xor_ == NULL)
 	{
-	  printf("error\n");
+	  std::cout << "error\n";
 	  exit(0);
 	}
       fprintf(f, "%s( ", indentation(indent));
@@ -644,7 +644,7 @@ void CCSTAndExpr::write(FILE *f, int indent)
 {
   if(this->and_ == NULL || this->eq_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   fprintf(f, "%s( ", indentation(indent));
@@ -672,7 +672,7 @@ void CCSTEqExpr::write(FILE *f, int indent)
 {
   if(this->eq_expr_ == NULL || this->r_expr_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   if(equal_)
@@ -713,7 +713,7 @@ void CCSTRelationalExpr::write(FILE *f, int indent)
 {
   if(this->r_expr_ == NULL || this->s_expr_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   fprintf(f, "%s( ", indentation(indent));
@@ -735,7 +735,7 @@ void CCSTRelationalExpr::write(FILE *f, int indent)
       break;
     default:
       {
-	printf("error\n");
+	std::cout << "error\n";
 	exit(0);
       }
     }
@@ -760,7 +760,7 @@ void CCSTShiftExpr::write(FILE *f, int indent)
 {
   if(this->s_expr_ == NULL || this->a_expr_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   fprintf(f, "%s( ", indentation(indent));
@@ -776,7 +776,7 @@ void CCSTShiftExpr::write(FILE *f, int indent)
       break;
     default:
       {
-	printf("error\n");
+	std::cout << "error\n";
 	exit(0);
       } 
     }
@@ -801,7 +801,7 @@ void CCSTAdditiveExpr::write(FILE *f, int indent)
 { 
   if(this->a_expr_ == NULL || this->m_expr_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   fprintf(f, "%s( ", indentation(indent));
@@ -817,7 +817,7 @@ void CCSTAdditiveExpr::write(FILE *f, int indent)
       break;
     default:
       {
-	printf("error\n");
+	std::cout << "error\n";
 	exit(0);
       }
     }
@@ -842,7 +842,7 @@ void CCSTMultExpr::write(FILE *f, int indent)
 {
   if(this->m_expr_ == NULL || this->c_expr_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   fprintf(f, "%s( ", indentation(indent));
@@ -861,7 +861,7 @@ void CCSTMultExpr::write(FILE *f, int indent)
       break;
     default:
       {
-	printf("error\n");
+	std::cout << "error\n";
 	exit(0);
       }
     }
@@ -885,7 +885,7 @@ void CCSTCastExpr::write(FILE *f, int indent)
 {
   if(this->cast_type_ == NULL || this->cast_expr_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   fprintf(f, "%s( ", indentation(indent));
@@ -904,7 +904,7 @@ void CCSTUnaryExprCastExpr::write(FILE *f, int indent)
 {
   if(this->unary_op_ == NULL || this->cast_expr_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   this->unary_op_->write(f, indent);
@@ -921,7 +921,7 @@ void CCSTUnaryExprOpOp::write(FILE *f, int indent)
 {
   if(this->unary_expr_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   switch (this->op_)
@@ -934,7 +934,7 @@ void CCSTUnaryExprOpOp::write(FILE *f, int indent)
       break;
     default:
       {
-	printf("error\n");
+	std::cout << "error\n";
 	exit(0);
       }
     }
@@ -971,7 +971,7 @@ void CCSTUnaryExprSizeOf::write(FILE *f, int indent)
     }
   else
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
 }
@@ -987,7 +987,7 @@ void CCSTPostFixExprOpOp::write(FILE *f, int indent)
 {
   if(this->post_fix_expr_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   this->post_fix_expr_->write(f, indent);
@@ -1002,7 +1002,7 @@ void CCSTPostFixExprOpOp::write(FILE *f, int indent)
       break;
     default:
       {
-	printf("error\n");
+	std::cout << "error\n";
 	exit(0);
       }
     }
@@ -1019,7 +1019,7 @@ void CCSTPostFixExprAccess::write(FILE *f, int indent)
 {
   if(this->post_fix_expr_ == 0x0 || this->id_ == "")
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   this->post_fix_expr_->write(f, indent);
@@ -1033,7 +1033,7 @@ void CCSTPostFixExprAccess::write(FILE *f, int indent)
       break;
     default:
       {
-	printf("error\n");
+	std::cout << "error\n";
 	exit(0);
       }
     }
@@ -1050,7 +1050,7 @@ void CCSTPostFixExprExpr::write(FILE *f, int indent)
 {
   if(this->post_fix_expr_ == NULL || this->expr_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   this->post_fix_expr_->write(f, indent);
@@ -1069,7 +1069,7 @@ void CCSTPostFixExprAssnExpr::write(FILE *f, int indent)
 {
   if(this->post_fix_expr_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   
@@ -1105,7 +1105,7 @@ void CCSTPrimaryExpr::write(FILE *f, int indent)
 {
   if(this->expr_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   fprintf(f, "%s( ", indentation(indent));
@@ -1255,7 +1255,7 @@ void CCSTAssignExpr::write(FILE *f, int indent)
 {
   if(this->unary_expr_ == NULL || this->assn_op_ == NULL || this->assn_expr_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   this->unary_expr_->write(f, indent);
@@ -1314,7 +1314,7 @@ void CCSTAssignOp::write(FILE *f, int indent)
       break;
     default:
       {
-	printf("error\n");
+	std::cout << "error\n";
 	exit(0);
       }
     }
@@ -1354,7 +1354,7 @@ void CCSTUnaryOp::write(FILE *f, int indent)
       break;
     default:
       {
-	printf("error\n");
+	std::cout << "error\n";
 	exit(0);
       }
     }
@@ -1400,7 +1400,7 @@ void CCSTParamTypeList::write(FILE *f, int indent)
 {
   if(this->p_list_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   this->p_list_->write(f, indent);
@@ -1476,7 +1476,7 @@ void CCSTParamDeclaration::write(FILE *f, int indent)
     {
       if(this->abs_dec_ == NULL)
  	{
-	  printf("error\n");
+	  std::cout << "error\n";
 	  exit(0);
 	}
       this->abs_dec_->write(f, 0);
@@ -1503,7 +1503,7 @@ void CCSTAbstDeclarator::write(FILE *f, int indent)
 {
   if(this->p_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   this->p_->write(f, indent);
@@ -1554,7 +1554,7 @@ void CCSTDirectAbstDeclarator::write(FILE *f, int indent)
     {
       if(this->d_abs_dec_ == NULL)
 	{
-	  printf("error\n");
+	  std::cout << "error\n";
 	  exit(0);
 	}
       this->d_abs_dec_->write(f, indent);
@@ -1563,7 +1563,7 @@ void CCSTDirectAbstDeclarator::write(FILE *f, int indent)
 	  
 	  if(this->param_type_list_ == NULL)
 	    {
-	      printf("error\n");
+	      std::cout << "error\n";
 	      exit(0);
 	    }
 	  fprintf(f, "%s( ", indentation(indent));
@@ -1692,7 +1692,7 @@ void CCSTDeclaration::write(FILE *f, int indent)
 
   for(std::vector<CCSTMacro*>::iterator it = attributes_.begin(); it != attributes_.end(); ++it) {
     CCSTMacro *mac = *it;
-    printf("--> Writing linkage attribute\n");
+    std::cout << "--> Writing linkage attribute\n";
     mac->write(f, 0);
   }
 
@@ -1723,7 +1723,7 @@ void CCSTInitDeclarator::write(FILE *f, int indent)
   // does inheritence cover just declarator case?
   if(this->dec_ == NULL || this->init_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   this->dec_->write(f, indent);
@@ -1757,7 +1757,7 @@ void CCSTInitializer::write(FILE *f, int indent)
     {
       if(this->init_list_ == NULL)
 	{
-	  printf("error\n");
+	  std::cout << "error\n";
 	  exit(0);
 	}
       fprintf(f, "%s{ ", indentation(indent));
@@ -1910,7 +1910,7 @@ void CCSTIfStatement::write(FILE *f, int indent)
   fprintf(f, "( ");
   if(this->cond_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   this->cond_->write(f, 0);
@@ -1935,7 +1935,7 @@ void CCSTIfElseStatement::write(FILE *f, int indent)
   fprintf(f, "( ");
   if(this->cond_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   this->cond_->write(f, 0);
@@ -1960,7 +1960,7 @@ void CCSTSwitchStatement::write(FILE *f, int indent)
 {
   if(this->expr_ == NULL)
     {
-      printf("error\n");
+      std::cout << "error\n";
       exit(0);
     }
   fprintf(f, "%sswitch ", indentation(indent));
