@@ -1055,7 +1055,12 @@ Type_form	=	"projection" Space+ n:Identifier Spacing {{
 			| "channel" Spacing {{  // todo
 			    value = new Channel();
 			}}
-			| type
+			| Qualifier? type
+
+
+Qualifier	= Qualifiers+ Space+
+
+Qualifiers	= "volatile" | "const"
 
 Spacing		=	Space*
 
