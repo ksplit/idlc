@@ -308,9 +308,14 @@ CCSTFile* generate_server_header(Module *file)
       // function callee function declarations
       std::vector<Rpc*> rpcs = file->rpc_definitions();
       for(std::vector<Rpc*>::iterator it = rpcs.begin(); it != rpcs.end(); it ++)
-	{
-	  definitions.push_back(callee_declaration((Rpc*) *it));
-	}
+      {
+        Rpc *r = *it;
+        // Print declaration only for callee functions.
+        // Function pointer callee functions are declared in caller's header
+        if (!r->function_pointer_defined()) {
+          definitions.push_back(callee_declaration((Rpc*) *it));
+        }
+      }
     }
   definitions.push_back(dispatch_function_declaration());
   CCSTFile *c_file = new CCSTFile(definitions);
