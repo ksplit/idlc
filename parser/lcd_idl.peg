@@ -421,7 +421,21 @@ FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* 
 			    
 			    Parameter *_p = new Parameter(fp, (char *) id.getValue(), 1);
 			    set_specs(*_p, s);
-			    set_current_scope(get_current_scope()->outer_scope());
+
+			    // FIXME: Since Rpc introduces a new scope (why??), unnamed scope of the current scope
+			    // is two levels behind. Let's traverse to that. Is this the rightway? Why not add
+			    // an unnamed scope param and save it in every lexical scope object?
+			    LexicalScope *this_unnamed = get_current_scope()->outer_scope()->outer_scope();
+			    set_current_scope(this_unnamed);
+			    insertType((char*)id.getValue(), fp);
+
+			    // creating constructor
+			    std::vector<ProjectionField*> container_fields;
+			    create_container(id, container_fields);
+			    const char *container_name_str = container_name((char*)id.getValue());
+			    ProjectionType * container = new ProjectionType(container_name_str, container_name_str, container_fields);
+			    std::cout << __func__ << ": Inserting projection type " << container_name_str << std::endl;
+			    insertType(container_name_str, container);
 			    value = _p;
 			}}
 
