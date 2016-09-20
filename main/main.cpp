@@ -56,21 +56,31 @@ int main(int argc, char ** argv)
       for (std::vector<Module*>::iterator it = project_modules.begin();
           it != project_modules.end(); it++) {
         Module *m = *it;
-        std::string fname (m->identifier());
+        //FIXME: Looks cluttered. Refactor appropriately
+        std::string fname(m->identifier());
+        std::string lds_fname(m->identifier());
         fname.append("_callee.h");
+        lds_fname.append("_callee.lds.S");
 
-        FILE *of = fopen(fname.c_str(), "w");
-        CCSTFile* ccst_tree = generate_server_header(m);
+        FILE *of_hdr = fopen(fname.c_str(), "w");
+        FILE *of_lds = fopen(lds_fname.c_str(), "w");
+
+        CCSTFile* ccst_hdr = generate_server_header(m);
+        CCSTFile* ccst_lds = generate_callee_lds(m);
 
         std::string hdr_macro("__");
         hdr_macro.append(m->identifier());
         hdr_macro.append("_callee_h__");
         std_string_toupper(hdr_macro);
 
-        fprintf(of, "#ifndef %s\n", hdr_macro.c_str());
-        fprintf(of, "#define %s\n\n", hdr_macro.c_str());
-        ccst_tree->write(of, 0);
-        fprintf(of, "\n#endif /* %s */\n", hdr_macro.c_str());
+        fprintf(of_hdr, "#ifndef %s\n", hdr_macro.c_str());
+        fprintf(of_hdr, "#define %s\n\n", hdr_macro.c_str());
+        ccst_hdr->write(of_hdr, 0);
+        fprintf(of_hdr, "\n#endif /* %s */\n", hdr_macro.c_str());
+
+        fprintf(of_lds, "SECTIONS\n{\n");
+        ccst_lds->write(of_lds, 1);
+        fprintf(of_lds, "}\nINSERT AFTER .text;\n");
       }
     } else if (!strcmp(argv[1], "-serversource")) {
       // Callee code
