@@ -47,6 +47,7 @@ void CCSTFuncDef::write(FILE *f, int indent)
 
     for(std::vector<CCSTMacro*>::iterator it = attributes_.begin(); it != attributes_.end(); ++it) {
       CCSTMacro *mac = *it;
+      fprintf(f, " ");
       mac->write(f, 0);
     }
 
@@ -198,7 +199,7 @@ void CCSTStructUnionSpecifier::write(FILE *f, int indent)
     }
   if(!this->struct_dec_.empty())
     {
-      fprintf(f, " {\n");
+      fprintf(f, "{\n");
       for(std::vector<CCSTStructDeclaration*>::iterator it = struct_dec_.begin(); it != struct_dec_.end(); ++it)
 	{
 	  CCSTStructDeclaration *ds = *it;
@@ -1465,7 +1466,6 @@ void CCSTParamDeclaration::write(FILE *f, int indent)
     {
       CCSTDecSpecifier *spec = *it;
       spec->write(f, 0);
-      fprintf(f, " ");
     }
   
   if(this->dec_ == NULL && this->abs_dec_ == NULL)
@@ -1613,9 +1613,9 @@ void CCSTEnumSpecifier::write(FILE *f, int indent)
     {
       fprintf(f, "%senum ", indentation(indent));
       fprintf(f, "%s", this->id_);
-      fprintf(f, " { ");
-      this->el_->write(f, 0);
-      fprintf(f, " }");
+      fprintf(f, " {\n");
+      this->el_->write(f, 1);
+      fprintf(f, "\n}");
     }
 }
 
@@ -1638,7 +1638,7 @@ void CCSTEnumeratorList::write(FILE *f, int indent)
 	{
 	  fprintf(f, ",\n");
 	  CCSTEnumerator *l = *it;
-	  l->write(f, 0);
+	  l->write(f, indent);
 	}
     }
 }
@@ -1845,9 +1845,8 @@ CCSTPlainLabelStatement::CCSTPlainLabelStatement(const char* id, CCSTStatement *
 
 void CCSTPlainLabelStatement::write(FILE *f, int indent)
 {
-  //todo
   fprintf(f, "%s:\n", this->id_);
-  this->stmnt_->write(f, 0);
+  this->stmnt_->write(f, indent);
 }
 
 CCSTCaseStatement::CCSTCaseStatement(CCSTCondExpr *c, CCSTStatement *body)
@@ -1860,18 +1859,16 @@ void CCSTCaseStatement::write(FILE *f, int indent)
 {
   fprintf(f, "%scase ", indentation(indent));
   this->case_label_->write(f, 0);
-  fprintf(f, ": ");
-  fprintf(f, "{\n");
+  fprintf(f, ":\n");
   this->body_->write(f, indent+1);
-  fprintf(f, "\n%s}", indentation(indent));
+  fprintf(f, "\n");
 }
 
 void CCSTDefaultLabelStatement::write(FILE *f, int indent)
 {
-  fprintf(f, "%sdefault: ", indentation(indent));
-  fprintf(f, "{\n");
+  fprintf(f, "%sdefault:\n", indentation(indent));
   this->body_->write(f, indent+1);
-  fprintf(f, "\n%s}", indentation(indent));
+  fprintf(f, "\n");
 }
 
 CCSTDefaultLabelStatement::CCSTDefaultLabelStatement(CCSTStatement* body)
@@ -1906,20 +1903,16 @@ CCSTIfStatement::CCSTIfStatement(CCSTExpression *cond, CCSTStatement *body)
 
 void CCSTIfStatement::write(FILE *f, int indent)
 {
-  fprintf(f, "%sif", indentation(indent));
-  fprintf(f, "( ");
+  fprintf(f, "%sif (", indentation(indent));
   if(this->cond_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
   this->cond_->write(f, 0);
-  fprintf(f, " )");
-  fprintf(f, " {\n");
+  fprintf(f, ") {\n");
   this->body_->write(f, indent+1);
-  fprintf(f, "\n");
-  fprintf(f, "%s}", indentation(indent));
-  fprintf(f, "\n");
+  fprintf(f, "%s}\n", indentation(indent));
 }
 
 CCSTIfElseStatement::CCSTIfElseStatement(CCSTExpression *cond, CCSTStatement *if_body, CCSTStatement *else_body)
@@ -1964,12 +1957,12 @@ void CCSTSwitchStatement::write(FILE *f, int indent)
       exit(0);
     }
   fprintf(f, "%sswitch ", indentation(indent));
-  fprintf(f, "( ");
+  fprintf(f, "(");
   this->expr_->write(f, 0);
-  fprintf(f, " )");
+  fprintf(f, ")");
   fprintf(f, " {\n");
   this->body_->write(f, indent+1); // all cases?
-  fprintf(f, "\n%s}\n", indentation(indent));
+  fprintf(f, "%s}\n", indentation(indent));
 }
 
 CCSTWhileLoop::CCSTWhileLoop(CCSTExpression *cond, CCSTStatement *body)
@@ -2019,9 +2012,7 @@ CCSTForLoop::CCSTForLoop(CCSTExpression *init, CCSTExpression *cond, CCSTExpress
 
 void CCSTForLoop::write(FILE *f, int indent)
 {
-  // write for (
-  fprintf(f, "%sfor", indentation(indent));
-  fprintf(f, "( ");
+  fprintf(f, "%sfor (", indentation(indent));
   if(this->init_ != NULL)
     this->init_->write(f, 0);
   fprintf(f, ";");
@@ -2030,10 +2021,9 @@ void CCSTForLoop::write(FILE *f, int indent)
   fprintf(f, ";");
   if(this->up_ != NULL)
     this->up_->write(f, 0);
-  fprintf(f, " ) ");
-  fprintf(f, "{\n");
+  fprintf(f, ") {\n");
   this->body_->write(f, indent+1);
-  fprintf(f, "\n%s}", indentation(indent));
+  fprintf(f, "%s}\n", indentation(indent));
 }
 
 CCSTGoto::CCSTGoto(const char* id)
@@ -2043,9 +2033,7 @@ CCSTGoto::CCSTGoto(const char* id)
 
 void CCSTGoto::write(FILE *f, int indent)
 {
-  fprintf(f, "%sgoto ", indentation(indent));
-  fprintf(f, "%s", this->identifier_);
-  fprintf(f, ";");
+  fprintf(f, "%sgoto %s;\n", indentation(indent), this->identifier_);
 }
 
 CCSTContinue::CCSTContinue()
@@ -2063,7 +2051,7 @@ CCSTBreak::CCSTBreak()
 
 void CCSTBreak::write(FILE *f, int indent)
 {
-  fprintf(f, "%sbreak", indentation(indent));
+  fprintf(f, "%sbreak;", indentation(indent));
 }
 
 CCSTReturn::CCSTReturn()
