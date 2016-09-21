@@ -2137,21 +2137,3 @@ const char *indentation(int level)
   else
     return indents[INDENT_LEVEL_MAX];
 }
-
-#if 0
-const char* indentation(int level)
-{
-  int length = level*INDENT;
-
-  char *spacing = (char*) malloc(sizeof(char)*(length+1));
-
-  std::ostringstream total;
-  int i = 0;
-  while(i < length) {
-    total << " ";
-    i++;
-  }
-  strncpy(spacing, total.str().c_str(), length+1);
-  return spacing;
-}
-#endif

@@ -4,6 +4,7 @@ start-symbol: File
 include: {{
 #include "lcd_ast.h"
 #include "error.h"
+#include "utils.h"
 #include <vector>
 #include <stdlib.h>
 #include <string>
@@ -58,18 +59,6 @@ void set_specs(Variable &v, const Value &s)
     if (spec & BIND_CALLEE) {
         v.set_bind_callee(true);
     }
-}
-
-const char* container_name(const char* name)
-{
-    int length = strlen(name);
-    int length2 = strlen("_container");
-    char *new_str = (char*) malloc(sizeof(char)*(length+length2+1));
-
-    std::ostringstream total;
-    total << name << "_container";
-    strncpy(new_str, total.str().c_str(), length+length2+1);
-    return new_str;
 }
 
 void set_current_scope(LexicalScope *ls)
@@ -169,17 +158,14 @@ void insertType(const char * sym, Type * val) // should this be void?
 
 const char* returnVarName()
 {
-    char* name = "ret";
+    const char* name = "ret";
     while(get_current_scope()->contains_identifier(name)) {
         // append _ on end of name
-
-        int len1 = strlen(name);
-        int len2 = strlen("_");
-        char* new_name = (char*) malloc(sizeof(char)*(len1+len2+1));
-
         std::ostringstream total;
         total << name << "_";
-        strncpy(new_name, total.str().c_str(), len1+len2+1);
+        int len = total.str().length() + 1;
+        char *new_name = new char[len];
+        strncpy(new_name, total.str().c_str(), len);
         name = new_name;
     }
     return name;
@@ -244,10 +230,8 @@ Pathname	= 	p1:PathStart+ {{
 				total << c;
 			    }
 			    
-			    std::string str = total.str();
-			    
-			    value.value = malloc(str.length()+1);
-			    strncpy((char*)value.value, str.c_str(), str.length()+1);
+			    std::string *str = new std::string(total.str().c_str());
+			    value.value = str->c_str();
 			}}
 
 PathStart      	=	IdentCont | [./~]
@@ -262,9 +246,8 @@ Identifier	=	i1:IdentStart i2:IdentCont* {{
 				char letter = (char) (intptr_t) v.getValue();
 				total << letter;
 		   	    }
-			    std::string str = total.str();
-		   	    value.value = malloc(str.length()+1);
-			    strncpy((char*)value.value, str.c_str(), str.length()+1); 
+			    std::string *str = new std::string(total.str());
+			    value.value = str->c_str();
 			}}
 
 IdentStart	=	[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]
@@ -363,9 +346,8 @@ VerbatimContent =	!"]" .
 RealType	=	fp:Identifier? Spacing sp:Identifier Spacing {{ //temporary solution
 			std::ostringstream total;	     
 			total << fp.getValue() << ' ' << sp.getValue();
-			std::string str = total.str();
-			value.value = malloc(str.length()+1);
-			strncpy((char*)value.value, str.c_str(), str.length()+1);
+			std::string *str = new std::string(total.str());
+			value.value = str->c_str();
 			}}		
 
 String		=	<ascii 34> l:any_letter+ <ascii 34> {{
@@ -399,9 +381,8 @@ String		=	<ascii 34> l:any_letter+ <ascii 34> {{
 				}
 				total << letter;
 			    }
-			    std::string str = total.str();
-			    value.value = malloc(str.length()+1);
-			    strncpy((char*)value.value, str.c_str(), str.length()+1);
+			    std::string *str = new std::string(total.str());
+			    value.value = str->c_str();
 			}}
 
 any_letter	=	[_.,/?<>'; =:%`!@#$^&*()-+{}|\\ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789]
@@ -410,11 +391,11 @@ Type_Definitions =	Typedef | Projection {{ std::cout << "done with projection\n"
 		 	| Projection_constructor
 
 Include		 =	"include" Space+ "<" Spacing p:Pathname Spacing ">" Spacing{{
-			    value = new Include(false, (char*) p.getValue());
+			    value = new Include(false, (const char*) p.getValue());
 			}} 
 			| "include" Space+ <ascii 34> Spacing p:Pathname Spacing <ascii 34> Spacing{{
 			    std::cout << "parsed an include\n";
-			    value = new Include(true, (char*) p.getValue());
+			    value = new Include(true, (const char*) p.getValue());
 			}}
 
 FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE {{

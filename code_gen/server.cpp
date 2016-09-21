@@ -326,9 +326,7 @@ CCSTDeclaration* callee_declaration(Rpc* r)
 {
   std::vector<CCSTDecSpecifier*> specifier; // = new std::vector<CCSTDecSpecifier*>();
   specifier.push_back(new CCSTSimpleTypeSpecifier(int_t));
-  char * callee_name = (char*) malloc((strlen(r->name())+strlen("_callee")+1)*sizeof(char));
-  sprintf(callee_name, "%s%s", r->name(), "_callee");
-  CCSTDirectDecId* id = new CCSTDirectDecId(callee_name);
+  CCSTDirectDecId* id = new CCSTDirectDecId(new_name(r->name(), "_callee"));
   
   std::vector<CCSTDecSpecifier*> s;
   s.push_back(new  CCSTSimpleTypeSpecifier(void_t));

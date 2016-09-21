@@ -21,9 +21,7 @@ GlobalVariable::GlobalVariable(const GlobalVariable& other)
   this->accessor_ = other.accessor_;
   
   // copy id
-  char* id_copy = (char*) malloc(sizeof(char)*(strlen(other.id_)+1));
-  strcpy(id_copy, other.id_);
-  this->id_ = id_copy;
+  this->id_ = new_name("", other.id_);
   // copy marshal info
   if (other.marshal_info_ != 0x0) {
     this->marshal_info_ = other.marshal_info_->clone(); // copy for real?
@@ -363,9 +361,7 @@ Parameter::Parameter(const Parameter& other) :
   this->type_ = other.type_->clone();
 
   // clone name
-  char* name_copy = (char*) malloc(sizeof(char)*(strlen(other.name_)+1));
-  strcpy(name_copy, other.name_);
-  this->name_ = name_copy;
+  this->name_ = new_name("", other.name_);
   this->pointer_count_ = other.pointer_count_;
   this->in_ = other.in_;
   this->out_ = other.out_;
@@ -689,9 +685,7 @@ ReturnVariable::ReturnVariable(Type *return_type, int pointer_count,
 ReturnVariable::ReturnVariable(const ReturnVariable& other)
 {
   // copy name
-  char* name_copy = (char*) malloc(sizeof(char)*(strlen(other.name_)+1));
-  strcpy(name_copy, other.name_);
-  this->name_ = name_copy;
+  this->name_ = new_name("", other.name_);
 
   // copy type
   this->type_ = other.type_->clone();
@@ -1029,9 +1023,7 @@ ProjectionField::ProjectionField(const ProjectionField& other)
   // copy Type
   this->type_ = other.type_->clone();
   // copy field name
-  char* field_name_copy = (char*) malloc(sizeof(char)*(strlen(other.field_name_)+1));
-  strcpy(field_name_copy, other.field_name_);
-  this->field_name_ = field_name_copy;
+  this->field_name_ = new_name("", other.field_name_);
 
   this->pointer_count_ = other.pointer_count_;
 

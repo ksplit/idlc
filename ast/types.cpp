@@ -132,9 +132,7 @@ Function::Function(const char *id, ReturnVariable *return_var, std::vector<Param
 Function::Function(const Function& other)
 {
   // copy id
-  char* id_copy = (char*) malloc(sizeof(char)*(strlen(other.identifier_)+1));
-  strcpy(id_copy, other.identifier_);
-  this->identifier_ = id_copy;
+  this->identifier_ = new_name("", other.identifier_);
 
   // copy return var
   this->return_var_ = new ReturnVariable(*other.return_var_);
@@ -217,9 +215,7 @@ UnresolvedType::UnresolvedType(const char *name)
 
 UnresolvedType::UnresolvedType(const UnresolvedType& other)
 {
-  char* name_copy = (char*) malloc(sizeof(char)*(strlen(other.type_name_)+1));
-  strcpy(name_copy, other.type_name_);
-  this->type_name_ = name_copy;
+  this->type_name_ = new_name("", other.type_name_);
 }
 
 CCSTTypeName* UnresolvedType::accept(TypeNameVisitor *worker)
@@ -310,19 +306,13 @@ Typedef::Typedef(const char* id, const char* alias, Type* type)
 Typedef::Typedef(const Typedef& other)
 {
   // copy id
-  char* id_copy = (char*) malloc(sizeof(char)*(strlen(other.identifier_)+1));
-  strcpy(id_copy, other.identifier_);
-  this->identifier_ = id_copy;			      
+  this->identifier_ = new_name("", other.identifier_);
   // copy alias
-  char* alias_copy = (char*) malloc(sizeof(char)*(strlen(other.alias_)+1));
-  strcpy(alias_copy, other.alias_);
-  this->alias_ = alias_copy;
+  this->alias_ = new_name("", other.alias_);;
   // copy Type
   this->type_ = other.type_->clone();
   // copy marshal info
-  char* marshal_info_copy = (char*) malloc(sizeof(char)*(strlen(other.marshal_info_)+1));
-  strcpy(marshal_info_copy, other.marshal_info_);
-  this->marshal_info_ = marshal_info_copy;
+  this->marshal_info_ = new_name("", other.marshal_info_);
 }
 
 Marshal_type* Typedef::accept(MarshalPrepareVisitor *worker)
@@ -508,13 +498,9 @@ ProjectionType::ProjectionType(const char* id, const char* real_type, std::vecto
 ProjectionType::ProjectionType(const ProjectionType& other)
 {
   // copy id
-  char* id_copy = (char*) malloc(sizeof(char)*(strlen(other.id_)+1));
-  strcpy(id_copy, other.id_);
-  this->id_ = id_copy;
+  this->id_ = new_name("", other.id_);
   // copy real_type_
-  char* real_type_copy = (char*) malloc(sizeof(char)*(strlen(other.real_type_)+1));
-  strcpy(real_type_copy, other.real_type_);
-  this->real_type_ = real_type_copy;
+  this->real_type_ = new_name("", other.real_type_);;
   // copy fields_
   std::vector<ProjectionField*> fields_copy;
   for(std::vector<ProjectionField*>::const_iterator it = other.fields_.begin(); it != other.fields_.end(); it ++) {
@@ -642,13 +628,9 @@ ProjectionConstructorType::ProjectionConstructorType(const char* id, const char*
 ProjectionConstructorType::ProjectionConstructorType(const ProjectionConstructorType& other)
 {
   // copy id
-  char* id_copy = (char*) malloc(sizeof(char)*(strlen(other.id_)+1));
-  strcpy(id_copy, other.id_);
-  this->id_ = id_copy;
+  this->id_ = new_name("", other.id_);
   // copy real_type_
-  char* real_type_copy = (char*) malloc(sizeof(char)*(strlen(other.real_type_)+1));
-  strcpy(real_type_copy, other.real_type_);
-  this->real_type_ = real_type_copy;
+  this->real_type_ = new_name("", other.real_type_);
   // copy fields_
   std::vector<ProjectionField*> fields_copy;
   for(std::vector<ProjectionField*>::const_iterator it = other.fields_.begin(); it != other.fields_.end(); it ++) {

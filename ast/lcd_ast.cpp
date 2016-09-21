@@ -120,16 +120,12 @@ LexicalScope* Rpc::current_scope()
 
 const char* Rpc::callee_name()
 {
-  char * callee_name = (char*) malloc((strlen(this->name_)+strlen("_callee")+1)*sizeof(char));
-  sprintf(callee_name, "%s%s", this->name_, "_callee");
-  return callee_name;
+  return new_name(this->name_, "_callee");
 }
 
 const char* Rpc::enum_name()
-{					       
-  char * callee_name = (char*) malloc((strlen(this->name_)+strlen("_enum")+1)*sizeof(char));
-  sprintf(callee_name, "%s%s", this->name_, "_enum");
-  return callee_name;
+{
+  return new_name(this->name_, "_enum");
 }
 
 std::vector<Parameter*> Rpc::parameters()

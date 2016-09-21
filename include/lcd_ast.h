@@ -447,7 +447,7 @@ class Typedef : public Type
  public:
   Type* type_;
   const char* alias_;
-  char* marshal_info_;
+  const char* marshal_info_;
   const char* identifier_;
   
   Typedef(const char* id, const char* alias, Type* type);

@@ -134,24 +134,14 @@ void std_string_toupper(std::string &input)
  */
 const char* append_strings(const char* delimiter, std::vector<const char*> strs)
 {
-  int delim_length = strlen(delimiter);
-  int length = 0;
-  for(std::vector<const char*>::iterator it = strs.begin(); it != strs.end(); it ++) {
-    const char* s = *it;
-    length += strlen(s);
+  std::string *total = new std::string;
+
+  for (std::vector<const char*>::iterator it = strs.begin(); it != strs.end(); it ++) {
+	const char *s = *it;
+	total->append(s);
+	total->append(delimiter);
   }
-
-  char* new_str = (char*) malloc(sizeof(char)*(length+1+( strs.size()-1)*delim_length));
-
-  std::ostringstream total;
-  for(std::vector<const char*>::iterator it = strs.begin(); it != strs.end()-1; it ++) {
-    const char* s = *it;
-    total << s << delimiter;
-  }
-
-  const char* s = *(strs.end()-1);
-  total << s;
-    
-  strncpy(new_str, total.str().c_str(), length+1+( strs.size()-1)*delim_length);
-  return new_str;
+  //Trim the last underscore to not have __ at the end
+  total->resize(total->length() - 1);
+  return total->c_str();
 }
