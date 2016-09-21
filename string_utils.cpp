@@ -5,50 +5,24 @@
 
 const char* new_name(const char* name, const char* suffix)
 {
-  int length = strlen(name);
-  int length2 = strlen(suffix);
-  char *new_str = (char*) malloc(sizeof(char)*(length+length2+1));
-  
-  std::ostringstream total;
-  total << name << suffix;
-  strncpy(new_str, total.str().c_str(), length+length2+1);
-  return new_str;
+  std::string *str = new std::string(name);
+  str->append(suffix);
+  return str->c_str();
 }
 
 const char* struct_name(const char* name)
 {
-  int length = strlen(name);
-  int length2 = strlen("struct ");
-  char *new_str = (char*) malloc(sizeof(char)*(length+length2+1));
-
-  std::ostringstream total;
-  total << "struct " << name;
-  strncpy(new_str, total.str().c_str(), length+length2+1);
-  return new_str;
+  return new_name("struct ", name);
 }
 
 const char* lookup_name(const char* name)
 {
-  int length = strlen(name);
-  int length2 = strlen("lookup_"); // wrong
-  char *new_str = (char*) malloc(sizeof(char)*(length+length2+1));
-
-  std::ostringstream total;
-  total << name << "lookup_";
-  strncpy(new_str, total.str().c_str(), length+length2+1);
-  return new_str;
+  return new_name("lookup_", name);
 }
 
 const char* insert_name(const char* name)
 {
-  int length = strlen(name);
-  int length2 = strlen("_insert"); // wrong
-  char *new_str = (char*) malloc(sizeof(char)*(length+length2+1));
-
-  std::ostringstream total;
-  total << name << "_insert";
-  strncpy(new_str, total.str().c_str(), length+length2+1);
-  return new_str;
+  return new_name(name, "_insert");
 }
 
 const char* cap_init_name(const char* name)
@@ -124,7 +98,7 @@ const char* hidden_args_name(const char* name)
 /* 
  * returns a new string with _p on the end.
  */ 
-const char* parameter_name(const char* name) 
+const char* parameter_name(const char* name)
 {
   return new_name(name, "_p");
 }
