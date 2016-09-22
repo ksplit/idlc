@@ -7,6 +7,21 @@ static const char* register_store_mapping_[] =
   { STORE_REG(0), STORE_REG(1), STORE_REG(2), STORE_REG(3), STORE_REG(4),
   STORE_REG(5), STORE_REG(6), STORE_REG(7) };
 
+static const char* cr_reg_access_mapping_[] =
+  { CREG(0), CREG(1), CREG(2), CREG(3), CREG(4), CREG(5), CREG(6), CREG(7) };
+
+static const char* cr_reg_store_mapping_[] =
+  { STORE_CREG(0), STORE_CREG(1), STORE_CREG(2), STORE_CREG(3), STORE_CREG(4),
+  STORE_CREG(5), STORE_CREG(6), STORE_CREG(7) };
+
+static const char* ipc_reg_access_mapping_[] =
+  { IPC_GET_REG(0), IPC_GET_REG(1), IPC_GET_REG(2), IPC_GET_REG(3),
+  IPC_GET_REG(4), IPC_GET_REG(5), IPC_GET_REG(6), IPC_GET_REG(7) };
+
+static const char* ipc_reg_store_mapping_[] =
+  { IPC_SET_REG(0), IPC_SET_REG(1), IPC_SET_REG(2), IPC_SET_REG(3),
+  IPC_SET_REG(4), IPC_SET_REG(5), IPC_SET_REG(6), IPC_SET_REG(7) };
+
 const char* access_register_mapping(int idx)
 {
   Assert(idx < LCD_MAX_REGS, "Illegal register access\n");

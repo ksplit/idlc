@@ -6,6 +6,10 @@
 
 #define REG(x)          "lcd_r"#x
 #define STORE_REG(x)    "lcd_set_r"#x
+#define CREG(x)         "lcd_cr"#x
+#define STORE_CREG(x)   "lcd_set_cr"#x
+#define IPC_GET_REG(x)  "fipc_get_reg"#x
+#define IPC_SET_REG(x)  "fipc_set_reg"#x
 
 #include <stdlib.h>
 #include "assert.h"
