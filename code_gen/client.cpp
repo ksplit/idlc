@@ -1,5 +1,6 @@
 #include "ccst.h"
 #include "code_gen.h"
+#include "utils.h"
 #include <string.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -199,7 +200,9 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   }
 
   /* marshal function tag */
-  statements.push_back(marshal(new CCSTInteger(r->tag()), 0));
+  std::string *func_type = new std::string(r->name());
+  std_string_toupper(*func_type);
+  statements.push_back(marshal(new CCSTEnumConst(func_type->c_str()), 0));
 
   /* make remote call using appropriate channel */
 
