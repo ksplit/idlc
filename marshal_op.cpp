@@ -39,22 +39,10 @@ const char* store_register_mapping(int idx)
  * Finds next free register, then
  * sets it as used
  */
-Registers::Registers()
+Registers::Registers() :
+  regs_(),
+  cap_regs_()
 {
-  init();
-}
-
-void Registers::init()
-{
-  int i;
-  for(i = 0; i < LCD_MAX_REGS; i ++)
-    {
-      regs_[i] = 0;
-    }
-  for(i = 0; i < LCD_MAX_CAP_REGS; i ++)
-    {
-      cap_regs_[i] = 0;
-    }
 }
 
 void Registers::init(int regs_taken[], int len1, int caps_taken[], int len2)

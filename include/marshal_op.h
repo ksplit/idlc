@@ -47,7 +47,6 @@ class Registers
 {
   int regs_ [LCD_MAX_REGS];
   int cap_regs_ [LCD_MAX_CAP_REGS];
-  void init();
  public:
   Registers();
   void init(Registers *r1, Registers *r2); // set union. 
