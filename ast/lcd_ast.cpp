@@ -2,20 +2,25 @@
 #include "utils.h"
 #include <stdio.h>
 
-Rpc::Rpc(ReturnVariable *return_value, const char* name, std::vector<Parameter* > parameters, LexicalScope *current_scope)
+Rpc::Rpc(ReturnVariable *return_value, const char* name,
+  std::vector<Parameter*> parameters, LexicalScope *current_scope) :
+  explicit_return_(return_value),
+  name_(name),
+  enum_str(name),
+  tag_(0),
+  parameters_(parameters),
+  current_scope_(current_scope)
 {
-  this->explicit_return_ = return_value;
-  this->name_ = name;
-  this->parameters_ = parameters;
   this->symbol_table_ = new SymbolTable();
-  this->current_scope_ = current_scope;
-  this->tag_ = 0;
-  
-  for(std::vector<Parameter*>::iterator it = parameters.begin(); it != parameters.end(); it ++)
-    {
-      Parameter *p = (Parameter*) *it;
-      this->symbol_table_->insert(p->identifier());
-    }
+
+  // Convert name to upper case for writing enums
+  std_string_toupper(this->enum_str);
+
+  for (std::vector<Parameter*>::iterator it = parameters.begin();
+    it != parameters.end(); it++) {
+    Parameter *p = (Parameter*) *it;
+    this->symbol_table_->insert(p->identifier());
+  }
 }
 
 unsigned int Rpc::tag()
@@ -125,7 +130,7 @@ const char* Rpc::callee_name()
 
 const char* Rpc::enum_name()
 {
-  return new_name(this->name_, "_enum");
+  return this->enum_str.c_str();
 }
 
 std::vector<Parameter*> Rpc::parameters()

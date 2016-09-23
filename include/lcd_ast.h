@@ -619,6 +619,7 @@ class Rpc : public Base
   LexicalScope *current_scope_;
   /* -------------- */
   const char* name_;
+  std::string enum_str;
   std::vector<Parameter* > parameters_;
   
   bool function_pointer_defined_;
