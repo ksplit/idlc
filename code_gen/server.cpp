@@ -58,7 +58,9 @@ CCSTCompoundStatement* dispatch_loop_body(std::vector<Rpc*> rps)
 
       std::vector<CCSTStatement*> case_body_stmts;
       std::vector<CCSTAssignExpr*> msg_args;
-      msg_args.push_back(new CCSTString("FILL IN MESSAGE"));
+      std::string *lcd_msg = new std::string("Calling function ");
+      lcd_msg->append(r_tmp->name());
+      msg_args.push_back(new CCSTString(lcd_msg->c_str()));
       case_body_stmts.push_back(new CCSTExprStatement( new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("LCD_MSG")
 										   , msg_args)));
 
@@ -87,8 +89,8 @@ CCSTCompoundStatement* dispatch_loop_body(std::vector<Rpc*> rps)
   default_stmts.push_back(new CCSTGoto("out"));
   CCSTCompoundStatement* default_body =  new CCSTCompoundStatement(default_dec_empty
 								   , default_stmts);
-  CCSTDefaultLabelStatement* default_case = new CCSTDefaultLabelStatement( new CCSTExprStatement( new CCSTString("finish") ));
-  cases.push_back(default_case);
+  // Just add a break statement in default case for now
+  cases.push_back(new CCSTDefaultLabelStatement(new CCSTBreak()));
   /* end of adding default case */
 
   std::vector<CCSTDeclaration*> switch_dec_empty;
@@ -467,12 +469,14 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
 						,callee_body(r_tmp, m)));
        }
      }
-   
-  //  definitions.push_back( function_definition(dispatch_function_declaration()
-  //						   , dispatch_loop_body(rps)));
-   CCSTFile *c_file = new CCSTFile(definitions);
-   std::cout << "in server source gen\n";
-   return c_file;
+
+  definitions.push_back(
+    function_definition(dispatch_function_declaration(),
+      dispatch_loop_body(rps)));
+
+  CCSTFile *c_file = new CCSTFile(definitions);
+  std::cout << "in server source gen\n";
+  return c_file;
 }
 
 CCSTFile *generate_callee_lds(Module *mod)
