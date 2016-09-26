@@ -254,7 +254,7 @@ IdentStart	=	[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]
 
 IdentCont	=	IdentStart | [0123456789]
 
-unnamed_scope 	= 	s:unnamed_scope_special d:Type_Definitions* r:Rpc* Spacing CLOSEC Spacing {{
+unnamed_scope 	= 	s:unnamed_scope_special new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* Spacing CLOSEC Spacing {{
 		            
 			    std::vector<Rpc*> *rpcs = new std::vector<Rpc*>();
 			    for(Value::iterator it = r.getValues().begin(); it != r.getValues().end(); it ++) {
@@ -296,7 +296,25 @@ pc_unnamed_scope=	s:pc_unnamed_scope_special d:Type_Definitions* p:ProjField* Sp
 			    value = fields;
 			}}
 
-Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{ 
+ChanType	= "async" | "sync"
+
+ChanInits	= "channel" Space+ id:Identifier Spacing <ascii 61> Spacing "new" Space+ type:ChanType Spacing OPEN host_ch:Identifier CLOSE SEMI Spacing {{
+				std::cout << "New channel type: " << (char*)type.getValue() << " Initialized" << std::endl;
+			}}
+
+Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
+					// all functions that is in the current scope and its inner scopes use this
+					// channel for communication unless an unnamed scope overrides it.
+					// Every unnamed scope can override use keyword by specifying which channel its
+					// functions would like to use
+					// TODO:
+					// Should unnamed scope channels be monitored in dispatch loop? Probably yes
+					// *) Add this to global channel list
+					// *) Dispatch loop should monitor all
+					std::cout << "######### Using channel " << (char*)ch.getValue() << std::endl;
+				}}
+
+Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
 			      LexicalScope *module_scope = (LexicalScope*) m.getValue();
 			      std::vector<Rpc*> rpcs;				
 			      std::vector<GlobalVariable*> *channels = (std::vector<GlobalVariable*>*) chans.getValue();  
@@ -912,6 +930,7 @@ ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 	            InitializeType *it = new InitializeType(getType((char*) id.getValue()), *arguments);
 			    ProjectionField *pf = new ProjectionField(it, (char*) field_id.getValue(), count_pointers(pointers));
 			    set_specs(*pf, s);
+
 
 				if (pf->alloc_callee()) {
 				   pf->set_in(true);
