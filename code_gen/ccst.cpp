@@ -111,44 +111,44 @@ void CCSTStoClassSpecifier::write(FILE *f, int indent)
 
 }
 
-CCSTSimpleTypeSpecifier::CCSTSimpleTypeSpecifier(type_spec_t type)
+CCSTSimpleTypeSpecifier::CCSTSimpleTypeSpecifier(TypeSpecifier type) :
+  type(type)
 {
-  this->type_ = type;
 }
 
 void CCSTSimpleTypeSpecifier::write(FILE *f, int indent)
 {
   fprintf(f, "%s", indentation(indent));
-  switch (this->type_)
+  switch (this->type)
     {
-    case void_t:
+    case VoidTypeSpec:
       fprintf(f, "%s ", "void");
       break;
-    case char_t:
+    case CharTypeSpec:
       fprintf(f, "%s ", "char");
       break;
-    case short_t:
+    case ShortTypeSpec:
       fprintf(f, "%s ", "short");
       break;
-    case int_t:
+    case IntegerTypeSpec:
       fprintf(f, "%s ", "int");
       break;
-    case long_t:
+    case LongTypeSpec:
       fprintf(f, "%s ", "long");
       break;
-    case float_t:
+    case FloatTypeSpec:
       fprintf(f, "%s ", "float");
       break;
-    case double_t:
+    case DoubleTypeSpec:
       fprintf(f, "%s ", "double");
       break;
-    case signed_t:
+    case SignedTypeSpec:
       fprintf(f, "%s ", "signed");
       break;
-    case unsigned_t:
+    case UnsignedTypeSpec:
       fprintf(f, "%s ", "unsigned");
       break;
-    case bool_t:
+    case BoolTypeSpec:
       fprintf(f, "%s ", "bool");
       break;
     default:

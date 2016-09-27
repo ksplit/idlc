@@ -4,7 +4,7 @@ CCSTTypeName* TypeNameVisitor::visit(FloatType *ft)
 {
   CCSTPointer *pt = 0x0;
   std::vector<CCSTSpecifierQual*> sq;
-  sq.push_back(new CCSTSimpleTypeSpecifier(float_t));
+  sq.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::FloatTypeSpec));
 
   return new CCSTTypeName(sq, pt);
 }
@@ -13,7 +13,7 @@ CCSTTypeName* TypeNameVisitor::visit(DoubleType *dt)
 {
   CCSTPointer *pt = 0x0;
   std::vector<CCSTSpecifierQual*> sq;
-  sq.push_back(new CCSTSimpleTypeSpecifier(double_t));
+  sq.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::DoubleTypeSpec));
 
   return new CCSTTypeName(sq, pt);
 }
@@ -22,7 +22,7 @@ CCSTTypeName* TypeNameVisitor::visit(BoolType *bt)
 {
   CCSTPointer *pt = 0x0;
   std::vector<CCSTSpecifierQual*> sq;
-  sq.push_back(new CCSTSimpleTypeSpecifier(bool_t));
+  sq.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::BoolTypeSpec));
 
   return new CCSTTypeName(sq, pt);
 }
@@ -49,7 +49,7 @@ CCSTTypeName* TypeNameVisitor::visit(VoidType *vt)
   CCSTPointer *pt = 0x0;
   std::vector<CCSTSpecifierQual*> sq;
   
-  sq.push_back(new CCSTSimpleTypeSpecifier(void_t));
+  sq.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
   
   return new CCSTTypeName(sq, pt);
 }
@@ -61,28 +61,28 @@ CCSTTypeName* TypeNameVisitor::visit(IntegerType *it)
   
   switch(it->int_type()){
   case pt_char_t: {
-    sq.push_back(new CCSTSimpleTypeSpecifier(char_t));
+    sq.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::CharTypeSpec));
     break;
   }
   case pt_short_t: {
-    sq.push_back(new CCSTSimpleTypeSpecifier(short_t));
+    sq.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::ShortTypeSpec));
     break;
   }
   case pt_int_t: {
-    sq.push_back(new CCSTSimpleTypeSpecifier(int_t));
+    sq.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
     break;
   }
   case pt_long_t: {
-    sq.push_back(new CCSTSimpleTypeSpecifier(long_t));
+    sq.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::LongTypeSpec));
     break;
   }
   case pt_longlong_t: {
-    sq.push_back(new CCSTSimpleTypeSpecifier(long_t));
-    sq.push_back(new CCSTSimpleTypeSpecifier(long_t));
+    sq.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::LongTypeSpec));
+    sq.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::LongTypeSpec));
     break;
   }
   case pt_capability_t: {
-    sq.push_back(new CCSTSimpleTypeSpecifier(long_t));
+    sq.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::LongTypeSpec));
     break;
   }
   default: {

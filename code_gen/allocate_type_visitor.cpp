@@ -11,7 +11,7 @@ CCSTStatement* AllocateTypeVisitor::visit(FloatType *ft, Variable *v)
   std::vector<CCSTStatement*> statements;
 
   std::vector<CCSTSpecifierQual*> void_star_quals;
-  void_star_quals.push_back(new CCSTSimpleTypeSpecifier(void_t));
+  void_star_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
 
   CCSTTypeName *void_star = new CCSTTypeName(void_star_quals, new CCSTPointer());
 
@@ -59,7 +59,7 @@ CCSTStatement* AllocateTypeVisitor::visit(DoubleType *dt, Variable *v)
   std::vector<CCSTStatement*> statements;
 
   std::vector<CCSTSpecifierQual*> void_star_quals;
-  void_star_quals.push_back(new CCSTSimpleTypeSpecifier(void_t));
+  void_star_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
 
   CCSTTypeName *void_star = new CCSTTypeName(void_star_quals, new CCSTPointer());
 
@@ -107,7 +107,7 @@ CCSTStatement* AllocateTypeVisitor::visit(BoolType *bt, Variable *v)
   std::vector<CCSTStatement*> statements;
 
   std::vector<CCSTSpecifierQual*> void_star_quals;
-  void_star_quals.push_back(new CCSTSimpleTypeSpecifier(void_t));
+  void_star_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
 
   CCSTTypeName *void_star = new CCSTTypeName(void_star_quals, new CCSTPointer());
 
@@ -185,7 +185,7 @@ CCSTStatement* AllocateTypeVisitor::visit(IntegerType *it, Variable *v)
   std::vector<CCSTStatement*> statements;
 
   std::vector<CCSTSpecifierQual*> void_star_quals;
-  void_star_quals.push_back(new CCSTSimpleTypeSpecifier(void_t));
+  void_star_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
 
   CCSTTypeName *void_star = new CCSTTypeName(void_star_quals, new CCSTPointer());
 
@@ -234,7 +234,7 @@ CCSTStatement* AllocateTypeVisitor::visit(ProjectionType *pt, Variable *v)
   std::vector<CCSTStatement*> statements;
 
   std::vector<CCSTSpecifierQual*> void_star_quals;
-  void_star_quals.push_back(new CCSTSimpleTypeSpecifier(void_t));
+  void_star_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
   CCSTTypeName *void_star = new CCSTTypeName(void_star_quals, new CCSTPointer());
 
   int p_count_save = v->pointer_count();
@@ -291,7 +291,7 @@ CCSTStatement* AllocateTypeVisitor::visit(ProjectionConstructorType *pt, Variabl
   std::vector<CCSTStatement*> statements;
 
   std::vector<CCSTSpecifierQual*> void_star_quals;
-  void_star_quals.push_back(new CCSTSimpleTypeSpecifier(void_t));
+  void_star_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
   CCSTTypeName *void_star = new CCSTTypeName(void_star_quals, new CCSTPointer());
 
   int p_count_save = v->pointer_count();

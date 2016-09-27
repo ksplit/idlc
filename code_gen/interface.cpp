@@ -19,7 +19,7 @@ CCSTDeclaration* interface_init_function_declaration(Module *m)
 {
   /* returns an int */
   std::vector<CCSTDecSpecifier*> specifier;
-  specifier.push_back(new CCSTSimpleTypeSpecifier(int_t));
+  specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
   
   CCSTDirectDecId *name = new CCSTDirectDecId(glue_name(init_name(m->identifier())));
   /* init function parameters: the channels specified, and a */
@@ -180,7 +180,7 @@ CCSTDeclaration* interface_exit_function_declaration(Module *m)
 {
   /* returns void */
   std::vector<CCSTDecSpecifier*> specifier;
-  specifier.push_back(new CCSTSimpleTypeSpecifier(void_t));
+  specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
 
   CCSTDirectDecId *name = new CCSTDirectDecId(glue_name(exit_name(m->identifier())));
   CCSTParamList *param_list = new CCSTParamList(); // empty

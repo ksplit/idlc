@@ -4,7 +4,7 @@
 CCSTDeclaration* dispatch_function_declaration()
 {
   std::vector<CCSTDecSpecifier*>specifier;
-  specifier.push_back(new CCSTSimpleTypeSpecifier(void_t));
+  specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
   
   std::vector<CCSTInitDeclarator*> decs;
   
@@ -22,7 +22,7 @@ CCSTCompoundStatement* dispatch_loop_body(std::vector<Rpc*> rps)
   // int ret; 
   std::vector<CCSTDecSpecifier*> s;// = new std::vector<CCSTDecSpecifier*>();
   std::vector<CCSTInitDeclarator*> d;// = new std::vector<CCSTInitDeclarator*>();
-  s.push_back(new CCSTSimpleTypeSpecifier(int_t));
+  s.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
   d.push_back(new CCSTDeclarator(0x0, new CCSTDirectDecId("ret")));
   decs_in_body.push_back(new CCSTDeclaration(s,d));
   // Declare a variable of type int with name ret
@@ -327,11 +327,11 @@ CCSTFile* generate_server_header(Module *file)
 CCSTDeclaration* callee_declaration(Rpc* r)
 {
   std::vector<CCSTDecSpecifier*> specifier; // = new std::vector<CCSTDecSpecifier*>();
-  specifier.push_back(new CCSTSimpleTypeSpecifier(int_t));
+  specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
   CCSTDirectDecId* id = new CCSTDirectDecId(new_name(r->name(), "_callee"));
   
   std::vector<CCSTDecSpecifier*> s;
-  s.push_back(new  CCSTSimpleTypeSpecifier(void_t));
+  s.push_back(new  CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
 
   CCSTParamDeclaration *parameter = new CCSTParamDeclaration(s);
   int err;

@@ -21,28 +21,28 @@ std::vector<CCSTSpecifierQual*> type(Type *t)
 	  {
 	  case pt_char_t:
 	    {
-	      specifier.push_back(new CCSTSimpleTypeSpecifier(char_t));
+	      specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::CharTypeSpec));
 	      break;
 	    }
 	  case pt_short_t:
 	    {
-	      specifier.push_back(new CCSTSimpleTypeSpecifier(short_t));
+	      specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::ShortTypeSpec));
 	      break;
 	    }
 	  case pt_int_t:
 	    {
-	      specifier.push_back(new CCSTSimpleTypeSpecifier(int_t));
+	      specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
 	      break;
 	    }
 	  case pt_long_t:
 	    {
-	      specifier.push_back( new CCSTSimpleTypeSpecifier(long_t));
+	      specifier.push_back( new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::LongTypeSpec));
 	      break;
 	    }
 	  case pt_longlong_t:
 	    {
-	      specifier.push_back(new CCSTSimpleTypeSpecifier(long_t));
-	      specifier.push_back(new CCSTSimpleTypeSpecifier(long_t));
+	      specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::LongTypeSpec));
+	      specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::LongTypeSpec));
 	      break;
 	    }
 	  case pt_capability_t:
@@ -68,7 +68,7 @@ std::vector<CCSTSpecifierQual*> type(Type *t)
       {
 	// void type
 	// todo
-	specifier.push_back(new CCSTSimpleTypeSpecifier(void_t));
+	specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
 	return specifier;
       }
     case CHANNEL_TYPE:
@@ -103,17 +103,17 @@ std::vector<CCSTSpecifierQual*> type(Type *t)
       }
     case BOOL_TYPE:
       {
-	specifier.push_back(new CCSTSimpleTypeSpecifier(bool_t));
+	specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::BoolTypeSpec));
 	return specifier;
       }
     case DOUBLE_TYPE:
       {
-	specifier.push_back(new CCSTSimpleTypeSpecifier(double_t));
+	specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::DoubleTypeSpec));
 	return specifier;
       }
     case FLOAT_TYPE:
       {
-	specifier.push_back(new CCSTSimpleTypeSpecifier(float_t));
+	specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::FloatTypeSpec));
 	return specifier;
       }
     default:
@@ -163,22 +163,22 @@ CCSTTypeName* type_cast(Type *t, int pointer_count)
     case VOID_TYPE: // void
       { // does this even happen?
 	std::cout << "Warning: casting something as void\n";
-	spec_quals.push_back(new CCSTSimpleTypeSpecifier(void_t) );
+	spec_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec) );
 	break;
       }
     case BOOL_TYPE:
       {
-	spec_quals.push_back(new CCSTSimpleTypeSpecifier(bool_t));
+	spec_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::BoolTypeSpec));
 	break;
       }
     case DOUBLE_TYPE:
       {
-	spec_quals.push_back(new CCSTSimpleTypeSpecifier(double_t));
+	spec_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::DoubleTypeSpec));
 	break;
       }
     case FLOAT_TYPE:
       {
-	spec_quals.push_back(new CCSTSimpleTypeSpecifier(float_t));
+	spec_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::FloatTypeSpec));
 	break;
       }
     default:
@@ -196,34 +196,34 @@ std::vector<CCSTSpecifierQual*> integer_type_cast(IntegerType *it)
 
   if(it->is_unsigned())
     {
-      spec_quals.push_back(new CCSTSimpleTypeSpecifier(unsigned_t));
+      spec_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::UnsignedTypeSpec));
     }
   switch (it->int_type())
     {
     case pt_char_t:
       {
-	spec_quals.push_back(new CCSTSimpleTypeSpecifier(char_t));
+	spec_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::CharTypeSpec));
 	break;
       }
     case pt_short_t:
       {
-	spec_quals.push_back(new CCSTSimpleTypeSpecifier(short_t));
+	spec_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::ShortTypeSpec));
 	break;
       }
     case pt_int_t:
       {
-	spec_quals.push_back(new CCSTSimpleTypeSpecifier(int_t));
+	spec_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
 	break;
       }
     case pt_long_t:
       {
-	spec_quals.push_back(new CCSTSimpleTypeSpecifier(long_t));
+	spec_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::LongTypeSpec));
 	break;
       }
     case pt_longlong_t:
       {
-	spec_quals.push_back(new CCSTSimpleTypeSpecifier(long_t));
-	spec_quals.push_back(new CCSTSimpleTypeSpecifier(long_t));
+	spec_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::LongTypeSpec));
+	spec_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::LongTypeSpec));
 	break;
       }
     case pt_capability_t:
@@ -250,7 +250,7 @@ std::vector<CCSTDecSpecifier*> struct_type(const char *type_name)
 std::vector<CCSTDecSpecifier*> int_type()
 {
   std::vector<CCSTDecSpecifier*>specifier;
-  specifier.push_back(new CCSTSimpleTypeSpecifier(int_t));
+  specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
   
   return specifier;
 }
@@ -273,28 +273,28 @@ std::vector<CCSTDecSpecifier*> type2(Type *t)
 	{
 	case pt_char_t:
 	  {
-	    specifier.push_back(new CCSTSimpleTypeSpecifier(char_t));
+	    specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::CharTypeSpec));
 	    break;
 	  }
 	case pt_short_t:
 	  {
-	    specifier.push_back(new CCSTSimpleTypeSpecifier(short_t));
+	    specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::ShortTypeSpec));
 	    break;
 	  }
 	case pt_int_t:
 	  {
-	    specifier.push_back(new CCSTSimpleTypeSpecifier(int_t));
+	    specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
 	    break;
 	  }
 	case pt_long_t:
 	  {
-	    specifier.push_back( new CCSTSimpleTypeSpecifier(long_t));
+	    specifier.push_back( new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::LongTypeSpec));
 	    break;
 	  }
 	case pt_longlong_t:
 	  {
-	    specifier.push_back(new CCSTSimpleTypeSpecifier(long_t));
-	    specifier.push_back(new CCSTSimpleTypeSpecifier(long_t));
+	    specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::LongTypeSpec));
+	    specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::LongTypeSpec));
 	    break;
 	  }
 	case pt_capability_t:
@@ -318,7 +318,7 @@ std::vector<CCSTDecSpecifier*> type2(Type *t)
     }
   case VOID_TYPE:
     {
-      specifier.push_back(new CCSTSimpleTypeSpecifier(void_t));
+      specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
       return specifier;
     }
   case CHANNEL_TYPE:
@@ -330,20 +330,21 @@ std::vector<CCSTDecSpecifier*> type2(Type *t)
     {
       // function pointer type
       // todo
+      break;
     }
   case BOOL_TYPE:
     {
-      specifier.push_back(new CCSTSimpleTypeSpecifier(bool_t));
+      specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::BoolTypeSpec));
       return specifier;
     }
   case DOUBLE_TYPE:
     {
-      specifier.push_back(new CCSTSimpleTypeSpecifier(double_t));
+      specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::DoubleTypeSpec));
       return specifier;
     }
   case FLOAT_TYPE:
     {
-      specifier.push_back(new CCSTSimpleTypeSpecifier(float_t));
+      specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::FloatTypeSpec));
       return specifier;
     }
   default:
@@ -373,7 +374,7 @@ CCSTStructUnionSpecifier* struct_declaration(ProjectionType *pt)
     if (pf->type()->num() == FUNCTION_TYPE) {
       Function *f = dynamic_cast<Function*>(pf->type());
       std::vector<CCSTDecSpecifier*> new_fp_return_type = type2(f->return_var_->type());
-      specifier.push_back(new CCSTSimpleTypeSpecifier(int_t)); //type2(f->return_var_->type());
+      specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec)); //type2(f->return_var_->type());
       //specifier = new_fp_return_type;
       parameters = f->parameters_;
 

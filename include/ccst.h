@@ -248,10 +248,6 @@ class CCSTSpecifierQual : public CCSTDecSpecifier
   virtual void write(FILE *f, int indent) = 0;
 };
 
-
-enum type_spec_t {void_t, char_t, short_t, int_t, long_t, float_t, double_t,
-		  signed_t, unsigned_t, other_t, bool_t};
-
 class CCSTTypeSpecifier : public CCSTSpecifierQual // slightly different from c_bnf
 {
   /*
@@ -275,9 +271,23 @@ class CCSTTypeSpecifier : public CCSTSpecifierQual // slightly different from c_
 
 class CCSTSimpleTypeSpecifier : public CCSTTypeSpecifier
 {
-  type_spec_t type_;
- public:
-  CCSTSimpleTypeSpecifier(type_spec_t type); //{this->type_ = type;}
+public:
+  enum TypeSpecifier {
+    VoidTypeSpec = 0,
+    CharTypeSpec,
+    ShortTypeSpec,
+    IntegerTypeSpec,
+    LongTypeSpec,
+    FloatTypeSpec,
+    DoubleTypeSpec,
+    SignedTypeSpec,
+    UnsignedTypeSpec,
+    OtherTypeSpec,
+    BoolTypeSpec
+  };
+  TypeSpecifier type;
+
+  CCSTSimpleTypeSpecifier(TypeSpecifier type);
   virtual void write(FILE *f, int indent);
 };
 
