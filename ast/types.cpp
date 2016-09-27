@@ -253,8 +253,12 @@ void UnresolvedType::create_trampoline_structs(LexicalScope *ls)
   return;
 }
 
-Channel::Channel()
+Channel::Channel(const char *name, ChannelType type, Channel *host) :
+  chName(name),
+  chType(type),
+  hostChannel(host)
 {
+  std::cout << "Channel Type : " << type << std::endl;
 }
 
 Channel::Channel(const Channel& other)
@@ -276,7 +280,7 @@ CCSTStatement* Channel::accept(TypeVisitor *worker, Variable *v)
 }
 const char* Channel::name()
 {
-  return "channel";
+  return this->chName.c_str();
 }
 int Channel::num()
 {

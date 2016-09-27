@@ -262,7 +262,12 @@ unnamed_scope 	= 	s:unnamed_scope_special new_chans:ChanInits* ch:Channel_scope*
 				Rpc *r = (Rpc*) v.getValue();
 				rpcs->push_back(r);
 			    }
-		
+				LexicalScope *sc = (LexicalScope *)s.getValue();
+				if (ch.getValue()) {
+					Type *t = getType((char*)ch.getValue());
+					Channel *c = dynamic_cast<Channel*>(t);
+					sc->setactiveChannel(c);
+				}
 			    set_current_scope(get_current_scope()->outer_scope()); // leaving current scope
 			    value = rpcs;
 			}}
@@ -296,10 +301,21 @@ pc_unnamed_scope=	s:pc_unnamed_scope_special d:Type_Definitions* p:ProjField* Sp
 			    value = fields;
 			}}
 
-ChanType	= "async" | "sync"
+ChanType	= "async" {{
+					value = new int(Channel::AsyncChannel);
+				}}
+				| "sync" {{
+					value = new int(Channel::SyncChannel);
+				}}
 
 ChanInits	= "channel" Space+ id:Identifier Spacing <ascii 61> Spacing "new" Space+ type:ChanType Spacing OPEN host_ch:Identifier CLOSE SEMI Spacing {{
-				std::cout << "New channel type: " << (char*)type.getValue() << " Initialized" << std::endl;
+				Channel::ChannelType ct = static_cast<Channel::ChannelType>(*((int*)type.getValue()));
+				std::cout << "New channel type: " << ct << " Initialized" << std::endl;
+
+				Channel *newCh = new Channel((char*)id.getValue(), ct, NULL);
+				// insert channel into type list
+				insertType((char*)id.getValue(), newCh);
+				value = newCh;
 			}}
 
 Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
@@ -311,7 +327,12 @@ Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
 					// Should unnamed scope channels be monitored in dispatch loop? Probably yes
 					// *) Add this to global channel list
 					// *) Dispatch loop should monitor all
-					std::cout << "######### Using channel " << (char*)ch.getValue() << std::endl;
+					std::cout << "Using channel " << (char*)ch.getValue() << std::endl;
+					Type *t = getType((char*)ch.getValue());
+					Channel *c = dynamic_cast<Channel*>(t);
+					Assert(c != NULL, "Dynamic cast from Type to Channel failed");
+					get_current_scope()->setactiveChannel(c);
+					value = new std::string((char*)ch.getValue());
 				}}
 
 Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
@@ -331,6 +352,14 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
 				  std::vector<Rpc*> *r_tmp = (std::vector<Rpc*>*) v2.getValue();
 				  rpcs.insert(rpcs.end(), r_tmp->begin(), r_tmp->end());
 			      }
+
+				  if (ch.getValue()) {
+					  Type *t = getType((char*)ch.getValue());
+					  Channel *c = dynamic_cast<Channel*>(t);
+					  module_scope->setactiveChannel(c);
+				  } else {
+					  module_scope->setactiveChannel(NULL);
+				  }
 
 			      set_current_scope(get_current_scope()->outer_scope()); // leaving current scope	  
 			      value = new Module((char*) id.getValue(), rpcs, channels2, module_scope); 

@@ -373,6 +373,10 @@ Module::Module(const char *id, std::vector<Rpc*> rpc_definitions, std::vector<Gl
 {
   this->module_name_ = id;
   this->module_scope_ = ls;
+  this->module_scope_->setactiveChannel(ls->activeChannel);
+  if (ls->activeChannel) {
+    std::cout << "Active channel " << ls->activeChannel->name() << std::endl;
+  }
   this->rpc_definitions_ = rpc_definitions;
   this->channels_ = channels;
 

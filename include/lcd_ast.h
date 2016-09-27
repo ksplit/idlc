@@ -44,8 +44,8 @@ typedef enum {
   FLOAT_TYPE,
 } types_t;
 
-template<class T, class T2>
 class ASTVisitor;
+class Channel;
 
 class Base
 {			  
@@ -61,8 +61,12 @@ class LexicalScope : public Base
   std::map<std::pair<std::string, std::vector<Parameter*> >, Rpc*> rpc_definitions_; // rpc or function pointer. why do we keep this? 
 
   std::vector<std::string> identifiers_; // new
-
   std::vector<LexicalScope*> inner_scopes_;
+  // List of channels under this scope
+  std::vector<Channel*> channels;
+  // Active channel for this scope
+  Channel *activeChannel;
+
   LexicalScope();
   LexicalScope(LexicalScope *outer_scope);
   std::vector<Rpc*> rpc_in_scope();
@@ -88,6 +92,16 @@ class LexicalScope : public Base
   std::map<std::string, Type*> all_type_definitions();
   std::map<std::string, Type*> all_types_outer();
   std::map<std::string, Type*> all_types_inner();
+
+  Channel* getactiveChannel() const
+  {
+    return activeChannel;
+  }
+
+  void setactiveChannel(Channel* activeChannel)
+  {
+    this->activeChannel = activeChannel;
+  }
 };
 
 class GlobalScope : public LexicalScope
@@ -468,7 +482,17 @@ class Typedef : public Type
 class Channel : public Type 
 {
  public:
-  Channel();
+  enum ChannelType {
+    AsyncChannel = 0,
+    SyncChannel
+  };
+
+  Channel *hostChannel;
+  ChannelType chType;
+  std::string chName;
+
+  Channel() {}
+  Channel(const char*, ChannelType, Channel*);
   Channel(const Channel& other);
   virtual Type* clone() const { return new Channel(*this); }
   virtual Marshal_type* accept(MarshalPrepareVisitor *worker);
@@ -478,6 +502,24 @@ class Channel : public Type
   virtual int num();
   virtual void resolve_types(LexicalScope *ls);
   virtual void create_trampoline_structs(LexicalScope *ls);
+
+  void setChannelType(ChannelType type) {
+    this->chType = type;
+  }
+
+  const ChannelType getChannelType() const {
+    return this->chType;
+  }
+
+  Channel* gethostChannel() const
+  {
+    return hostChannel;
+  }
+
+  void sethostChannel(Channel* hostChannel)
+  {
+    this->hostChannel = hostChannel;
+  }
 };
 
 class VoidType : public Type
