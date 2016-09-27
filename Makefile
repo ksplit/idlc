@@ -5,10 +5,10 @@ idl_cpp = parser/lcd_idl.cpp
 idl_h = include/lcd_idl.h
 idl = $(idl_cpp) $(idl_h)
 
-CXXFLAGS = -g -fsanitize=address  -fno-omit-frame-pointer -Iinclude/ -lasan
-CXXFLAGS += -MMD
+CXXFLAGS = -g -fno-omit-frame-pointer -Iinclude/ -fsanitize=address
+CXXFLAGS += -MMD -std=c++11
 CXX = g++
-LDFLAGS = -fsanitize=address
+LDFLAGS = -lasan
 
 CPP_a = $(shell find . -type f ! -path "./parser/vembyr-1.1/*" -name "*.cpp") $(idl_cpp)
 CPP = $(filter-out ./test/%,$(CPP_a))
