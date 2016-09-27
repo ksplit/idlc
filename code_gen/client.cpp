@@ -96,9 +96,7 @@ std::vector<CCSTDeclaration*> declare_containers(Variable *v)
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed.\n");
 
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *pt) {
       if(pf->container() != 0x0) {
 	std::vector<CCSTDeclaration*> tmp = declare_containers(pf);
 	declarations.insert(declarations.end(), tmp.begin(), tmp.end());
@@ -134,9 +132,7 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   }
 				     
   // for every parameter that has a container. declare containers. then alloc or container of
-  for(std::vector<Parameter*>::iterator it = params.begin(); it != params.end(); it ++)
-    {
-      Parameter *p = *it;
+  for (auto p : *r) {
       if(p->container() != 0x0) {
 	// declare containers
 	std::vector<CCSTDeclaration*> tmp = declare_containers(p);
@@ -148,9 +144,7 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
     }
 
   /* projection channel allocation */
-  for(std::vector<Parameter*>::iterator it = params.begin(); it != params.end(); it ++) {
-    Parameter *p = *it;
-    
+  for (auto p : *r) {
     if(p->type_->num() == PROJECTION_TYPE || p->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) { // if a projection
       ProjectionType *pt = dynamic_cast<ProjectionType*>(p->type_);
       Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
@@ -160,9 +154,7 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   }
 
   // projection channel initialization
-  for(std::vector<Parameter*>::iterator it = params.begin(); it != params.end(); it ++) {
-    Parameter *p = *it;
-    
+  for (auto p : *r) {
     if((p->type_->num() == PROJECTION_TYPE || p->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) && p->alloc_caller()) {
       ProjectionType *pt = dynamic_cast<ProjectionType*>(p->type_);
       Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
@@ -177,10 +169,7 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   /* TODO: what about function pointers */
   
   /* marshal parameters */
-
-  std::vector<Parameter*> parameters = r->parameters();
-  for(std::vector<Parameter*>::iterator it = parameters.begin(); it != parameters.end(); it ++) {
-    Parameter *p = *it;
+  for (auto p : *r) {
     if(p->in()) {
       std::cout << "going to marshal variable " << p->identifier() <<  " for function " <<  r->name() << std::endl;
       statements.push_back(marshal_variable(p, "in"));    
@@ -218,8 +207,7 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   
 
   /* unmarshal appropriate parameters and return value */
-  for(std::vector<Parameter*>::iterator it = parameters.begin(); it != parameters.end(); it ++) {
-    Parameter *p = *it;
+  for (auto& p : *r) {
     if(p->type()->num() != VOID_TYPE) {
       if(p->out()) {
 	std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_caller(p);
@@ -245,8 +233,7 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   }
 
   // if anything is marked dealloc. dealloc
-  for(std::vector<Parameter*>::iterator it = parameters.begin(); it != parameters.end(); it ++) {
-    Parameter *p = *it;   
+  for (auto p : *r) {
     std::vector<CCSTStatement*> tmp_statements = dealloc_containers_caller(p, cspace_to_use, r->current_scope());
     statements.insert(statements.end(), tmp_statements.begin(), tmp_statements.end());
   }

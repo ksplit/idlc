@@ -27,9 +27,7 @@ std::vector<CCSTStatement*> container_of(Variable *v, const char* cspace)
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast failed\n");
 
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *pt) {
       if( pf->container() != 0x0) {
 	std::vector<CCSTStatement*> tmp = container_of(pf, cspace);
 	statements.insert(statements.end(), tmp.begin(), tmp.end());
@@ -131,9 +129,7 @@ CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const ch
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
 
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *pt) {
       statements.push_back(allocate_and_link_containers_callee(pf, cspace));
 
       // link
@@ -221,9 +217,7 @@ CCSTStatement* allocate_non_container_variables(Variable *v)
       ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
       Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
 
-      std::vector<ProjectionField*> fields = pt->fields();
-      for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-	ProjectionField *pf = *it;
+      for (auto pf : *pt) {
 	
 	// if pf is a pointer need to allocate.  
 	if(pf->container() == 0x0 && pf->pointer_count() > 0) {
@@ -249,9 +243,7 @@ CCSTStatement* allocate_non_container_variables(Variable *v)
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
 
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *pt) {
       // v is a container, so if pf is also a container they ahve already been allocated and linked
       // otherwise we want to allocate pf and link them.
       if(pf->container() == 0x0 && pf->pointer_count() > 0) {
@@ -383,9 +375,7 @@ CCSTCompoundStatement* alloc_link_container_caller(Variable *v, const char* cspa
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
     
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *pt) {
 
       ProjectionType *v_container_type = dynamic_cast<ProjectionType*>(v->container()->type());
       Assert(v_container_type != 0x0, "Error: dynamic cast to projection type failed\n");
@@ -451,8 +441,7 @@ std::vector<CCSTStatement*> caller_allocate_channels(ProjectionType *pt)
   }
 
   // recurse on fields.
-  for(std::vector<ProjectionField*>::iterator it = pt->fields_.begin(); it != pt->fields_.end(); it ++) {
-    ProjectionField *pf = *it;
+  for (auto pf : *pt) {
     if(pf->type_->num() == PROJECTION_TYPE || pf->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) {
       ProjectionType *tmp = dynamic_cast<ProjectionType*>(pf->type_);
       Assert(tmp != 0x0, "Error: dynamic cast to projection type failed\n");
@@ -497,8 +486,7 @@ std::vector<CCSTStatement*> caller_initialize_channels(ProjectionType *pt)
   }
   
   // recurse on fields.
-  for(std::vector<ProjectionField*>::iterator it = pt->fields_.begin(); it != pt->fields_.end(); it ++) {
-    ProjectionField *pf = *it;
+  for (auto pf : *pt) {
     if((pf->type_->num() == PROJECTION_TYPE || pf->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) && pf->alloc_caller()) {
       ProjectionType *tmp = dynamic_cast<ProjectionType*>(pf->type_);
       Assert(tmp != 0x0, "Error: dynamic cast to projection type failed\n");
@@ -589,10 +577,7 @@ std::vector<CCSTStatement*> dealloc_containers_callee(Variable *v, const char* c
 
 
     
-    std::vector<ProjectionField*> fields = tmp->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
-
+    for (auto pf : *tmp) {
       if(pf->type()->num() == FUNCTION_TYPE && v->container() != 0x0 && v->dealloc_callee()) {
 	// set our hidden args struct equal to thing
 	ProjectionType *v_container_type = dynamic_cast<ProjectionType*>(v->container()->type());
@@ -715,9 +700,7 @@ std::vector<CCSTStatement*> dealloc_containers_caller(Variable *v, const char* c
       }
     }
     
-    std::vector<ProjectionField*> fields = tmp->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *tmp) {
       
       if(pf->type()->num() == FUNCTION_TYPE && v->container() != 0x0 && v->dealloc_caller())  {
 	// set our hidden args struct equal to thing

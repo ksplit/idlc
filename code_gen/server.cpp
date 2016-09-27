@@ -141,15 +141,12 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   /* code that loops through parameters and allocates/initializes whatever necessary before marshalling*/
   
   // loop through params, declare a tmp and pull out marshal value
-  std::vector<Parameter*> params = r->parameters();
   
   // declare containers and variables
-  for(std::vector<Parameter*>::iterator it = params.begin(); it != params.end(); it ++)
-    {
-      Parameter *p = *it;
-      std::vector<CCSTDeclaration*> tmp_decs = declare_variables_callee(p);
-      declarations.insert(declarations.end(), tmp_decs.begin(), tmp_decs.end());
-    }
+  for (auto p : *r) {
+    std::vector<CCSTDeclaration*> tmp_decs = declare_variables_callee(p);
+    declarations.insert(declarations.end(), tmp_decs.begin(), tmp_decs.end());
+  }
 
   if(r->function_pointer_defined()) {
     std::vector<Parameter*> hidden_args = r->hidden_args_;
@@ -162,28 +159,24 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   // TODO: unmarshal channel refs;
 
   // allocate/initiliaze and link these
-  for(std::vector<Parameter*>::iterator it = params.begin(); it != params.end(); it ++)
-    {
-      Parameter *p = *it; // allocs and lookups but doesn't link yet.
-      std::cout << "Parameter is " <<  p->identifier() << std::endl;
-      statements.push_back(allocate_and_link_containers_callee(p
-							       , m->cspaces_.at(0)->identifier()));
-    }
+  for (auto p : *r) {
+    std::cout << "Parameter is " << p->identifier() << std::endl;
+    statements.push_back(
+      allocate_and_link_containers_callee(p,
+        m->cspaces_.at(0)->identifier()));
+  }
 
   // allocate things which are not containers
-  for(std::vector<Parameter*>::iterator it = params.begin(); it != params.end(); it ++)
-    {
-      Parameter *p = *it; // allocs and lookups but doesn't link yet.
-      statements.push_back(allocate_non_container_variables(p));
-    }
+  for (auto p : *r) {
+    statements.push_back(allocate_non_container_variables(p));
+  }
 
   /* As it stands now, only need to allocate hidden args structures if the 
    * parameter is alloc callee and contains function pointers
    */
 
   // declare hidden args structures;
-  for(std::vector<Parameter*>::iterator it = params.begin(); it != params.end(); it ++) {
-    Parameter *p = *it;
+  for (auto p : *r) {
     if( p->type()->num() == PROJECTION_TYPE || p->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
       ProjectionType *pt = dynamic_cast<ProjectionType*>(p->type());
       Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
@@ -211,8 +204,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   }
 
   // unmarshal rest of parameters. rest means not a container reference.
-  for(std::vector<Parameter*>::iterator it = params.begin(); it != params.end(); it ++) {
-    Parameter *p = *it;
+  for (auto p : *r) {
     if(p->in()) {
       std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_callee(p);
       statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
@@ -222,8 +214,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   
   /* build up real call params */
   std::vector<CCSTAssignExpr*> real_call_params;
-  for(std::vector<Parameter*>::iterator it = params.begin(); it != params.end(); it ++) {
-    Parameter *p = *it;
+  for (auto p : *r) {
     if(p->container() != 0x0) {
       ProjectionType *p_container_type = dynamic_cast<ProjectionType*>(p->container()->type());
       Assert(p_container_type != 0x0, "Error: dynamic cast to projection type failed\n");
@@ -259,17 +250,15 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   }
 
   /* dealloc containers and contents of containers if necessary */
-  for(std::vector<Parameter*>::iterator it = params.begin(); it != params.end(); it ++) {
-    Parameter *v = *it;
-    std::vector<CCSTStatement*> tmp_stmts = dealloc_containers_callee(v, m->cspaces_.at(0)->identifier(), r->current_scope());
+  for (auto& p : *r) {
+    std::vector<CCSTStatement*> tmp_stmts = dealloc_containers_callee(p, m->cspaces_.at(0)->identifier(), r->current_scope());
     statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
   }
 
   /* marshal return params and val */
-  for(std::vector<Parameter*>::iterator it = params.begin(); it != params.end(); it ++) {
-    Parameter *v = *it;
-    if(v->out()) {
-      std::vector<CCSTStatement*> tmp_stmts = marshal_variable_callee(v);
+  for (auto& p : *r) {
+    if(p->out()) {
+      std::vector<CCSTStatement*> tmp_stmts = marshal_variable_callee(p);
       statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
     }
   }
@@ -308,14 +297,11 @@ CCSTFile* generate_server_header(Module *file)
       std::cout << "rpc not empty\n";
       definitions.push_back(construct_enum(file));
       // function callee function declarations
-      std::vector<Rpc*> rpcs = file->rpc_definitions();
-      for(std::vector<Rpc*>::iterator it = rpcs.begin(); it != rpcs.end(); it ++)
-      {
-        Rpc *r = *it;
+      for (auto r : *file) {
         // Print declaration only for callee functions.
         // Function pointer callee functions are declared in caller's header
         if (!r->function_pointer_defined()) {
-          definitions.push_back(callee_declaration((Rpc*) *it));
+          definitions.push_back(callee_declaration((Rpc*)r));
         }
       }
     }

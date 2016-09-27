@@ -70,10 +70,7 @@ CCSTCompoundStatement* trampoline_function_body(Rpc* r)
   /* loop through rpc parameters and add them to the parameters for the new fp*/
   std::vector<CCSTParamDeclaration*> func_pointer_params;
 
-  std::vector<Parameter*> parameters = r->parameters();
-  for(std::vector<Parameter*>::iterator it = parameters.begin(); it != parameters.end(); it ++) {
-    Parameter *p = *it;
-    
+  for (auto p : *r) {
     std::vector<CCSTDecSpecifier*> fp_param_tmp = type2(p->type());
     func_pointer_params.push_back(new CCSTParamDeclaration(fp_param_tmp
 							   , new CCSTDeclarator(pointer(p->pointer_count()), new CCSTDirectDecId(""))));
@@ -125,8 +122,7 @@ CCSTCompoundStatement* trampoline_function_body(Rpc* r)
   std::vector<CCSTAssignExpr*> new_fp_args;
 
  
-  for(std::vector<Parameter*>::iterator it = parameters.begin(); it != parameters.end(); it ++) {
-    Parameter *p = *it;
+  for (auto p : *r) {
     new_fp_args.push_back(new CCSTPrimaryExprId(p->identifier()));
   }
 
@@ -146,9 +142,7 @@ CCSTCompoundStatement* alloc_init_hidden_args_struct(ProjectionType *pt, Variabl
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
 
-  std::vector<ProjectionField*> fields = pt->fields();
-  for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-    ProjectionField *pf = *it;
+  for (auto pf : *pt) {
     if(pf->type()->num() == FUNCTION_TYPE && pf->alloc_callee()) {
       // allocate hidden args structure 
       statements.push_back(kzalloc_structure(hidden_args_name(pf->type()->name())
@@ -259,9 +253,7 @@ std::vector<CCSTDeclaration*> declare_hidden_args_structures(ProjectionType *pt,
 {
   std::vector<CCSTDeclaration*> declarations;
   
-  std::vector<ProjectionField*> fields = pt->fields();
-  for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-    ProjectionField *pf = *it;
+  for (auto pf : *pt) {
     
     if(pf->type()->num() == FUNCTION_TYPE) { // function
       // declare

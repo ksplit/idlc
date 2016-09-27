@@ -273,10 +273,7 @@ CCSTStatement* AllocateTypeVisitor::visit(ProjectionType *pt, Variable *v)
   v->set_pointer_count(p_count_save);
 
   /* Now need to allocate fields */
-  std::vector<ProjectionField*> fields = pt->fields();
-  for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-    ProjectionField *pf = *it;
-
+  for (auto pf : *pt) {
     if (pf->pointer_count() > 0) {
       statements.push_back(pf->type()->accept(this, pf));
     }
@@ -330,10 +327,7 @@ CCSTStatement* AllocateTypeVisitor::visit(ProjectionConstructorType *pt, Variabl
   v->set_pointer_count(p_count_save);
 
   /* Now need to allocate fields */
-  std::vector<ProjectionField*> fields = pt->fields();
-  for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-    ProjectionField *pf = *it;
-
+  for (auto pf : *pt) {
     if (pf->pointer_count() > 0) {
       statements.push_back(pf->type()->accept(this, pf));
     }

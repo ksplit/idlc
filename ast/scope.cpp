@@ -297,32 +297,33 @@ void LexicalScope::create_trampoline_structs()
 std::vector<Rpc*> LexicalScope::function_pointer_to_rpc()
 {
   std::vector<Rpc*> rpcs;
-  for(std::map<std::string, Type*>::iterator it = this->type_definitions_.begin(); it != this->type_definitions_.end(); it ++) {
+  for (std::map<std::string, Type*>::iterator it =
+    this->type_definitions_.begin(); it != this->type_definitions_.end();
+    it++) {
     Type *t = it->second;
 
-    if(t->num() == PROJECTION_TYPE || t->num() == PROJECTION_CONSTRUCTOR_TYPE) { // projection type
+    if (t->num() == PROJECTION_TYPE
+      || t->num() == PROJECTION_CONSTRUCTOR_TYPE) { // projection type
       ProjectionType *pt = dynamic_cast<ProjectionType*>(t);
       Assert(pt != 0x0, "Error: dynamic cast to projection type failed!\n");
-      std::vector<ProjectionField*> fields = pt->fields();
 
-      for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-	ProjectionField *pf = (ProjectionField*) *it;
-
-	if(pf->type()->num() == FUNCTION_TYPE) { // function pointer field
-	  Function *f = dynamic_cast<Function*>(pf->type());
-	  rpcs.push_back(f->to_rpc(pt));
-	}
+      for (auto pf : *pt) {
+        if (pf->type()->num() == FUNCTION_TYPE) { // function pointer field
+          Function *f = dynamic_cast<Function*>(pf->type());
+          rpcs.push_back(f->to_rpc(pt));
+        }
       }
     }
     // continue
   }
 
-  for(std::vector<LexicalScope*>::iterator it2 = this->inner_scopes_.begin(); it2 != this->inner_scopes_.end(); it2 ++) {
+  for (std::vector<LexicalScope*>::iterator it2 = this->inner_scopes_.begin();
+    it2 != this->inner_scopes_.end(); it2++) {
     LexicalScope *ls = (LexicalScope*) *it2;
     std::vector<Rpc*> tmp_rpcs = ls->function_pointer_to_rpc();
     rpcs.insert(rpcs.end(), tmp_rpcs.begin(), tmp_rpcs.end());
   }
-  
+
   return rpcs;
 }
 

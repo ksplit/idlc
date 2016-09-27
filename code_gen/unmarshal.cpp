@@ -16,9 +16,7 @@ std::vector<CCSTStatement*> unmarshal_variable_no_check(Variable *v)
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection failed!\n");
 
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *pt) {
       std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_no_check(pf);
       statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
     }
@@ -61,9 +59,7 @@ std::vector<CCSTStatement*> unmarshal_variable_caller(Variable *v)
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection failed!\n");
     
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *pt) {
       if(pf->out()) {
 	std::vector<CCSTStatement*> tmp_stmt = unmarshal_variable_caller(pf);
 	statements.insert(statements.end(), tmp_stmt.begin(), tmp_stmt.end());
@@ -95,9 +91,7 @@ std::vector<CCSTStatement*> unmarshal_variable_callee(Variable *v)
   if(v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *pt) {
       if(pf->in()) {
 	std::vector<CCSTStatement*> tmp_stmt = unmarshal_variable_callee(pf);
 	statements.insert(statements.end(), tmp_stmt.begin(), tmp_stmt.end());
@@ -148,9 +142,7 @@ std::vector<CCSTStatement*> unmarshal_container_refs_caller(Variable *v)
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
     
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *pt) {
       if(pf->out()) {
 	std::vector<CCSTStatement*> tmp_stmts = unmarshal_container_refs_caller(pf);
 	statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());

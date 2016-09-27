@@ -138,9 +138,9 @@ Function::Function(const Function& other)
   this->return_var_ = new ReturnVariable(*other.return_var_);
   // copy parameters
   std::vector<Parameter*> parameters_copy;
-  for(std::vector<Parameter*>::const_iterator it = other.parameters_.begin(); it != other.parameters_.end(); it ++) {
-    Parameter *original = *it;
-    Parameter *copy = new Parameter(*original);
+
+  for (const auto p : other) {
+    Parameter *copy = new Parameter(*p);
   }
   this->parameters_ = parameters_copy;
 
@@ -507,11 +507,12 @@ ProjectionType::ProjectionType(const ProjectionType& other)
   this->real_type_ = new_name("", other.real_type_);;
   // copy fields_
   std::vector<ProjectionField*> fields_copy;
-  for(std::vector<ProjectionField*>::const_iterator it = other.fields_.begin(); it != other.fields_.end(); it ++) {
-    ProjectionField *original = *it;
-    ProjectionField *copy = new ProjectionField(*original);
+
+  for (auto field : other) {
+    ProjectionField *copy = new ProjectionField(*field);
     fields_copy.push_back(copy);
   }
+
   this->fields_ = fields_copy;
   // copy init_variables;
   std::vector<ProjectionField*> channels;
@@ -561,8 +562,7 @@ const char* ProjectionType::name()
 
 void ProjectionType::resolve_types(LexicalScope *ls)
 {
-  for(std::vector<ProjectionField*>::iterator it = this->fields_.begin(); it != this->fields_.end(); it ++) {
-    ProjectionField *pf = (ProjectionField*) *it;
+  for (auto pf : *this) {
     pf->resolve_types(ls);
   }
 
@@ -575,8 +575,7 @@ void ProjectionType::resolve_types(LexicalScope *ls)
 
 void ProjectionType::create_trampoline_structs(LexicalScope *ls)
 {
-  for(std::vector<ProjectionField*>::iterator it = this->fields_.begin(); it != this->fields_.end(); it ++) {
-    ProjectionField *pf = (ProjectionField*) *it;
+  for (auto pf : *this) {
     if (pf->type()->num() == FUNCTION_TYPE) { // function pointer
       Function *f = dynamic_cast<Function*>(pf->type());
       Assert(f != 0x0, "Error: dynamic cast to function type failed!\n");
@@ -597,8 +596,7 @@ void ProjectionType::create_trampoline_structs(LexicalScope *ls)
 
 ProjectionField* ProjectionType::get_field(const char *field_name)
 {
-  for(std::vector<ProjectionField*>::iterator it = this->fields_.begin(); it != this->fields_.end(); it ++) {
-    ProjectionField *pf = *it;
+  for (auto pf : *this) {
     if (strcmp(field_name, pf->identifier()) == 0) {
       return pf;
     }
@@ -608,8 +606,7 @@ ProjectionField* ProjectionType::get_field(const char *field_name)
 
 void ProjectionType::initialize_type()
 {
-  for(std::vector<ProjectionField*>::iterator it = this->fields_.begin(); it != this->fields_.end(); it ++) {
-    ProjectionField *pf = *it;
+  for (auto pf : *this) {
     pf->initialize_type();
   }
 }
@@ -637,9 +634,8 @@ ProjectionConstructorType::ProjectionConstructorType(const ProjectionConstructor
   this->real_type_ = new_name("", other.real_type_);
   // copy fields_
   std::vector<ProjectionField*> fields_copy;
-  for(std::vector<ProjectionField*>::const_iterator it = other.fields_.begin(); it != other.fields_.end(); it ++) {
-    ProjectionField *original = *it;
-    ProjectionField *copy = new ProjectionField(*original);
+  for (auto field : other) {
+    ProjectionField *copy = new ProjectionField(*field);
     fields_copy.push_back(copy);
   }
   this->fields_ = fields_copy;
@@ -685,8 +681,7 @@ void ProjectionConstructorType::initialize(std::vector<Variable*> chans)
 
 void ProjectionConstructorType::resolve_types(LexicalScope *ls)
 {
-  for(std::vector<ProjectionField*>::iterator it = this->fields_.begin(); it != this->fields_.end(); it ++) {
-    ProjectionField *pf = (ProjectionField*) *it;
+  for (auto pf : *this) {
     pf->resolve_types(ls);
   }
 

@@ -21,10 +21,8 @@ CCSTStatement* marshal_variable(Variable *v, const char* direction)
     // loop through fields
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection failed!\n");
-    
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+
+    for (auto pf : *pt) {
       if( (strcmp("in", direction) == 0 && pf->in()) || (strcmp("out", direction) == 0 && pf->out())) {
 	
 	statements.push_back(marshal_variable(pf, direction));
@@ -55,9 +53,7 @@ std::vector<CCSTStatement*> marshal_variable_callee(Variable *v)
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
 
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *pt) {
       if(pf->out()) {
 	std::vector<CCSTStatement*> tmp_stmt = marshal_variable_callee(pf);
 	statements.insert(statements.end(), tmp_stmt.begin(), tmp_stmt.end());
@@ -85,9 +81,7 @@ std::vector<CCSTStatement*> marshal_variable_no_check(Variable *v)
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
 
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *pt) {
       std::vector<CCSTStatement*> tmp_stmt = marshal_variable_callee(pf);
       statements.insert(statements.end(), tmp_stmt.begin(), tmp_stmt.end());
     }

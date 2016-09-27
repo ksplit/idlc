@@ -16,9 +16,7 @@ Rpc::Rpc(ReturnVariable *return_value, const char* name,
   // Convert name to upper case for writing enums
   std_string_toupper(this->enum_str);
 
-  for (std::vector<Parameter*>::iterator it = parameters.begin();
-    it != parameters.end(); it++) {
-    Parameter *p = (Parameter*) *it;
+  for (auto p : *this) {
     this->symbol_table_->insert(p->identifier());
   }
 }
@@ -37,9 +35,7 @@ std::vector<Variable*> Rpc::marshal_projection_parameters(ProjectionType *pt, co
 {
   std::vector<Variable*> marshal_parameters;
 
-  std::vector<ProjectionField*> fields = pt->fields();
-  for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-    ProjectionField *pf = *it;
+  for (auto pf : *pt) {
     if( (strcmp(direction, "in") == 0 && pf->in())
 	|| (strcmp(direction, "out") == 0 && pf->out())
 	|| (strcmp(direction, "inout") == 0 && pf->in() && pf->out())
@@ -80,8 +76,7 @@ void Rpc::create_container_variables()
 {
   // for each parameter that is a pointer, need to create a container variable
   std::cout << "in create container variables for " <<  this->name_ << std::endl;
-  for(std::vector<Parameter*>::iterator it = this->parameters_.begin(); it != this->parameters_.end(); it ++) {
-    Parameter *p = *it;
+  for (auto p: *this) {
     p->create_container_variable(this->current_scope());
   }
 }
@@ -290,8 +285,7 @@ void Rpc::prepare_marshal()
 void Rpc::resolve_types()
 {  
   // marshal prepare for parameters as long as they are in or out
-  for(std::vector<Parameter*>::iterator it = this->parameters_.begin(); it != this->parameters_.end(); it ++) {
-    Parameter* p = *it;
+  for (auto p : *this) {
     p->resolve_types(this->current_scope_);
   }
   
@@ -302,8 +296,7 @@ void Rpc::resolve_types()
 void Rpc::copy_types()
 {
   // copy parameters.
-  for(std::vector<Parameter*>::iterator it = this->parameters_.begin(); it != this->parameters_.end(); it ++) {
-    Parameter *p = *it;
+  for (auto p : *this) {
     p->type_ = p->type_->clone();
     if (p->container_ != 0x0) {
       p->container_ = p->container_->clone();
@@ -320,8 +313,7 @@ void Rpc::set_accessors()
   this->explicit_return_->set_accessor(0x0);
 
   // parameters
-  for(std::vector<Parameter*>::iterator it = this->parameters_.begin(); it != this->parameters_.end(); it ++) {
-    Parameter *p = *it;
+  for (auto p : *this) {
     p->set_accessor(0x0);
   }
 }
@@ -332,8 +324,7 @@ void Rpc::set_copy_container_accessors()
   this->explicit_return_->set_accessor(0x0);
 
   // parameters
-  for(std::vector<Parameter*>::iterator it = this->parameters_.begin(); it != this->parameters_.end(); it ++) {
-    Parameter *p = *it;
+  for (auto p : *this) {
     p->set_accessor(0x0);
   }
 }
@@ -341,8 +332,7 @@ void Rpc::set_copy_container_accessors()
 void Rpc::initialize_types()
 {
   // parameters
-  for(std::vector<Parameter*>::iterator it = this->parameters_.begin(); it != this->parameters_.end(); it ++) {
-    Parameter *p = *it;
+  for (auto p : *this) {
     p->initialize_type();
   }
 
@@ -352,8 +342,7 @@ void Rpc::initialize_types()
 
 void Rpc::create_trampoline_structs()
 {
-  for(std::vector<Parameter*>::iterator it = this->parameters_.begin(); it != this->parameters_.end(); it ++) {
-    Parameter* p = *it;
+  for (auto p : *this) {
     if (p->type()->num() == FUNCTION_TYPE) {
       Function *f = dynamic_cast<Function*>(p->type());
       Assert(f != 0x0, "Error: dynamic cast to function type failed!\n");
@@ -417,9 +406,8 @@ LexicalScope* Module::module_scope()
 
 void Module::prepare_marshal()
 {
-  for(std::vector<Rpc*>::iterator it = this->rpc_definitions_.begin(); it != this->rpc_definitions_.end(); it ++) {
-    Rpc *r = *it;
-    r->prepare_marshal();
+  for (auto rpc: *this) {
+    rpc->prepare_marshal();
   }
 }
 
@@ -428,33 +416,29 @@ void Module::resolve_types()
   // need to resolve types in projections.
   this->module_scope_->resolve_types();
   
-  for(std::vector<Rpc*>::iterator it = this->rpc_definitions_.begin(); it != this->rpc_definitions_.end(); it ++) {
-    Rpc *r = *it;
-    r->resolve_types();
+  for (auto rpc: *this) {
+    rpc->resolve_types();
   }
 }
 
 void Module::copy_types()
 {
-  for(std::vector<Rpc*>::iterator it = this->rpc_definitions_.begin(); it != this->rpc_definitions_.end(); it ++) {
-    Rpc *r = *it;
-    r->copy_types();
+  for (auto rpc: *this) {
+    rpc->copy_types();
   }
 }
 
 void Module::set_accessors()
 {
-  for(std::vector<Rpc*>::iterator it = this->rpc_definitions_.begin(); it != this->rpc_definitions_.end(); it ++) {
-    Rpc *r = *it;
-    r->set_accessors();
+  for (auto rpc: *this) {
+    rpc->set_accessors();
   }
 }
 
 void Module::initialize_types()
 {
-  for(std::vector<Rpc*>::iterator it = this->rpc_definitions_.begin(); it != this->rpc_definitions_.end(); it ++) {
-    Rpc *r = *it;
-    r->initialize_types();
+  for (auto rpc: *this) {
+    rpc->initialize_types();
   }
 }
 
@@ -469,35 +453,30 @@ void Module::create_trampoline_structs()
   this->module_scope_->create_trampoline_structs();
   // loop through rpc definitions
   // todo
-  
-  for(std::vector<Rpc*>::iterator it = this->rpc_definitions_.begin(); it != this->rpc_definitions_.end(); it ++) {
-    Rpc *r = *it;
-    r->create_trampoline_structs();
+
+  for (auto rpc: *this) {
+    rpc->create_trampoline_structs();
   }
 }
 
 void Module::generate_function_tags(Project *p)
 {
-  for(std::vector<Rpc*>::iterator it = this->rpc_definitions_.begin(); it != this->rpc_definitions_.end(); it ++) {
-    Rpc *r = *it;
-    
-    r->set_tag(p->get_next_tag());
+  for (auto rpc: *this) {
+    rpc->set_tag(p->get_next_tag());
   }
 }
 
 void Module::create_container_variables()
 {
-  for(std::vector<Rpc*>::iterator it = this->rpc_definitions_.begin(); it != this->rpc_definitions_.end(); it ++) {
-    Rpc *r = *it;
-    r->create_container_variables();
+  for (auto rpc: *this) {
+    rpc->create_container_variables();
   }
 }
 
 void Module::set_copy_container_accessors()
 {
-  for(std::vector<Rpc*>::iterator it = this->rpc_definitions_.begin(); it != this->rpc_definitions_.end(); it ++) {
-    Rpc *r = *it;
-    r->set_copy_container_accessors();
+  for (auto rpc: *this) {
+    rpc->set_copy_container_accessors();
   }
 }
 
@@ -516,9 +495,8 @@ Project::Project(LexicalScope *scope, std::vector<Module*> modules, std::vector<
 
 void Project::prepare_marshal()
 {
-  for(std::vector<Module*>::iterator it = this->project_modules_.begin(); it != this->project_modules_.end(); it ++) {
-    Module *m = *it;
-    m->prepare_marshal();
+  for (auto module: *this) {
+    module->prepare_marshal();
   }
 }
 
@@ -526,61 +504,51 @@ void Project::resolve_types()
 {
   this->project_scope_->resolve_types();
   
-  for(std::vector<Module*>::iterator it = this->project_modules_.begin(); it != this->project_modules_.end(); it ++) {
-    Module *m = *it;
-    m->resolve_types();
+  for (auto module: *this) {
+    module->resolve_types();
   }
 }
 
 void Project::copy_types()
 {
-  for(std::vector<Module*>::iterator it = this->project_modules_.begin(); it != this->project_modules_.end(); it ++) {
-    Module *m = *it;
-    m->copy_types();
+  for (auto module: *this) {
+    module->copy_types();
   }
 }
 
 void Project::set_accessors()
 {
-  for(std::vector<Module*>::iterator it = this->project_modules_.begin(); it != this->project_modules_.end(); it ++) {
-    Module *m = *it;
-    m->set_accessors();
+  for (auto module: *this) {
+    module->set_accessors();
   }
 }
 
 void Project::function_pointer_to_rpc()
 {
   // right now project doesnt have free rpcs.
-
-  for(std::vector<Module*>::iterator it = this->project_modules_.begin(); it != this->project_modules_.end(); it ++) {
-    Module *m = *it;
-    m->function_pointer_to_rpc();
+  for (auto module: *this) {
+    module->function_pointer_to_rpc();
   }
 }
 
 void Project::create_trampoline_structs()
 {
-  // todo
-
-  for(std::vector<Module*>::iterator it = this->project_modules_.begin(); it != this->project_modules_.end(); it ++) {
-    Module *m = *it;
-    m->create_trampoline_structs();
+  for (auto module: *this) {
+    module->create_trampoline_structs();
   }
 }
 
 void Project::generate_function_tags()
 {
-  for(std::vector<Module*>::iterator it = this->project_modules_.begin(); it != this->project_modules_.end(); it ++) {
-    Module *m = *it;
-    m->generate_function_tags(this);
+  for (auto module: *this) {
+    module->generate_function_tags(this);
   }
 }
 
 void Project::create_container_variables()
 {
-  for(std::vector<Module*>::iterator it = this->project_modules_.begin(); it != this->project_modules_.end(); it ++) {
-    Module *m = *it;
-    m->create_container_variables();
+  for (auto module: *this) {
+    module->create_container_variables();
   }
 }
 
@@ -602,17 +570,15 @@ unsigned int Project::get_next_tag()
 
 void Project::initialize_types()
 {
-  for(std::vector<Module*>::iterator it = this->project_modules_.begin(); it != this->project_modules_.end(); it ++) {
-    Module *m = *it;
-    m->initialize_types();
+  for (auto module: *this) {
+    module->initialize_types();
   }
 }
 
 void Project::set_copy_container_accessors()
 {
-  for(std::vector<Module*>::iterator it = this->project_modules_.begin(); it != this->project_modules_.end(); it ++) {
-    Module *m = *it;
-    m->set_copy_container_accessors();
+  for (auto module: *this) {
+    module->set_copy_container_accessors();
   }
 }
 
@@ -621,5 +587,3 @@ Include::Include(bool relative, const char *path)
   this->relative_ = relative;
   this->path_ = path;
 }
-
-

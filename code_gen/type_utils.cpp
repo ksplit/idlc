@@ -369,8 +369,7 @@ CCSTStructUnionSpecifier* struct_declaration(ProjectionType *pt)
   std::vector<ProjectionField*> fields = pt->fields();
   std::vector<CCSTParamDeclaration*> func_pointer_params;
 
-  for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-    ProjectionField *pf = (ProjectionField*) *it;
+  for (auto pf : *pt) {
     if (pf->type()->num() == FUNCTION_TYPE) {
       Function *f = dynamic_cast<Function*>(pf->type());
       std::vector<CCSTDecSpecifier*> new_fp_return_type = type2(f->return_var_->type());
@@ -378,8 +377,7 @@ CCSTStructUnionSpecifier* struct_declaration(ProjectionType *pt)
       //specifier = new_fp_return_type;
       parameters = f->parameters_;
 
-      for(std::vector<Parameter*>::iterator it = parameters.begin(); it != parameters.end(); it ++) {
-        Parameter *p = *it;
+      for (auto p : *f) {
         std::vector<CCSTDecSpecifier*> fp_param_tmp = type2(p->type());
         func_pointer_params.push_back(new CCSTParamDeclaration(fp_param_tmp
                      , new CCSTDeclarator(pointer(p->pointer_count()), new CCSTDirectDecId(""))));

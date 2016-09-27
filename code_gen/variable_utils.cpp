@@ -6,7 +6,6 @@
  */
 CCSTDeclaration* declare_static_variable(Variable *gv)
 {
-  
   std::vector<CCSTDecSpecifier*> specifier;
   specifier.push_back(new CCSTStoClassSpecifier(static_t));
 
@@ -49,9 +48,7 @@ std::vector<CCSTDeclaration*> declare_variables_callee(Variable *v)
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
 
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *pt) {
       std::vector<CCSTDeclaration*> tmp_declarations = declare_containers_only_callee(pf);
       declarations.insert(declarations.end(), tmp_declarations.begin(), tmp_declarations.end());
     }
@@ -71,9 +68,7 @@ std::vector<CCSTDeclaration*> declare_containers_only_callee(Variable *v)
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
     
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *pt) {
       std::vector<CCSTDeclaration*> tmp_declarations = declare_containers_only_callee(pf);
       declarations.insert(declarations.end(), tmp_declarations.begin(), tmp_declarations.end());
     }

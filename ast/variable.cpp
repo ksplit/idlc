@@ -73,9 +73,7 @@ void GlobalVariable::set_accessor(Variable *v)
     ProjectionType *pt = dynamic_cast<ProjectionType*>(this->type_);
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
 
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *pt) {
       pf->set_accessor(this);
     }
   }
@@ -213,10 +211,8 @@ void GlobalVariable::create_container_variable(LexicalScope *ls)
   
   ProjectionType *pt = dynamic_cast<ProjectionType*>(tmp);
   Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
-  
-  std::vector<ProjectionField*> fields = pt->fields();
-  for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-    ProjectionField *pf = *it;
+
+  for (auto pf : *pt) {
     pf->create_container_variable(ls);
   }
 }
@@ -431,11 +427,10 @@ void Parameter::create_container_variable(LexicalScope *ls)
   ProjectionType *pt = dynamic_cast<ProjectionType*>(tmp);
   Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
   
-  std::vector<ProjectionField*> fields = pt->fields();
-  for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-    ProjectionField *pf = *it;
+  for (auto pf : *pt) {
     pf->create_container_variable(ls);
   }
+
   } else if (this->type_->num() == FUNCTION_TYPE) {
     ProjectionType *container = dynamic_cast<ProjectionType*>(container_t);
     Assert(container != 0x0, "Error: could not dynamically cast to projection\n");
@@ -501,9 +496,7 @@ void Parameter::set_accessor(Variable *v)
     ProjectionType *pt = dynamic_cast<ProjectionType*>(this->type_);
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
     
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *pt) {
       pf->set_accessor(this);
     }
   }
@@ -753,9 +746,7 @@ void ReturnVariable::create_container_variable(LexicalScope *ls)
   ProjectionType *pt = dynamic_cast<ProjectionType*>(tmp);
   Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
   
-  std::vector<ProjectionField*> fields = pt->fields();
-  for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-    ProjectionField *pf = *it;
+  for (auto pf : *pt) {
     pf->create_container_variable(ls);
   }
 }
@@ -811,9 +802,7 @@ void ReturnVariable::set_accessor(Variable *v)
     ProjectionType *pt = dynamic_cast<ProjectionType*>(this->type_);
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
     
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *pt) {
       pf->set_accessor(this);
     }
   }
@@ -1087,9 +1076,7 @@ void ProjectionField::create_container_variable(LexicalScope *ls)
   ProjectionType *pt = dynamic_cast<ProjectionType*>(tmp);
   Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
   
-  std::vector<ProjectionField*> fields = pt->fields();
-  for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-    ProjectionField *pf = *it;
+  for (auto pf : *pt) {
     pf->create_container_variable(ls);
   }
 }
@@ -1145,9 +1132,7 @@ void ProjectionField::set_accessor(Variable *v)
     ProjectionType *pt = dynamic_cast<ProjectionType*>(this->type_);
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
     
-    std::vector<ProjectionField*> fields = pt->fields();
-    for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-      ProjectionField *pf = *it;
+    for (auto pf : *pt) {
       pf->set_accessor(this);
     }
   }
@@ -1381,9 +1366,7 @@ void FPParameter::create_container_variable(LexicalScope *ls)
   ProjectionType *pt = dynamic_cast<ProjectionType*>(tmp);
   Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
   
-  std::vector<ProjectionField*> fields = pt->fields();
-  for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
-    ProjectionField *pf = *it;
+  for (auto pf : *pt) {
     pf->create_container_variable(ls);
   }
 }

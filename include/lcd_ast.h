@@ -438,6 +438,8 @@ class ReturnVariable : public Variable
 
 class Function : public Type
 {
+  typedef std::vector<Parameter*>::iterator iterator;
+  typedef std::vector<Parameter*>::const_iterator const_iterator;
  public:
   const char *identifier_;
   ReturnVariable *return_var_;
@@ -454,6 +456,10 @@ class Function : public Type
   virtual void resolve_types(LexicalScope *ls);
   Rpc* to_rpc(ProjectionType *pt);
   virtual void create_trampoline_structs(LexicalScope *ls);
+  iterator begin() { return parameters_.begin(); }
+  iterator end() { return parameters_.end(); }
+  const_iterator begin() const { return parameters_.begin(); }
+  const_iterator end() const { return parameters_.end(); }
 };
  
 class Typedef : public Type
@@ -621,7 +627,10 @@ class ProjectionType : public Type // complex type
   std::vector<ProjectionField*> channels_;
   const char* id_; 
   const char* real_type_;
-  std::vector<ProjectionField*> fields_; 
+  std::vector<ProjectionField*> fields_;
+  typedef std::vector<ProjectionField*>::iterator iterator;
+  typedef std::vector<ProjectionField*>::const_iterator const_iterator;
+
   ProjectionType();
   ProjectionType(const char* id, const char* real_type, std::vector<ProjectionField*> fields, std::vector<ProjectionField*> channels);
   ProjectionType(const char* id, const char* real_type, std::vector<ProjectionField*> fields);
@@ -639,6 +648,10 @@ class ProjectionType : public Type // complex type
   virtual void create_trampoline_structs(LexicalScope *ls);
   ProjectionField* get_field(const char* field_name);
   void initialize_type();
+  iterator begin() { return fields_.begin(); }
+  iterator end() { return fields_.end(); }
+  const_iterator begin() const { return fields_.begin(); }
+  const_iterator end() const { return fields_.end(); }
 };
 
 class ProjectionConstructorType : public ProjectionType 
@@ -666,7 +679,8 @@ class Rpc : public Base
   
   bool function_pointer_defined_;
   std::vector<Variable*> marshal_projection_parameters(ProjectionType *pt, const char *direction);
-  
+  typedef std::vector<Parameter*>::iterator iterator;
+
  public:
   std::vector<Parameter*> hidden_args_;
   Rpc(ReturnVariable *return_var, const char* name, std::vector<Parameter* > parameters, LexicalScope *current_scope);
@@ -690,6 +704,8 @@ class Rpc : public Base
   void initialize_types();
   void set_copy_container_accessors();
   LexicalScope *current_scope();
+  iterator begin() { return parameters_.begin(); }
+  iterator end() { return parameters_.end(); }
 };
 
 class Module : public Base
@@ -700,6 +716,8 @@ class Module : public Base
   std::vector<GlobalVariable*> channels_;
    // create these from the channels in the constructor.
   std::vector<Rpc*> rpc_definitions_;
+  typedef std::vector<Rpc*>::iterator iterator;
+
  public:
   std::vector<GlobalVariable*> cspaces_;
   GlobalVariable *channel_group;
@@ -718,6 +736,8 @@ class Module : public Base
   void initialize_types();
   void set_copy_container_accessors();
   const char* identifier();
+  iterator begin() { return rpc_definitions_.begin(); }
+  iterator end() { return rpc_definitions_.end(); }
 };
 
 class Include : public Base
@@ -740,6 +760,7 @@ class Project : public Base
   std::vector<Module*> project_modules_;
   std::vector<Include*> project_includes_;
   unsigned int last_tag_;
+  typedef std::vector<Module*>::iterator iterator;
   
  public:
   Project(LexicalScope *scope, std::vector<Module*> modules, std::vector<Include*> includes);
@@ -756,6 +777,8 @@ class Project : public Base
   std::vector<Module*> modules();
   unsigned int get_next_tag();
   std::vector<Include*> includes();
+  iterator begin() { return project_modules_.begin(); }
+  iterator end() { return project_modules_.end(); }
 };
 
 class TypeNameVisitor // generates CCSTTypeName for each type.
