@@ -9,7 +9,8 @@ Rpc::Rpc(ReturnVariable *return_value, const char* name,
   enum_str(name),
   tag_(0),
   parameters_(parameters),
-  current_scope_(current_scope)
+  current_scope_(current_scope),
+  function_pointer_defined_(false)
 {
   this->symbol_table_ = new SymbolTable();
 

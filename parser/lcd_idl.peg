@@ -26,6 +26,7 @@ typedef enum {
 
 LexicalScope *current_scope;
 LexicalScope *current_module_scope;
+LexicalScope *current_unnamed_scope;
 
 void set_specs(Variable &v, const Value &s)
 {
@@ -71,6 +72,16 @@ LexicalScope* get_current_scope()
     return current_scope;
 }
 
+void set_current_unnamed_scope(LexicalScope *ls)
+{
+    current_unnamed_scope = ls;
+}
+
+LexicalScope* get_current_unnamed_scope()
+{
+    return current_unnamed_scope;
+}
+
 void set_current_module_scope(LexicalScope *ls)
 {
     current_module_scope = ls;
@@ -88,11 +99,13 @@ Type * getType(const char* type)
     if(!ls) {
         std::cout << "current scope is null\n";
     }
+    std::cout << "!Looking up for: " << type << " in scope: " << ls << "\n";
+
     Type* val = ls->lookup(type, &err);
 
     if(!val)
     {
-        std::cout << "val is null\n";
+        std::cout << "!ERROR: val is null for: " << type << " in scope: " << ls << "\n";
         val = new UnresolvedType(type);
     }
     return val;
@@ -147,6 +160,10 @@ void insertType(const char * sym, Type * val) // should this be void?
 {
     LexicalScope *ls = get_current_scope();
     bool ret = ls->insert(sym, val);
+
+    std::cout << (ret ? "=> Inserting variable type " : "=> Could not insert type ")
+				<< sym << " in scope " << ls << "\n";
+
     if(!ret)
     {
         ErrorReport* er = ErrorReport::instance();
@@ -277,6 +294,8 @@ unnamed_scope_special = Spacing OPENC Spacing {{
 		      	    LexicalScope *new_scope = new LexicalScope(tmp);
 			    tmp->add_inner_scope(new_scope);
 			    set_current_scope(new_scope);
+		        std::cout << "# New Unnamed scope " << new_scope << " from: " << tmp << "\n";
+			    set_current_unnamed_scope(new_scope);
 			    value = new_scope;
 			}}
 
@@ -370,6 +389,7 @@ Interface_special =	  "module" {{
 			      GlobalScope::instance()->add_inner_scope(new_scope);
 			      set_current_module_scope(new_scope);
 			      set_current_scope(new_scope);
+			      std::cout << "# Module scope " << new_scope << "\n";
 			      value = new_scope;  
 			  }}
 
@@ -446,6 +466,7 @@ Include		 =	"include" Space+ "<" Spacing p:Pathname Spacing ">" Spacing{{
 			}}
 
 FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE {{
+
 			    std::vector<Parameter*> *params = (std::vector<Parameter*>*) p.getValue();
 			    Function *fp = new Function((char*) id.getValue(), new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
 			    	     	       		, *params, get_current_scope());
@@ -453,11 +474,11 @@ FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* 
 			    Parameter *_p = new Parameter(fp, (char *) id.getValue(), 1);
 			    set_specs(*_p, s);
 
-			    // FIXME: Since Rpc introduces a new scope (why??), unnamed scope of the current scope
-			    // is two levels behind. Let's traverse to that. Is this the rightway? Why not add
-			    // an unnamed scope param and save it in every lexical scope object?
-			    LexicalScope *this_unnamed = get_current_scope()->outer_scope()->outer_scope();
-			    set_current_scope(this_unnamed);
+				// XXX: Set scope to unnamed_scope as we need to insert definitions into that scope
+				// definitions inserted into rpc scope is lost as rpc scope is not added to
+				// unnamed scope's inner scopes
+				set_current_scope(get_current_scope()->outer_scope());
+
 			    insertType((char*)id.getValue(), fp);
 
 			    // creating constructor
@@ -467,6 +488,12 @@ FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* 
 			    ProjectionType * container = new ProjectionType(container_name_str, container_name_str, container_fields);
 			    std::cout << __func__ << ": Inserting projection type " << container_name_str << std::endl;
 			    insertType(container_name_str, container);
+
+				// XXX: Reset scope to current_unnamed_scope as nested so that nested function pointers
+				// unwind properly. Blindly setting it to current_scope's outer_scope will hit global scope
+				// sooner or later and cause SEGFAULT as global scope doesn't have any outer_scope
+				set_current_scope(get_current_unnamed_scope());
+
 			    value = _p;
 			}}
 
@@ -729,10 +756,11 @@ FP_Parameters	=	f:FP_FirstParam* l:FP_LastParam {{
 			}}
 
 rpc_special     =      "rpc" {{
-		           LexicalScope *tmp = get_current_scope();
-			   LexicalScope *new_scope = new LexicalScope(tmp);	
+		           LexicalScope *tmp = get_current_unnamed_scope();
+			   LexicalScope *new_scope = new LexicalScope(tmp);
 			   // dont need to add to inner scope because rpc do not have type definitinos
-			   set_current_scope(new_scope);      
+			   set_current_scope(new_scope);
+			   std::cout << "# New RPC scope(Not in any inner scope) " << new_scope << " from :" << tmp << "\n";
 			   value = new_scope;
 		       }}
 
