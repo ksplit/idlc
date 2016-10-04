@@ -30,9 +30,13 @@ LexicalScope *current_unnamed_scope;
 
 void set_specs(Variable &v, const Value &s)
 {
-    // return if NULL
-    if (!s.getValue())
+    // Since function arguments need to be marshalled across domains,
+    // set a parameter to [in] if nothing is set. This avoids marking every
+    // function parameter as [in]
+    if (!s.getValue()) {
+        v.set_in(true);
         return;
+	}
 
     int spec = *((int*) s.getValue());
 
