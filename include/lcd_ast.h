@@ -69,6 +69,7 @@ class LexicalScope : public Base
 
   LexicalScope();
   LexicalScope(LexicalScope *outer_scope);
+  virtual ~LexicalScope() {}
   std::vector<Rpc*> rpc_in_scope();
   bool insert(Rpc *r);
   bool insert(Variable *v);
@@ -124,6 +125,7 @@ class Type : public Base
   virtual const char* name() = 0;
   virtual void resolve_types(LexicalScope *ls) = 0;
   virtual void create_trampoline_structs(LexicalScope *ls) = 0;
+  virtual ~Type() {}
 };
 
 class FloatType : public Type
@@ -240,6 +242,7 @@ class Variable : public Base
   virtual bool bind_callee() = 0;
 
   virtual Variable* container() = 0;
+  virtual ~Variable() {}
 };
 
 class GlobalVariable : public Variable
@@ -356,6 +359,7 @@ class FPParameter : public Parameter
   Variable *container_;
   FPParameter(Type *type, int pointer_count);
   FPParameter(const FPParameter& other);
+  virtual ~FPParameter() {}
   virtual Variable* clone() const { return new FPParameter(*this); }
   virtual Variable* container();
   virtual Type* type();
@@ -401,6 +405,7 @@ class ReturnVariable : public Variable
   ReturnVariable();
   ReturnVariable(Type* return_type, int pointer_count, const char* id);
   ReturnVariable(const ReturnVariable& other);
+  virtual ~ReturnVariable() {}
   virtual Variable* clone() const { return new ReturnVariable(*this); }
   virtual Variable *container();
   virtual void set_marshal_info(Marshal_type *mt);
@@ -447,6 +452,7 @@ class Function : public Type
   LexicalScope *current_scope_;
   Function(const char *id, ReturnVariable *return_var, std::vector<Parameter*> parameters, LexicalScope *ls);
   Function(const Function& other);
+  virtual ~Function() {}
   virtual Type* clone() const {return new Function(*this); }
   virtual Marshal_type* accept(MarshalPrepareVisitor *worker);
   virtual CCSTTypeName* accept(TypeNameVisitor *worker);
@@ -472,6 +478,7 @@ class Typedef : public Type
   
   Typedef(const char* id, const char* alias, Type* type);
   Typedef(const Typedef& other);
+  virtual ~Typedef() {}
   virtual Type* clone() const { return new Typedef(*this); }
   virtual Marshal_type* accept(MarshalPrepareVisitor *worker);
   virtual CCSTTypeName* accept(TypeNameVisitor *worker);
@@ -490,14 +497,15 @@ class Channel : public Type
  public:
   enum ChannelType {
     AsyncChannel = 0,
-    SyncChannel
+    SyncChannel,
+    Unknown
   };
 
   Channel *hostChannel;
   ChannelType chType;
   std::string chName;
 
-  Channel() {}
+  Channel() :hostChannel(NULL), chType(Unknown) {}
   Channel(const char*, ChannelType, Channel*);
   Channel(const Channel& other);
   virtual Type* clone() const { return new Channel(*this); }
@@ -583,7 +591,7 @@ class ProjectionField : public Variable //?
   Marshal_type *marshal_info_;
   Variable *container_;
   ProjectionField(Type* field_type, const char* field_name, int pointer_count);
-  ~ProjectionField(); 
+  virtual ~ProjectionField() {}
   ProjectionField(const ProjectionField& other);
   virtual Variable* clone() const { return new ProjectionField(*this); }
   virtual Variable *container();
@@ -813,6 +821,7 @@ class TypeVisitor
   virtual CCSTStatement* visit(BoolType *bt, Variable *v) = 0;
   virtual CCSTStatement* visit(DoubleType *dt, Variable *v) = 0;
   virtual CCSTStatement* visit(FloatType *ft, Variable *v) = 0;
+  virtual ~TypeVisitor() {}
 };
 
 class AllocateTypeVisitor : public TypeVisitor    
@@ -831,6 +840,7 @@ class AllocateTypeVisitor : public TypeVisitor
   virtual CCSTStatement* visit(BoolType *bt, Variable *v);
   virtual CCSTStatement* visit(DoubleType *dt, Variable *v);
   virtual CCSTStatement* visit(FloatType *ft, Variable *v);
+  virtual ~AllocateTypeVisitor() {}
 };
 
 #endif
