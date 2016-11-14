@@ -3,121 +3,120 @@
 #include <algorithm>
 #include <string>
 
-const char* new_name(const char* name, const char* suffix)
+const std::string new_name(const std::string& name,
+  const std::string& suffix)
 {
-  std::string *str = new std::string(name);
-  str->append(suffix);
-  return str->c_str();
+  return std::string(name).append(suffix);
 }
 
-const char* struct_name(const char* name)
+const std::string struct_name(const std::string& name)
 {
-  return new_name("struct ", name);
+  return new_name(std::string("struct "), name);
 }
 
-const char* lookup_name(const char* name)
+const std::string lookup_name(const std::string& name)
 {
-  return new_name("lookup_", name);
+  return new_name(std::string("lookup_"), name);
 }
 
-const char* insert_name(const char* name)
+const std::string insert_name(const std::string& name)
 {
-  return new_name(name, "_insert");
+  return new_name(std::string("insert_"), name);
 }
 
-const char* cap_init_name(const char* name)
+const std::string cap_init_name(const std::string& name)
 {
-  return new_name(name, "_cap_init");
+  return new_name(name, std::string("_cap_init"));
 }
 
-const char* cap_create_name(const char* name)
+const std::string cap_create_name(const std::string& name)
 {
-  return new_name(name, "_cap_create");
+  return new_name(name, std::string("_cap_create"));
 }
 
-const char* cap_exit_name(const char* name)
+const std::string cap_exit_name(const std::string& name)
 {
-  return new_name(name, "_cap_exit");
+  return new_name(name, std::string("_cap_exit"));
 }
 
-const char* cap_destroy_name(const char* name)
+const std::string cap_destroy_name(const std::string& name)
 {
-  return new_name(name, "_cap_destroy");
+  return new_name(name, std::string("_cap_destroy"));
 }
 
-const char* cspace_name(const char* name)
+const std::string cspace_name(const std::string& name)
 {
-  return new_name(name, "_cspace");
+  return new_name(name, std::string("_cspace"));
 }
 
-const char* group_name(const char* name)
+const std::string group_name(const std::string& name)
 {
-  return new_name(name, "_group");
+  return new_name(name, std::string("_group"));
 }
 
 /*
  * returns a new string with _exit on the end.
  */
-const char* exit_name(const char* name)
+const std::string exit_name(const std::string& name)
 {
-  return new_name(name, "_exit");
+  return new_name(name, std::string("_exit"));
 }
 
 /*
  * returns a new string with _init on the end.
  */
-const char* init_name(const char* name)
+const std::string init_name(const std::string& name)
 {
-  return new_name(name, "_init");
+  return new_name(name, std::string("_init"));
 }
 
 /*
  * returns a new stirng with glue_ on the front.
  */
-const char* glue_name(const char* name)
+const std::string glue_name(const std::string& name)
 {
-  return new_name("glue_", name);
+  return new_name(std::string("glue_"), name);
 }
 
 /*
  * returns a new string with _container on the end.
  */
-const char* container_name(const char* name)
+const std::string container_name(const std::string& name)
 {
-  return new_name(name, "_container");
+  return new_name(name, std::string("_container"));
 }
 
 /*
  * returns a new string with _hidden_args on the end.
  */
-const char* hidden_args_name(const char* name)
+const std::string hidden_args_name(const std::string& name)
 {
-  return new_name(name, "_hidden_args");
+  return new_name(name, std::string("_hidden_args"));
 }
 
 /* 
  * returns a new string with _p on the end.
  */ 
-const char* parameter_name(const char* name)
+const std::string parameter_name(const std::string& name)
 {
-  return new_name(name, "_p");
+  return new_name(name, std::string("_p"));
 }
 
 /*
  * returns a new string with _p on the end.
  */
-const char* fp_name(const char* name)
+const std::string fp_name(const std::string& name)
 {
-  return new_name(name, "_fp");
+  return new_name(name, std::string("_fp"));
 }
 
 
 /*
  * returns a new string with _container on the end.
  */
-const char* trampoline_func_name(const char* name)
+const std::string trampoline_func_name(const std::string& name)
 {
-  return new_name(name, "_trampoline");
+  return new_name(name, std::string("_trampoline"));
 }
 
 /*
@@ -132,16 +131,17 @@ void std_string_toupper(std::string &input)
 /*
  * appends strings in list together with the delimiter.
  */
-const char* append_strings(const char* delimiter, std::vector<const char*> strs)
+const std::string append_strings(const std::string& delimiter,
+  const std::vector<std::string> strs)
 {
-  std::string *total = new std::string;
+  std::string total;
 
-  for (std::vector<const char*>::iterator it = strs.begin(); it != strs.end(); it ++) {
-	const char *s = *it;
-	total->append(s);
-	total->append(delimiter);
+  for (std::vector<std::string>::const_iterator it = strs.begin(); it != strs.end();
+    it++) {
+    total.append(*it);
+    total.append(delimiter);
   }
   //Trim the last underscore to not have __ at the end
-  total->resize(total->length() - 1);
-  return total->c_str();
+  total.resize(total.length() - 1);
+  return total;
 }

@@ -6,7 +6,7 @@
  * when marshal params list is populated.
  * This function should never be called on a variable whose type is a projection
  */
-CCSTStatement* marshal_variable(Variable *v, const char* direction)
+CCSTStatement* marshal_variable(Variable *v, const std::string& direction)
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
@@ -23,9 +23,9 @@ CCSTStatement* marshal_variable(Variable *v, const char* direction)
     Assert(pt != 0x0, "Error: dynamic cast to projection failed!\n");
 
     for (auto pf : *pt) {
-      if( (strcmp("in", direction) == 0 && pf->in()) || (strcmp("out", direction) == 0 && pf->out())) {
-	
-	statements.push_back(marshal_variable(pf, direction));
+      if ((direction == "in" && pf->in())
+        || (direction == "out" && pf->out())) {
+        statements.push_back(marshal_variable(pf, direction));
       }
     }
     
@@ -96,7 +96,7 @@ std::vector<CCSTStatement*> marshal_variable_no_check(Variable *v)
 
 CCSTStatement* marshal(CCSTPostFixExpr *v, int reg)
 {
-  const char* store_reg_func = store_register_mapping(reg);
+  const std::string& store_reg_func = store_register_mapping(reg);
   
   std::vector<CCSTAssignExpr*> store_reg_args;
   store_reg_args.push_back(v);

@@ -32,25 +32,25 @@ std::vector<CCSTStatement*> marshal_parameters(std::vector<Parameter*> params); 
 std::vector<CCSTStatement*> unmarshal_implicit_return(std::vector<Parameter*> implicit_returns); // todo does this belong in a different file?
 CCSTStatement* unmarshal_explicit_return(Marshal_type *return_info); // todo does this belong in a different file?
 
-const char* struct_name(ProjectionType *pt); // complete
+const std::string& struct_name(ProjectionType *pt); // complete
 // client seems to be missing important functions.
 
 
 
 // helper.cpp
-std::vector<const char*> construct_list_vars(Variable *v); // complete
+std::vector<std::string> construct_list_vars(Variable *v); // complete
 CCSTUnaryOp* reference();
-char* type_number_to_name(int num);
-CCSTDeclaration* struct_pointer_declaration(const char* struct_name, const char* var_name, LexicalScope *ls); // complete
-CCSTStatement* kzalloc_structure(const char*struct_name, const char* var_name); // complete
-CCSTCompoundStatement* alloc_init_containers_driver(Variable *v, ProjectionType *pt, LexicalScope *ls, const char* side); // complete
-CCSTCompoundStatement* declare_and_initialize_container_struct(Variable *v, ProjectionType *pt, LexicalScope *ls, const char* side); // complete
-CCSTCompoundStatement* alloc_init_containers(Variable *v, ProjectionType *pt, LexicalScope *ls, const char* side); // complete
+const std::string type_number_to_name(int num);
+CCSTDeclaration* struct_pointer_declaration(const std::string& struct_name, const std::string& var_name, LexicalScope *ls); // complete
+CCSTStatement* kzalloc_structure(const std::string&struct_name, const std::string& var_name); // complete
+CCSTCompoundStatement* alloc_init_containers_driver(Variable *v, ProjectionType *pt, LexicalScope *ls, const std::string& side); // complete
+CCSTCompoundStatement* declare_and_initialize_container_struct(Variable *v, ProjectionType *pt, LexicalScope *ls, const std::string& side); // complete
+CCSTCompoundStatement* alloc_init_containers(Variable *v, ProjectionType *pt, LexicalScope *ls, const std::string& side); // complete
 
 
 bool contains_function_pointer(ProjectionType *pt); //complete
-bool alloc_callee(Variable *v, const char* side); // complete 
-bool alloc_caller(Variable *v, const char* side); // complete
+bool alloc_callee(Variable *v, const std::string& side); // complete
+bool alloc_caller(Variable *v, const std::string& side); // complete
 CCSTStructUnionSpecifier* struct_declaration(ProjectionType *pt); // complete
 CCSTDeclaration* declare_and_initialize_container_struct(Variable *v); // complete
 
@@ -66,16 +66,16 @@ CCSTEnumeratorList* construct_enumlist(std::vector<Rpc*> rpcs); // ???????
 CCSTUnaryOp* indirection(); // complete
 CCSTUnaryExprCastExpr* dereference(CCSTCastExpr *to_deref); //complete
 CCSTPostFixExpr* access(Variable *v); // complete to test.
-CCSTPrimaryExprId* function_name(const char *func_name); // complete
-CCSTPostFixExprAssnExpr* function_call(const char* func_name, std::vector<CCSTAssignExpr*> args); // complete
+CCSTPrimaryExprId* function_name(const std::string& func_name); // complete
+CCSTPostFixExprAssnExpr* function_call(const std::string& func_name, std::vector<CCSTAssignExpr*> args); // complete
 CCSTUnaryOp* Not();
-CCSTIfStatement* if_cond_fail(CCSTExpression *cond, const char *err_msg); // complete
-CCSTIfStatement* if_cond_fail_goto(CCSTExpression *cond, const char* err_msg, const char* goto_label); // complete
+CCSTIfStatement* if_cond_fail(CCSTExpression *cond, const std::string& err_msg); // complete
+CCSTIfStatement* if_cond_fail_goto(CCSTExpression *cond, const std::string& err_msg, const std::string& goto_label); // complete
 std::vector<CCSTDecSpecifier*> int_type(); // complete
 
 CCSTPointer* pointer(int p_count); // complete
 
-std::vector<CCSTDecSpecifier*> struct_type(const char *type_name); // complete
+std::vector<CCSTDecSpecifier*> struct_type(const std::string& type_name); // complete
 std::vector<CCSTDecSpecifier*> type2(Type *t); // complete?
 std::vector<CCSTSpecifierQual*> type(Type *t); // complete?
 CCSTTypeName* type_cast(Type *t); //??????
@@ -112,28 +112,28 @@ std::vector<CCSTStatement*> unmarshal_variable_caller(Variable *v);
 std::vector<CCSTStatement*> unmarshal_container_refs_caller(Variable *v);
 
 // marshal.cpp
-CCSTStatement* marshal_variable(Variable *v, const char* direction); // complete
+CCSTStatement* marshal_variable(Variable *v, const std::string& direction); // complete
 std::vector<CCSTStatement*> marshal_variable_callee(Variable *v); // complete
 std::vector<CCSTStatement*> marshal_variable_no_check(Variable *v); // complete
 CCSTStatement* marshal(CCSTPostFixExpr *v, int reg); // complete
 
 // containers.cpp
-std::vector<CCSTAssignExpr*> container_of_args(CCSTPostFixExpr *struct_pointer, const char *type_name, const char *field_name); // complete
-std::vector<CCSTStatement*> container_of(Variable *v, const char* cspace); // complete
+std::vector<CCSTAssignExpr*> container_of_args(CCSTPostFixExpr *struct_pointer, const std::string& type_name, const std::string& field_name); // complete
+std::vector<CCSTStatement*> container_of(Variable *v, const std::string& cspace); // complete
 CCSTCompoundStatement* set_remote_ref(Variable *v); // complete
-CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const char* cspace);
+CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const std::string& cspace);
 CCSTStatement* lookup_variable_container(Variable *v);
 CCSTStatement* alloc_variable(Variable *v); // complete
 CCSTStatement* allocate_non_container_variables(Variable *v);
-CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const char* cspace);
+CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const std::string& cspace);
 ProjectionField* get_cptr_field(Variable *v);
-ProjectionField* find_field(ProjectionType *pt, const char *field_name);
-CCSTCompoundStatement* alloc_link_container_caller(Variable *v, const char* cspace);
+ProjectionField* find_field(ProjectionType *pt, const std::string& field_name);
+CCSTCompoundStatement* alloc_link_container_caller(Variable *v, const std::string& cspace);
 std::vector<CCSTStatement*> caller_allocate_channels(ProjectionType *pt);
 std::vector<CCSTStatement*> caller_initialize_channels(ProjectionType *pt);
-std::vector<CCSTStatement*> dealloc_containers(Variable *v, const char* cspace);
-std::vector<CCSTStatement*> dealloc_containers_callee(Variable *v, const char* cspace, LexicalScope *ls);
-std::vector<CCSTStatement*> dealloc_containers_caller(Variable *v, const char* cspace, LexicalScope *ls);
+std::vector<CCSTStatement*> dealloc_containers(Variable *v, const std::string& cspace);
+std::vector<CCSTStatement*> dealloc_containers_callee(Variable *v, const std::string& cspace, LexicalScope *ls);
+std::vector<CCSTStatement*> dealloc_containers_caller(Variable *v, const std::string& cspace, LexicalScope *ls);
 
 
 // variable_utils.cpp

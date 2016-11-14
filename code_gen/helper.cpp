@@ -3,7 +3,7 @@
 
 CCSTExDeclaration* construct_enum(Module *f)
 {
-  const char* enum_name = "dispatch_t";
+  std::string enum_name("dispatch_t");
   std::vector<Rpc*> rpcs = f->rpc_definitions();
   CCSTEnumeratorList *el = construct_enumlist(rpcs);
   CCSTEnumSpecifier *e = new CCSTEnumSpecifier(enum_name, el);
@@ -22,9 +22,7 @@ CCSTEnumeratorList* construct_enumlist(std::vector<Rpc *> rps)
   for(std::vector<Rpc*>::iterator it = rps.begin(); it != rps.end(); it ++)
     {
       Rpc *r = *it;
-      std::string *enum_str = new std::string(r->name());
-      std_string_toupper(*enum_str);
-      list->push_back(new CCSTEnumerator(enum_str->c_str()));
+      list->push_back(new CCSTEnumerator(r->enum_name()));
     }
   CCSTEnumeratorList *enum_list = new CCSTEnumeratorList(list);
   return enum_list;
@@ -151,7 +149,7 @@ CCSTPostFixExpr* access(Variable *v)
   }
 }
 
-CCSTIfStatement* if_cond_fail(CCSTExpression *cond, const char *err_msg)
+CCSTIfStatement* if_cond_fail(CCSTExpression *cond, const std::string& err_msg)
 {
   std::vector<CCSTDeclaration*> if_body_declarations;
   std::vector<CCSTStatement*> if_body_statements;
@@ -168,7 +166,7 @@ CCSTIfStatement* if_cond_fail(CCSTExpression *cond, const char *err_msg)
   return new CCSTIfStatement(cond, if_body);
 }
 
-CCSTIfStatement* if_cond_fail_goto(CCSTExpression *cond, const char *err_msg, const char* goto_label)
+CCSTIfStatement* if_cond_fail_goto(CCSTExpression *cond, const std::string& err_msg, const std::string& goto_label)
 {
   std::vector<CCSTDeclaration*> if_body_declarations;
   std::vector<CCSTStatement*> if_body_statements;

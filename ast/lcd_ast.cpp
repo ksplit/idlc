@@ -2,7 +2,7 @@
 #include "utils.h"
 #include <stdio.h>
 
-Rpc::Rpc(ReturnVariable *return_value, const char* name,
+Rpc::Rpc(ReturnVariable *return_value, const std::string& name,
   std::vector<Parameter*> parameters, LexicalScope *current_scope) :
   explicit_return_(return_value),
   name_(name),
@@ -32,15 +32,16 @@ void Rpc::set_tag(unsigned int t)
   this->tag_ = t;
 }
 
-std::vector<Variable*> Rpc::marshal_projection_parameters(ProjectionType *pt, const char* direction)
+std::vector<Variable*> Rpc::marshal_projection_parameters(ProjectionType *pt,
+  const std::string& direction)
 {
   std::vector<Variable*> marshal_parameters;
 
   for (auto pf : *pt) {
-    if( (strcmp(direction, "in") == 0 && pf->in())
-	|| (strcmp(direction, "out") == 0 && pf->out())
-	|| (strcmp(direction, "inout") == 0 && pf->in() && pf->out())
-	|| strcmp(direction, "") == 0) {
+    if((direction == "in" && pf->in())
+        || (direction == "out" && pf->out())
+        || (direction == "inout" && pf->in() && pf->out())
+        || direction == "") {
 
       if (pf->type()->num() == PROJECTION_TYPE || pf->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
 	ProjectionType *pt_tmp = dynamic_cast<ProjectionType*>(pf->type());
@@ -53,10 +54,10 @@ std::vector<Variable*> Rpc::marshal_projection_parameters(ProjectionType *pt, co
 
       if(pf->container() != 0x0) {
 	Variable *con = pf->container();
-	if( (strcmp(direction, "in") == 0 && con->in())
-	    || (strcmp(direction, "out") == 0 && con->out())
-	    || (strcmp(direction, "inout") == 0 && con->in() && pf->out())
-	    || strcmp(direction, "") == 0) {
+	if((direction == "in" && con->in())
+	    || (direction == "out" && con->out())
+	    || (direction == "inout"  && con->in() && pf->out())
+	    || direction == "") {
 	  
 	  if (con->type()->num() == PROJECTION_TYPE || con->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
 	    ProjectionType *pt_tmp = dynamic_cast<ProjectionType*>(con->type());
@@ -102,7 +103,7 @@ ReturnVariable* Rpc::return_variable()
   return this->explicit_return_;
 }
 
-const char* Rpc::name()
+const std::string Rpc::name() const
 {
   return name_;
 }
@@ -119,14 +120,14 @@ LexicalScope* Rpc::current_scope()
   return this->current_scope_;
 }
 
-const char* Rpc::callee_name()
+const std::string Rpc::callee_name() const
 {
   return new_name(this->name_, "_callee");
 }
 
-const char* Rpc::enum_name()
+const std::string& Rpc::enum_name() const
 {
-  return this->enum_str.c_str();
+  return this->enum_str;
 }
 
 std::vector<Parameter*> Rpc::parameters()
@@ -353,13 +354,13 @@ void Rpc::create_trampoline_structs()
       trampoline_fields.push_back(new ProjectionField(this->current_scope_->lookup("cspace", &err), "cspace", 1)); // dstore field
       trampoline_fields.push_back(new ProjectionField(this->current_scope_->lookup("lcd_trampoline_handle", &err), "t_handle", 1)); // lcd_trampoline handle field
       
-      const char* trampoline_struct_name = hidden_args_name(f->name());
+      const std::string& trampoline_struct_name = hidden_args_name(f->name());
       this->current_scope_->insert(trampoline_struct_name, new ProjectionType(trampoline_struct_name, trampoline_struct_name, trampoline_fields));
     }
   }
 }
 
-Module::Module(const char *id, std::vector<Rpc*> rpc_definitions, std::vector<GlobalVariable*> channels, LexicalScope *ls)
+Module::Module(const std::string& id, std::vector<Rpc*> rpc_definitions, std::vector<GlobalVariable*> channels, LexicalScope *ls)
 {
   this->module_name_ = id;
   this->module_scope_ = ls;
@@ -481,7 +482,7 @@ void Module::set_copy_container_accessors()
   }
 }
 
-const char* Module::identifier()
+const std::string Module::identifier()
 {
   return this->module_name_;
 }
@@ -583,7 +584,7 @@ void Project::set_copy_container_accessors()
   }
 }
 
-Include::Include(bool relative, const char *path)
+Include::Include(bool relative, const std::string& path)
 {
   this->relative_ = relative;
   this->path_ = path;

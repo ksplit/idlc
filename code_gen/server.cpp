@@ -60,7 +60,7 @@ CCSTCompoundStatement* dispatch_loop_body(std::vector<Rpc*> rps)
       std::vector<CCSTAssignExpr*> msg_args;
       std::string *lcd_msg = new std::string("Calling function ");
       lcd_msg->append(r_tmp->name());
-      msg_args.push_back(new CCSTString(lcd_msg->c_str()));
+      msg_args.push_back(new CCSTString(*lcd_msg));
       case_body_stmts.push_back(new CCSTExprStatement( new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("LCD_MSG")
 										   , msg_args)));
 

@@ -74,13 +74,13 @@ class LexicalScope : public Base
   bool insert(Rpc *r);
   bool insert(Variable *v);
 
-  bool insert_identifier(const char* id);
-  bool contains_identifier(const char* id);
+  bool insert_identifier(const std::string& id);
+  bool contains_identifier(const std::string& id);
 
-  Variable* lookup_variable(const char *sym, int* err);
-  Type* lookup(const char *sym, int* err);
-  bool insert(const char *sym, Type* type);
-  bool contains(const char *symbol);
+  Variable* lookup_variable(const std::string& sym, int* err);
+  Type* lookup(const std::string& sym, int* err);
+  bool insert(const std::string& sym, Type* type);
+  bool contains(const std::string& symbol);
   virtual void set_outer_scope(LexicalScope *ls);
   void add_inner_scope(LexicalScope *ls);
   void add_inner_scopes(std::vector<LexicalScope*> scopes);
@@ -105,13 +105,19 @@ class LexicalScope : public Base
   }
 };
 
-class GlobalScope : public LexicalScope
+class GlobalScope: public LexicalScope
 {
   static GlobalScope *instance_;
- public:
+public:
   GlobalScope();
-  virtual void set_outer_scope(LexicalScope *ls); // x
-  static GlobalScope* instance(); // x
+  virtual void set_outer_scope(LexicalScope *ls);
+  static GlobalScope* instance();
+
+  virtual ~GlobalScope()
+  {
+    if (instance_)
+      delete instance_;
+  }
 };
 
 class Type : public Base
@@ -122,7 +128,7 @@ class Type : public Base
   virtual CCSTTypeName* accept(TypeNameVisitor *worker) = 0;
   virtual CCSTStatement* accept(TypeVisitor *worker, Variable *v) = 0;
   virtual int num() = 0;
-  virtual const char* name() = 0;
+  virtual const std::string& name() const = 0;
   virtual void resolve_types(LexicalScope *ls) = 0;
   virtual void create_trampoline_structs(LexicalScope *ls) = 0;
   virtual ~Type() {}
@@ -137,7 +143,7 @@ class FloatType : public Type
   virtual CCSTTypeName* accept(TypeNameVisitor *worker);
   virtual CCSTStatement* accept(TypeVisitor *worker, Variable *v);
   virtual int num();
-  virtual const char* name();
+  virtual const std::string& name() const;
   virtual void resolve_types(LexicalScope *ls);
   virtual void create_trampoline_structs(LexicalScope *ls);
 };
@@ -151,7 +157,7 @@ class DoubleType : public Type
   virtual CCSTTypeName* accept(TypeNameVisitor *worker);
   virtual CCSTStatement* accept(TypeVisitor *worker, Variable *v);
   virtual int num();
-  virtual const char* name();
+  virtual const std::string& name() const;
   virtual void resolve_types(LexicalScope *ls);
   virtual void create_trampoline_structs(LexicalScope *ls);
 };
@@ -165,7 +171,7 @@ class BoolType : public Type
   virtual CCSTTypeName* accept(TypeNameVisitor *worker);
   virtual CCSTStatement* accept(TypeVisitor *worker, Variable *v);
   virtual int num();
-  virtual const char* name();
+  virtual const std::string& name() const;
   virtual void resolve_types(LexicalScope *ls);
   virtual void create_trampoline_structs(LexicalScope *ls);
 };
@@ -182,7 +188,7 @@ class InitializeType : public Type
   virtual CCSTTypeName* accept(TypeNameVisitor *worker);
   virtual CCSTStatement* accept(TypeVisitor *worker, Variable *v);
   virtual int num();
-  virtual const char* name();
+  virtual const std::string& name() const;
   virtual void resolve_types(LexicalScope *ls);
   virtual void create_trampoline_structs(LexicalScope *ls);
 
@@ -192,15 +198,15 @@ class InitializeType : public Type
 class UnresolvedType : public Type
 {
  public:
-  const char *type_name_;
-  UnresolvedType(const char* type_name);
+  std::string type_name_;
+  UnresolvedType(const std::string& type_name);
   UnresolvedType(const UnresolvedType& other);
   virtual Type* clone() const { return new UnresolvedType(*this); }
   virtual Marshal_type* accept(MarshalPrepareVisitor *worker);
   virtual CCSTTypeName* accept(TypeNameVisitor *worker); // need to add unresolved type to these visitors.
   virtual CCSTStatement* accept(TypeVisitor *worker, Variable *v);
   virtual int num();
-  virtual const char* name();
+  virtual const std::string& name() const;
   virtual void resolve_types(LexicalScope *ls);
   virtual void create_trampoline_structs(LexicalScope *ls);
 };
@@ -210,8 +216,8 @@ class Variable : public Base
  public:
   virtual Variable* clone() const = 0;
   virtual Type* type() = 0;
-  virtual const char* identifier() = 0;
-  virtual void set_identifier(const char* id) = 0;
+  virtual const std::string& identifier() const = 0;
+  virtual void set_identifier(const std::string& id) = 0;
   virtual void set_accessor(Variable *v) = 0;
   virtual Variable* accessor() = 0;
   virtual void set_marshal_info(Marshal_type *mt) = 0;
@@ -249,12 +255,12 @@ class GlobalVariable : public Variable
 {
  public:
   Type *type_;
-  const char *id_;
+  std::string id_;
   int pointer_count_;
   Marshal_type *marshal_info_;
   Variable *container_;
   Variable *accessor_;
-  GlobalVariable(Type *type, const char *id, int pointer_count);
+  GlobalVariable(Type *type, const std::string& id, int pointer_count);
   GlobalVariable(const GlobalVariable& other);
   virtual Variable* clone() const { return new GlobalVariable(*this); }
   virtual Variable* container();
@@ -262,8 +268,8 @@ class GlobalVariable : public Variable
   virtual void resolve_types(LexicalScope *ls);
   virtual void create_container_variable(LexicalScope *ls);
   virtual Type* type();
-  virtual const char* identifier();
-  virtual void set_identifier(const char* id);
+  virtual const std::string& identifier() const;
+  virtual void set_identifier(const std::string& id);
   virtual void set_accessor(Variable *v);
   virtual Variable* accessor();
   virtual void set_marshal_info(Marshal_type *mt);
@@ -304,13 +310,13 @@ class Parameter : public Variable
   bool bind_callee_;
   
   Type* type_;
-  const char* name_;
+  std::string name_;
   Marshal_type *marshal_info_;
   Variable *accessor_;
   int pointer_count_;
   Variable *container_;
   Parameter();
-  Parameter(Type* type, const char* name, int pointer_count);
+  Parameter(Type* type, const std::string& name, int pointer_count);
   Parameter(const Parameter& other);
   virtual Variable* clone() const { return new Parameter(*this); }
   virtual Variable* container();
@@ -320,8 +326,8 @@ class Parameter : public Variable
   virtual Type* type();
   virtual void set_marshal_info(Marshal_type* mt);
   virtual Marshal_type* marshal_info(); 
-  virtual const char* identifier();
-  virtual void set_identifier(const char* id);
+  virtual const std::string& identifier() const;
+  virtual void set_identifier(const std::string& id);
   virtual void set_accessor(Variable *v);
   virtual Variable* accessor();
   virtual int pointer_count();
@@ -363,8 +369,8 @@ class FPParameter : public Parameter
   virtual Variable* clone() const { return new FPParameter(*this); }
   virtual Variable* container();
   virtual Type* type();
-  virtual const char* identifier();
-  virtual void set_identifier(const char* id);
+  virtual const std::string& identifier() const;
+  virtual void set_identifier(const std::string& id);
   virtual int pointer_count();
   virtual void set_pointer_count(int pcount);
   virtual void set_marshal_info(Marshal_type *mt);
@@ -396,14 +402,14 @@ class FPParameter : public Parameter
 class ReturnVariable : public Variable
 {
  public:
-  const char* name_; // to be decided by a name space or something
+  std::string name_; // to be decided by a name space or something
   Type* type_;
   Marshal_type *marshal_info_;
   Variable* accessor_;
   int pointer_count_;
   Variable *container_;
   ReturnVariable();
-  ReturnVariable(Type* return_type, int pointer_count, const char* id);
+  ReturnVariable(Type* return_type, int pointer_count, const std::string& id);
   ReturnVariable(const ReturnVariable& other);
   virtual ~ReturnVariable() {}
   virtual Variable* clone() const { return new ReturnVariable(*this); }
@@ -413,8 +419,8 @@ class ReturnVariable : public Variable
   virtual void prepare_marshal(MarshalPrepareVisitor *worker);
   virtual void resolve_types(LexicalScope *ls);
   virtual void create_container_variable(LexicalScope *ls);
-  virtual const char* identifier();
-  virtual void set_identifier(const char* id);
+  virtual const std::string& identifier() const;
+  virtual void set_identifier(const std::string& id);
   virtual Type* type();
   virtual void set_accessor(Variable *v);
   virtual Variable* accessor();
@@ -446,11 +452,11 @@ class Function : public Type
   typedef std::vector<Parameter*>::iterator iterator;
   typedef std::vector<Parameter*>::const_iterator const_iterator;
  public:
-  const char *identifier_;
+  std::string identifier_;
   ReturnVariable *return_var_;
   std::vector<Parameter*> parameters_;
   LexicalScope *current_scope_;
-  Function(const char *id, ReturnVariable *return_var, std::vector<Parameter*> parameters, LexicalScope *ls);
+  Function(const std::string& id, ReturnVariable *return_var, std::vector<Parameter*> parameters, LexicalScope *ls);
   Function(const Function& other);
   virtual ~Function() {}
   virtual Type* clone() const {return new Function(*this); }
@@ -458,7 +464,7 @@ class Function : public Type
   virtual CCSTTypeName* accept(TypeNameVisitor *worker);
   virtual CCSTStatement* accept(TypeVisitor *worker, Variable *v);
   virtual int num();
-  virtual const char* name();
+  virtual const std::string& name() const;
   virtual void resolve_types(LexicalScope *ls);
   Rpc* to_rpc(ProjectionType *pt);
   virtual void create_trampoline_structs(LexicalScope *ls);
@@ -472,20 +478,20 @@ class Typedef : public Type
 {
  public:
   Type* type_;
-  const char* alias_;
-  const char* marshal_info_;
-  const char* identifier_;
+  std::string alias_;
+  std::string marshal_info_;
+  std::string identifier_;
   
-  Typedef(const char* id, const char* alias, Type* type);
+  Typedef(const std::string& id, const std::string& alias, Type* type);
   Typedef(const Typedef& other);
   virtual ~Typedef() {}
   virtual Type* clone() const { return new Typedef(*this); }
   virtual Marshal_type* accept(MarshalPrepareVisitor *worker);
   virtual CCSTTypeName* accept(TypeNameVisitor *worker);
   virtual CCSTStatement* accept(TypeVisitor *worker, Variable *v);
-  virtual const char* name();
+  virtual const std::string& name() const;
   Type* type();
-  const char* alias();
+  const std::string& alias() const;
   virtual int num();
   virtual void resolve_types(LexicalScope *ls);
   // virtual void marshal();
@@ -506,13 +512,13 @@ class Channel : public Type
   std::string chName;
 
   Channel() :hostChannel(NULL), chType(Unknown) {}
-  Channel(const char*, ChannelType, Channel*);
+  Channel(const std::string& name, ChannelType, Channel*);
   Channel(const Channel& other);
   virtual Type* clone() const { return new Channel(*this); }
   virtual Marshal_type* accept(MarshalPrepareVisitor *worker);
   virtual CCSTTypeName* accept(TypeNameVisitor *worker);
   virtual CCSTStatement* accept(TypeVisitor *worker, Variable *v);
-  virtual const char* name();
+  virtual const std::string& name() const;
   virtual int num();
   virtual void resolve_types(LexicalScope *ls);
   virtual void create_trampoline_structs(LexicalScope *ls);
@@ -545,7 +551,7 @@ class VoidType : public Type
   virtual Marshal_type* accept(MarshalPrepareVisitor *worker);
   virtual CCSTTypeName* accept(TypeNameVisitor *worker);
   virtual CCSTStatement* accept(TypeVisitor *worker, Variable *v);
-  virtual const char* name();
+  virtual const std::string& name() const;
   virtual int num();
   virtual void resolve_types(LexicalScope *ls);
   virtual void create_trampoline_structs(LexicalScope *ls);
@@ -563,7 +569,7 @@ class IntegerType : public Type
   virtual Marshal_type* accept(MarshalPrepareVisitor *worker);
   virtual CCSTTypeName* accept(TypeNameVisitor *worker);
   virtual CCSTStatement* accept(TypeVisitor *worker, Variable *v);
-  virtual const char* name();
+  virtual const std::string& name() const;
   PrimType int_type();
   bool is_unsigned();
   virtual int num();
@@ -585,19 +591,19 @@ class ProjectionField : public Variable //?
   bool bind_callee_;
 
   Type* type_;
-  const char* field_name_;
+  std::string field_name_;
   Variable *accessor_; // 
   int pointer_count_;
   Marshal_type *marshal_info_;
   Variable *container_;
-  ProjectionField(Type* field_type, const char* field_name, int pointer_count);
+  ProjectionField(Type* field_type, const std::string& field_name, int pointer_count);
   virtual ~ProjectionField() {}
   ProjectionField(const ProjectionField& other);
   virtual Variable* clone() const { return new ProjectionField(*this); }
   virtual Variable *container();
   virtual Type* type();
-  virtual const char* identifier();
-  virtual void set_identifier(const char* id);
+  virtual const std::string& identifier() const;
+  virtual void set_identifier(const std::string& id);
   virtual void set_accessor(Variable *v);
   virtual Variable* accessor();
   virtual void set_marshal_info(Marshal_type *mt); // add to .cpp file
@@ -633,28 +639,28 @@ class ProjectionType : public Type // complex type
 {
  public:
   std::vector<ProjectionField*> channels_;
-  const char* id_; 
-  const char* real_type_;
+  std::string id_;
+  std::string real_type_;
   std::vector<ProjectionField*> fields_;
   typedef std::vector<ProjectionField*>::iterator iterator;
   typedef std::vector<ProjectionField*>::const_iterator const_iterator;
 
   ProjectionType();
-  ProjectionType(const char* id, const char* real_type, std::vector<ProjectionField*> fields, std::vector<ProjectionField*> channels);
-  ProjectionType(const char* id, const char* real_type, std::vector<ProjectionField*> fields);
+  ProjectionType(const std::string& id, const std::string& real_type, std::vector<ProjectionField*> fields, std::vector<ProjectionField*> channels);
+  ProjectionType(const std::string& id, const std::string& real_type, std::vector<ProjectionField*> fields);
   ProjectionType(const ProjectionType& other);
   virtual Type* clone() const { return new ProjectionType(*this); }
   virtual Marshal_type* accept(MarshalPrepareVisitor *worker);
   virtual CCSTTypeName* accept(TypeNameVisitor *worker);
   virtual CCSTStatement* accept(TypeVisitor *worker, Variable *v);
-  virtual const char* name();
-  const char* real_type();
+  virtual const std::string& name() const;
+  const std::string real_type() const;
   std::vector<ProjectionField*> fields();
   virtual int num();
   virtual void resolve_types(LexicalScope *ls);
   ~ProjectionType(){ std::cout << "projection type destructor\n"; }
   virtual void create_trampoline_structs(LexicalScope *ls);
-  ProjectionField* get_field(const char* field_name);
+  ProjectionField* get_field(const std::string& field_name);
   void initialize_type();
   iterator begin() { return fields_.begin(); }
   iterator end() { return fields_.end(); }
@@ -666,7 +672,7 @@ class ProjectionConstructorType : public ProjectionType
 {
  public:
   std::vector<std::pair<Variable*, Variable*> > channel_params_;
-  ProjectionConstructorType(const char* id, const char* real_type, std::vector<ProjectionField*> fields, std::vector<ProjectionField*> channel_fields, std::vector<ProjectionField*> channel_params);
+  ProjectionConstructorType(const std::string& id, const std::string& real_type, std::vector<ProjectionField*> fields, std::vector<ProjectionField*> channel_fields, std::vector<ProjectionField*> channel_params);
   ProjectionConstructorType(const ProjectionConstructorType& other);
   virtual int num();
   virtual Type* clone() const { return new ProjectionConstructorType(*this); }
@@ -681,26 +687,26 @@ class Rpc : public Base
   ReturnVariable *explicit_return_;
   LexicalScope *current_scope_;
   /* -------------- */
-  const char* name_;
+  std::string name_;
   std::string enum_str;
   std::vector<Parameter* > parameters_;
   
   bool function_pointer_defined_;
-  std::vector<Variable*> marshal_projection_parameters(ProjectionType *pt, const char *direction);
+  std::vector<Variable*> marshal_projection_parameters(ProjectionType *pt, const std::string& direction);
   typedef std::vector<Parameter*>::iterator iterator;
 
  public:
   std::vector<Parameter*> hidden_args_;
-  Rpc(ReturnVariable *return_var, const char* name, std::vector<Parameter* > parameters, LexicalScope *current_scope);
+  Rpc(ReturnVariable *return_var, const std::string& name, std::vector<Parameter* > parameters, LexicalScope *current_scope);
   void copy_types();
   unsigned int tag();
   void set_tag(unsigned int t);
   void set_function_pointer_defined(bool b);
   void set_hidden_args(std::vector<Parameter*> hidden_args);
   bool function_pointer_defined();
-  const char* name();
-  const char* enum_name();
-  const char* callee_name();
+  const std::string name() const;
+  const std::string& enum_name() const;
+  const std::string callee_name() const;
   std::vector<Parameter*> parameters();
   ReturnVariable *return_variable();
   SymbolTable* symbol_table();
@@ -718,8 +724,8 @@ class Rpc : public Base
 
 class Module : public Base
 {
-  // const char *verbatim_;
-  const char* module_name_;
+  // const std::string& verbatim_;
+  std::string module_name_;
   LexicalScope *module_scope_;
   std::vector<GlobalVariable*> channels_;
    // create these from the channels in the constructor.
@@ -729,7 +735,7 @@ class Module : public Base
  public:
   std::vector<GlobalVariable*> cspaces_;
   GlobalVariable *channel_group;
-  Module(const char* id, std::vector<Rpc*> rpc_definitions, std::vector<GlobalVariable*> globals, LexicalScope *ls);
+  Module(const std::string& id, std::vector<Rpc*> rpc_definitions, std::vector<GlobalVariable*> globals, LexicalScope *ls);
   std::vector<Rpc*> rpc_definitions();  
   std::vector<GlobalVariable*> channels();
   LexicalScope *module_scope();
@@ -743,7 +749,7 @@ class Module : public Base
   void set_accessors();
   void initialize_types();
   void set_copy_container_accessors();
-  const char* identifier();
+  const std::string identifier();
   iterator begin() { return rpc_definitions_.begin(); }
   iterator end() { return rpc_definitions_.end(); }
 };
@@ -751,10 +757,10 @@ class Module : public Base
 class Include : public Base
 {
   bool relative_; // true if "" false for <>
-  const char *path_;
+  std::string path_;
  public:
-  Include(bool relative, const char *path);
-  const char* get_path() {
+  Include(bool relative, const std::string& path);
+  std::string get_path() {
 	  return this->path_;
   }
   bool is_relative() {

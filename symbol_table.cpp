@@ -1,21 +1,23 @@
 #include "symbol_table.h"
 
-SymbolTable::SymbolTable()
+SymbolTable::SymbolTable() :
+  last_tmp_(0)
 {
   // init symbols
 }
 
-SymbolTable::SymbolTable(std::vector<const char*> symbols)
+SymbolTable::SymbolTable(std::vector<std::string>& symbols) :
+  last_tmp_(0)
 {
   this->symbols_ = symbols;
 }
 
 /*
- * returns a unique const char* that begins with tmp 
+ * returns a unique const std::string& that begins with tmp 
  * that is not already in symbol table
  * adds to symbol table
  */
-const char* SymbolTable::unique_tmp()
+const std::string& SymbolTable::unique_tmp()
 {
   std::string str_tmp = "tmp" + to_string(this->last_tmp_ + 1);
   char *tmp = (char*) malloc(sizeof(char)*(str_tmp.length()+1));
@@ -33,11 +35,11 @@ const char* SymbolTable::unique_tmp()
 /*
  * returns true if symbol table contains symbol
  */
-bool SymbolTable::contains(const char *symbol)
+bool SymbolTable::contains(const std::string& symbol)
 {
-  for(std::vector<const char*>::iterator it = this->symbols_.begin(); it != this->symbols_.end(); it ++) {
-    const char *str = (const char*) *it;
-    if( strcmp(str, symbol) == 0) {
+  for(std::vector<std::string>::const_iterator it = this->symbols_.begin(); it != this->symbols_.end(); it ++) {
+    std::string str = *it;
+    if(str == symbol) {
       return true;
     }
   }
@@ -49,7 +51,7 @@ bool SymbolTable::contains(const char *symbol)
  * if symbol is already in table returns -1
  * returns 0 on success
  */
-int SymbolTable::insert(const char *symbol)
+int SymbolTable::insert(const std::string& symbol)
 {
   if(contains(symbol))
     return -1;
@@ -64,11 +66,11 @@ int SymbolTable::insert(const char *symbol)
  * and returns -1
  * returns 0 on success
  */
-int SymbolTable::insert(std::vector<const char*> symbols)
+int SymbolTable::insert(const std::vector<std::string>& symbols)
 {
-  for(std::vector<const char*>::iterator it = symbols.begin(); it != symbols.end(); it ++) {
-    const char *str = (const char*) *it;
-    if(contains(str))
+  for(std::vector<std::string>::const_iterator it = symbols.begin(); it != symbols.end(); it ++) {
+    std::string str = *it;
+    if (contains(str))
       return -1;
   }
   

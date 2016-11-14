@@ -91,12 +91,12 @@ void set_current_module_scope(LexicalScope *ls)
     current_module_scope = ls;
 }
 
-LexicalScope* get_current_module_scope()
+LexicalScope *get_current_module_scope()
 {
     return current_module_scope;
 }
 
-Type * getType(const char* type)
+Type *getType(const std::string& type)
 {
     int err;
     LexicalScope *ls = get_current_scope();
@@ -115,7 +115,7 @@ Type * getType(const char* type)
     return val;
 }
 
-Variable* getVariable(const char* id)
+Variable* getVariable(const std::string& id)
 {
     int err;
     LexicalScope *ls = get_current_scope();
@@ -160,7 +160,7 @@ void insertVariable(Variable *v)
     }
 }
 
-void insertType(const char * sym, Type * val) // should this be void?
+void insertType(const std::string& sym, Type * val) // should this be void?
 {
     LexicalScope *ls = get_current_scope();
     bool ret = ls->insert(sym, val);
@@ -194,9 +194,9 @@ const char* returnVarName()
 
 void create_container(const Value &id, std::vector<ProjectionField*> &container_fields)
 {
-    const char *_id = (char*) id.getValue();
+	const std::string *_id = static_cast<const std::string*>(id.getValue());
 
-    container_fields.push_back(new ProjectionField(getType(_id), _id, 0));
+    container_fields.push_back(new ProjectionField(getType(*_id), *_id, 0));
 
     ProjectionField *other_ref = new ProjectionField(getType("cptr_t"), "other_ref", 0);
     other_ref->set_out(true);
@@ -234,7 +234,7 @@ GlobalScopeDefinitions =      d:Type_Definitions* {{
 		       	          for(Value::iterator it = d.getValues().begin(); it != d.getValues().end(); it ++) { 
 			    	      const Value & v2 = *it;
 			    	      Type *type = (Type*) v2.getValue();
-			    	      bool err = GlobalScope::instance()->insert(type->name(), type);
+			    	      bool err = GlobalScope::instance()->insert(type->name().c_str(), type);
 				      if(!err) {
 				          std::cout << "Error: definition already exists for a type of name "
 				            <<  type->name() << " in global scope" << std::endl;
@@ -252,7 +252,7 @@ Pathname	= 	p1:PathStart+ {{
 			    }
 			    
 			    std::string *str = new std::string(total.str().c_str());
-			    value.value = str->c_str();
+			    value = str;
 			}}
 
 PathStart      	=	IdentCont | [./~]
@@ -268,7 +268,7 @@ Identifier	=	i1:IdentStart i2:IdentCont* {{
 				total << letter;
 		   	    }
 			    std::string *str = new std::string(total.str());
-			    value.value = str->c_str();
+			    value = str;
 			}}
 
 IdentStart	=	[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]
@@ -285,7 +285,8 @@ unnamed_scope 	= 	s:unnamed_scope_special new_chans:ChanInits* ch:Channel_scope*
 			    }
 				LexicalScope *sc = (LexicalScope *)s.getValue();
 				if (ch.getValue()) {
-					Type *t = getType((char*)ch.getValue());
+					const std::string *_ch = static_cast<const std::string*>(ch.getValue());
+					Type *t = getType(*_ch);
 					Channel *c = dynamic_cast<Channel*>(t);
 					sc->setactiveChannel(c);
 				}
@@ -334,10 +335,11 @@ ChanType	= "async" {{
 ChanInits	= "channel" Space+ id:Identifier Spacing <ascii 61> Spacing "new" Space+ type:ChanType Spacing OPEN host_ch:Identifier CLOSE SEMI Spacing {{
 				Channel::ChannelType ct = static_cast<Channel::ChannelType>(*((int*)type.getValue()));
 				std::cout << "New channel type: " << ct << " Initialized" << std::endl;
+				const std::string *_id = static_cast<const std::string*>(id.getValue());
 
-				Channel *newCh = new Channel((char*)id.getValue(), ct, NULL);
+				Channel *newCh = new Channel(*_id, ct, NULL);
 				// insert channel into type list
-				insertType((char*)id.getValue(), newCh);
+				insertType(*_id, newCh);
 				value = newCh;
 			}}
 
@@ -350,8 +352,11 @@ Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
 					// Should unnamed scope channels be monitored in dispatch loop? Probably yes
 					// *) Add this to global channel list
 					// *) Dispatch loop should monitor all
-					std::cout << "Using channel " << (char*)ch.getValue() << std::endl;
-					Type *t = getType((char*)ch.getValue());
+					const std::string *_id = static_cast<const std::string*>(ch.getValue());
+
+					std::cout << "Using channel " << *_id << std::endl;
+
+					Type *t = getType(*_id);
 					Channel *c = dynamic_cast<Channel*>(t);
 					Assert(c != NULL, "Dynamic cast from Type to Channel failed");
 					get_current_scope()->setactiveChannel(c);
@@ -377,7 +382,9 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
 			      }
 
 				  if (ch.getValue()) {
-					  Type *t = getType((char*)ch.getValue());
+				      const std::string *_ch = static_cast<const std::string*>(ch.getValue());
+
+					  Type *t = getType(*_ch);
 					  Channel *c = dynamic_cast<Channel*>(t);
 					  module_scope->setactiveChannel(c);
 				  } else {
@@ -385,7 +392,8 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
 				  }
 
 			      set_current_scope(get_current_scope()->outer_scope()); // leaving current scope	  
-			      value = new Module((char*) id.getValue(), rpcs, channels2, module_scope); 
+				  const std::string *name = static_cast<const std::string*>(id.getValue());
+			      value = new Module(*name, rpcs, channels2, module_scope); 
 			  }}
 
 Interface_special =	  "module" {{
@@ -398,8 +406,11 @@ Interface_special =	  "module" {{
 			  }}
 
 Typedef		=	 "typedef" Spacing "<" Spacing rt:RealType "," Spacing mt:Type_form ">" Spacing id:Identifier Spacing {{ 
-			     Typedef * val = new Typedef((char*) id.getValue(), (char*) rt.getValue(), (Type*) mt.getValue());
-			     insertType((char*)id.getValue(),val);
+				const std::string *_id = static_cast<const std::string*>(id.getValue());
+				const std::string *_rt = static_cast<const std::string*>(rt.getValue());
+
+			     Typedef * val = new Typedef(*_id, *_rt, (Type*) mt.getValue());
+			     insertType(*_id, val);
 			 }}
 
 Verbatim	=	 "verbatim" Spacing "[" contents:VerbatimContent "]" {{ std::ostringstream total;
@@ -462,20 +473,24 @@ Type_Definitions =	Typedef | Projection {{ std::cout << "done with projection\n"
 		 	| Projection_constructor
 
 Include		 =	"include" Space+ "<" Spacing p:Pathname Spacing ">" Spacing{{
-			    value = new Include(false, (const char*) p.getValue());
+				const std::string *_path = static_cast<const std::string*>(p.getValue());
+			    value = new Include(false, *_path);
 			}} 
 			| "include" Space+ <ascii 34> Spacing p:Pathname Spacing <ascii 34> Spacing{{
 			    std::cout << "parsed an include\n";
-			    value = new Include(true, (const char*) p.getValue());
+				const std::string *_path = static_cast<const std::string*>(p.getValue());
+			    value = new Include(true, *_path);
 			}}
 
 FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE {{
 
 			    std::vector<Parameter*> *params = (std::vector<Parameter*>*) p.getValue();
-			    Function *fp = new Function((char*) id.getValue(), new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
+				const std::string *_id = static_cast<const std::string*>(id.getValue());
+
+			    Function *fp = new Function(*_id, new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
 			    	     	       		, *params, get_current_scope());
-			    
-			    Parameter *_p = new Parameter(fp, (char *) id.getValue(), 1);
+
+			    Parameter *_p = new Parameter(fp, *_id, 1);
 			    set_specs(*_p, s);
 
 				// XXX: Set scope to unnamed_scope as we need to insert definitions into that scope
@@ -483,12 +498,12 @@ FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* 
 				// unnamed scope's inner scopes
 				set_current_scope(get_current_scope()->outer_scope());
 
-			    insertType((char*)id.getValue(), fp);
+			    insertType(*_id, fp);
 
 			    // creating constructor
 			    std::vector<ProjectionField*> container_fields;
 			    create_container(id, container_fields);
-			    const char *container_name_str = container_name((char*)id.getValue());
+			    const std::string container_name_str = container_name(*_id);
 			    ProjectionType * container = new ProjectionType(container_name_str, container_name_str, container_fields);
 			    std::cout << __func__ << ": Inserting projection type " << container_name_str << std::endl;
 			    insertType(container_name_str, container);
@@ -504,10 +519,12 @@ FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* 
 FirstParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:star* Spacing field_id:Identifier Spacing OPEN Spacing args:Arguments Spacing CLOSE Spacing COMMA Spacing {{
 			    
 			    std::vector<Variable*> *arguments = (std::vector<Variable*>*) args.getValue();
-			    InitializeType *it = new InitializeType(getType((char*) id.getValue()), *arguments);
+				const std::string *_id = static_cast<const std::string*>(id.getValue());
+			    InitializeType *it = new InitializeType(getType(*_id), *arguments);
 
 			    int p_count = count_pointers(pointers);
-			    Parameter *p = new Parameter(it, (char *) id.getValue(), p_count); 
+
+			    Parameter *p = new Parameter(it, *_id, p_count); 
 			    set_specs(*p, s);
 
 				if (p->alloc_callee()) {
@@ -534,7 +551,8 @@ FirstParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers
 
  		|	  t:Type_form s:Specification? pointers:star* Spacing id:Identifier Spacing COMMA Spacing {{
 			    int p_count = count_pointers(pointers);
-			    Parameter *p = new Parameter((Type *) t.getValue(), (char *) id.getValue(), p_count); 
+				const std::string *_id = static_cast<const std::string*>(id.getValue());
+			    Parameter *p = new Parameter((Type *) t.getValue(), *_id, p_count); 
 			    set_specs(*p, s);
 
 				if (p->alloc_callee()) {
@@ -591,7 +609,9 @@ FP_FirstParam	=	t:Type_form s:Specification? pointers:star* Spacing COMMA Spacin
 			}}
 			| rpc_special Space+ rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing COMMA Spacing {{
 			    std::vector<Parameter*> *params = (std::vector<Parameter*>*) p.getValue();
-			    Function *fp = new Function((char*) id.getValue(), new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
+				const std::string *_id = static_cast<const std::string*>(id.getValue());
+
+			    Function *fp = new Function(*_id, new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
 			                                , *params, get_current_scope());
 
 			    set_current_scope(get_current_scope()->outer_scope());
@@ -601,10 +621,13 @@ FP_FirstParam	=	t:Type_form s:Specification? pointers:star* Spacing COMMA Spacin
 LastParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:star* Spacing field_id:Identifier Spacing OPEN Spacing args:Arguments Spacing CLOSE Spacing {{
 			    
 			    std::vector<Variable*> *arguments = (std::vector<Variable*>*) args.getValue();
-			    InitializeType *it = new InitializeType(getType((char*) id.getValue()), *arguments);
+				const std::string *_id = static_cast<const std::string*>(id.getValue());
+
+			    InitializeType *it = new InitializeType(getType(*_id), *arguments);
 
 			    int p_count = count_pointers(pointers);
-			    Parameter *p = new Parameter(it, (char *) id.getValue(), p_count); 
+
+			    Parameter *p = new Parameter(it, *_id, p_count); 
 			    set_specs(*p, s);
 
 				if (p->alloc_callee()) {
@@ -627,7 +650,9 @@ LastParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 
  		|   t:Type_form s:Specification? pointers:star* Spacing id:Identifier Spacing {{
 			    int p_count = count_pointers(pointers);
-			    Parameter *p = new Parameter((Type *) t.getValue(), (char *) id.getValue(), p_count); 
+				const std::string *_id = static_cast<const std::string*>(id.getValue());
+
+			    Parameter *p = new Parameter((Type *) t.getValue(), *_id, p_count); 
 			    set_specs(*p, s);
 
 				if (p->alloc_callee()) {
@@ -675,7 +700,9 @@ FP_LastParam	=	t:Type_form s:Specification? pointers:star* Spacing {{
 			|  rpc_special Space+ rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing {{
 			    // todo change return type to return variable and add pointer
 			    std::vector<Parameter*> *params = (std::vector<Parameter*>*) p.getValue();
-			    Function *fp = new Function((char*) id.getValue(), new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
+				const std::string *_id = static_cast<const std::string*>(id.getValue());
+
+			    Function *fp = new Function(*_id, new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
 			                                , *params, get_current_scope());
 
 			    set_current_scope(get_current_scope()->outer_scope());
@@ -686,12 +713,14 @@ Variable	=	Access | Identifier
 
 FirstArg	=	id:Identifier Spacing COMMA Spacing {{
 			    // look up in scope.
-			    Variable *v = getVariable((char*) id.getValue());
+				const std::string *_id = static_cast<const std::string*>(id.getValue());
+			    Variable *v = getVariable(*_id);
 			    value = v;    
 			}}
 LastArg		=	id:Identifier Spacing {{
 			    // lookup in scope
-			    Variable *v = getVariable((char*) id.getValue());
+				const std::string *_id = static_cast<const std::string*>(id.getValue());
+			    Variable *v = getVariable(*_id);
 			    value = v;
 			}}
 
@@ -723,13 +752,15 @@ Parameters	=	f:FirstParam* l:LastParam {{
 			}}
 
 FirstChannel    = "channel" Space+ id:Identifier Spacing COMMA Spacing {{
-		    GlobalVariable *gv = new GlobalVariable(getType("cptr_t"), (char*) id.getValue(), 0);
+				const std::string *_id = static_cast<const std::string*>(id.getValue());
+		    GlobalVariable *gv = new GlobalVariable(getType("cptr_t"), *_id, 0);
 		    insertVariable(gv);
 		    value = gv;
 		}}
 
 LastChannel     = "channel" Space+ id:Identifier Spacing {{
-		    GlobalVariable *gv = new GlobalVariable(getType("cptr_t"), (char*) id.getValue(), 0);
+				const std::string *_id = static_cast<const std::string*>(id.getValue());
+		    GlobalVariable *gv = new GlobalVariable(getType("cptr_t"), *_id, 0);
 		    insertVariable(gv);
 		    value = gv;
 		}}
@@ -772,8 +803,10 @@ rpc_special     =      "rpc" {{
 Rpc		=	rpc_special Space+ t:Type_form pointers:star* Spacing id1:Identifier Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing {{
 			    std::vector<Parameter*>* params = (std::vector<Parameter*>*) p.getValue();
 			    std::vector<Parameter*> params_ = *params;
+				const std::string *_id = static_cast<const std::string*>(id1.getValue());
+
 			    Rpc* r = new Rpc(new ReturnVariable((Type *) t.getValue(), count_pointers(pointers), returnVarName())
-			                                       , (char *) id1.getValue(), params_, get_current_scope());
+			                                       , *_id, params_, get_current_scope());
 			    
 			    std::cout << "creating an rpc\n";
 			    /*
@@ -806,7 +839,10 @@ Projection_constructor =    s:Projection_constructor_special Spacing "<" Spacing
 				    fields.insert(fields.end(), tmp.begin(), tmp.end());
 				}
 
-				ProjectionConstructorType *val = new ProjectionConstructorType((char*) id.getValue(), (char*) t.getValue(), fields, chan_fields, channels);	
+				const std::string *_id = static_cast<const std::string*>(id.getValue());
+				const std::string *_type = static_cast<const std::string*>(t.getValue());
+
+				ProjectionConstructorType *val = new ProjectionConstructorType(*_id, *_type, fields, chan_fields, channels);	
 
 				// creating container
                 std::vector<ProjectionField*> container_fields;
@@ -815,13 +851,13 @@ Projection_constructor =    s:Projection_constructor_special Spacing "<" Spacing
 				container_fields.insert(container_fields.end(), channels.begin(), channels.end());
 				container_fields.insert(container_fields.end(), chan_fields.begin(), chan_fields.end());
 			
-                const char *container_name_str = container_name((char*)id.getValue());
+                const std::string container_name_str = container_name(*_id);
                 ProjectionType * container = new ProjectionType(container_name_str, container_name_str, container_fields);
 				std::cout << "inserting container with name " <<  container_name_str << std::endl;
 			    	
                 // finished creating constructor
  				set_current_scope(get_current_scope()->outer_scope()); // leaving current scope
-				insertType((char*) id.getValue(), val); // insert projection constructor
+				insertType(*_id, val); // insert projection constructor
 				insertType(container_name_str, container); // insert container
 				value = val;
 			    }}
@@ -850,9 +886,13 @@ Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id
 				std::vector<ProjectionField*> *tmp_ = (std::vector<ProjectionField*>*) v.getValue();
 				std::vector<ProjectionField*> tmp = *tmp_;
 				fields.insert(fields.end(), tmp.begin(), tmp.end());
-			    } 
-			    ProjectionType * val = new ProjectionType((char* ) id.getValue(), (char*) t.getValue(), fields, channels);
-			    insertType((char*)id.getValue(), val);
+			    }
+
+				const std::string *_id = static_cast<const std::string*>(id.getValue());
+				const std::string *_type = static_cast<const std::string*>(t.getValue());
+
+			    ProjectionType * val = new ProjectionType(*_id, *_type, fields, channels);
+			    insertType(*_id, val);
 
 			    // creating constructor
                 std::vector<ProjectionField*> container_fields;
@@ -860,7 +900,7 @@ Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id
 
 			    container_fields.insert(container_fields.end(), channels.begin(), channels.end());	    
 
-			    const char *container_name_str = container_name((char*)id.getValue());
+			    const std::string container_name_str = container_name(*_id);
 			    ProjectionType * container = new ProjectionType(container_name_str, container_name_str, container_fields);
 			    std::cout << "inserting projection type with name " <<  container_name_str << std::endl;
 			    insertType(container_name_str, container);
@@ -940,15 +980,17 @@ Specification	=	OPENS Spacing s:Start* l:Last CLOSES Spacing {{
 			}}
 
 FirstProjArg    =      "channel" Space+ id:Identifier Spacing COMMA Spacing {{
-		           ProjectionField *pf = new ProjectionField(getType("cptr_t"), (char*) id.getValue(), 0);
+				const std::string *name = static_cast<const std::string*>(id.getValue());
+		           ProjectionField *pf = new ProjectionField(getType("cptr_t"), *name, 0);
 			   insertVariable(pf); 
 			   value = pf;
 		       }}
 
 LastProjArg     =      "channel" Space+ id:Identifier Spacing {{
-		           ProjectionField *pf = new ProjectionField(getType("cptr_t"), (char*) id.getValue(), 0);
-			   insertVariable(pf);
-			   value = pf;
+				const std::string *name = static_cast<const std::string*>(id.getValue());
+				ProjectionField *pf = new ProjectionField(getType("cptr_t"), *name, 0);
+				insertVariable(pf);
+				value = pf;
 		       }}
 
 ProjArgs        =       f:FirstProjArg* l:LastProjArg {{
@@ -964,7 +1006,8 @@ ProjArgs        =       f:FirstProjArg* l:LastProjArg {{
 			}}
 
 ChanField       =       "channel" Space+ s:Specification? Spacing id:Identifier Spacing SEMI Spacing {{
-			    ProjectionField *pf = new ProjectionField(getType("cptr_t"), (char*) id.getValue(), 0);
+				const std::string *name = static_cast<const std::string*>(id.getValue());
+			    ProjectionField *pf = new ProjectionField(getType("cptr_t"), *name, 0);
 			    insertVariable(pf);
 			    set_specs(*pf, s);
 
@@ -988,8 +1031,12 @@ ChanField       =       "channel" Space+ s:Specification? Spacing id:Identifier 
 
 ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:star* Spacing field_id:Identifier Spacing OPEN Spacing args:Arguments Spacing CLOSE Spacing SEMI Spacing {{
 			    std::vector<Variable*> *arguments = (std::vector<Variable*>*) args.getValue();
-	            InitializeType *it = new InitializeType(getType((char*) id.getValue()), *arguments);
-			    ProjectionField *pf = new ProjectionField(it, (char*) field_id.getValue(), count_pointers(pointers));
+				const std::string *name = static_cast<const std::string*>(id.getValue());
+				const std::string *_fid = static_cast<const std::string*>(field_id.getValue());
+
+	            InitializeType *it = new InitializeType(getType(*name), *arguments);
+
+			    ProjectionField *pf = new ProjectionField(it, *_fid, count_pointers(pointers));
 			    set_specs(*pf, s);
 
 
@@ -1014,8 +1061,9 @@ ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 			    
 			}}
 			| t:Type_form Spacing s:Specification? pointers:star* Spacing id:Identifier Spacing SEMI Spacing {{ 
+				const std::string *_id = static_cast<const std::string*>(id.getValue());
 
-			    ProjectionField *pf = new ProjectionField((Type *) t.getValue(), (char *) id.getValue(), count_pointers(pointers));
+			    ProjectionField *pf = new ProjectionField((Type *) t.getValue(), *_id, count_pointers(pointers));
 			    set_specs(*pf, s);
 
 				if (pf->alloc_callee()) {
@@ -1038,11 +1086,11 @@ ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 			    value = fields; 
 			}}
 			| rpc_special Spacing s:Specification? rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing {{
-
+				const std::string *name = static_cast<const std::string*>(id.getValue());
 			    std::vector<Parameter*> *params = (std::vector<Parameter*>*) p.getValue();
-			    Function *fp = new Function((char*) id.getValue(), new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
+			    Function *fp = new Function(*name, new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
 			                               , *params, get_current_scope());
-			    ProjectionField *pf = new ProjectionField(fp, (char*) id.getValue(), 1);
+			    ProjectionField *pf = new ProjectionField(fp, *name, 1);
 			    set_specs(*pf, s);
 
 			    std::vector<ProjectionField*> *fields = new std::vector<ProjectionField*>();
@@ -1111,7 +1159,8 @@ type 		=	unsigned_type
 ## just ignore the modules ones, not supporting right now
 
 Type_form	=	"projection" Space+ n:Identifier Spacing {{
-			    value = getType((char*)n.getValue()); 
+				const std::string *_id = static_cast<const std::string*>(n.getValue());
+			    value = getType(*_id); 
 			}}
 			| "channel" Spacing {{  // todo
 			    value = new Channel();

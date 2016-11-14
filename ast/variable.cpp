@@ -3,7 +3,7 @@
 
 /* global variable */
 
-GlobalVariable::GlobalVariable(Type *type, const char *id, int pointer_count) :
+GlobalVariable::GlobalVariable(Type *type, const std::string& id, int pointer_count) :
   type_(type),
   id_(id),
   pointer_count_(pointer_count),
@@ -21,7 +21,7 @@ GlobalVariable::GlobalVariable(const GlobalVariable& other)
   this->accessor_ = other.accessor_;
   
   // copy id
-  this->id_ = new_name("", other.id_);
+  this->id_ = other.id_;
   // copy marshal info
   if (other.marshal_info_ != 0x0) {
     this->marshal_info_ = other.marshal_info_->clone(); // copy for real?
@@ -51,12 +51,12 @@ Type* GlobalVariable::type()
   return this->type_;
 }
 
-const char* GlobalVariable::identifier()
+const std::string& GlobalVariable::identifier() const
 {
   return this->id_;
 }
 
-void GlobalVariable::set_identifier(const char* id)
+void GlobalVariable::set_identifier(const std::string& id)
 {
   this->id_ = id;
 }
@@ -200,8 +200,7 @@ void GlobalVariable::create_container_variable(LexicalScope *ls)
 
   // really need to make variable non abstract and get rid of unnecessary variables.
 
-  const char* name = container_name(append_strings("_", construct_list_vars(this)));
-
+  const std::string& name = container_name(append_strings(std::string("_"), construct_list_vars(this)));
   Parameter *container_var = new Parameter(container, name, 1);
   container_var->set_in(this->in());
   container_var->set_out(this->out());
@@ -332,7 +331,7 @@ Parameter::Parameter() :
 {
 }
 
-Parameter::Parameter(Type* type, const char* name, int pointer_count) :
+Parameter::Parameter(Type* type, const std::string& name, int pointer_count) :
   in_(false),
   out_(false),
   alloc_callee_(false),
@@ -357,7 +356,7 @@ Parameter::Parameter(const Parameter& other) :
   this->type_ = other.type_->clone();
 
   // clone name
-  this->name_ = new_name("", other.name_);
+  this->name_ = other.name_;
   this->pointer_count_ = other.pointer_count_;
   this->in_ = other.in_;
   this->out_ = other.out_;
@@ -413,7 +412,7 @@ void Parameter::create_container_variable(LexicalScope *ls)
 
   // really need to make variable non abstract and get rid of unnecessary variables.
 
-  const char* name = container_name(append_strings("_", construct_list_vars(this)));
+  const std::string& name = container_name(append_strings("_", construct_list_vars(this)));
 
   Parameter *container_var = new Parameter(container, name, 1);
   container_var->set_in(this->in());
@@ -434,7 +433,7 @@ void Parameter::create_container_variable(LexicalScope *ls)
   } else if (this->type_->num() == FUNCTION_TYPE) {
     ProjectionType *container = dynamic_cast<ProjectionType*>(container_t);
     Assert(container != 0x0, "Error: could not dynamically cast to projection\n");
-    const char* name = container_name(append_strings("_", construct_list_vars(this)));
+    const std::string& name = "temp"; //container_name(append_strings("_", construct_list_vars(this)));
 
     Parameter *container_var = new Parameter(container, name, 1);
     container_var->set_in(this->in());
@@ -460,12 +459,12 @@ void Parameter::prepare_marshal(MarshalPrepareVisitor *worker)
   this->marshal_info_ = this->type_->accept(worker);
 }
 
-const char* Parameter::identifier()
+const std::string& Parameter::identifier() const
 {
   return this->name_;
 }
 
-void Parameter::set_identifier(const char* id)
+void Parameter::set_identifier(const std::string& id)
 {
   this->name_ = id;
 }
@@ -665,7 +664,7 @@ bool Parameter::bind_callee()
 
 /* Return Variable */
 ReturnVariable::ReturnVariable(Type *return_type, int pointer_count,
-  const char* id) :
+  const std::string& id) :
   name_(id),
   type_(return_type),
   marshal_info_(NULL),
@@ -678,7 +677,7 @@ ReturnVariable::ReturnVariable(Type *return_type, int pointer_count,
 ReturnVariable::ReturnVariable(const ReturnVariable& other)
 {
   // copy name
-  this->name_ = new_name("", other.name_);
+  this->name_ = other.name_;
 
   // copy type
   this->type_ = other.type_->clone();
@@ -734,7 +733,7 @@ void ReturnVariable::create_container_variable(LexicalScope *ls)
 
   // really need to make variable non abstract and get rid of unnecessary variables.
 
-  const char* name = container_name(append_strings("_", construct_list_vars(this)));
+  const std::string& name = container_name(append_strings("_", construct_list_vars(this)));
 
   ReturnVariable *container_var = new ReturnVariable(container, 1, "");
   container_var->set_in(this->in());
@@ -775,12 +774,12 @@ Marshal_type* ReturnVariable::marshal_info()
   return this->marshal_info_;
 }
 
-const char* ReturnVariable::identifier()
+const std::string& ReturnVariable::identifier() const
 {
   return this->name_;
 }
 
-void ReturnVariable::set_identifier(const char* id)
+void ReturnVariable::set_identifier(const std::string& id)
 {
   this->name_ = id;
 }
@@ -979,7 +978,7 @@ bool ReturnVariable::bind_callee()
 
 /* projection field */
 
-ProjectionField::ProjectionField(Type* field_type, const char* field_name,
+ProjectionField::ProjectionField(Type* field_type, const std::string& field_name,
   int pointer_count) :
   in_(false),
   out_(false),
@@ -1012,7 +1011,7 @@ ProjectionField::ProjectionField(const ProjectionField& other)
   // copy Type
   this->type_ = other.type_->clone();
   // copy field name
-  this->field_name_ = new_name("", other.field_name_);
+  this->field_name_ = other.field_name_;
 
   this->pointer_count_ = other.pointer_count_;
 
@@ -1064,7 +1063,7 @@ void ProjectionField::create_container_variable(LexicalScope *ls)
 
   // really need to make variable non abstract and get rid of unnecessary variables.
 
-  const char* name = container_name(append_strings("_", construct_list_vars(this)));
+  const std::string& name = container_name(append_strings("_", construct_list_vars(this)));
 
   ProjectionField *container_var = new ProjectionField(container, name, 1);
   container_var->set_in(this->in());
@@ -1110,12 +1109,12 @@ void ProjectionField::set_pointer_count(int pcount)
   this->pointer_count_ = pcount;
 }
 
-const char* ProjectionField::identifier()
+const std::string& ProjectionField::identifier() const
 {
   return this->field_name_;
 }
 
-void ProjectionField::set_identifier(const char* id)
+void ProjectionField::set_identifier(const std::string& id)
 {
   this->field_name_ = id;
 }
@@ -1354,7 +1353,7 @@ void FPParameter::create_container_variable(LexicalScope *ls)
 
   // really need to make variable non abstract and get rid of unnecessary variables.
 
-  const char* name = container_name(append_strings("_", construct_list_vars(this)));
+  const std::string& name = container_name(append_strings("_", construct_list_vars(this)));
 
   FPParameter *container_var = new FPParameter(container, 1);
   container_var->set_in(this->in());
@@ -1400,12 +1399,14 @@ void FPParameter::set_pointer_count(int pcount)
   this->pointer_count_ = pcount;
 }
 
-const char* FPParameter::identifier()
+const std::string& FPParameter::identifier() const
 {
   Assert(1 == 0, "Error: operation not allowed on function pointer parameter\n");
+  std::string *str = new std::string("");
+  return *str;
 }
 
-void FPParameter::set_identifier(const char* id)
+void FPParameter::set_identifier(const std::string& id)
 {
   return;
 }

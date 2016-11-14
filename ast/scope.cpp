@@ -121,7 +121,8 @@ void GlobalScope::set_outer_scope(LexicalScope *ls)
 
 
 LexicalScope::LexicalScope() :
-	outer_scope_(NULL)
+	outer_scope_(NULL),
+	activeChannel(NULL)
 {
 }
 
@@ -130,7 +131,7 @@ LexicalScope::LexicalScope(LexicalScope *outer_scope)
   this->outer_scope_ = outer_scope;
 }
 
-bool LexicalScope::insert_identifier(const char* id)
+bool LexicalScope::insert_identifier(const std::string& id)
 {
   std::string temp(id);
   if(this->contains_identifier(id)) {
@@ -140,7 +141,7 @@ bool LexicalScope::insert_identifier(const char* id)
   return true;
 }
 
-bool LexicalScope::contains_identifier(const char* id)
+bool LexicalScope::contains_identifier(const std::string& id)
 {
   std::string temp(id);
 
@@ -173,10 +174,9 @@ bool LexicalScope::insert(Variable *v)
   return ret.second;
 }
 
-Variable* LexicalScope::lookup_variable(const char *sym, int* err)
+Variable* LexicalScope::lookup_variable(const std::string& sym, int* err)
 {
-  std::string temp(sym);
-  if(this->variables_.find(temp) ==  this->variables_.end()) {
+  if(this->variables_.find(sym) ==  this->variables_.end()) {
     if(this->outer_scope_ == 0x0) {
       *err = 0;
       return 0x0;
@@ -186,7 +186,7 @@ Variable* LexicalScope::lookup_variable(const char *sym, int* err)
   }
   else {
     *err = 1;
-    return variables_[temp];
+    return variables_[sym];
   }
 }
 
@@ -197,10 +197,9 @@ std::vector<Rpc*> LexicalScope::rpc_in_scope()
   return empty;
 }
 
-bool LexicalScope::contains(const char *symbol)
+bool LexicalScope::contains(const std::string& symbol)
 {
-  std::string temp(symbol);
-  if(this->type_definitions_.find(temp) == this->type_definitions_.end()) {
+  if(this->type_definitions_.find(symbol) == this->type_definitions_.end()) {
     if(this->outer_scope_ == 0x0) {
       return false;
     } else {
@@ -212,30 +211,26 @@ bool LexicalScope::contains(const char *symbol)
 
 }
 
-// is err needed if we just return null? when would null ever be valid?
-Type* LexicalScope::lookup(const char *symbol, int *err)
-{
-  std::string temp(symbol);
+Type* LexicalScope::lookup(const std::string &temp, int *err) {
   if(this->type_definitions_.find(temp) ==  this->type_definitions_.end()) {
     if(this->outer_scope_ == 0x0) {
       *err = 0;
       return 0x0;
     } else {
-      return this->outer_scope_->lookup(symbol, err);
+      return this->outer_scope_->lookup(temp, err);
     }
   }
   else {
     *err = 1;
-    std::cout << "In lookup for type " <<  symbol << " is " << std::hex << type_definitions_[temp] << std::dec << std::endl;
+    std::cout << "In lookup for type " <<  temp << " is " << std::hex << type_definitions_[temp] << std::dec << std::endl;
     return type_definitions_[temp];
   }
 }
 
-bool LexicalScope::insert(const char *symbol, Type *type)
+bool LexicalScope::insert(const std::string& symbol, Type *type)
 {
-  std::string temp(symbol); 
   std::pair<std::map<std::string,Type*>::iterator,bool> ret;
-  ret = this->type_definitions_.insert(std::pair<std::string, Type*>(temp, type));
+  ret = this->type_definitions_.insert(std::pair<std::string, Type*>(symbol, type));
   std::cout << "In insert pointer for type " <<  symbol << " is " << type << std::endl;
   return ret.second;
 }

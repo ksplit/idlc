@@ -140,7 +140,7 @@ CCSTTypeName* type_cast(Type *t, int pointer_count)
     case TYPEDEF_TYPE: // typedef
       {
 	Typedef *td = dynamic_cast<Typedef*>(t);
-	const char* name = td->alias();
+	const std::string& name = td->alias();
 	spec_quals.push_back( new CCSTTypedefName(name) );
 	break;
       }
@@ -154,7 +154,7 @@ CCSTTypeName* type_cast(Type *t, int pointer_count)
       {
 	std::cout << "here in type cast\n";
 	ProjectionType *pt = dynamic_cast<ProjectionType*>(t);
-	const char* name = pt->real_type();
+	const std::string& name = pt->real_type();
 
 	std::cout << "projection name: " <<  name << std::endl;
 	spec_quals.push_back( new CCSTStructUnionSpecifier(struct_t, name) );
@@ -240,7 +240,7 @@ std::vector<CCSTSpecifierQual*> integer_type_cast(IntegerType *it)
 }
 
 // constructs a type declaration from a name instead of a type object
-std::vector<CCSTDecSpecifier*> struct_type(const char *type_name)
+std::vector<CCSTDecSpecifier*> struct_type(const std::string& type_name)
 {
   std::vector<CCSTDecSpecifier*> specifier;
   specifier.push_back(new CCSTStructUnionSpecifier(struct_t, type_name));
@@ -408,7 +408,7 @@ CCSTStructUnionSpecifier* struct_declaration(ProjectionType *pt)
  * looks up structure and returns a declaration for a variable 
  * with name var_name that is a pointer to struct with name struct_name
  */
-CCSTDeclaration* struct_pointer_declaration(const char* struct_name, const char* var_name, LexicalScope *ls)
+CCSTDeclaration* struct_pointer_declaration(const std::string& struct_name, const std::string& var_name, LexicalScope *ls)
 {
   int err;
   Type *struct_tmp = ls->lookup(struct_name, &err); // fix
@@ -422,7 +422,7 @@ CCSTDeclaration* struct_pointer_declaration(const char* struct_name, const char*
   return new CCSTDeclaration(type2(struct_), decs);
 }
 
-CCSTStatement* kzalloc_structure(const char* struct_name, const char* var_name)
+CCSTStatement* kzalloc_structure(const std::string& struct_name, const std::string& var_name)
 {
   // alloc
   std::vector<CCSTAssignExpr*> kzalloc_args;

@@ -1,30 +1,33 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-const char* new_name(const char* name, const char* suffix);
-const char* struct_name(const char* name);
-const char* lookup_name(const char* name);
-const char* exit_name(const char* name);
-const char* init_name(const char* name);
-const char* container_name(const char* name);
-const char* insert_name(const char* name);
-const char* cap_init_name(const char* name);
-const char* cap_create_name(const char* name);
-const char* cap_destroy_name(const char* name);
-const char* cap_exit_name(const char* name);
-const char* cspace_name(const char* name);
-const char* group_name(const char* name);
-const char* glue_name(const char* name);
-const char* hidden_args_name(const char* name);
-const char* parameter_name(const char* name);
-const char* fp_name(const char* name);
-const char* trampoline_func_name(const char* name);
-const char* append_strings(const char* delimiter, std::vector<const char*> strs);
-bool dealloc_caller(Variable *v, const char* side);
-bool dealloc_callee(Variable *v, const char* side);
-bool in(Variable *v, const char* side);
-bool out(Variable *v, const char* side);
+const std::string new_name(const std::string & name,
+  const std::string& suffix);
+const std::string struct_name(const std::string& name);
+const std::string lookup_name(const std::string& name);
+const std::string insert_name(const std::string& name);
+const std::string cap_init_name(const std::string& name);
+const std::string cap_create_name(const std::string& name);
+const std::string cap_exit_name(const std::string& name);
+const std::string cap_destroy_name(const std::string& name);
+const std::string cspace_name(const std::string& name);
+const std::string group_name(const std::string& name);
+const std::string exit_name(const std::string& name);
+const std::string init_name(const std::string& name);
+const std::string glue_name(const std::string& name);
+const std::string container_name(const std::string& name);
+const std::string hidden_args_name(const std::string& name);
+const std::string parameter_name(const std::string& name);
+const std::string fp_name(const std::string& name);
+const std::string trampoline_func_name(const std::string& name);
+const std::string append_strings(const std::string& delimiter,
+  const std::vector<std::string> strs);
+
+bool dealloc_caller(Variable *v, const std::string& side);
+bool dealloc_callee(Variable *v, const std::string& side);
+bool in(Variable *v, const std::string& side);
+bool out(Variable *v, const std::string& side);
 
 void std_string_toupper(std::string &input);
 
-#endif
+#endif /* UTILS_H */

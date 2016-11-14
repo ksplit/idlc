@@ -8,6 +8,7 @@
 #include "ccst.h"
 #include "code_gen.h"
 //#include "marshal_visitor.h"
+#include <fstream>
 
 void print_usage()
 {
@@ -28,7 +29,7 @@ int main(int argc, char ** argv)
   }
 
   try {
-    char * file = argv[2];
+    char* file = argv[2];
 
     // TODO: add support for multiple files, add option to specify
     // which module to compile, put each module in a different file
@@ -62,8 +63,16 @@ int main(int argc, char ** argv)
         fname.append("_callee.h");
         lds_fname.append("_callee.lds.S");
 
-        FILE *of_hdr = fopen(fname.c_str(), "w");
-        FILE *of_lds = fopen(lds_fname.c_str(), "w");
+        std::ofstream of_hdr(fname);
+        std::ofstream of_lds(lds_fname);
+
+        if (!of_hdr.is_open() || !of_lds.is_open()) {
+          if (!of_lds.is_open())
+            std::cerr << "Error: unable to open " << lds_fname << "for writing\n";
+          if (!of_hdr.is_open())
+            std::cerr << "Error: unable to open " << fname << "for writing\n";
+          exit(-1);
+        }
 
         CCSTFile* ccst_hdr = generate_server_header(m);
         CCSTFile* ccst_lds = generate_callee_lds(m);
@@ -73,14 +82,14 @@ int main(int argc, char ** argv)
         hdr_macro.append("_callee_h__");
         std_string_toupper(hdr_macro);
 
-        fprintf(of_hdr, "#ifndef %s\n", hdr_macro.c_str());
-        fprintf(of_hdr, "#define %s\n\n", hdr_macro.c_str());
+        of_hdr << "#ifndef " << hdr_macro << std::endl;
+        of_hdr << "#define " << hdr_macro << "\n\n";
         ccst_hdr->write(of_hdr, 0);
-        fprintf(of_hdr, "\n#endif /* %s */\n", hdr_macro.c_str());
+        of_hdr << "\n#endif /* " << hdr_macro << " */" << std::endl;
 
-        fprintf(of_lds, "SECTIONS\n{\n");
+        of_lds << "SECTIONS\n{" << std::endl;
         ccst_lds->write(of_lds, 1);
-        fprintf(of_lds, "}\nINSERT AFTER .text;\n");
+        of_lds << "}\nINSERT AFTER .text;\n";
       }
     } else if (!strcmp(argv[1], "-serversource")) {
       // Callee code
@@ -111,17 +120,17 @@ int main(int argc, char ** argv)
           exit(0);
         }
 
-        const char* of_name = new_name(m->identifier(), "_callee.c");
+        std::string fname = new_name(m->identifier(), std::string("_callee.c"));
 
-        FILE *of = fopen(of_name, "w");
-        if (!of) {
-          std::cerr << "Error: unable to open " << of_name << "for writing\n";
+        std::ofstream of_callee(fname);
+
+        if (!of_callee.is_open()) {
+          std::cerr << "Error: unable to open " << fname << "for writing\n";
           // cleanup
           exit(0);
         }
         CCSTFile* ccst_tree = generate_server_source(m, project_includes);
-        ccst_tree->write(of, 0);
-        fclose(of);
+        ccst_tree->write(of_callee, 0);
       }
 
       std::cout << "Completed callee source writing\n";
@@ -136,7 +145,13 @@ int main(int argc, char ** argv)
          std::string fname (m->identifier());
          fname.append("_caller.h");
 
-         FILE *of = fopen(fname.c_str(), "w");
+         std::ofstream of_hdr(fname);
+
+         if (!of_hdr.is_open()) {
+           std::cerr << "Error: unable to open " << fname << "for writing\n";
+           exit(0);
+         }
+
          CCSTFile* ccst_tree = generate_client_header(m);
 
          std::string hdr_macro("__");
@@ -144,10 +159,10 @@ int main(int argc, char ** argv)
          hdr_macro.append("_caller_h__");
          std_string_toupper(hdr_macro);
 
-         fprintf(of, "#ifndef %s\n", hdr_macro.c_str());
-         fprintf(of, "#define %s\n\n", hdr_macro.c_str());
-         ccst_tree->write(of, 0);
-         fprintf(of, "\n#endif /* %s */\n", hdr_macro.c_str());
+         of_hdr << "#ifndef " << hdr_macro << std::endl;
+         of_hdr << "#define " << hdr_macro << "\n\n";
+         ccst_tree->write(of_hdr, 0);
+         of_hdr << "\n#endif /* " << hdr_macro << " */" << std::endl;
        }
     } else if (!strcmp(argv[1], "-clientsource")) {
       // Caller code
@@ -177,17 +192,18 @@ int main(int argc, char ** argv)
           exit(0);
         }
 
-        const char* of_name = new_name(m->identifier(), "_caller.c");
+        std::string fname = new_name(m->identifier(), std::string("_caller.c"));
 
-        FILE *of = fopen(of_name, "w");
-        if (!of) {
-          std::cerr << "Error: unable to open " << of_name << "for writing\n";
+        std::ofstream of_caller(fname);
+
+        if (!of_caller.is_open()) {
+          std::cerr << "Error: unable to open " << fname << "for writing\n";
           // TODO: cleanup
           exit(0);
         }
+
         CCSTFile* ccst_tree = generate_client_source(m, project_includes);
-        ccst_tree->write(of, 0);
-        fclose(of);
+        ccst_tree->write(of_caller, 0);
       }
       std::cout << "Completed caller source writing\n";
     } else {

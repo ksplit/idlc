@@ -16,9 +16,9 @@
 #include "lcd_ast.h"
 #include "ccst.h"
 
-const char* access_register_mapping(int register_index);
+const std::string access_register_mapping(int register_index);
 
-const char* store_register_mapping(int register_index);
+const std::string store_register_mapping(int register_index);
 
 class Type;
 class Function;

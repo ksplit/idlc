@@ -28,9 +28,9 @@ int FloatType::num()
   return FLOAT_TYPE;
 }
 
-const char* FloatType::name()
+const std::string& FloatType::name() const
 {
-  return "float";
+  return std::string("float");
 }
 
 void FloatType::resolve_types(LexicalScope *ls)
@@ -67,7 +67,7 @@ int DoubleType::num()
   return DOUBLE_TYPE;
 }
 
-const char* DoubleType::name()
+const std::string& DoubleType::name() const
 {
   return "double";
 }
@@ -106,7 +106,7 @@ int BoolType::num()
   return BOOL_TYPE;
 }
 
-const char* BoolType::name()
+const std::string& BoolType::name() const
 {
   return "bool";
 }
@@ -121,7 +121,7 @@ void BoolType::create_trampoline_structs(LexicalScope *ls)
   return;
 }
 
-Function::Function(const char *id, ReturnVariable *return_var, std::vector<Parameter*> parameters, LexicalScope *ls)
+Function::Function(const std::string& id, ReturnVariable *return_var, std::vector<Parameter*> parameters, LexicalScope *ls)
 {
   this->identifier_  = id;
   this->return_var_ = return_var;
@@ -132,7 +132,7 @@ Function::Function(const char *id, ReturnVariable *return_var, std::vector<Param
 Function::Function(const Function& other)
 {
   // copy id
-  this->identifier_ = new_name("", other.identifier_);
+  this->identifier_ = other.identifier_;
 
   // copy return var
   this->return_var_ = new ReturnVariable(*other.return_var_);
@@ -168,7 +168,7 @@ int Function::num()
   return FUNCTION_TYPE;
 }
 
-const char* Function::name()
+const std::string& Function::name() const
 {
   return this->identifier_;
 }
@@ -208,14 +208,14 @@ Rpc* Function::to_rpc(ProjectionType *pt)
 
 /* end */
 
-UnresolvedType::UnresolvedType(const char *name)
+UnresolvedType::UnresolvedType(const std::string& name)
 {
   this->type_name_ = name;
 }
 
 UnresolvedType::UnresolvedType(const UnresolvedType& other)
 {
-  this->type_name_ = new_name("", other.type_name_);
+  this->type_name_ = other.type_name_;
 }
 
 CCSTTypeName* UnresolvedType::accept(TypeNameVisitor *worker)
@@ -238,7 +238,7 @@ int UnresolvedType::num()
   return UNRESOLVED_TYPE;
 }
 
-const char* UnresolvedType::name()
+const std::string& UnresolvedType::name() const
 {
   return this->type_name_;
 }
@@ -253,7 +253,7 @@ void UnresolvedType::create_trampoline_structs(LexicalScope *ls)
   return;
 }
 
-Channel::Channel(const char *name, ChannelType type, Channel *host) :
+Channel::Channel(const std::string& name, ChannelType type, Channel *host) :
   chName(name),
   chType(type),
   hostChannel(host)
@@ -278,9 +278,9 @@ CCSTStatement* Channel::accept(TypeVisitor *worker, Variable *v)
 {
   return worker->visit(this, v);
 }
-const char* Channel::name()
+const std::string& Channel::name() const
 {
-  return this->chName.c_str();
+  return this->chName;
 }
 int Channel::num()
 {
@@ -300,7 +300,7 @@ void Channel::create_trampoline_structs(LexicalScope *ls)
 /* typedef type */
 
 
-Typedef::Typedef(const char* id, const char* alias, Type* type)
+Typedef::Typedef(const std::string& id, const std::string& alias, Type* type)
 {
   this->identifier_ = id;
   this->alias_ = alias;
@@ -310,13 +310,13 @@ Typedef::Typedef(const char* id, const char* alias, Type* type)
 Typedef::Typedef(const Typedef& other)
 {
   // copy id
-  this->identifier_ = new_name("", other.identifier_);
+  this->identifier_ = other.identifier_;
   // copy alias
-  this->alias_ = new_name("", other.alias_);;
+  this->alias_ = other.alias_;;
   // copy Type
   this->type_ = other.type_->clone();
   // copy marshal info
-  this->marshal_info_ = new_name("", other.marshal_info_);
+  this->marshal_info_ = other.marshal_info_;
 }
 
 Marshal_type* Typedef::accept(MarshalPrepareVisitor *worker)
@@ -334,7 +334,7 @@ CCSTStatement* Typedef::accept(TypeVisitor *worker, Variable *v)
   return worker->visit(this, v);
 }
 
-const char* Typedef::alias()
+const std::string& Typedef::alias() const
 {
   return this->alias_;
 }
@@ -349,7 +349,7 @@ int Typedef::num()
   return TYPEDEF_TYPE;
 }
 
-const char* Typedef::name()
+const std::string& Typedef::name() const
 {
   return this->identifier_;
 }
@@ -398,7 +398,7 @@ int VoidType::num()
   return VOID_TYPE;
 }
 
-const char* VoidType::name()
+const std::string& VoidType::name() const
 {
   return "void";
 }
@@ -461,10 +461,10 @@ int IntegerType::num()
   return INTEGER_TYPE;
 }
 
-const char* IntegerType::name()
+const std::string& IntegerType::name() const
 {
   std::cout << "todo integer type name function.\n";
-  return "";
+  return std::string("");
 }
 
 void IntegerType::resolve_types(LexicalScope *ls)
@@ -484,14 +484,14 @@ ProjectionType::ProjectionType()
 {
 }
 
-ProjectionType::ProjectionType(const char* id, const char* real_type, std::vector<ProjectionField*> fields)
+ProjectionType::ProjectionType(const std::string& id, const std::string& real_type, std::vector<ProjectionField*> fields)
 {
   this->id_ = id; 
   this->real_type_ = real_type; 
   this->fields_ = fields;
 }
 
-ProjectionType::ProjectionType(const char* id, const char* real_type, std::vector<ProjectionField*> fields, std::vector<ProjectionField*> channels)
+ProjectionType::ProjectionType(const std::string& id, const std::string& real_type, std::vector<ProjectionField*> fields, std::vector<ProjectionField*> channels)
 {
   this->id_ = id; 
   this->real_type_ = real_type; 
@@ -502,9 +502,9 @@ ProjectionType::ProjectionType(const char* id, const char* real_type, std::vecto
 ProjectionType::ProjectionType(const ProjectionType& other)
 {
   // copy id
-  this->id_ = new_name("", other.id_);
+  this->id_ = other.id_;
   // copy real_type_
-  this->real_type_ = new_name("", other.real_type_);;
+  this->real_type_ = other.real_type_;
   // copy fields_
   std::vector<ProjectionField*> fields_copy;
 
@@ -540,7 +540,7 @@ CCSTStatement* ProjectionType::accept(TypeVisitor *worker, Variable *v)
 }
 
 // may never be used
-const char* ProjectionType::real_type()
+const std::string ProjectionType::real_type() const
 {
   return this->real_type_;
 }
@@ -555,7 +555,7 @@ int ProjectionType::num()
   return PROJECTION_TYPE;
 }
 
-const char* ProjectionType::name()
+const std::string& ProjectionType::name() const
 {
   return this->id_;
 }
@@ -588,16 +588,16 @@ void ProjectionType::create_trampoline_structs(LexicalScope *ls)
       trampoline_fields.push_back(new ProjectionField(ls->lookup("thc_channel", &err), "async_chnl", 1));
       trampoline_fields.push_back(new ProjectionField(ls->lookup("cptr_t", &err), "sync_ep", 0));
 
-      const char* trampoline_struct_name = hidden_args_name(f->name());
+      const std::string& trampoline_struct_name = hidden_args_name(f->name());
       ls->insert(trampoline_struct_name, new ProjectionType(trampoline_struct_name, trampoline_struct_name, trampoline_fields));
     }
   }
 }
 
-ProjectionField* ProjectionType::get_field(const char *field_name)
+ProjectionField* ProjectionType::get_field(const std::string& field_name)
 {
   for (auto pf : *this) {
-    if (strcmp(field_name, pf->identifier()) == 0) {
+    if (pf->identifier() == field_name) {
       return pf;
     }
   }
@@ -612,7 +612,7 @@ void ProjectionType::initialize_type()
 }
 
 /* projection constructor type*/
-ProjectionConstructorType::ProjectionConstructorType(const char* id, const char* real_type, std::vector<ProjectionField*> fields, std::vector<ProjectionField*> channel_fields, std::vector<ProjectionField*> channel_params)
+ProjectionConstructorType::ProjectionConstructorType(const std::string& id, const std::string& real_type, std::vector<ProjectionField*> fields, std::vector<ProjectionField*> channel_fields, std::vector<ProjectionField*> channel_params)
 {
   this->id_ = id;
   this->real_type_ = real_type;
@@ -629,9 +629,9 @@ ProjectionConstructorType::ProjectionConstructorType(const char* id, const char*
 ProjectionConstructorType::ProjectionConstructorType(const ProjectionConstructorType& other)
 {
   // copy id
-  this->id_ = new_name("", other.id_);
+  this->id_ = other.id_;
   // copy real_type_
-  this->real_type_ = new_name("", other.real_type_);
+  this->real_type_ = other.real_type_;
   // copy fields_
   std::vector<ProjectionField*> fields_copy;
   for (auto field : other) {
@@ -738,7 +738,7 @@ int InitializeType::num()
   return INITIALIZE_TYPE;
 }
 
-const char* InitializeType::name()
+const std::string& InitializeType::name() const
 {
   return this->type_->name();
 }

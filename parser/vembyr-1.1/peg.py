@@ -1221,7 +1221,7 @@ goto %s;
                 if debug:
                     debugging = """%s.setName("%s(%s)"); std::cout << "Trying rule '" << %s.makeBacktrace() << "' at position: " << %s << " input: '" << %s.get(%s.getPosition()) << "'" << std::endl;""" % (trace, self.name, special_escape(pattern.generate_bnf(code = False)).replace("\n", "\\n"), stream, position, stream, result)
                 if 'debug2' in peg.options:
-                    debug_result = """std::cout << "Succeeded rule %s at position: " << %s.getPosition() << " alternative: %s" << std::endl;""" % (self.name, result, special_escape(pattern.generate_bnf(code = False)).replace("\n", "\\n"))
+                    debug_result = """std::cout << "\x1b[32mSucceeded \x1b[0m rule \x1b[35m %s \x1b[0m at position: " << "\x1b[36m" << %s.getPosition() << "\x1b[0m" << " alternative: %s" << std::endl;""" % (self.name, result, special_escape(pattern.generate_bnf(code = False)).replace("\n", "\\n"))
                 do_memo = peg.memo and self.rules == None and self.parameters == None
                 start_transaction = ""
                 if peg.transactions:
@@ -1304,7 +1304,7 @@ try{
 
         debug_fail = ""
         if 'debug2' in peg.options:
-            debug_fail = """std::cout << "Failed rule %s at position: " << %s << std::endl;""" % (self.name, my_position)
+            debug_fail = """std::cout << "\x1b[31mFailed \x1b[0m rule \x1b[34m %s \x1b[0m at position: " << %s << std::endl;""" % (self.name, my_position)
 
         data = """
 Result rule_%s(Stream & %s, const int %s%s%s){

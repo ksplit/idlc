@@ -257,8 +257,8 @@ std::vector<CCSTDeclaration*> declare_hidden_args_structures(ProjectionType *pt,
     
     if(pf->type()->num() == FUNCTION_TYPE) { // function
       // declare
-      const char* hidden_args_struct_name = hidden_args_name(pf->type()->name());
-      const char* var_name = hidden_args_name(append_strings("_"
+      const std::string& hidden_args_struct_name = hidden_args_name(pf->type()->name());
+      const std::string& var_name = hidden_args_name(append_strings("_"
 							     , construct_list_vars(pf)));
 
       declarations.push_back(struct_pointer_declaration(hidden_args_struct_name

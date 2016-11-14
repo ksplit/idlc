@@ -6,7 +6,7 @@
  * code related to container structures.
  */
 
-std::vector<CCSTAssignExpr*> container_of_args(CCSTPostFixExpr *struct_pointer, const char* type_name, const char* field_name)
+std::vector<CCSTAssignExpr*> container_of_args(CCSTPostFixExpr *struct_pointer, const std::string& type_name, const std::string& field_name)
 {
   std::vector<CCSTAssignExpr*> args;
   args.push_back( struct_pointer);
@@ -15,7 +15,7 @@ std::vector<CCSTAssignExpr*> container_of_args(CCSTPostFixExpr *struct_pointer, 
   return args;
 }
 
-std::vector<CCSTStatement*> container_of(Variable *v, const char* cspace)
+std::vector<CCSTStatement*> container_of(Variable *v, const std::string& cspace)
 {
   std::vector<CCSTStatement*> statements;
   
@@ -109,7 +109,7 @@ CCSTCompoundStatement* set_remote_ref(Variable *v)
   return new CCSTCompoundStatement(declarations, statements);
 }
 
-CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const char* cspace)
+CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const std::string& cspace)
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
@@ -272,7 +272,7 @@ CCSTStatement* allocate_non_container_variables(Variable *v)
  * assumes the container has already been declared at v->container()->identifier()
  * inserts container into cspace
  */
-CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const char* cspace)
+CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const std::string& cspace)
 {
   // TODO: set other ref;
   std::vector<CCSTDeclaration*> declarations;
@@ -345,7 +345,7 @@ ProjectionField* get_cptr_field(Variable *v)
   return cptr;
 }
 
-ProjectionField* find_field(ProjectionType *pt, const char* field_name)
+ProjectionField* find_field(ProjectionType *pt, const std::string& field_name)
 {
   ProjectionField *field = pt->get_field(field_name);
   Assert(field != 0x0, "Error: could not find field\n");
@@ -353,7 +353,7 @@ ProjectionField* find_field(ProjectionType *pt, const char* field_name)
   return field;
 }
 
-CCSTCompoundStatement* alloc_link_container_caller(Variable *v, const char* cspace)
+CCSTCompoundStatement* alloc_link_container_caller(Variable *v, const std::string& cspace)
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
@@ -499,7 +499,7 @@ std::vector<CCSTStatement*> caller_initialize_channels(ProjectionType *pt)
   return statements;
 }
 
-std::vector<CCSTStatement*> dealloc_container(Variable *v, const char* cspace)
+std::vector<CCSTStatement*> dealloc_container(Variable *v, const std::string& cspace)
 {
   std::vector<CCSTStatement*> statements;
   
@@ -521,7 +521,7 @@ std::vector<CCSTStatement*> dealloc_container(Variable *v, const char* cspace)
   return statements;
 }
 
-std::vector<CCSTStatement*> dealloc_containers_callee(Variable *v, const char* cspace, LexicalScope *ls)
+std::vector<CCSTStatement*> dealloc_containers_callee(Variable *v, const std::string& cspace, LexicalScope *ls)
 {
   std::vector<CCSTStatement*> statements;
   if(v->dealloc_caller() && !v->dealloc_callee()) {
@@ -594,7 +594,7 @@ std::vector<CCSTStatement*> dealloc_containers_callee(Variable *v, const char* c
 
 	std::vector<CCSTAssignExpr*> args;
 	args.push_back(access(pf_in_container));
-	const char* hidden_args_id = hidden_args_name(append_strings("_"
+	const std::string& hidden_args_id = hidden_args_name(append_strings("_"
 								     , construct_list_vars(pf)));
 	statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId(hidden_args_id)
 								       , equals()
@@ -645,7 +645,7 @@ std::vector<CCSTStatement*> dealloc_containers_callee(Variable *v, const char* c
   return statements;
 }
 
-std::vector<CCSTStatement*> dealloc_containers_caller(Variable *v, const char* cspace, LexicalScope *ls)
+std::vector<CCSTStatement*> dealloc_containers_caller(Variable *v, const std::string& cspace, LexicalScope *ls)
 {
   std::vector<CCSTStatement*> statements;
   if(v->dealloc_callee() && !v->dealloc_caller()) {
@@ -718,7 +718,7 @@ std::vector<CCSTStatement*> dealloc_containers_caller(Variable *v, const char* c
 
 	std::vector<CCSTAssignExpr*> args;
 	args.push_back(access(pf_in_container));
-	const char* hidden_args_id = hidden_args_name(append_strings("_"
+	const std::string& hidden_args_id = hidden_args_name(append_strings("_"
 								     , construct_list_vars(pf)));
 	statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId(hidden_args_id)
 								       , equals()

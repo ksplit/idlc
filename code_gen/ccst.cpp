@@ -6,7 +6,7 @@ CCSTFile::CCSTFile(std::vector<CCSTExDeclaration*> defs)
   this->defs_ = defs;
 }
 
-void CCSTFile::write(FILE *f, int indent)
+void CCSTFile::write(std::ofstream& of, int indent)
 {
   /*
     for(std::vector<T>::iterator it = v.begin(); it != v.end(); ++it) {
@@ -14,7 +14,7 @@ void CCSTFile::write(FILE *f, int indent)
   for(std::vector<CCSTExDeclaration*>::iterator it = defs_.begin(); it != defs_.end(); ++it)
     {
       CCSTExDeclaration *ex_dec = *it;
-      ex_dec->write(f, indent);
+      ex_dec->write(of, indent);
     }
 }
 
@@ -36,31 +36,31 @@ CCSTFuncDef::CCSTFuncDef(std::vector<CCSTDecSpecifier*> specifiers, CCSTDeclarat
   this->attributes_ = attribs;
 }
 
-void CCSTFuncDef::write(FILE *f, int indent)
+void CCSTFuncDef::write(std::ofstream& of, int indent)
 {
   for(std::vector<CCSTDecSpecifier*>::iterator it = specifiers_.begin(); it != specifiers_.end(); ++it)
     {
       CCSTDecSpecifier *ds = *it;
-      ds->write(f, indent);
+      ds->write(of, indent);
     }
-  this->ret_->write(f, 0);
+  this->ret_->write(of, 0);
 
     for(std::vector<CCSTMacro*>::iterator it = attributes_.begin(); it != attributes_.end(); ++it) {
       CCSTMacro *mac = *it;
-      fprintf(f, " ");
-      mac->write(f, 0);
+      of << " ";
+      mac->write(of, 0);
     }
 
   for(std::vector<CCSTDeclaration*>::iterator it = decs_.begin(); it != decs_.end(); ++it)
     {
       CCSTDeclaration *ds = *it;
-      ds->write(f, 0);
+      ds->write(of, 0);
     }
   // write body
-  fprintf(f, "\n");
-  fprintf(f, "{\n");
-  this->body_->write(f, indent+1);
-  fprintf(f, "\n}\n\n");
+  of << "\n";
+  of << "{\n";
+  this->body_->write(of, indent+1);
+  of << "\n}\n\n";
 }
 
 CCSTDeclaration::CCSTDeclaration(std::vector<CCSTDecSpecifier*> specifier, std::vector<CCSTInitDeclarator*> decs)
@@ -84,28 +84,28 @@ CCSTStoClassSpecifier::CCSTStoClassSpecifier(sto_class_t val)
   this->val_ = val;
 }
 
-void CCSTStoClassSpecifier::write(FILE *f, int indent)
+void CCSTStoClassSpecifier::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%s", indentation(indent));
+  of << indentation(indent);
   switch (this->val_)
     {
     case auto_t:
-      fprintf(f, "%s ", "auto");
+      of << "auto ";
       break;
     case register_local_t:
-      fprintf(f, "%s ", "register");
+      of << "register ";
       break;
     case static_t:
-      fprintf(f, "%s ", "static");
+      of << "static ";
       break;
     case extern_t:
-      fprintf(f, "%s ", "extern");
+      of << "extern ";
       break;
     case typedef_t:
-      fprintf(f, "%s ", "typedef");
+      of << "typedef ";
       break;
     default:
-      fprintf(f, "%s ", "error");
+      of << "error";
       break;
     } 
 
@@ -116,54 +116,54 @@ CCSTSimpleTypeSpecifier::CCSTSimpleTypeSpecifier(TypeSpecifier type) :
 {
 }
 
-void CCSTSimpleTypeSpecifier::write(FILE *f, int indent)
+void CCSTSimpleTypeSpecifier::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%s", indentation(indent));
+  of << indentation(indent);
   switch (this->type)
     {
     case VoidTypeSpec:
-      fprintf(f, "%s ", "void");
+      of << "void ";
       break;
     case CharTypeSpec:
-      fprintf(f, "%s ", "char");
+      of << "char ";
       break;
     case ShortTypeSpec:
-      fprintf(f, "%s ", "short");
+      of << "short ";
       break;
     case IntegerTypeSpec:
-      fprintf(f, "%s ", "int");
+      of << "int ";
       break;
     case LongTypeSpec:
-      fprintf(f, "%s ", "long");
+      of << "long ";
       break;
     case FloatTypeSpec:
-      fprintf(f, "%s ", "float");
+      of << "float ";
       break;
     case DoubleTypeSpec:
-      fprintf(f, "%s ", "double");
+      of << "double ";
       break;
     case SignedTypeSpec:
-      fprintf(f, "%s ", "signed");
+      of << "signed ";
       break;
     case UnsignedTypeSpec:
-      fprintf(f, "%s ", "unsigned");
+      of << "unsigned ";
       break;
     case BoolTypeSpec:
-      fprintf(f, "%s ", "bool");
+      of << "bool ";
       break;
     default:
-      fprintf(f, "%s ", "error");
+      of << "error";
       break;
     } 
 }
 
-CCSTStructUnionSpecifier::CCSTStructUnionSpecifier(struct_union_t s_or_u, const char* id)
+CCSTStructUnionSpecifier::CCSTStructUnionSpecifier(struct_union_t s_or_u, const std::string& id)
 {
   this->s_or_u_ = s_or_u; 
   this->id_ = id;
 }
 
-CCSTStructUnionSpecifier::CCSTStructUnionSpecifier(struct_union_t s_or_u, const char* id, std::vector<CCSTStructDeclaration*> struct_dec)
+CCSTStructUnionSpecifier::CCSTStructUnionSpecifier(struct_union_t s_or_u, const std::string& id, std::vector<CCSTStructDeclaration*> struct_dec)
 {
   this->s_or_u_ = s_or_u; 
   this->id_ = id; 
@@ -177,19 +177,19 @@ CCSTStructUnionSpecifier::CCSTStructUnionSpecifier(struct_union_t s_or_u, std::v
   this->struct_dec_ = struct_dec;
 }
 
-void CCSTStructUnionSpecifier::write(FILE *f, int indent)
+void CCSTStructUnionSpecifier::write(std::ofstream& of, int indent)
 {
   switch (this->s_or_u_)
     {
     case struct_t:
       {
 	//  <struct-or-union> <identifier> what about this case
-	fprintf(f, "%s%s %s ", indentation(indent), "struct", this->id_);
+	of << indentation(indent) << "struct " << this->id_ << " ";
 	break;
       }
     case union_t:
       {
-	fprintf(f, "%s%s %s ", indentation(indent), "union", this->id_);
+	of << indentation(indent) << "union " << this->id_ << " ";
 	break;
       }
     default:
@@ -199,14 +199,14 @@ void CCSTStructUnionSpecifier::write(FILE *f, int indent)
     }
   if(!this->struct_dec_.empty())
     {
-      fprintf(f, "{\n");
+      of << "{\n";
       for(std::vector<CCSTStructDeclaration*>::iterator it = struct_dec_.begin(); it != struct_dec_.end(); ++it)
 	{
 	  CCSTStructDeclaration *ds = *it;
-	  ds->write(f, indent + 1);
-	  fprintf(f, ";\n");
+	  ds->write(of, indent + 1);
+	  of << ";\n";
 	}
-      fprintf(f, "}");
+      of << "}";
     }
 }
 
@@ -216,20 +216,20 @@ CCSTStructDeclaration::CCSTStructDeclaration(std::vector<CCSTSpecifierQual*> spe
   this->dec_list_ = dec_list;
 }
 
-void CCSTStructDeclaration::write(FILE *f, int indent)
+void CCSTStructDeclaration::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%s", indentation(indent));
+  of << indentation(indent);
   if(!this->spec_qual_.empty())
     {
       for(std::vector<CCSTSpecifierQual*>::iterator it = spec_qual_.begin(); it != spec_qual_.end(); ++it)
 	{
 	  CCSTSpecifierQual *ds = *it;
-	  ds->write(f, 0);
-	  //fprintf(f, " ");
+	  ds->write(of, 0);
+	  //of << " ";
 	  
 	}
     }
-  this->dec_list_->write(f, 0);
+  this->dec_list_->write(of, 0);
   
 }
 
@@ -243,14 +243,14 @@ CCSTStructDecList::CCSTStructDecList(std::vector<CCSTStructDeclarator*> struct_d
   this->struct_decs_ = struct_decs;
 }
 
-void CCSTStructDecList::write(FILE *f, int indent)
+void CCSTStructDecList::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%s", indentation(indent));
+  of << indentation(indent);
   for(std::vector<CCSTStructDeclarator*>::iterator it = struct_decs_.begin(); it != struct_decs_.end(); ++it)
 	{
 	  CCSTStructDeclarator *ds = *it;
-	  ds->write(f, 0);
-	  fprintf(f, ", "); // if last do not write ,
+	  ds->write(of, 0);
+	  of << ", "; // if last do not write ,
 	}
 }
 CCSTStructDeclarator::CCSTStructDeclarator()
@@ -277,16 +277,16 @@ CCSTStructDeclarator::CCSTStructDeclarator(CCSTConstExpr *expr)
   this->expr_ = expr;
 }
 
-void CCSTStructDeclarator::write(FILE *f, int indent)
+void CCSTStructDeclarator::write(std::ofstream& of, int indent)
 {
   if(this->dec_ != NULL)
     {
-      this->dec_->write(f, indent);
+      this->dec_->write(of, indent);
     }
   if(this->expr_ != NULL)
     {
-      fprintf(f, " : ");
-      this->expr_->write(f, 0);
+      of << " : ";
+      this->expr_->write(of, 0);
     }
 }
 
@@ -296,19 +296,19 @@ CCSTDeclarator::CCSTDeclarator(CCSTPointer *pointer, CCSTDirectDeclarator *d_dec
   this->d_dec_ = d_dec;
 }
 
-void CCSTDeclarator::write(FILE *f, int indent)
+void CCSTDeclarator::write(std::ofstream& of, int indent)
 {
   
   if(this->pointer_ != NULL)
     {
-      this->pointer_->write(f, indent);
+      this->pointer_->write(of, indent);
     }
   if(this->d_dec_ == NULL)
     {
       std::cout << "error";
       exit(0);
     }
-  this->d_dec_->write(f, 0);
+  this->d_dec_->write(of, 0);
 }
 
 CCSTPointer::CCSTPointer(std::vector<type_qualifier> type_q, CCSTPointer *p)
@@ -333,19 +333,19 @@ CCSTPointer::CCSTPointer(CCSTPointer *p)
   this->p_ = p;
 }
 
-void CCSTPointer::write(FILE *f, int indent)
+void CCSTPointer::write(std::ofstream& of, int indent)
 {
-  fprintf(f,"%s*", indentation(indent));
+  of << indentation(indent) << "*";
   for(std::vector<type_qualifier>::iterator it = type_q_.begin(); it != type_q_.end(); ++it)
 	{
 	  type_qualifier tq =  *it;
 	  switch (tq)
 	    {
 	    case const_t:
-	      fprintf(f, "%s ", "const");
+	      of << "const ";
 	      break;
 	    case volatile_t:
-	      fprintf(f, "%s ", "volatile");
+	      of << "volatile ";
 	      break;
 	    default:
 	      break;
@@ -353,18 +353,18 @@ void CCSTPointer::write(FILE *f, int indent)
 	}
   if(this->p_ != NULL)
     {
-      this->p_->write(f, 0);
+      this->p_->write(of, 0);
     }
 }
 
-CCSTDirectDecId::CCSTDirectDecId(const char* id)
+CCSTDirectDecId::CCSTDirectDecId(const std::string& id)
 {
   this->id_ = id;
 }
 
-void CCSTDirectDecId::write(FILE *f, int indent)
+void CCSTDirectDecId::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%s%s", indentation(indent), this->id_);
+  of << indentation(indent) << this->id_;
 }
 
 CCSTDirectDecDec::CCSTDirectDecDec(CCSTDeclarator *dec)
@@ -372,16 +372,16 @@ CCSTDirectDecDec::CCSTDirectDecDec(CCSTDeclarator *dec)
   this->dec_ = dec;
 }
 
-void CCSTDirectDecDec::write(FILE *f, int indent)
+void CCSTDirectDecDec::write(std::ofstream& of, int indent)
 {
   if(this->dec_ == NULL)
     {
       std::cout << "Error\n";
       exit(0);
     }
-  fprintf(f, "%s( ", indentation(indent)); // are there actually supposed to be parens?
-  this->dec_->write(f, 0);
-  fprintf(f, " )");
+  of << indentation(indent) << "( "; // are there actually supposed to be parens?
+  this->dec_->write(of, 0);
+  of << " )";
 }
 
 CCSTDirectDecConstExpr::CCSTDirectDecConstExpr(CCSTDirectDeclarator *direct_dec, CCSTConstExpr *const_expr)
@@ -396,20 +396,20 @@ CCSTDirectDecConstExpr::CCSTDirectDecConstExpr(CCSTDirectDeclarator *direct_dec)
  this->const_expr_ = NULL; 
 }
 
-void CCSTDirectDecConstExpr::write(FILE *f, int indent)
+void CCSTDirectDecConstExpr::write(std::ofstream& of, int indent)
 {
   if(this->direct_dec_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  this->direct_dec_->write(f, indent);
-  fprintf(f, "[ ");
+  this->direct_dec_->write(of, indent);
+  of << "[ ";
   if(this->const_expr_ != NULL)
     {
-      this->const_expr_->write(f, 0);
+      this->const_expr_->write(of, 0);
     }
-  fprintf(f, "]");
+  of << "]";
 }
 
 CCSTDirectDecParamTypeList::CCSTDirectDecParamTypeList(CCSTDirectDeclarator *direct_dec, CCSTParamTypeList *p_t_list)
@@ -418,45 +418,44 @@ CCSTDirectDecParamTypeList::CCSTDirectDecParamTypeList(CCSTDirectDeclarator *dir
   this->p_t_list_ = p_t_list;
 }
 
-void CCSTDirectDecParamTypeList::write(FILE *f, int indent)
+void CCSTDirectDecParamTypeList::write(std::ofstream& of, int indent)
 {
   if(this->direct_dec_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  this->direct_dec_->write(f, indent);
-  fprintf(f, "(");
+  this->direct_dec_->write(of, indent);
+  of << "(";
   if(this->p_t_list_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  this->p_t_list_->write(f, 0);
-  fprintf(f, ")");
+  this->p_t_list_->write(of, 0);
+  of << ")";
 }
 
-CCSTDirectDecIdList::CCSTDirectDecIdList(CCSTDirectDeclarator *direct_dec, std::vector<char*> ids)
+CCSTDirectDecIdList::CCSTDirectDecIdList(CCSTDirectDeclarator *direct_dec, const std::vector<std::string>& ids)
 {
   this->direct_dec_ = direct_dec; 
   this->ids_ = ids;
 }
 
-void CCSTDirectDecIdList::write(FILE *f, int indent)
+void CCSTDirectDecIdList::write(std::ofstream& of, int indent)
 {
   if(this->direct_dec_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  fprintf(f, "%s( ", indentation(indent));
-  for(std::vector<char*>::iterator it = ids_.begin(); it != ids_.end(); ++it)
+  of << indentation(indent) << "( ";
+  for (std::vector<std::string>::const_iterator it = ids_.begin(); it != ids_.end(); ++it)
 	{
-	  char *id = *it;
-	  fprintf(f, " %s", id);
-	  fprintf(f, ", "); // should i be printing commas
+	  of << " " << *it;
+	  of << ", "; // should i be printing commas
 	}
-  fprintf(f, " )");
+  of << " )";
 }
 
 CCSTCondExpr::CCSTCondExpr()
@@ -472,7 +471,7 @@ CCSTCondExpr::CCSTCondExpr(CCSTLogicalOrExpr *log_or_expr, CCSTExpression *expr,
   this->cond_expr_ = cond_expr;
 }
 
-void CCSTCondExpr::write(FILE *f, int indent)
+void CCSTCondExpr::write(std::ofstream& of, int indent)
 {
   std::cout << "incomplete cond expr\n";
   //todo
@@ -483,14 +482,14 @@ CCSTConstExpr::CCSTConstExpr(CCSTCondExpr *cond_expr)
   this->cond_expr_ = cond_expr;
 }
 
-void CCSTConstExpr::write(FILE *f, int indent)
+void CCSTConstExpr::write(std::ofstream& of, int indent)
 {
   if(this->cond_expr_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  fprintf(f, "const todo");
+  of << "const todo";
   
 }
 
@@ -506,7 +505,7 @@ CCSTLogicalOrExpr::CCSTLogicalOrExpr(CCSTLogicalOrExpr *or__, CCSTLogicalAndExpr
   this->or_ = or__;
 }
 
-void CCSTLogicalOrExpr::write(FILE *f, int indent)
+void CCSTLogicalOrExpr::write(std::ofstream& of, int indent)
 {
   if(this->or_ != NULL)
     {
@@ -515,19 +514,19 @@ void CCSTLogicalOrExpr::write(FILE *f, int indent)
 	  std::cout << "error\n";
 	  exit(0);
 	}
-      fprintf(f, "%s( ", indentation(indent));
-      this->or_->write(f, 0);
-      fprintf(f, " )");
-      fprintf(f, " || ");
-      fprintf(f, "( ");
-      this->and_->write(f, 0);
-      fprintf(f, " )");
+      of << indentation(indent) << "( ";
+      this->or_->write(of, 0);
+      of << " )";
+      of << " || ";
+      of << "( ";
+      this->and_->write(of, 0);
+      of << " )";
     }
   else 
     {
-      // fprintf(f, "( ");
-      this->and_->write(f, indent);
-      // fprintf(f, " )");
+      // of << "( ";
+      this->and_->write(of, indent);
+      // of << " )";
     }
 }
 
@@ -541,7 +540,7 @@ CCSTLogicalAndExpr::CCSTLogicalAndExpr(CCSTLogicalAndExpr *and__, CCSTInclusiveO
   this->and_ = and__; this->or_ = or__;
 }
 
-void CCSTLogicalAndExpr::write(FILE *f, int indent)
+void CCSTLogicalAndExpr::write(std::ofstream& of, int indent)
 {
   if(this->and_ != NULL)
     {
@@ -550,19 +549,19 @@ void CCSTLogicalAndExpr::write(FILE *f, int indent)
 	  std::cout << "error\n";
 	  exit(0);
 	}
-      fprintf(f, "%s( ", indentation(indent));
-      this->and_->write(f, 0);
-      fprintf(f, " )");
-      fprintf(f, " && ");
-      fprintf(f, "( ");
-      this->or_->write(f, 0);
-      fprintf(f, " )");
+      of << indentation(indent)  << "( ";
+      this->and_->write(of, 0);
+      of << " )";
+      of << " && ";
+      of << "( ";
+      this->or_->write(of, 0);
+      of << " )";
     }
   else
     {
-      //  fprintf(f, "( ");
-      this->or_->write(f, indent);
-      //    fprintf(f, " )");
+      //  of << "( ";
+      this->or_->write(of, indent);
+      //    of << " )";
     }
 }
 
@@ -577,7 +576,7 @@ CCSTInclusiveOrExpr::CCSTInclusiveOrExpr(CCSTInclusiveOrExpr *in_or, CCSTXorExpr
   this->xor_ = xor__;
 }
 
-void CCSTInclusiveOrExpr::write(FILE *f, int indent)
+void CCSTInclusiveOrExpr::write(std::ofstream& of, int indent)
 {
   if(this->in_or_ != NULL)
     {
@@ -586,17 +585,17 @@ void CCSTInclusiveOrExpr::write(FILE *f, int indent)
 	  std::cout << "error\n";
 	  exit(0);
 	}
-      fprintf(f, "%s( ", indentation(indent));
-      this->in_or_->write(f, 0);
-      fprintf(f, " )");
-      fprintf(f, " | ");
-      fprintf(f, "( ");
-      this->xor_->write(f, 0);
-      fprintf(f, " )");
+      of << indentation(indent)  << "( ";
+      this->in_or_->write(of, 0);
+      of << " )";
+      of << " | ";
+      of << "( ";
+      this->xor_->write(of, 0);
+      of << " )";
     }
   else
     {
-      this->xor_->write(f, indent);
+      this->xor_->write(of, indent);
     }
 }
 
@@ -611,22 +610,22 @@ CCSTXorExpr::CCSTXorExpr(CCSTXorExpr *xor__, CCSTAndExpr *and__)
   this->and_ = and__;
 }
 
-void CCSTXorExpr::write(FILE *f, int indent)
+void CCSTXorExpr::write(std::ofstream& of, int indent)
 {
   if(this->xor_ != NULL)
     {
-      fprintf(f, "%s( ", indentation(indent));
-      this->xor_->write(f, 0);
-      fprintf(f, " )");
-      fprintf(f, " ^ ");
-      fprintf(f, "( ");
-      this->and_->write(f, 0);
-      fprintf(f, " )");
+      of << indentation(indent)  << "( ";
+      this->xor_->write(of, 0);
+      of << " )";
+      of << " ^ ";
+      of << "( ";
+      this->and_->write(of, 0);
+      of << " )";
     }
   else
     {
       // the if else not needed, because and expression inherits from xor expr
-      this->and_->write(f, indent);
+      this->and_->write(of, indent);
     }
 }
 
@@ -641,20 +640,20 @@ CCSTAndExpr::CCSTAndExpr(CCSTAndExpr *and__, CCSTEqExpr *eq)
   this->eq_ = eq;
 }
 
-void CCSTAndExpr::write(FILE *f, int indent)
+void CCSTAndExpr::write(std::ofstream& of, int indent)
 {
   if(this->and_ == NULL || this->eq_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  fprintf(f, "%s( ", indentation(indent));
-  this->and_->write(f, 0);
-  fprintf(f, " )");
-  fprintf(f, " & ");
-  fprintf(f, "( ");
-  this->eq_->write(f, 0);
-  fprintf(f, " )");
+  of << indentation(indent)  << "( ";
+  this->and_->write(of, 0);
+  of << " )";
+  of << " & ";
+  of << "( ";
+  this->eq_->write(of, 0);
+  of << " )";
 }
 
 CCSTEqExpr::CCSTEqExpr()
@@ -669,7 +668,7 @@ CCSTEqExpr::CCSTEqExpr(bool equal, CCSTEqExpr *eq_expr, CCSTRelationalExpr *r_ex
   this->r_expr_ = r_expr;
 }
 
-void CCSTEqExpr::write(FILE *f, int indent)
+void CCSTEqExpr::write(std::ofstream& of, int indent)
 {
   if(this->eq_expr_ == NULL || this->r_expr_ == NULL)
     {
@@ -678,23 +677,23 @@ void CCSTEqExpr::write(FILE *f, int indent)
     }
   if(equal_)
     {
-      fprintf(f, "%s( ", indentation(indent));
-      this->eq_expr_->write(f, 0);
-      fprintf(f, " )");
-      fprintf(f, " == ");
-      fprintf(f, "( ");
-      this->r_expr_->write(f, 0);
-      fprintf(f, " )");
+      of << indentation(indent)  << "( ";
+      this->eq_expr_->write(of, 0);
+      of << " )";
+      of << " == ";
+      of << "( ";
+      this->r_expr_->write(of, 0);
+      of << " )";
     }
   else
     {
-      fprintf(f, "%s( ", indentation(indent));
-      this->eq_expr_->write(f, 0);
-      fprintf(f, " )");
-      fprintf(f, " != ");
-      fprintf(f, "( ");
-      this->r_expr_->write(f, 0);
-      fprintf(f, " )");
+      of << indentation(indent)  << "( ";
+      this->eq_expr_->write(of, 0);
+      of << " )";
+      of << " != ";
+      of << "( ";
+      this->r_expr_->write(of, 0);
+      of << " )";
     }
 }
 
@@ -710,29 +709,29 @@ CCSTRelationalExpr::CCSTRelationalExpr(relational_op op, CCSTRelationalExpr *r_e
   this->s_expr_ = s_expr;
 }
 
-void CCSTRelationalExpr::write(FILE *f, int indent)
+void CCSTRelationalExpr::write(std::ofstream& of, int indent)
 {
   if(this->r_expr_ == NULL || this->s_expr_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  fprintf(f, "%s( ", indentation(indent));
-  this->r_expr_->write(f, 0);
-  fprintf(f, " )");
+  of << indentation(indent)  << "( ";
+  this->r_expr_->write(of, 0);
+  of << " )";
   switch (this->op_)
     {
     case lessthan_t:
-      fprintf(f, " < ");  
+      of << " < ";
       break;
     case greaterthan_t:
-      fprintf(f, " > ");
+      of << " > ";
       break;
     case lessthaneq_t:
-      fprintf(f, " <= ");
+      of << " <= ";
       break;
     case greaterthaneq_t:
-      fprintf(f, " >= ");
+      of << " >= ";
       break;
     default:
       {
@@ -740,9 +739,9 @@ void CCSTRelationalExpr::write(FILE *f, int indent)
 	exit(0);
       }
     }
-  fprintf(f, "( ");
-  this->s_expr_->write(f, 0);
-  fprintf(f, " )");
+  of << "( ";
+  this->s_expr_->write(of, 0);
+  of << " )";
 }
 
 CCSTShiftExpr::CCSTShiftExpr()
@@ -757,23 +756,23 @@ CCSTShiftExpr::CCSTShiftExpr(shift_op shift, CCSTShiftExpr *s_expr, CCSTAdditive
   this->a_expr_ = a_expr;
 }
 
-void CCSTShiftExpr::write(FILE *f, int indent)
+void CCSTShiftExpr::write(std::ofstream& of, int indent)
 {
   if(this->s_expr_ == NULL || this->a_expr_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  fprintf(f, "%s( ", indentation(indent));
-  this->s_expr_->write(f, 0);
-  fprintf(f, " )");
+  of << indentation(indent)  << "( ";
+  this->s_expr_->write(of, 0);
+  of << " )";
   switch (this->shift_)
     {
     case leftshift_t:
-      fprintf(f, " << ");
+      of << " << ";
       break;
     case rightshift_t:
-      fprintf(f, " >> ");
+      of << " >> ";
       break;
     default:
       {
@@ -781,9 +780,9 @@ void CCSTShiftExpr::write(FILE *f, int indent)
 	exit(0);
       } 
     }
-  fprintf(f, "( ");
-  this->a_expr_->write(f, 0);
-  fprintf(f, " )");
+  of << "( ";
+  this->a_expr_->write(of, 0);
+  of << " )";
 }
 
 CCSTAdditiveExpr::CCSTAdditiveExpr()
@@ -798,23 +797,23 @@ CCSTAdditiveExpr::CCSTAdditiveExpr(additive_op op, CCSTAdditiveExpr *a_expr, CCS
   this->m_expr_ = m_expr;
 }
 
-void CCSTAdditiveExpr::write(FILE *f, int indent)
+void CCSTAdditiveExpr::write(std::ofstream& of, int indent)
 { 
   if(this->a_expr_ == NULL || this->m_expr_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  fprintf(f, "%s( ", indentation(indent));
-  this->a_expr_->write(f, 0);
-  fprintf(f, " )");
+  of << indentation(indent)  << "( ";
+  this->a_expr_->write(of, 0);
+  of << " )";
   switch (this->op_)
     {
     case plus_t:
-      fprintf(f, " + ");
+      of << " + ";
       break;
     case minus_t:
-      fprintf(f, " - ");
+      of << " - ";
       break;
     default:
       {
@@ -822,9 +821,9 @@ void CCSTAdditiveExpr::write(FILE *f, int indent)
 	exit(0);
       }
     }
-  fprintf(f, "( ");
-  this->m_expr_->write(f, 0);
-  fprintf(f, " )");
+  of << "( ";
+  this->m_expr_->write(of, 0);
+  of << " )";
 }
 
 CCSTMultExpr::CCSTMultExpr()
@@ -839,26 +838,26 @@ CCSTMultExpr::CCSTMultExpr(mult_op op, CCSTMultExpr *m_expr, CCSTCastExpr *c_exp
   this->c_expr_ = c_expr;
 }
 
-void CCSTMultExpr::write(FILE *f, int indent)
+void CCSTMultExpr::write(std::ofstream& of, int indent)
 {
   if(this->m_expr_ == NULL || this->c_expr_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  fprintf(f, "%s( ", indentation(indent));
-  this->m_expr_->write(f, 0);
-  fprintf(f, " )");
+  of << indentation(indent)  << "( ";
+  this->m_expr_->write(of, 0);
+  of << " )";
   switch (this->op_)
     {
     case multiply_t:
-      fprintf(f, " * ");
+      of << " * ";
       break;
     case divide_t:
-      fprintf(f, " / ");
+      of << " / ";
       break;
     case mod_t:
-      fprintf(f, " %s ", "%");
+      of << " % ";
       break;
     default:
       {
@@ -866,9 +865,9 @@ void CCSTMultExpr::write(FILE *f, int indent)
 	exit(0);
       }
     }
-  fprintf(f, "( ");
-  this->c_expr_->write(f, 0);
-  fprintf(f, " )");
+  of << "( ";
+  this->c_expr_->write(of, 0);
+  of << " )";
 }
 
 CCSTCastExpr::CCSTCastExpr()
@@ -882,17 +881,17 @@ CCSTCastExpr::CCSTCastExpr(CCSTTypeName *cast_type, CCSTCastExpr *cast_expr)
   this->cast_expr_ = cast_expr;
 }
 
-void CCSTCastExpr::write(FILE *f, int indent)
+void CCSTCastExpr::write(std::ofstream& of, int indent)
 {
   if(this->cast_type_ == NULL || this->cast_expr_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  fprintf(f, "%s( ", indentation(indent));
-  this->cast_type_->write(f, 0);
-  fprintf(f, " )");
-  this->cast_expr_->write(f, 0);
+  of << indentation(indent)  << "( ";
+  this->cast_type_->write(of, 0);
+  of << " )";
+  this->cast_expr_->write(of, 0);
 }
 
 CCSTUnaryExprCastExpr::CCSTUnaryExprCastExpr(CCSTUnaryOp *unary_op, CCSTCastExpr *cast_expr)
@@ -901,15 +900,15 @@ CCSTUnaryExprCastExpr::CCSTUnaryExprCastExpr(CCSTUnaryOp *unary_op, CCSTCastExpr
   this->cast_expr_ = cast_expr;
 }
 
-void CCSTUnaryExprCastExpr::write(FILE *f, int indent)
+void CCSTUnaryExprCastExpr::write(std::ofstream& of, int indent)
 {
   if(this->unary_op_ == NULL || this->cast_expr_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  this->unary_op_->write(f, indent);
-  this->cast_expr_->write(f, 0);
+  this->unary_op_->write(of, indent);
+  this->cast_expr_->write(of, 0);
 }
 
 CCSTUnaryExprOpOp::CCSTUnaryExprOpOp(incr_decr_ops op, CCSTUnaryExpr *unary_expr)
@@ -918,7 +917,7 @@ CCSTUnaryExprOpOp::CCSTUnaryExprOpOp(incr_decr_ops op, CCSTUnaryExpr *unary_expr
   this->op_ = op;
 }
 
-void CCSTUnaryExprOpOp::write(FILE *f, int indent)
+void CCSTUnaryExprOpOp::write(std::ofstream& of, int indent)
 {
   if(this->unary_expr_ == NULL)
     {
@@ -928,10 +927,10 @@ void CCSTUnaryExprOpOp::write(FILE *f, int indent)
   switch (this->op_)
     {
     case increment_t:
-      fprintf(f, "%s++ ", indentation(indent));
+      of << indentation(indent) << "++ ";
       break;
     case decrement_t:
-      fprintf(f, "%s-- ", indentation(indent));
+      of << indentation(indent) << "-- ";
       break;
     default:
       {
@@ -939,7 +938,7 @@ void CCSTUnaryExprOpOp::write(FILE *f, int indent)
 	exit(0);
       }
     }
-  this->unary_expr_->write(f, 0);
+  this->unary_expr_->write(of, 0);
 }
 
 CCSTUnaryExprSizeOf::CCSTUnaryExprSizeOf(CCSTUnaryExpr *unary_expr)
@@ -954,21 +953,21 @@ CCSTUnaryExprSizeOf::CCSTUnaryExprSizeOf(CCSTTypeName *type_name)
   this->unary_expr_ = NULL;
 }
 
-void CCSTUnaryExprSizeOf::write(FILE *f, int indent)
+void CCSTUnaryExprSizeOf::write(std::ofstream& of, int indent)
 {
   if(this->unary_expr_ != NULL)
     {
-      fprintf(f, "%ssizeof", indentation(indent));
-      fprintf(f, "( ");
-      this->unary_expr_->write(f, 0);
-      fprintf(f, " )");
+      of << indentation(indent) << "sizeof";
+      of << "( ";
+      this->unary_expr_->write(of, 0);
+      of << " )";
     }
   else if(this->type_name_ != NULL)
     {
-      fprintf(f, "%ssizeof", indentation(indent));
-      fprintf(f, "( ");
-      this->type_name_->write(f, 0);
-      fprintf(f, " )");
+      of << indentation(indent) << "sizeof";
+      of << "( ";
+      this->type_name_->write(of, 0);
+      of << " )";
     }
   else
     {
@@ -984,22 +983,22 @@ CCSTPostFixExprOpOp::CCSTPostFixExprOpOp(CCSTPostFixExpr *post_fix_expr, incr_de
 }
 
 // is this correct?
-void CCSTPostFixExprOpOp::write(FILE *f, int indent)
+void CCSTPostFixExprOpOp::write(std::ofstream& of, int indent)
 {
   if(this->post_fix_expr_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  this->post_fix_expr_->write(f, indent);
-  fprintf(f, " ");
+  this->post_fix_expr_->write(of, indent);
+  of << " ";
   switch (this->op_)
     {
     case increment_t:
-      fprintf(f, "++");
+      of << "++";
       break;
     case decrement_t:
-      fprintf(f, "--");
+      of << "--";
       break;
     default:
       {
@@ -1009,28 +1008,28 @@ void CCSTPostFixExprOpOp::write(FILE *f, int indent)
     }
 }
 
-CCSTPostFixExprAccess::CCSTPostFixExprAccess(CCSTPostFixExpr *post_fix_expr, accessor op, const char * id)
+CCSTPostFixExprAccess::CCSTPostFixExprAccess(CCSTPostFixExpr *post_fix_expr, accessor op, const std::string& id)
 {
   this->post_fix_expr_ = post_fix_expr; 
   this->op_ = op;
   this->id_ = id;
 }
 
-void CCSTPostFixExprAccess::write(FILE *f, int indent)
+void CCSTPostFixExprAccess::write(std::ofstream& of, int indent)
 {
   if(this->post_fix_expr_ == 0x0 || this->id_ == "")
     {
       std::cout << "error\n";
       exit(0);
     }
-  this->post_fix_expr_->write(f, indent);
+  this->post_fix_expr_->write(of, indent);
   switch (this->op_)
     {
     case pointer_access_t:
-      fprintf(f, "->");
+      of << "->";
       break;
     case object_access_t:
-      fprintf(f, ".");
+      of << ".";
       break;
     default:
       {
@@ -1038,7 +1037,7 @@ void CCSTPostFixExprAccess::write(FILE *f, int indent)
 	exit(0);
       }
     }
-  fprintf(f, "%s", this->id_);
+  of << this->id_;
 }
 
 CCSTPostFixExprExpr::CCSTPostFixExprExpr(CCSTPostFixExpr *post_fix_expr, CCSTExpression *expr)
@@ -1047,17 +1046,17 @@ CCSTPostFixExprExpr::CCSTPostFixExprExpr(CCSTPostFixExpr *post_fix_expr, CCSTExp
   this->expr_ = expr;
 }
 
-void CCSTPostFixExprExpr::write(FILE *f, int indent)
+void CCSTPostFixExprExpr::write(std::ofstream& of, int indent)
 {
   if(this->post_fix_expr_ == NULL || this->expr_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  this->post_fix_expr_->write(f, indent);
-  fprintf(f, "[ ");
-  this->expr_->write(f, 0);
-  fprintf(f, " ]");
+  this->post_fix_expr_->write(of, indent);
+  of << "[ ";
+  this->expr_->write(of, 0);
+  of << " ]";
 }
 
 CCSTPostFixExprAssnExpr::CCSTPostFixExprAssnExpr(CCSTPostFixExpr *post_fix_expr, std::vector<CCSTAssignExpr*> args)
@@ -1066,7 +1065,7 @@ CCSTPostFixExprAssnExpr::CCSTPostFixExprAssnExpr(CCSTPostFixExpr *post_fix_expr,
   this->args_ = args;
 }
 
-void CCSTPostFixExprAssnExpr::write(FILE *f, int indent)
+void CCSTPostFixExprAssnExpr::write(std::ofstream& of, int indent)
 {
   if(this->post_fix_expr_ == NULL)
     {
@@ -1074,21 +1073,21 @@ void CCSTPostFixExprAssnExpr::write(FILE *f, int indent)
       exit(0);
     }
   
-  this->post_fix_expr_->write(f, indent);
-  fprintf(f, "(");
+  this->post_fix_expr_->write(of, indent);
+  of << "(";
   std::vector<CCSTAssignExpr*> args = this->args_;
   if(!args.empty())
     {
-      args.at(0)->write(f, 0);
+      args.at(0)->write(of, 0);
       
       for(std::vector<CCSTAssignExpr*>::iterator it = args.begin()+1; it != args.end(); ++it)
 	{
-	  fprintf(f,", ");
+	  of <<", ";
 	  CCSTAssignExpr *arg = *it;
-	  arg->write(f, 0);
+	  arg->write(of, 0);
 	 }
     }
-  fprintf(f, ")");
+  of << ")";
   
 }
 
@@ -1102,19 +1101,19 @@ CCSTPrimaryExpr::CCSTPrimaryExpr(CCSTExpression *expr)
   this->expr_ = expr;
 }
 
-void CCSTPrimaryExpr::write(FILE *f, int indent)
+void CCSTPrimaryExpr::write(std::ofstream& of, int indent)
 {
   if(this->expr_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  fprintf(f, "%s( ", indentation(indent));
-  this->expr_->write(f, 0);
-  fprintf(f, " )");
+  of << indentation(indent)  << "( ";
+  this->expr_->write(of, 0);
+  of << " )";
 }
 
-CCSTString::CCSTString(const char* string)
+CCSTString::CCSTString(const std::string& string)
 {
   this->string_ = string;
 }
@@ -1124,10 +1123,10 @@ CCSTString::CCSTString()
   //todo
 }
 
-void CCSTString::write(FILE *f, int indent)
+void CCSTString::write(std::ofstream& of, int indent)
 {
   // how should this be stored exactly?
-  fprintf(f, "%s\"%s\"", indentation(indent), this->string_);
+  of << indentation(indent) << "\"" << this->string_ << "\"";
 }
 
 CCSTPrimaryExprId::CCSTPrimaryExprId()
@@ -1135,14 +1134,14 @@ CCSTPrimaryExprId::CCSTPrimaryExprId()
   //todo
 }
 
-CCSTPrimaryExprId::CCSTPrimaryExprId(const char* id)
+CCSTPrimaryExprId::CCSTPrimaryExprId(const std::string& id)
 {
   this->id_ = id;
 }
 
-void CCSTPrimaryExprId::write(FILE *f, int indent)
+void CCSTPrimaryExprId::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%s%s", indentation(indent), this->id_);
+  of << indentation(indent) << this->id_;
 }
 
 CCSTInteger::CCSTInteger()
@@ -1155,9 +1154,9 @@ CCSTInteger::CCSTInteger(int i)
   this->integer_ = i;
 }
 
-void CCSTInteger::write(FILE *f, int indent)
+void CCSTInteger::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%s%d", indentation(indent), this->integer_);
+  of << indentation(indent) << this->integer_;
 }
 
 CCSTChar::CCSTChar()
@@ -1170,9 +1169,9 @@ CCSTChar::CCSTChar(char c)
   this->c_ = c;
 }
 
-void CCSTChar::write(FILE *f, int indent)
+void CCSTChar::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%s%c", indentation(indent), this->c_);
+  of << indentation(indent) << this->c_;
 }
 
 CCSTFloat::CCSTFloat(float f)
@@ -1192,19 +1191,19 @@ CCSTFloat::CCSTFloat()
   //todo
 }
 
-void CCSTFloat::write(FILE *f, int indent)
+void CCSTFloat::write(std::ofstream& of, int indent)
 {
   if(float_)
     {
-      fprintf(f, "%s%f", indentation(indent), this->f_);
+      of << indentation(indent) << this->f_;
     }
   else
     {
-      fprintf(f, "%s%f", indentation(indent), this->d_);
+      of << indentation(indent) << this->d_;
     }
 }
 
-CCSTEnumConst::CCSTEnumConst(const char* enum_val)
+CCSTEnumConst::CCSTEnumConst(const std::string& enum_val)
 {
   this->enum_val_ = enum_val;
 }
@@ -1214,9 +1213,9 @@ CCSTEnumConst::CCSTEnumConst()
   //todo
 }
 
-void CCSTEnumConst::write(FILE *f, int indent)
+void CCSTEnumConst::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%s%s", indentation(indent), this->enum_val_);
+  of << indentation(indent) << this->enum_val_;
 }
 
 CCSTExpression::CCSTExpression()
@@ -1229,12 +1228,12 @@ CCSTExpression::CCSTExpression(std::vector<CCSTAssignExpr*> assn)
   this->assn_exprs_ = assn;
 }
 
-void CCSTExpression::write(FILE *f, int indent)
+void CCSTExpression::write(std::ofstream& of, int indent)
 {
    for(std::vector<CCSTAssignExpr*>::iterator it = assn_exprs_.begin(); it != assn_exprs_.end(); ++it)
 	{
 	  CCSTAssignExpr *assn = *it;
-	  assn->write(f, indent);
+	  assn->write(of, indent);
 	}
 }
 
@@ -1252,18 +1251,18 @@ CCSTAssignExpr::CCSTAssignExpr(CCSTUnaryExpr *unary_expr, CCSTAssignOp *assn_op,
   this->assn_expr_ = assn_expr;
 }
 
-void CCSTAssignExpr::write(FILE *f, int indent)
+void CCSTAssignExpr::write(std::ofstream& of, int indent)
 {
   if(this->unary_expr_ == NULL || this->assn_op_ == NULL || this->assn_expr_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  this->unary_expr_->write(f, indent);
-  fprintf(f, " ");
-  this->assn_op_->write(f, 0);
-  fprintf(f, " ");
-  this->assn_expr_->write(f, 0);
+  this->unary_expr_->write(of, indent);
+  of << " ";
+  this->assn_op_->write(of, 0);
+  of << " ";
+  this->assn_expr_->write(of, 0);
 }
 
 CCSTAssignOp::CCSTAssignOp(assign_op op)
@@ -1276,42 +1275,42 @@ CCSTAssignOp::CCSTAssignOp()
   //todo
 }
 
-void CCSTAssignOp::write(FILE *f, int indent)
+void CCSTAssignOp::write(std::ofstream& of, int indent)
 {
   switch (this->op_)
     {
     case equal_t:
-      fprintf(f, "=");
+      of << "=";
       break;
     case mult_eq_t:
-      fprintf(f, "*=");
+      of << "*=";
       break;
     case div_eq_t:
-      fprintf(f, "/=");
+      of << "/=";
       break;
     case mod_eq_t:
-      fprintf(f, "%s", "%=");
+      of << "%=";
       break;
     case plus_eq_t:
-      fprintf(f, "+=");
+      of << "+=";
       break;
     case minus_eq_t:
-      fprintf(f, "-=");
+      of << "-=";
       break;
     case lshift_eq_t:
-      fprintf(f, "<<=");
+      of << "<<=";
       break;
     case rshift_eq_t:
-      fprintf(f, ">>=");
+      of << ">>=";
       break;
     case and_eq_t:
-      fprintf(f, "&=");
+      of << "&=";
       break;
     case xor_eq_t:
-      fprintf(f, "^=");
+      of << "^=";
       break;
     case or_eq_t:
-      fprintf(f, "|=");
+      of << "|=";
       break;
     default:
       {
@@ -1331,27 +1330,27 @@ CCSTUnaryOp::CCSTUnaryOp()
   
 }
 
-void CCSTUnaryOp::write(FILE *f, int indent)
+void CCSTUnaryOp::write(std::ofstream& of, int indent)
 {
   switch (this->op_)
     {
     case unary_bit_and_t:
-      fprintf(f, "&");
+      of << "&";
       break;
     case unary_mult_t:
-      fprintf(f, "*");
+      of << "*";
       break;
     case unary_plus_t:
-      fprintf(f, "+");
+      of << "+";
       break;
     case unary_minus_t:
-      fprintf(f, "-");
+      of << "-";
       break;
     case unary_tilde_t:
-      fprintf(f, "~");
+      of << "~";
       break;
     case unary_bang_t:
-      fprintf(f, "!");
+      of << "!";
       break;
     default:
       {
@@ -1372,17 +1371,17 @@ CCSTTypeName::CCSTTypeName(std::vector<CCSTSpecifierQual*> spec_quals, CCSTAbstD
   this->abs_dec_ = abs_dec;
 }
 
-void CCSTTypeName::write(FILE *f, int indent)
+void CCSTTypeName::write(std::ofstream& of, int indent)
 {
    for(std::vector<CCSTSpecifierQual*>::iterator it = spec_quals_.begin(); it != spec_quals_.end(); ++it)
 	{
 	  CCSTSpecifierQual *qual = *it;
-	  qual->write(f, 0);
-	  fprintf(f, " ");
+	  qual->write(of, 0);
+	  of << " ";
 	}
    if(this->abs_dec_ != NULL)
      {
-       this->abs_dec_->write(f, 0);
+       this->abs_dec_->write(of, 0);
      }
 }
 
@@ -1397,16 +1396,16 @@ CCSTParamTypeList::CCSTParamTypeList(CCSTParamList *p_list, bool ellipsis)
   this->ellipsis_ = ellipsis;
 }
 
-void CCSTParamTypeList::write(FILE *f, int indent)
+void CCSTParamTypeList::write(std::ofstream& of, int indent)
 {
   if(this->p_list_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  this->p_list_->write(f, indent);
-  fprintf(f, " , ");
-  fprintf(f, "...");
+  this->p_list_->write(of, indent);
+  of << " , ";
+  of << "...";
 }
 
 CCSTParamList::CCSTParamList()
@@ -1419,17 +1418,17 @@ CCSTParamList::CCSTParamList(std::vector<CCSTParamDeclaration*> p_dec)
   this->p_dec_ = p_dec;
 }
 
-void CCSTParamList::write(FILE *f, int indent)
+void CCSTParamList::write(std::ofstream& of, int indent)
 {
   if(!p_dec_.empty())
     {
-      p_dec_.at(0)->write(f, indent);
+      p_dec_.at(0)->write(of, indent);
       
       for(std::vector<CCSTParamDeclaration*>::iterator it = p_dec_.begin()+1; it != p_dec_.end(); ++it)
 	{
-	  fprintf(f,", ");
+	  of <<", ";
 	  CCSTParamDeclaration *dec = *it;
-	  dec->write(f, 0);
+	  dec->write(of, 0);
 	}
     }
 }
@@ -1460,12 +1459,12 @@ CCSTParamDeclaration::CCSTParamDeclaration(std::vector<CCSTDecSpecifier*> dec_sp
   this->dec_ = NULL;
 }
 
-void CCSTParamDeclaration::write(FILE *f, int indent)
+void CCSTParamDeclaration::write(std::ofstream& of, int indent)
 {
   for(std::vector<CCSTDecSpecifier*>::iterator it = dec_specs_.begin(); it != dec_specs_.end(); ++it)
     {
       CCSTDecSpecifier *spec = *it;
-      spec->write(f, 0);
+      spec->write(of, 0);
     }
   
   if(this->dec_ == NULL && this->abs_dec_ == NULL)
@@ -1479,11 +1478,11 @@ void CCSTParamDeclaration::write(FILE *f, int indent)
 	  std::cout << "error\n";
 	  exit(0);
 	}
-      this->abs_dec_->write(f, 0);
+      this->abs_dec_->write(of, 0);
     }
   else
     {
-      this->dec_->write(f, 0);
+      this->dec_->write(of, 0);
     }
   
 }
@@ -1499,18 +1498,18 @@ CCSTAbstDeclarator::CCSTAbstDeclarator(CCSTPointer *p, CCSTDirectAbstDeclarator 
   this->d_abs_dec_ = d_abs_dec;
 }
 
-void CCSTAbstDeclarator::write(FILE *f, int indent)
+void CCSTAbstDeclarator::write(std::ofstream& of, int indent)
 {
   if(this->p_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  this->p_->write(f, indent);
-  fprintf(f, " ");
+  this->p_->write(of, indent);
+  of << " ";
   if(this->d_abs_dec_ != NULL)
     {
-      this->d_abs_dec_->write(f, 0);
+      this->d_abs_dec_->write(of, 0);
     }
 }
 
@@ -1536,7 +1535,7 @@ CCSTDirectAbstDeclarator::CCSTDirectAbstDeclarator(CCSTDirectAbstDeclarator *d_a
   this->param_type_list_ = param_type_list;
 }
 
-void CCSTDirectAbstDeclarator::write(FILE *f, int indent)
+void CCSTDirectAbstDeclarator::write(std::ofstream& of, int indent)
 {
   /*
     <direct-abstract-declarator> ::=  ( <abstract-declarator> )
@@ -1546,9 +1545,9 @@ void CCSTDirectAbstDeclarator::write(FILE *f, int indent)
   // TODO
   if(this->d_abs_dec_ == NULL && this->const_expr_ == NULL && this->param_type_list_ == NULL)
     {
-      fprintf(f, "%s( ", indentation(indent));
-      this->abs_dec_->write(f, 0);
-      fprintf(f, " )");
+      of << indentation(indent)  << "( ";
+      this->abs_dec_->write(of, 0);
+      of << " )";
     }
   else
     {
@@ -1557,7 +1556,7 @@ void CCSTDirectAbstDeclarator::write(FILE *f, int indent)
 	  std::cout << "error\n";
 	  exit(0);
 	}
-      this->d_abs_dec_->write(f, indent);
+      this->d_abs_dec_->write(of, indent);
       if(this->const_expr_ == NULL)
 	{
 	  
@@ -1566,26 +1565,26 @@ void CCSTDirectAbstDeclarator::write(FILE *f, int indent)
 	      std::cout << "error\n";
 	      exit(0);
 	    }
-	  fprintf(f, "%s( ", indentation(indent));
-	  this->param_type_list_->write(f, 0);
-	  fprintf(f, " )");
+	  of << indentation(indent)  << "( ";
+	  this->param_type_list_->write(of, 0);
+	  of << " )";
 	}
       else
 	{
-	  fprintf(f, "%s[ ", indentation(indent));
-	  this->const_expr_->write(f, 0);
-	  fprintf(f, " ] ");
+	  of << indentation(indent) << "[ ";
+	  this->const_expr_->write(of, 0);
+	  of << " ] ";
 	}
     }
 }
 
-CCSTEnumSpecifier::CCSTEnumSpecifier(const char* id, CCSTEnumeratorList *el)
+CCSTEnumSpecifier::CCSTEnumSpecifier(const std::string& id, CCSTEnumeratorList *el)
 {
   this->id_ = id; 
   this->el_ = el;
 }
 
-CCSTEnumSpecifier::CCSTEnumSpecifier(const char* id)
+CCSTEnumSpecifier::CCSTEnumSpecifier(const std::string& id)
 {
   this->id_ = id;
   this->el_ = NULL;
@@ -1602,20 +1601,20 @@ CCSTEnumSpecifier::CCSTEnumSpecifier()
   //todo
 }
 
-void CCSTEnumSpecifier::write(FILE *f, int indent)
+void CCSTEnumSpecifier::write(std::ofstream& of, int indent)
 {
   if(this->el_ == NULL)
     {
-      fprintf(f, "%senum ", indentation(indent));
-      fprintf(f, "%s", this->id_);
+      of << indentation(indent) << "enum ";
+      of << this->id_;
     }
   else
     {
-      fprintf(f, "%senum ", indentation(indent));
-      fprintf(f, "%s", this->id_);
-      fprintf(f, " {\n");
-      this->el_->write(f, 1);
-      fprintf(f, "\n}");
+      of << indentation(indent) << "enum ";
+      of << this->id_;
+      of << " {\n";
+      this->el_->write(of, 1);
+      of << "\n}";
     }
 }
 
@@ -1629,81 +1628,81 @@ CCSTEnumeratorList::CCSTEnumeratorList(std::vector<CCSTEnumerator*> *list)
   this->list_ = list;
 }
 
-void CCSTEnumeratorList::write(FILE *f, int indent)
+void CCSTEnumeratorList::write(std::ofstream& of, int indent)
 {
   if(!list_->empty())
     {
-      list_->at(0)->write(f, indent);
+      list_->at(0)->write(of, indent);
       for(std::vector<CCSTEnumerator*>::iterator it = list_->begin()+1; it != list_->end(); ++it)
 	{
-	  fprintf(f, ",\n");
+	  of << ",\n";
 	  CCSTEnumerator *l = *it;
-	  l->write(f, indent);
+	  l->write(of, indent);
 	}
     }
 }
 
-CCSTEnumerator::CCSTEnumerator(const char* id, CCSTConstExpr *ce)
+CCSTEnumerator::CCSTEnumerator(const std::string& id, CCSTConstExpr *ce)
 {
   this->id_ = id; 
   this->ce_ = ce;
 }
 
-CCSTEnumerator::CCSTEnumerator(const char* id)
+CCSTEnumerator::CCSTEnumerator(const std::string& id)
 {
   this->id_ = id; 
   this->ce_ = NULL;
 }
 
-void CCSTEnumerator::write(FILE *f, int indent)
+void CCSTEnumerator::write(std::ofstream& of, int indent)
 {
   if(this->ce_ == NULL)
     {
-      fprintf(f, "%s%s", indentation(indent), this->id_);
+      of << indentation(indent) << this->id_;
     }
   else
     {
-      fprintf(f, "%s%s", indentation(indent), this->id_);
-      fprintf(f, " = ");
-      this->ce_->write(f, 0);
+      of << indentation(indent) << this->id_;
+      of << " = ";
+      this->ce_->write(of, 0);
     }
 }
 
-CCSTTypedefName::CCSTTypedefName(const char* name)
+CCSTTypedefName::CCSTTypedefName(const std::string& name)
 {
   this->id_ = name;
 }
 
-void CCSTTypedefName::write(FILE *f, int indent)
+void CCSTTypedefName::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%s%s", this->id_, indentation(indent));
+  of << this->id_ << indentation(indent);
 }
 
 
-void CCSTDeclaration::write(FILE *f, int indent)
+void CCSTDeclaration::write(std::ofstream& of, int indent)
 {
   for(std::vector<CCSTDecSpecifier*>::iterator it = specifier_.begin(); it != specifier_.end(); ++it)
     {
       CCSTDecSpecifier *dec_spec = *it;
-      dec_spec->write(f, indent);
-      //fprintf(f, " ");
+      dec_spec->write(of, indent);
+      //of << " ";
     }
 
 
   for(std::vector<CCSTMacro*>::iterator it = attributes_.begin(); it != attributes_.end(); ++it) {
     CCSTMacro *mac = *it;
     std::cout << "--> Writing linkage attribute\n";
-    mac->write(f, 0);
+    mac->write(of, 0);
   }
 
   for(std::vector<CCSTInitDeclarator*>::iterator it = decs_.begin(); it != decs_.end(); ++it)
     {
       CCSTInitDeclarator *init_dec = *it;
-      init_dec->write(f, 0);
-      //fprintf(f, " ");
+      init_dec->write(of, 0);
+      //of << " ";
     }
-  fprintf(f, ";");
-  fprintf(f, "\n");
+  of << ";";
+  of << "\n";
 }
 
 CCSTInitDeclarator::CCSTInitDeclarator(CCSTDeclarator *dec, CCSTInitializer *init)
@@ -1718,7 +1717,7 @@ CCSTInitDeclarator::CCSTInitDeclarator(CCSTDeclarator *dec)
   this->init_ = NULL;
 }
 
-void CCSTInitDeclarator::write(FILE *f, int indent)
+void CCSTInitDeclarator::write(std::ofstream& of, int indent)
 {
   // does inheritence cover just declarator case?
   if(this->dec_ == NULL || this->init_ == NULL)
@@ -1726,9 +1725,9 @@ void CCSTInitDeclarator::write(FILE *f, int indent)
       std::cout << "error\n";
       exit(0);
     }
-  this->dec_->write(f, indent);
-  fprintf(f, " = ");
-  this->init_->write(f, 0);
+  this->dec_->write(of, indent);
+  of << " = ";
+  this->init_->write(of, 0);
 }
 
 CCSTInitializer::CCSTInitializer(CCSTAssignExpr *assn_expr)
@@ -1743,7 +1742,7 @@ CCSTInitializer::CCSTInitializer(CCSTInitializerList *init_list)
   this->assn_expr_ = 0x0;
 }
 
-void CCSTInitializer::write(FILE *f, int indent)
+void CCSTInitializer::write(std::ofstream& of, int indent)
 {
   /*
     
@@ -1760,13 +1759,13 @@ void CCSTInitializer::write(FILE *f, int indent)
 	  std::cout << "error\n";
 	  exit(0);
 	}
-      fprintf(f, "%s{ ", indentation(indent));
-      this->init_list_->write(f, 0);
-      fprintf(f, " }");
+      of << indentation(indent) << "{ ";
+      this->init_list_->write(of, 0);
+      of << " }";
     }
   else
     {
-      this->assn_expr_->write(f, indent);
+      this->assn_expr_->write(of, indent);
     }
 }
 
@@ -1780,37 +1779,37 @@ CCSTInitializerList::CCSTInitializerList(std::vector<CCSTInitializer*> init_list
   this->init_list_ = init_list;
 }
 
-void CCSTInitializerList::write(FILE *f, int indent)
+void CCSTInitializerList::write(std::ofstream& of, int indent)
 {
   // TODO
   for(std::vector<CCSTInitializer*>::iterator it = init_list_.begin(); it != init_list_.end(); ++it)
     {
       CCSTInitializer *init = *it;
-      init->write(f, 0);
-      fprintf(f, ", ");
+      init->write(of, 0);
+      of << ", ";
     }
   
 }
 
-CCSTPreprocessor::CCSTPreprocessor(const char *path, bool relative)
+CCSTPreprocessor::CCSTPreprocessor(const std::string&path, bool relative)
 {
   this->pathname = new std::string(path);
   this->relative = relative;
 }
 
-void CCSTPreprocessor::write(FILE *f, int indent)
+void CCSTPreprocessor::write(std::ofstream& of, int indent)
 {
-	fprintf(f, "#include ");
+	of << "#include ";
 	if (this->relative)
-		fprintf(f, "\"");
+		of << "\"";
 	else
-		fprintf(f, "<");
-	fprintf(f, "%s", this->pathname->c_str());
+		of << "<";
+	of << this->pathname;
 
 	if (this->relative)
-		fprintf(f, "\"\n");
+		of << "\"\n";
 	else
-		fprintf(f, ">\n");
+		of << ">\n";
 }
 
 CCSTCompoundStatement::CCSTCompoundStatement(std::vector<CCSTDeclaration*> decs, std::vector<CCSTStatement*> s)
@@ -1819,34 +1818,34 @@ CCSTCompoundStatement::CCSTCompoundStatement(std::vector<CCSTDeclaration*> decs,
   this->statements_ = s;
 }
 
-void CCSTCompoundStatement::write(FILE *f, int indent)
+void CCSTCompoundStatement::write(std::ofstream& of, int indent)
 {
 
   for(std::vector<CCSTDeclaration*>::iterator it = this->declarations_.begin(); it != declarations_.end(); ++it)
     {
       CCSTDeclaration *dec = *it;
       
-      dec->write(f, indent);
-      //    fprintf(f, "\n");
+      dec->write(of, indent);
+      //    of << "\n";
     }
   for(std::vector<CCSTStatement*>::iterator it = this->statements_.begin(); it != statements_.end(); ++it)
     {
       CCSTStatement *state = *it;
-      state->write(f, indent);
-      //   fprintf(f, "\n");
+      state->write(of, indent);
+      //   of << "\n";
     }
 }
 
-CCSTPlainLabelStatement::CCSTPlainLabelStatement(const char* id, CCSTStatement *stmnt)
+CCSTPlainLabelStatement::CCSTPlainLabelStatement(const std::string& id, CCSTStatement *stmnt)
 {
   this->id_ = id; 
   this->stmnt_ = stmnt;
 }
 
-void CCSTPlainLabelStatement::write(FILE *f, int indent)
+void CCSTPlainLabelStatement::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%s:\n", this->id_);
-  this->stmnt_->write(f, indent);
+  of << this->id_ << ":\n";
+  this->stmnt_->write(of, indent);
 }
 
 CCSTCaseStatement::CCSTCaseStatement(CCSTCondExpr *c, CCSTStatement *body)
@@ -1855,20 +1854,20 @@ CCSTCaseStatement::CCSTCaseStatement(CCSTCondExpr *c, CCSTStatement *body)
   this->body_ = body;
 }
 
-void CCSTCaseStatement::write(FILE *f, int indent)
+void CCSTCaseStatement::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%scase ", indentation(indent));
-  this->case_label_->write(f, 0);
-  fprintf(f, ":\n");
-  this->body_->write(f, indent+1);
-  fprintf(f, "\n");
+  of << indentation(indent) << "case ";
+  this->case_label_->write(of, 0);
+  of << ":\n";
+  this->body_->write(of, indent+1);
+  of << "\n";
 }
 
-void CCSTDefaultLabelStatement::write(FILE *f, int indent)
+void CCSTDefaultLabelStatement::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%sdefault:\n", indentation(indent));
-  this->body_->write(f, indent+1);
-  fprintf(f, "\n");
+  of << indentation(indent) << "default:\n";
+  this->body_->write(of, indent+1);
+  of << "\n";
 }
 
 CCSTDefaultLabelStatement::CCSTDefaultLabelStatement(CCSTStatement* body)
@@ -1885,14 +1884,14 @@ CCSTExprStatement::CCSTExprStatement(CCSTExpression *expr)
   this->expr_ = expr;
 }
 
-void CCSTExprStatement::write(FILE *f, int indent)
+void CCSTExprStatement::write(std::ofstream& of, int indent)
 {
   // weird why the semicolon with no expression
   if(this->expr_ != NULL)
     {
-      this->expr_->write(f, indent);
+      this->expr_->write(of, indent);
     }
-  fprintf(f, ";\n");
+  of << ";\n";
 }
 
 CCSTIfStatement::CCSTIfStatement(CCSTExpression *cond, CCSTStatement *body)
@@ -1901,18 +1900,18 @@ CCSTIfStatement::CCSTIfStatement(CCSTExpression *cond, CCSTStatement *body)
   this->body_ = body;
 }
 
-void CCSTIfStatement::write(FILE *f, int indent)
+void CCSTIfStatement::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%sif (", indentation(indent));
+  of << indentation(indent) << "if (";
   if(this->cond_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  this->cond_->write(f, 0);
-  fprintf(f, ") {\n");
-  this->body_->write(f, indent+1);
-  fprintf(f, "%s}\n", indentation(indent));
+  this->cond_->write(of, 0);
+  of << ") {\n";
+  this->body_->write(of, indent+1);
+  of << indentation(indent) << "}\n";
 }
 
 CCSTIfElseStatement::CCSTIfElseStatement(CCSTExpression *cond, CCSTStatement *if_body, CCSTStatement *else_body)
@@ -1922,25 +1921,25 @@ CCSTIfElseStatement::CCSTIfElseStatement(CCSTExpression *cond, CCSTStatement *if
   this->else_body_ = else_body;
 }
 
-void CCSTIfElseStatement::write(FILE *f, int indent)
+void CCSTIfElseStatement::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%sif", indentation(indent));
-  fprintf(f, "( ");
+  of << indentation(indent) << "if";
+  of << "( ";
   if(this->cond_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  this->cond_->write(f, 0);
-  fprintf(f, " )");
-  fprintf(f, " {\n");
-  this->if_body_->write(f, indent+1);
-  fprintf(f, "\n");
-  fprintf(f, "%s}", indentation(indent));
-  fprintf(f, " else");
-  fprintf(f, " {\n");
-  this->else_body_->write(f, indent+1);
-  fprintf(f, "\n%s}\n", indentation(indent));
+  this->cond_->write(of, 0);
+  of << " )";
+  of << " {\n";
+  this->if_body_->write(of, indent+1);
+  of << "\n";
+  of << indentation(indent) << "}";
+  of << " else";
+  of << " {\n";
+  this->else_body_->write(of, indent+1);
+  of << "\n" << indentation(indent) << "}\n";
 }
 
 CCSTSwitchStatement::CCSTSwitchStatement(CCSTExpression *expr, CCSTStatement *body)
@@ -1949,20 +1948,20 @@ CCSTSwitchStatement::CCSTSwitchStatement(CCSTExpression *expr, CCSTStatement *bo
   this->body_ = body;
 }
 
-void CCSTSwitchStatement::write(FILE *f, int indent)
+void CCSTSwitchStatement::write(std::ofstream& of, int indent)
 {
   if(this->expr_ == NULL)
     {
       std::cout << "error\n";
       exit(0);
     }
-  fprintf(f, "%sswitch ", indentation(indent));
-  fprintf(f, "(");
-  this->expr_->write(f, 0);
-  fprintf(f, ")");
-  fprintf(f, " {\n");
-  this->body_->write(f, indent+1); // all cases?
-  fprintf(f, "%s}\n", indentation(indent));
+  of << indentation(indent) << "switch ";
+  of << "(";
+  this->expr_->write(of, 0);
+  of << ")";
+  of << " {\n";
+  this->body_->write(of, indent+1); // all cases?
+  of << indentation(indent) << "}\n";
 }
 
 CCSTWhileLoop::CCSTWhileLoop(CCSTExpression *cond, CCSTStatement *body)
@@ -1971,16 +1970,16 @@ CCSTWhileLoop::CCSTWhileLoop(CCSTExpression *cond, CCSTStatement *body)
   this->body_ = body;
 }
 
-void CCSTWhileLoop::write(FILE *f, int indent)
+void CCSTWhileLoop::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%swhile", indentation(indent));
-  fprintf(f, "( ");
-  this->cond_->write(f, 0);
-  fprintf(f, " )");
-  fprintf(f, " {\n");
-  this->body_->write(f, indent+1);
-  fprintf(f, "\n");
-  fprintf(f, "%s}", indentation(indent));
+  of << indentation(indent) << "while";
+  of << "( ";
+  this->cond_->write(of, 0);
+  of << " )";
+  of << " {\n";
+  this->body_->write(of, indent+1);
+  of << "\n";
+  of << indentation(indent) << "}";
 }
 
 CCSTDoLoop::CCSTDoLoop(CCSTStatement *body, CCSTExpression *cond)
@@ -1989,17 +1988,17 @@ CCSTDoLoop::CCSTDoLoop(CCSTStatement *body, CCSTExpression *cond)
   this->cond_ = cond;
 }
 
-void CCSTDoLoop::write(FILE *f, int indent)
+void CCSTDoLoop::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%sdo ", indentation(indent));
-  fprintf(f, "{\n");
-  this->body_->write(f, indent+1);
-  fprintf(f, "\n%s} ", indentation(indent));
-  fprintf(f, "while");
-  fprintf(f, "( ");
-  this->cond_->write(f, 0);
-  fprintf(f, " )");
-  fprintf(f, ";\n");
+  of << indentation(indent) << "do ";
+  of << "{\n";
+  this->body_->write(of, indent+1);
+  of << "\n" << indentation(indent) << "} ";
+  of << "while";
+  of << "( ";
+  this->cond_->write(of, 0);
+  of << " )";
+  of << ";\n";
 }
 
 CCSTForLoop::CCSTForLoop(CCSTExpression *init, CCSTExpression *cond, CCSTExpression *up, CCSTStatement *body)
@@ -2010,48 +2009,48 @@ CCSTForLoop::CCSTForLoop(CCSTExpression *init, CCSTExpression *cond, CCSTExpress
   this->body_ = body;
 }
 
-void CCSTForLoop::write(FILE *f, int indent)
+void CCSTForLoop::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%sfor (", indentation(indent));
+  of << indentation(indent) << "for (";
   if(this->init_ != NULL)
-    this->init_->write(f, 0);
-  fprintf(f, ";");
+    this->init_->write(of, 0);
+  of << ";";
   if(this->cond_ != NULL)
-    this->cond_->write(f, 0);
-  fprintf(f, ";");
+    this->cond_->write(of, 0);
+  of << ";";
   if(this->up_ != NULL)
-    this->up_->write(f, 0);
-  fprintf(f, ") {\n");
-  this->body_->write(f, indent+1);
-  fprintf(f, "%s}\n", indentation(indent));
+    this->up_->write(of, 0);
+  of << ") {\n";
+  this->body_->write(of, indent+1);
+  of << indentation(indent) << "}\n";
 }
 
-CCSTGoto::CCSTGoto(const char* id)
+CCSTGoto::CCSTGoto(const std::string& id)
 {
   this->identifier_ = id;
 }
 
-void CCSTGoto::write(FILE *f, int indent)
+void CCSTGoto::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%sgoto %s;\n", indentation(indent), this->identifier_);
+  of << indentation(indent) << "goto " << this->identifier_ << ";\n";
 }
 
 CCSTContinue::CCSTContinue()
 {
 }
 
-void CCSTContinue::write(FILE *f, int indent)
+void CCSTContinue::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%scontinue;", indentation(indent));// write continue ;
+  of << indentation(indent) << "continue;" ;// write continue ;
 }
 
 CCSTBreak::CCSTBreak()
 {
 }
 
-void CCSTBreak::write(FILE *f, int indent)
+void CCSTBreak::write(std::ofstream& of, int indent)
 {
-  fprintf(f, "%sbreak;", indentation(indent));
+  of << indentation(indent) << "break;";
 }
 
 CCSTReturn::CCSTReturn()
@@ -2063,50 +2062,47 @@ CCSTReturn::CCSTReturn(CCSTExpression *expr)
   this->expr_ = expr;
 }
 
-void CCSTReturn::write(FILE *f, int indent)
+void CCSTReturn::write(std::ofstream& of, int indent)
 {
   if(this->expr_ == NULL)
     {
-      fprintf(f, "%sreturn;", indentation(indent));
+      of << indentation(indent)  << "return;";
     }
   else
     {
-      fprintf(f, "%sreturn ", indentation(indent));
-      this->expr_->write(f, 0);
-      fprintf(f, ";\n");
+      of << indentation(indent) << "return ";
+      this->expr_->write(of, 0);
+      of << ";\n";
     }
 }
 
-void CCSTMacro::write(FILE *f, int indent)
+void CCSTMacro::write(std::ofstream& of, int indent)
 {
   std::vector<CCSTAssignExpr*> args = this->data_args;
 
-  fprintf(f, "%s%s(", indentation(indent), this->macro_name->c_str());
+  of << indentation(indent) << this->macro_name << "(";
 
   if(!args.empty())
     {
-      args.at(0)->write(f, 0);
+      args.at(0)->write(of, 0);
 
       for(std::vector<CCSTAssignExpr*>::iterator it = args.begin()+1; it != args.end(); ++it)
 	  {
-	    fprintf(f,", ");
+	    of <<", ";
 	    CCSTAssignExpr *arg = *it;
-	    arg->write(f, 0);
+	    arg->write(of, 0);
 	  }
     }
   if (this->is_terminal)
-	  fprintf(f, ");\n");
+	  of << ");\n";
   else
-	  fprintf(f, ")\n");
+	  of << ")\n";
 }
 
 // FIXME: How to handle this efficiently for multiple
 // levels? Surely we cannot waste memory by allocating.
 // May be some macro magic?
-
-#define INDENT_LEVEL_MAX	9
-
-const char* indents[INDENT_LEVEL_MAX] = {
+const std::vector<std::string> indents = {
 "",			    //0
 "\t",			    //1
 "\t\t",			    //2
@@ -2118,10 +2114,10 @@ const char* indents[INDENT_LEVEL_MAX] = {
 "\t\t\t\t\t\t\t\t"	//8
 };
 
-const char *indentation(int level)
+const std::string indentation(unsigned int level)
 {
-  if (level <= INDENT_LEVEL_MAX)
+  if (level < indents.size())
     return indents[level];
   else
-    return indents[INDENT_LEVEL_MAX];
+    return indents.back();
 }

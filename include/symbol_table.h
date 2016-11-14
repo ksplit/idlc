@@ -10,14 +10,14 @@
 class SymbolTable 
 {
   unsigned int last_tmp_;
-  std::vector<const char*> symbols_;
+  std::vector<std::string> symbols_;
  public:
   SymbolTable();
-  SymbolTable(std::vector<const char*> symbols);
-  const char* unique_tmp();
-  bool contains(const char *symbol);
-  int insert(const char *symbol);
-  int insert(std::vector<const char*> symbols);
+  SymbolTable(std::vector<std::string>& symbols);
+  const std::string& unique_tmp();
+  bool contains(const std::string& symbol);
+  int insert(const std::string& symbol);
+  int insert(const std::vector<std::string>& symbols);
   std::string to_string(int value);
 };
 
