@@ -232,7 +232,8 @@ void Rpc::prepare_marshal()
   
 
   // assign register(s) to return value
-  out_params.push_back(this->explicit_return_);
+  if (this->explicit_return_->type()->num() != VOID_TYPE)
+    out_params.push_back(this->explicit_return_);
   if(this->explicit_return_->type()->num() == PROJECTION_TYPE || this->explicit_return_->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(this->explicit_return_->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection failed\n");
