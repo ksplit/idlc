@@ -1,7 +1,129 @@
 #include "code_gen.h"
 
+
+CCSTStatement* marshal_void_pointer(Variable *v) {
+  std::vector<CCSTDeclaration*> declarations;
+  std::vector<CCSTStatement*> statements;
+
+  std::vector<CCSTDecSpecifier*> spec_ull;
+  std::vector<CCSTSpecifierQual*> spec_ull2;
+  std::vector<CCSTDecSpecifier*> spec_int;
+  std::vector<CCSTDecSpecifier*> spec_cptr;
+
+  std::vector<CCSTInitDeclarator*> decs_sz;
+  std::vector<CCSTInitDeclarator*> decs_off;
+  std::vector<CCSTInitDeclarator*> decs_cptr;
+  std::vector<CCSTInitDeclarator*> decs_sret;
+
+  spec_cptr.push_back(new CCSTTypedefName("cptr_t"));
+
+  spec_ull.push_back(
+    new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::UnsignedTypeSpec));
+  spec_ull.push_back(
+    new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::LongTypeSpec));
+  spec_ull2.push_back(
+    new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::UnsignedTypeSpec));
+  spec_ull2.push_back(
+    new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::LongTypeSpec));
+  spec_int.push_back(
+    new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
+
+  decs_sret.push_back(
+    new CCSTInitDeclarator(
+      new CCSTDeclarator(NULL, new CCSTDirectDecId("sync_ret"))));
+  decs_off.push_back(
+    new CCSTInitDeclarator(
+      new CCSTDeclarator(NULL,
+        new CCSTDirectDecId(v->identifier() + "_offset"))));
+  decs_cptr.push_back(
+    new CCSTInitDeclarator(
+      new CCSTDeclarator(NULL,
+        new CCSTDirectDecId(v->identifier() + "_cptr"))));
+  decs_sz.push_back(
+    new CCSTInitDeclarator(
+      new CCSTDeclarator(NULL,
+        new CCSTDirectDecId(v->identifier() + "_mem_sz"))));
+
+  declarations.push_back(new CCSTDeclaration(spec_int, decs_sret));
+  declarations.push_back(new CCSTDeclaration(spec_ull, decs_sz));
+  declarations.push_back(new CCSTDeclaration(spec_ull, decs_off));
+  declarations.push_back(new CCSTDeclaration(spec_cptr, decs_cptr));
+
+  std::vector<CCSTAssignExpr*> virt_cptr_args;
+  std::vector<CCSTAssignExpr*> gva_args;
+  std::vector<CCSTAssignExpr*> sync_send_args;
+  std::vector<CCSTAssignExpr*> set_cr0_args;
+  std::vector<CCSTAssignExpr*> set_cr0_args2;
+  std::vector<CCSTAssignExpr*> set_r0_args;
+  std::vector<CCSTAssignExpr*> set_r1_args;
+
+
+  gva_args.push_back(
+    new CCSTCastExpr(new CCSTTypeName(spec_ull2, NULL),
+      new CCSTPrimaryExprId(v->identifier())));
+  virt_cptr_args.push_back(function_call("__gva", gva_args));
+
+  virt_cptr_args.push_back(
+    new CCSTUnaryExprCastExpr(reference(),
+      new CCSTPrimaryExprId(v->identifier() + "_cptr")));
+
+  virt_cptr_args.push_back(
+    new CCSTUnaryExprCastExpr(reference(),
+      new CCSTPrimaryExprId(v->identifier() + "_mem_sz")));
+
+  virt_cptr_args.push_back(
+    new CCSTUnaryExprCastExpr(reference(),
+      new CCSTPrimaryExprId(v->identifier() + "_offset")));
+
+  sync_send_args.push_back(new CCSTPrimaryExprId("sync_ep"));
+
+  set_r0_args.push_back(new CCSTPrimaryExprId(v->identifier() + "_mem_sz"));
+  set_r1_args.push_back(new CCSTPrimaryExprId(v->identifier() + "_offset"));
+  set_cr0_args.push_back(new CCSTPrimaryExprId(v->identifier() + "_cptr"));
+  set_cr0_args2.push_back(new CCSTPrimaryExprId("CAP_CPTR_NULL"));
+
+  statements.push_back(
+    new CCSTExprStatement(
+      new CCSTAssignExpr(new CCSTPrimaryExprId("sync_ret"), equals(),
+        function_call("lcd_virt_to_cptr", virt_cptr_args))));
+
+  statements.push_back(
+    if_cond_fail(new CCSTPrimaryExprId("sync_ret"), "virt to cptr failed"));
+
+  // FIXME: How to delay push. This needs to be pushed after some other code
+  statements.push_back(
+    new CCSTExprStatement(
+      new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("lcd_set_r0"),
+        set_r0_args)));
+
+  statements.push_back(
+    new CCSTExprStatement(
+      new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("lcd_set_r1"),
+        set_r1_args)));
+
+  statements.push_back(
+    new CCSTExprStatement(
+      new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("lcd_set_cr0"),
+        set_cr0_args)));
+
+  statements.push_back(
+    new CCSTExprStatement(
+      new CCSTAssignExpr(new CCSTPrimaryExprId("sync_ret"), equals(),
+        function_call("lcd_sync_send", sync_send_args))));
+
+  statements.push_back(
+    new CCSTExprStatement(
+      new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("lcd_set_cr0"),
+        set_cr0_args2)));
+
+  statements.push_back(
+    if_cond_fail(new CCSTPrimaryExprId("sync_ret"), "failed to send"));
+
+  return new CCSTCompoundStatement(declarations, statements);
+}
+
 /*
- * Want this code to be as dumb as possible.  
+ * Want this code to be as dumb as possible.
  * The complexity for deciding what to marshal occurs previously.
  * when marshal params list is populated.
  * This function should never be called on a variable whose type is a projection
@@ -16,7 +138,7 @@ CCSTStatement* marshal_variable(Variable *v, const std::string& direction)
     std::cout << "trying to marshal container " <<  v->container()->identifier() << std::endl;
     statements.push_back(marshal_variable(v->container(), direction));
   }
-  
+
   if (v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) { // projection
     // loop through fields
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
@@ -29,6 +151,8 @@ CCSTStatement* marshal_variable(Variable *v, const std::string& direction)
       }
     }
     
+  } else if (v->type()->num() == VOID_TYPE) {
+    return marshal_void_pointer(v);
   } else {
     std::cout << "marshalling variable " <<  v->identifier() << std::endl;
     Assert(v->marshal_info() != 0x0, "Error: marshalling info is null\n");

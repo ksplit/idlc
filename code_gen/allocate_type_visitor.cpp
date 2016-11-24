@@ -173,9 +173,131 @@ CCSTStatement* AllocateTypeVisitor::visit(Typedef *td, Variable *v)
   return td->type()->accept(this, v);
 }
 
+/// Void pointer marshalling for callee.
+/// Declares cptr, and other variables for receiving a void pointer
+/// TODO: See if we can somehow squash this and the marshalling code for
+/// caller
 CCSTStatement* AllocateTypeVisitor::visit(VoidType *vt, Variable *v)
 {
-  Assert(1 == 0, "Error: allocation for void not implemented\n");
+  std::vector<CCSTDeclaration*> declarations;
+  std::vector<CCSTStatement*> statements;
+
+  std::vector<CCSTDecSpecifier*> spec_ull;
+  std::vector<CCSTDecSpecifier*> spec_int;
+  std::vector<CCSTDecSpecifier*> spec_cptr;
+  std::vector<CCSTDecSpecifier*> spec_gva;
+
+  std::vector<CCSTInitDeclarator*> decs_order;
+  std::vector<CCSTInitDeclarator*> decs_off;
+  std::vector<CCSTInitDeclarator*> decs_cptr;
+  std::vector<CCSTInitDeclarator*> decs_gva;
+  std::vector<CCSTInitDeclarator*> decs_sret;
+
+  spec_cptr.push_back(new CCSTTypedefName("cptr_t"));
+  spec_gva.push_back(new CCSTTypedefName("gva_t"));
+
+  spec_ull.push_back(
+    new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::UnsignedTypeSpec));
+  spec_ull.push_back(
+    new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::LongTypeSpec));
+  spec_int.push_back(
+    new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
+
+  decs_sret.push_back(
+    new CCSTInitDeclarator(
+      new CCSTDeclarator(NULL, new CCSTDirectDecId("sync_ret"))));
+  decs_order.push_back(
+    new CCSTInitDeclarator(
+      new CCSTDeclarator(NULL, new CCSTDirectDecId("mem_order"))));
+  decs_off.push_back(
+    new CCSTInitDeclarator(
+      new CCSTDeclarator(NULL,
+        new CCSTDirectDecId(v->identifier() + "_offset"))));
+  decs_cptr.push_back(
+    new CCSTInitDeclarator(
+      new CCSTDeclarator(NULL,
+        new CCSTDirectDecId(v->identifier() + "_cptr"))));
+  decs_gva.push_back(
+    new CCSTInitDeclarator(
+      new CCSTDeclarator(NULL,
+        new CCSTDirectDecId(v->identifier() + "_gva"))));
+
+  declarations.push_back(new CCSTDeclaration(spec_int, decs_sret));
+  declarations.push_back(new CCSTDeclaration(spec_ull, decs_order));
+  declarations.push_back(new CCSTDeclaration(spec_ull, decs_off));
+  declarations.push_back(new CCSTDeclaration(spec_cptr, decs_cptr));
+  declarations.push_back(new CCSTDeclaration(spec_gva, decs_gva));
+
+  std::vector<CCSTAssignExpr*> cptr_alloc_args;
+  std::vector<CCSTAssignExpr*> sync_recv_args;
+  std::vector<CCSTAssignExpr*> set_cr0_args;
+  std::vector<CCSTAssignExpr*> set_cr0_args2;
+  std::vector<CCSTAssignExpr*> map_virt_args;
+  std::vector<CCSTAssignExpr*> empty_args;
+
+  cptr_alloc_args.push_back(
+    new CCSTUnaryExprCastExpr(reference(),
+      new CCSTPrimaryExprId(v->identifier() + "_offset")));
+
+  sync_recv_args.push_back(new CCSTPrimaryExprId("sync_ep"));
+
+  set_cr0_args.push_back(
+    new CCSTUnaryExprCastExpr(indirection(),
+      new CCSTPrimaryExprId(v->identifier() + "_cptr")));
+
+  set_cr0_args2.push_back(new CCSTPrimaryExprId("CAP_CPTR_NULL"));
+
+  map_virt_args.push_back(new CCSTPrimaryExprId(v->identifier() + "_cptr"));
+  map_virt_args.push_back(new CCSTPrimaryExprId("mem_order"));
+  map_virt_args.push_back(new CCSTPrimaryExprId(v->identifier() + "_gva"));
+
+  statements.push_back(
+    new CCSTExprStatement(
+      new CCSTAssignExpr(new CCSTPrimaryExprId("sync_ret"), equals(),
+        function_call("lcd_cptr_alloc", cptr_alloc_args))));
+
+  statements.push_back(
+    if_cond_fail(new CCSTPrimaryExprId("sync_ret"), "failed to get cptr"));
+
+  statements.push_back(
+    new CCSTExprStatement(
+      new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("lcd_set_r0"),
+        set_cr0_args)));
+
+  statements.push_back(
+    new CCSTExprStatement(
+      new CCSTAssignExpr(new CCSTPrimaryExprId("sync_ret"), equals(),
+        function_call("lcd_sync_recv", sync_recv_args))));
+
+  statements.push_back(
+    new CCSTExprStatement(
+      new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("lcd_set_r0"),
+        set_cr0_args2)));
+
+  statements.push_back(
+    if_cond_fail(new CCSTPrimaryExprId("sync_ret"), "failed to recv"));
+
+  statements.push_back(
+    new CCSTExprStatement(
+      new CCSTAssignExpr(new CCSTPrimaryExprId("mem_order"), equals(),
+        function_call("lcd_r0", empty_args))));
+
+  statements.push_back(
+    new CCSTExprStatement(
+      new CCSTAssignExpr(new CCSTPrimaryExprId(v->identifier() + "_offset"),
+        equals(), function_call("lcd_r1", empty_args))));
+
+  statements.push_back(
+    new CCSTExprStatement(
+      new CCSTAssignExpr(new CCSTPrimaryExprId("sync_ret"), equals(),
+        function_call("lcd_map_virt", map_virt_args))));
+
+  // TODO: Add code to delete the mapping
+  statements.push_back(
+    if_cond_fail(new CCSTPrimaryExprId("sync_ret"),
+      "failed to map void *" + v->identifier()));
+
+  return new CCSTCompoundStatement(declarations, statements);
 }
 
 /* Assumes something with the name v->identifier(), has already been declared */

@@ -116,6 +116,8 @@ CCSTStatement* marshal_variable(Variable *v, const std::string& direction); // c
 std::vector<CCSTStatement*> marshal_variable_callee(Variable *v); // complete
 std::vector<CCSTStatement*> marshal_variable_no_check(Variable *v); // complete
 CCSTStatement* marshal(CCSTPostFixExpr *v, int reg); // complete
+// Common function for marshalling void pointer across domains
+CCSTStatement* marshal_void_pointer(Variable *v);
 
 // containers.cpp
 std::vector<CCSTAssignExpr*> container_of_args(CCSTPostFixExpr *struct_pointer, const std::string& type_name, const std::string& field_name); // complete
