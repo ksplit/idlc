@@ -144,6 +144,7 @@ Function::Function(const Function& other)
 
   for (const auto p : other) {
     Parameter *copy = new Parameter(*p);
+    parameters_copy.push_back(copy);
   }
   this->parameters_ = parameters_copy;
 
