@@ -361,16 +361,17 @@ void Rpc::create_trampoline_structs()
   }
 }
 
-Module::Module(const std::string& id, std::vector<Rpc*> rpc_definitions, std::vector<GlobalVariable*> channels, LexicalScope *ls)
+Module::Module(const std::string& id, std::vector<Rpc*> rpc_definitions,
+  std::vector<GlobalVariable*> channels, LexicalScope *ls) :
+  module_name_(id),
+  module_scope_(ls),
+  channels_(channels),
+  rpc_definitions_(rpc_definitions)
 {
-  this->module_name_ = id;
-  this->module_scope_ = ls;
   this->module_scope_->setactiveChannel(ls->activeChannel);
   if (ls->activeChannel) {
     std::cout << "Active channel " << ls->activeChannel->name() << std::endl;
   }
-  this->rpc_definitions_ = rpc_definitions;
-  this->channels_ = channels;
 
   int err;
   Type *cspace = this->module_scope_->lookup("glue_cspace", &err);
@@ -488,12 +489,13 @@ const std::string Module::identifier()
   return this->module_name_;
 }
 
-Project::Project(LexicalScope *scope, std::vector<Module*> modules, std::vector<Include*> includes)
+Project::Project(LexicalScope *scope, std::vector<Module*> modules,
+  std::vector<Include*> includes) :
+  project_scope_(scope),
+  project_modules_(modules),
+  project_includes_(includes),
+  last_tag_(0)
 {
-  this->project_scope_ = scope;
-  this->project_modules_ = modules;
-  this->project_includes_ = includes;
-  this->last_tag_ = 0;
 }
 
 void Project::prepare_marshal()
@@ -585,8 +587,8 @@ void Project::set_copy_container_accessors()
   }
 }
 
-Include::Include(bool relative, const std::string& path)
+Include::Include(bool relative, const std::string& path) :
+  relative_(relative),
+  path_(path)
 {
-  this->relative_ = relative;
-  this->path_ = path;
 }

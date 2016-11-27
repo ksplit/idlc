@@ -519,7 +519,7 @@ class CCSTPreprocessor : public CCSTExDeclaration
   * control-line = include <pathname>
   * 		| include "pathname"
   */
-  std::string *pathname;
+  std::string pathname;
   bool relative;
  public:
   CCSTPreprocessor(const std::string&path, bool relative);

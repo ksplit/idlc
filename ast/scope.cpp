@@ -6,8 +6,7 @@ GlobalScope* GlobalScope::instance_ = 0;
 GlobalScope::GlobalScope()
 {
   // move this code to wherever we create the root scope.
-  // instert for each builtin in type, add size to type if not done alreayd
-
+  // insert for each built-in in type, add size to type if not done already
   this->type_definitions_.insert( std::pair<std::string, Type*>("bool", new BoolType()));
   this->type_definitions_.insert( std::pair<std::string, Type*>("double", new DoubleType()));
   this->type_definitions_.insert( std::pair<std::string, Type*>("float", new FloatType()));
@@ -121,14 +120,15 @@ void GlobalScope::set_outer_scope(LexicalScope *ls)
 
 
 LexicalScope::LexicalScope() :
-	outer_scope_(NULL),
-	activeChannel(NULL)
+	outer_scope_(),
+	activeChannel()
 {
 }
 
-LexicalScope::LexicalScope(LexicalScope *outer_scope)
+LexicalScope::LexicalScope(LexicalScope *outer_scope) :
+  outer_scope_(outer_scope),
+  activeChannel()
 {
-  this->outer_scope_ = outer_scope;
 }
 
 bool LexicalScope::insert_identifier(const std::string& id)
