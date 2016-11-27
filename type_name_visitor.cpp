@@ -30,11 +30,11 @@ CCSTTypeName* TypeNameVisitor::visit(BoolType *bt)
 CCSTTypeName* TypeNameVisitor::visit(UnresolvedType *ut)
 {
   Assert(1 == 0, "Error: no type name for unresolved type.\n");
+  return NULL;
 }
 
 CCSTTypeName* TypeNameVisitor::visit(Typedef *td)
 {
-  CCSTPointer *pt = 0x0; 
   return td->type()->accept(this);
 }
 
@@ -121,5 +121,6 @@ CCSTTypeName* TypeNameVisitor::visit(ProjectionConstructorType *pct)
 CCSTTypeName* TypeNameVisitor::visit(InitializeType *it)
 {
   Assert(1 == 0, "Error: no type name for initialize type\n");
+  return NULL;
 }
 

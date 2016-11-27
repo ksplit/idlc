@@ -87,8 +87,8 @@ CCSTCompoundStatement* dispatch_loop_body(std::vector<Rpc*> rps)
   default_stmts.push_back(new CCSTExprStatement( new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("LCD_MSG")
 									     , lcd_msg_args)));
   default_stmts.push_back(new CCSTGoto("out"));
-  CCSTCompoundStatement* default_body =  new CCSTCompoundStatement(default_dec_empty
-								   , default_stmts);
+//  CCSTCompoundStatement* default_body =  new CCSTCompoundStatement(default_dec_empty
+//								   , default_stmts);
   // Just add a break statement in default case for now
   cases.push_back(new CCSTDefaultLabelStatement(new CCSTBreak()));
   /* end of adding default case */
@@ -139,7 +139,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   // allocate necessary container things
   
   /* code that loops through parameters and allocates/initializes whatever necessary before marshalling*/
-  
+
   // loop through params, declare a tmp and pull out marshal value
   
   // declare containers and variables
@@ -151,7 +151,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   if(r->function_pointer_defined()) {
     std::vector<Parameter*> hidden_args = r->hidden_args_;
     for(std::vector<Parameter*>::iterator it = hidden_args.begin(); it != hidden_args.end(); it ++) {
-      Parameter *p = *it;
+//      Parameter *p = *it;
       // declare hiiden args.
     }
   }
@@ -192,7 +192,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
 
 	cspace = pct->channel_params_.at(0).second;
       } else if (pt->channels_.size() > 0) {
-	cspace = pt->channels_.at(0);
+        cspace = pt->channels_.at(0);
       } else {
 	cspace = m->cspaces_.at(0);
       }
@@ -319,7 +319,7 @@ CCSTDeclaration* callee_declaration(Rpc* r)
   std::vector<CCSTDecSpecifier*> s;
   s.push_back(new  CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
 
-  CCSTParamDeclaration *parameter = new CCSTParamDeclaration(s);
+//  CCSTParamDeclaration *parameter = new CCSTParamDeclaration(s);
   int err;
   std::vector<CCSTParamDeclaration*> p_decs; // = new std::vector<CCSTParamDeclaration*>();
   p_decs.push_back(

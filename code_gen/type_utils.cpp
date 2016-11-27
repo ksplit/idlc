@@ -122,6 +122,7 @@ std::vector<CCSTSpecifierQual*> type(Type *t)
 	Assert(1 == 0, "Error: Not a struct or integer type. \n");
       }
     }
+  return std::vector<CCSTSpecifierQual*>();
 }
 
 
@@ -257,13 +258,14 @@ std::vector<CCSTDecSpecifier*> int_type()
 
 std::vector<CCSTDecSpecifier*> type2(Type *t)
 {
-  std::vector<CCSTDecSpecifier*>specifier;
+  std::vector<CCSTDecSpecifier*> specifier;
   int num = t->num();
   switch(num)  {
   case TYPEDEF_TYPE:
     {
-      // typdef 
+      // typdef
       // todo
+      break;
     }
   case INTEGER_TYPE: // int type case
     {
@@ -353,6 +355,7 @@ std::vector<CCSTDecSpecifier*> type2(Type *t)
       Assert(1 == 0, "Error: Not a struct or integer type.\n");
     }
   }
+  return std::vector<CCSTDecSpecifier*>();
 }
 
 /* 

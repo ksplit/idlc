@@ -7,9 +7,9 @@ GlobalVariable::GlobalVariable(Type *type, const std::string& id, int pointer_co
   type_(type),
   id_(id),
   pointer_count_(pointer_count),
+  marshal_info_(NULL),
   container_(NULL),
-  accessor_(NULL),
-  marshal_info_(NULL)
+  accessor_(NULL)
 {
 }
 
@@ -108,8 +108,8 @@ void GlobalVariable::set_pointer_count(int pcount)
 void GlobalVariable::resolve_types(LexicalScope *ls)
 {
   // need to rewrite to account for initializetype
-  Type *last = this->type_;
-  Type *tmp = this->type_;
+//  Type *last = this->type_;
+//  Type *tmp = this->type_;
   
   if(this->type_->num() == INITIALIZE_TYPE) {
     Type *tmp = this->type_;
@@ -519,8 +519,8 @@ Marshal_type* Parameter::marshal_info()
 void Parameter::resolve_types(LexicalScope *ls)
 {
    // need to rewrite to account for initializetype
-  Type *last = this->type_;
-  Type *tmp = this->type_;
+//  Type *last = this->type_;
+//  Type *tmp = this->type_;
   
   if(this->type_->num() == INITIALIZE_TYPE) {
     Type *tmp = this->type_;
@@ -820,8 +820,8 @@ void ReturnVariable::set_pointer_count(int pcount)
 void ReturnVariable::resolve_types(LexicalScope *ls)
 {
  // need to rewrite to account for initializetype
-  Type *last = this->type_;
-  Type *tmp = this->type_;
+//  Type *last = this->type_;
+//  Type *tmp = this->type_;
   
   if(this->type_->num() == INITIALIZE_TYPE) {
     Type *tmp = this->type_;
@@ -990,9 +990,9 @@ ProjectionField::ProjectionField(Type* field_type, const std::string& field_name
   bind_caller_(false),
   type_(field_type),
   field_name_(field_name),
-  marshal_info_(NULL),
   accessor_(NULL),
   pointer_count_(pointer_count),
+  marshal_info_(NULL),
   container_(NULL)
 {
 }
@@ -1155,8 +1155,8 @@ Marshal_type* ProjectionField::marshal_info()
 void ProjectionField::resolve_types(LexicalScope *ls)
 {
  // need to rewrite to account for initializetype
-  Type *last = this->type_;
-  Type *tmp = this->type_;
+//  Type *last = this->type_;
+//  Type *tmp = this->type_;
   
   if(this->type_->num() == INITIALIZE_TYPE) {
     Type *tmp = this->type_;
@@ -1300,8 +1300,8 @@ bool ProjectionField::bind_callee()
 FPParameter::FPParameter(Type *type, int pointer_count) :
   type_(type),
   pointer_count_(pointer_count),
-  container_(NULL),
-  marshal_info_(NULL)
+  marshal_info_(NULL),
+  container_(NULL)
 {
 }
 
@@ -1424,8 +1424,8 @@ Marshal_type* FPParameter::marshal_info()
 void FPParameter::resolve_types(LexicalScope *ls)
 {
  // need to rewrite to account for initializetype
-  Type *last = this->type_;
-  Type *tmp = this->type_;
+//  Type *last = this->type_;
+//  Type *tmp = this->type_;
   
   if(this->type_->num() == INITIALIZE_TYPE) {
     Type *tmp = this->type_;

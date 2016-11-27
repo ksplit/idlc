@@ -119,11 +119,7 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   // allocate necessary container things
   
   /* code that loops through parameters and allocates/initializes whatever necessary before marshalling*/
-  
-  // loop through params, declare a tmp and pull out marshal value
-  std::vector<Parameter*> params = r->parameters();
 
-  
   std::string cspace_to_use;
   if(r->function_pointer_defined()) { // cspace is 1st hidden arg
     cspace_to_use = r->hidden_args_.at(0)->identifier();

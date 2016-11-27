@@ -71,7 +71,7 @@ int glue_vfs_init(cptr_t vfs_chnl, struct lcd_sync_channel_group *_group)
 {
 	int ret;
 
-	/* Set up ipc channel 
+	 Set up ipc channel
 	ret = lcd_sync_channel_group_item_init(&vfs_channel, vfs_chnl, 1,
 					dispatch_vfs_channel);*/
 
@@ -94,9 +94,8 @@ int glue_vfs_init(cptr_t vfs_chnl, struct lcd_sync_channel_group *_group)
     body_statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId("ret"))
 						, "init channel item", "fail1"));
   }
-
   // TODO
-  
+  return new CCSTCompoundStatement(body_declarations, body_statements);
 }
 
 /* 
@@ -202,10 +201,10 @@ CCSTCompoundStatement* caller_interface_exit_function_body(Module *m)
   /* 
      void glue_vfs_exit(void)
 {
-/* Free vfs data store. 
+  Free vfs data store.
 	vfs_cap_destroy(vfs_cspace);
 
-	/* Tear down cap code 
+	Tear down cap code
 	vfs_cap_exit();
 }
    */

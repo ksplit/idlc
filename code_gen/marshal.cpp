@@ -156,7 +156,7 @@ CCSTStatement* marshal_variable(Variable *v, const std::string& direction)
   } else {
     std::cout << "marshalling variable " <<  v->identifier() << std::endl;
     Assert(v->marshal_info() != 0x0, "Error: marshalling info is null\n");
-    statements.push_back( marshal(access(v), v->marshal_info()->get_register()));
+    statements.push_back(marshal(access(v), v->marshal_info()->get_register()));
   }
   
   return new CCSTCompoundStatement(declarations, statements);
@@ -225,5 +225,5 @@ CCSTStatement* marshal(CCSTPostFixExpr *v, int reg)
   std::vector<CCSTAssignExpr*> store_reg_args;
   store_reg_args.push_back(v);
   
-  return new CCSTExprStatement( function_call(store_reg_func, store_reg_args));
+  return new CCSTExprStatement(function_call(store_reg_func, store_reg_args));
 }

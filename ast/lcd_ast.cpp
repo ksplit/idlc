@@ -4,12 +4,12 @@
 
 Rpc::Rpc(ReturnVariable *return_value, const std::string& name,
   std::vector<Parameter*> parameters, LexicalScope *current_scope) :
+  tag_(0),
   explicit_return_(return_value),
+  current_scope_(current_scope),
   name_(name),
   enum_str(name),
-  tag_(0),
   parameters_(parameters),
-  current_scope_(current_scope),
   function_pointer_defined_(false)
 {
   this->symbol_table_ = new SymbolTable();

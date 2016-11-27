@@ -126,8 +126,8 @@ CCSTCompoundStatement* trampoline_function_body(Rpc* r)
     new_fp_args.push_back(new CCSTPrimaryExprId(p->identifier()));
   }
 
-  int err;
-  ProjectionType *hidden_args_param = dynamic_cast<ProjectionType*>(r->current_scope()->lookup(hidden_args_name(r->name()), &err));
+//  int err;
+//  ProjectionType *hidden_args_param = dynamic_cast<ProjectionType*>(r->current_scope()->lookup(hidden_args_name(r->name()), &err));
 
   new_fp_args.push_back(new CCSTPrimaryExprId("hidden_args"));
 

@@ -152,11 +152,13 @@ CCSTStatement* AllocateTypeVisitor::visit(BoolType *bt, Variable *v)
 CCSTStatement* AllocateTypeVisitor::visit(Channel *c, Variable *v)
 {
   Assert(1 == 0, "Error: allocation for channel not implemented\n");
+  return NULL;
 }
 
 CCSTStatement* AllocateTypeVisitor::visit(UnresolvedType *ut, Variable *v)
 {
   Assert(1 == 0, "Error: cannot allocate an unresolved type\n");
+  return NULL;
 }
 
 CCSTStatement* AllocateTypeVisitor::visit(Function *fp, Variable *v)
@@ -461,4 +463,5 @@ CCSTStatement* AllocateTypeVisitor::visit(ProjectionConstructorType *pt, Variabl
 CCSTStatement* AllocateTypeVisitor::visit(InitializeType *it, Variable *v)
 {
   Assert( 1 == 0, "Error: cannot call allocate type on initialize type\n");
+  return NULL;
 }

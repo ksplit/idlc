@@ -26,8 +26,8 @@ std::vector<CCSTStatement*> unmarshal_variable_no_check(Variable *v)
     Assert(v->marshal_info() != 0x0, "Error: no marshal info\n");
     int reg = v->marshal_info()->get_register();
     const std::string& func_name = access_register_mapping(reg);
-    TypeNameVisitor *worker = new TypeNameVisitor();
-    CCSTTypeName *type_name = v->type()->accept(worker);
+//    TypeNameVisitor *worker = new TypeNameVisitor();
+//    CCSTTypeName *type_name = v->type()->accept(worker);
     
     std::vector<CCSTAssignExpr*> access_reg_args_empty;
     
@@ -44,8 +44,8 @@ CCSTPostFixExprAssnExpr* unmarshal_variable(Variable *v)
   Assert(v->marshal_info() != 0x0, "Error: no marshal info\n");
   int reg = v->marshal_info()->get_register();
   const std::string& func_name = access_register_mapping(reg);
-  TypeNameVisitor *worker = new TypeNameVisitor();
-  CCSTTypeName *type_name = v->type()->accept(worker);
+//  TypeNameVisitor *worker = new TypeNameVisitor();
+//  CCSTTypeName *type_name = v->type()->accept(worker);
   std::vector<CCSTAssignExpr*> access_reg_args_empty;
   return function_call(func_name, access_reg_args_empty);
 }
