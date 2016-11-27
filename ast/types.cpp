@@ -5,6 +5,7 @@
 using namespace std;
 
 FloatType::FloatType()
+: type_name("float")
 {
 }
 
@@ -30,7 +31,7 @@ int FloatType::num()
 
 const std::string& FloatType::name() const
 {
-  return std::string("float");
+  return this->type_name;
 }
 
 void FloatType::resolve_types(LexicalScope *ls)
@@ -44,6 +45,7 @@ void FloatType::create_trampoline_structs(LexicalScope *ls)
 }
 
 DoubleType::DoubleType()
+: type_name("double")
 {
 }
 
@@ -69,7 +71,7 @@ int DoubleType::num()
 
 const std::string& DoubleType::name() const
 {
-  return "double";
+  return this->type_name;
 }
 
 void DoubleType::resolve_types(LexicalScope *ls)
@@ -83,6 +85,7 @@ void DoubleType::create_trampoline_structs(LexicalScope *ls)
 }
 
 BoolType::BoolType()
+: type_name("bool")
 { 
 }
 
@@ -108,7 +111,7 @@ int BoolType::num()
 
 const std::string& BoolType::name() const
 {
-  return "bool";
+  return this->type_name;
 }
 
 void BoolType::resolve_types(LexicalScope *ls)
@@ -254,9 +257,9 @@ void UnresolvedType::create_trampoline_structs(LexicalScope *ls)
 }
 
 Channel::Channel(const std::string& name, ChannelType type, Channel *host) :
-  chName(name),
+  hostChannel(host),
   chType(type),
-  hostChannel(host)
+  chName(name)
 {
   std::cout << "Channel Type : " << type << std::endl;
 }
@@ -370,6 +373,7 @@ void Typedef::create_trampoline_structs(LexicalScope *ls)
 /* void type */
 
 VoidType::VoidType()
+: type_name("void")
 {
 }
 
@@ -400,7 +404,7 @@ int VoidType::num()
 
 const std::string& VoidType::name() const
 {
-  return "void";
+  return this->type_name;
 }
 
 void VoidType::resolve_types(LexicalScope *ls)
@@ -418,6 +422,7 @@ void VoidType::create_trampoline_structs(LexicalScope *ls)
 /* integer type */
 
 IntegerType::IntegerType(PrimType type, bool un, int size)
+: type_name("int")
 {
   this->type_ = type;
   this->unsigned_ = un;
@@ -463,8 +468,7 @@ int IntegerType::num()
 
 const std::string& IntegerType::name() const
 {
-  std::cout << "todo integer type name function.\n";
-  return std::string("");
+  return this->type_name;
 }
 
 void IntegerType::resolve_types(LexicalScope *ls)
@@ -673,7 +677,7 @@ void ProjectionConstructorType::initialize(std::vector<Variable*> chans)
   }
   
   // set them
-  for(int i = 0; i < chans.size(); i ++) {
+  for(unsigned int i = 0; i < chans.size(); i ++) {
     this->channel_params_.at(i).second = chans.at(i);
   }
  

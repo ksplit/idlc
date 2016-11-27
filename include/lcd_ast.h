@@ -138,6 +138,7 @@ class FloatType : public Type
 {
   public:
   FloatType();
+  std::string type_name;
   virtual Type* clone() const { return new FloatType(*this); }
   virtual Marshal_type* accept(MarshalPrepareVisitor *worker);
   virtual CCSTTypeName* accept(TypeNameVisitor *worker);
@@ -152,6 +153,7 @@ class DoubleType : public Type
 {
  public:
   DoubleType();
+  std::string type_name;
   virtual Type* clone() const { return new DoubleType(*this); }
   virtual Marshal_type* accept(MarshalPrepareVisitor *worker);
   virtual CCSTTypeName* accept(TypeNameVisitor *worker);
@@ -166,6 +168,7 @@ class BoolType : public Type
 {
   public:
   BoolType();
+  std::string type_name;
   virtual Type* clone() const { return new BoolType(*this); }
   virtual Marshal_type* accept(MarshalPrepareVisitor *worker);
   virtual CCSTTypeName* accept(TypeNameVisitor *worker);
@@ -179,6 +182,7 @@ class BoolType : public Type
 class InitializeType : public Type
 {
  public:
+  std::string type_name;
   Type* type_; // this is the type that WILL be initialized.  
   std::vector<Variable*> values_; // this is what will initialize the type
   InitializeType(Type *type, std::vector<Variable*> init_values);
@@ -306,8 +310,8 @@ class Parameter : public Variable
   bool alloc_caller_;
   bool dealloc_callee_;
   bool dealloc_caller_;
-  bool bind_caller_; 
   bool bind_callee_;
+  bool bind_caller_;
   
   Type* type_;
   std::string name_;
@@ -545,6 +549,7 @@ class Channel : public Type
 class VoidType : public Type
 {
  public:
+  std::string type_name;
   VoidType();
   VoidType(const VoidType& other);
   virtual Type* clone() const { return new VoidType(*this); }
@@ -560,6 +565,7 @@ class VoidType : public Type
 class IntegerType : public Type
 {
  public:
+  std::string type_name;
   bool unsigned_;
   PrimType type_;
   int size_;
@@ -587,8 +593,8 @@ class ProjectionField : public Variable //?
   bool alloc_caller_;
   bool dealloc_callee_;
   bool dealloc_caller_;
-  bool bind_caller_;
   bool bind_callee_;
+  bool bind_caller_;
 
   Type* type_;
   std::string field_name_;
