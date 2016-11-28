@@ -198,7 +198,7 @@ CCSTCompoundStatement* alloc_init_hidden_args_struct(ProjectionType *pt, Variabl
 															      , construct_list_vars(pf)))))));
 
       // store container in hidden args
-      ProjectionField *hidden_args_container_field = hidden_args_structure->get_field("container");
+      ProjectionField *hidden_args_container_field = hidden_args_structure->get_field("struct_container");
       Assert(hidden_args_container_field != 0x0, "Error: could not find container field in hidden args structure\n");
 
       hidden_args_container_field->set_accessor(tmp_hidden_args_param);
