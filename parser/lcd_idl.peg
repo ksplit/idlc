@@ -283,13 +283,22 @@ unnamed_scope 	= 	s:unnamed_scope_special new_chans:ChanInits* ch:Channel_scope*
 				Rpc *r = (Rpc*) v.getValue();
 				rpcs->push_back(r);
 			    }
+			    std::cout << " channel ID " << ch.getValue() << "\n";
 				LexicalScope *sc = (LexicalScope *)s.getValue();
-				if (ch.getValue()) {
-					const std::string *_ch = static_cast<const std::string*>(ch.getValue());
-					Type *t = getType(*_ch);
-					Channel *c = dynamic_cast<Channel*>(t);
-					sc->setactiveChannel(c);
-				}
+
+                for(Value::iterator it = ch.getValues().begin(); it != ch.getValues().end(); it ++) {
+                  const Value & v2 = *it;
+                  std::string *_ch = (std::string*) v2.getValue();
+                  std::cout << "### scope channel " << *_ch << "\n";
+                  if (_ch) {
+                      Type *t = getType(*_ch);
+                      Channel *c = dynamic_cast<Channel*>(t);
+                      sc->setactiveChannel(c);
+                  } else {
+                      sc->setactiveChannel(NULL);
+                  }
+                }
+
 			    set_current_scope(get_current_scope()->outer_scope()); // leaving current scope
 			    value = rpcs;
 			}}
@@ -360,7 +369,7 @@ Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
 					Channel *c = dynamic_cast<Channel*>(t);
 					Assert(c != NULL, "Dynamic cast from Type to Channel failed");
 					get_current_scope()->setactiveChannel(c);
-					value = new std::string((char*)ch.getValue());
+					value = new std::string(*_id);
 				}}
 
 Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
@@ -370,26 +379,29 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
 			      std::vector<GlobalVariable*> channels2 = *channels;
 
 			      for(Value::iterator it = r.getValues().begin(); it != r.getValues().end(); it ++) {
-			          const Value & v2 = *it;
-				  Rpc *r2 = (Rpc*) v2.getValue();
-				  rpcs.push_back(r2);
+                    const Value & v2 = *it;
+                    Rpc *r2 = (Rpc*) v2.getValue();
+                    rpcs.push_back(r2);
 			      }
 
 			      for(Value::iterator it = r2.getValues().begin(); it != r2.getValues().end(); it ++) {
-			          const Value & v2 = *it;
-				  std::vector<Rpc*> *r_tmp = (std::vector<Rpc*>*) v2.getValue();
-				  rpcs.insert(rpcs.end(), r_tmp->begin(), r_tmp->end());
+                    const Value & v2 = *it;
+                    std::vector<Rpc*> *r_tmp = (std::vector<Rpc*>*) v2.getValue();
+                    rpcs.insert(rpcs.end(), r_tmp->begin(), r_tmp->end());
 			      }
 
-				  if (ch.getValue()) {
-				      const std::string *_ch = static_cast<const std::string*>(ch.getValue());
-
-					  Type *t = getType(*_ch);
-					  Channel *c = dynamic_cast<Channel*>(t);
-					  module_scope->setactiveChannel(c);
-				  } else {
-					  module_scope->setactiveChannel(NULL);
-				  }
+                    for(Value::iterator it = ch.getValues().begin(); it != ch.getValues().end(); it ++) {
+                        const Value & v2 = *it;
+                        std::string *_ch = (std::string*) v2.getValue();
+                        std::cout << "### module channel " << *_ch << "\n";
+                        if (_ch) {
+                            Type *t = getType(*_ch);
+                            Channel *c = dynamic_cast<Channel*>(t);
+                            module_scope->setactiveChannel(c);
+                        } else {
+                            module_scope->setactiveChannel(NULL);
+                        }
+                    }
 
 			      set_current_scope(get_current_scope()->outer_scope()); // leaving current scope	  
 				  const std::string *name = static_cast<const std::string*>(id.getValue());
