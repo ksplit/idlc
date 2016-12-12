@@ -25,6 +25,8 @@ CCSTFile* generate_client_header(Module *m); //, std::vector<Include*> includes)
 CCSTFile* generate_client_source(Module *m, std::vector<Include*> includes); // todo complete
 
 CCSTCompoundStatement* caller_body(Rpc *r, Module *m); // todo complete
+CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use);
+CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use);
 
 std::vector<CCSTStatement*> marshal_in_parameters(std::vector<Parameter*> params); // complete
 

@@ -726,6 +726,11 @@ class Rpc : public Base
   LexicalScope *current_scope();
   iterator begin() { return parameters_.begin(); }
   iterator end() { return parameters_.end(); }
+
+  const LexicalScope* getcurrentscope() const
+  {
+    return current_scope_;
+  }
 };
 
 class Module : public Base

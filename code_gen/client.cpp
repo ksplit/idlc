@@ -116,70 +116,238 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
-  // allocate necessary container things
-  
-  /* code that loops through parameters and allocates/initializes whatever necessary before marshalling*/
-
   std::string cspace_to_use;
-  if(r->function_pointer_defined()) { // cspace is 1st hidden arg
+
+  if (r->function_pointer_defined()) {
+    // cspace is 1st hidden arg
     cspace_to_use = r->hidden_args_.at(0)->identifier();
   } else {
-    cspace_to_use =  m->cspaces_.at(0)->identifier();
+    cspace_to_use = m->cspaces_.at(0)->identifier();
   }
 				     
   // for every parameter that has a container. declare containers. then alloc or container of
   for (auto p : *r) {
-      if(p->container() != 0x0) {
-	// declare containers
-	std::vector<CCSTDeclaration*> tmp = declare_containers(p);
-	declarations.insert(declarations.end(), tmp.begin(), tmp.end());
+    if (p->container() != 0x0) {
+      // declare containers
+      std::vector<CCSTDeclaration*> tmp = declare_containers(p);
+      declarations.insert(declarations.end(), tmp.begin(), tmp.end());
 
-	statements.push_back(alloc_link_container_caller(p, cspace_to_use));
+      statements.push_back(alloc_link_container_caller(p, cspace_to_use));
 
-      }
     }
+  }
 
   /* projection channel allocation */
   for (auto p : *r) {
-    if(p->type_->num() == PROJECTION_TYPE || p->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) { // if a projection
+    if (p->type_->num() == PROJECTION_TYPE
+      || p->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) {
+
       ProjectionType *pt = dynamic_cast<ProjectionType*>(p->type_);
       Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
-      std::vector<CCSTStatement*> tmp_statements = caller_allocate_channels(pt);
-      statements.insert(statements.end(), tmp_statements.begin(), tmp_statements.end());
+      std::vector<CCSTStatement*> tmp_statements = caller_allocate_channels(
+        pt);
+      statements.insert(statements.end(), tmp_statements.begin(),
+        tmp_statements.end());
     }
   }
 
   // projection channel initialization
   for (auto p : *r) {
-    if((p->type_->num() == PROJECTION_TYPE || p->type_->num() == PROJECTION_CONSTRUCTOR_TYPE) && p->alloc_caller()) {
+    if ((p->type_->num() == PROJECTION_TYPE
+      || p->type_->num() == PROJECTION_CONSTRUCTOR_TYPE)
+      && p->alloc_caller()) {
+
       ProjectionType *pt = dynamic_cast<ProjectionType*>(p->type_);
       Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
-      std::vector<CCSTStatement*> tmp_statements = caller_initialize_channels(pt);
-      statements.insert(statements.end(), tmp_statements.begin(), tmp_statements.end());
+      std::vector<CCSTStatement*> tmp_statements = caller_initialize_channels(
+        pt);
+      statements.insert(statements.end(), tmp_statements.begin(),
+        tmp_statements.end());
     }
   }
-
   
-  // 
-
   /* TODO: what about function pointers */
+  // Get active channel of the unnamed scope
+  Channel *c = r->getcurrentscope()->outer_scope_->getactiveChannel();
+  if (c) {
+    std::cout << "### Rpc " << r->name() << " ac:  " << c->chName << std::endl;
+  }
+  CCSTCompoundStatement *updates;
+  if (c && c->getChannelType() == Channel::ChannelType::AsyncChannel) {
+    updates = async_call(r, c, cspace_to_use);
+  } else {
+    updates = sync_call(r, m, cspace_to_use);
+  }
+
+  std::vector<CCSTDeclaration*> __tmp_declarations = updates->getdeclarations();
+  std::vector<CCSTStatement*> __tmp_statements = updates->getstatements();
+
+  declarations.insert(declarations.end(), __tmp_declarations.begin(), __tmp_declarations.end());
+  statements.insert(statements.end(), __tmp_statements.begin(), __tmp_statements.end());
+
+  /* Todo:  clear capability registers? */
+  /* return value to caller */
+  if(r->return_variable()->type()->num() != VOID_TYPE) {
+    // declare return var.
+    declarations.push_back(declare_variable(r->return_variable()));
+
+    // unmarshal return var
+    std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_no_check(r->return_variable());
+    statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
+    statements.push_back(new CCSTReturn(new CCSTPrimaryExprId(r->return_variable()->identifier())));
+  } else {
+    statements.push_back(new CCSTReturn());
+  }
   
+  return new CCSTCompoundStatement(declarations, statements);
+}
+
+CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use)
+{
+  std::vector<CCSTDeclaration*> declarations;
+  std::vector<CCSTStatement*> statements;
+  std::vector<CCSTAssignExpr*> lcd_async_start_args;
+  std::vector<CCSTAssignExpr*> async_fntype_args;
+  std::vector<CCSTAssignExpr*> fipc_set_0;
+  std::vector<CCSTDecSpecifier*> spec_fipcm;
+
+  std::vector<CCSTInitDeclarator*> decs_req;
+  std::vector<CCSTInitDeclarator*> decs_resp;
+
+  spec_fipcm.push_back(
+    new CCSTStructUnionSpecifier(struct_t, "fipc_message"));
+
+  decs_resp.push_back(
+    new CCSTInitDeclarator(
+      new CCSTDeclarator(pointer(1), new CCSTDirectDecId("response"))));
+
+  decs_req.push_back(
+    new CCSTInitDeclarator(
+      new CCSTDeclarator(pointer(1), new CCSTDirectDecId("request"))));
+
+  declarations.push_back(
+    new CCSTDeclaration(spec_fipcm, decs_req));
+
+  declarations.push_back(
+    new CCSTDeclaration(spec_fipcm, decs_resp));
+
+  if (c->getChannelType() == Channel::ChannelType::AsyncChannel) {
+    lcd_async_start_args.push_back(new CCSTPrimaryExprId(c->chName));
+    lcd_async_start_args.push_back(
+      new CCSTUnaryExprCastExpr(reference(),
+        new CCSTPrimaryExprId(c->chName)));
+
+    statements.push_back(
+      new CCSTExprStatement(
+        new CCSTPostFixExprAssnExpr(
+          new CCSTPrimaryExprId("async_msg_blocking_send_start"),
+          lcd_async_start_args)));
+
+    statements.push_back(
+      if_cond_fail(new CCSTPrimaryExprId("ret"),
+        "failed to get a send slot"));
+
+    async_fntype_args.push_back(new CCSTPrimaryExprId("request"));
+    async_fntype_args.push_back(new CCSTPrimaryExprId(r->enum_name()));
+
+    statements.push_back(
+      new CCSTExprStatement(
+        new CCSTPostFixExprAssnExpr(
+          new CCSTPrimaryExprId("async_msg_set_fn_type"),
+          async_fntype_args)));
+  }
+
   /* marshal parameters */
   for (auto p : *r) {
     if(p->in()) {
-      std::cout << "going to marshal variable " << p->identifier() <<  " for function " <<  r->name() << std::endl;
-      statements.push_back(marshal_variable(p, "in"));    
+      std::cout << " ASYNC marshal variable " << p->identifier() <<  " for function " <<  r->name() << std::endl;
+      statements.push_back(marshal_variable_async(p, "in"));
     }
   }
-  
   /* if it is a function pointer need to marshal hidden args */
   if (r->function_pointer_defined()) {
     std::vector<Parameter*> hidden_args = r->hidden_args_;
     for(std::vector<Parameter*>::iterator it = hidden_args.begin(); it != hidden_args.end(); it ++) {
       Parameter *p = *it;
       if(p->in()) {
-	std::cout << "going to marshal hidden arg " << p->identifier() << " for function " <<  r->name() << std::endl;
-	statements.push_back(marshal_variable(p, "in"));
+  std::cout << " ASYNC going to marshal hidden arg " << p->identifier() << " for function " <<  r->name() << std::endl;
+  statements.push_back(marshal_variable_async(p, "in"));
+      }
+    }
+  }
+  std::vector<CCSTAssignExpr*> lcd_async_call_args;
+
+  lcd_async_call_args.push_back(new CCSTPrimaryExprId(c->chName));
+  lcd_async_call_args.push_back(new CCSTPrimaryExprId("request"));
+  lcd_async_call_args.push_back(new CCSTUnaryExprCastExpr(reference(), new CCSTPrimaryExprId("request")));
+    statements.push_back(
+      new CCSTExprStatement(
+        new CCSTAssignExpr(new CCSTPrimaryExprId("err"), equals(),
+          function_call("thc_ipc_call", lcd_async_call_args))));
+
+  statements.push_back(if_cond_fail(new CCSTPrimaryExprId("err"), "thc_ipc_call"));
+
+
+  /* unmarshal appropriate parameters and return value */
+  for (auto& p : *r) {
+    if(p->type()->num() != VOID_TYPE) {
+      if(p->out()) {
+  std::vector<CCSTStatement*> tmp_stmts = unmarshal_async_variable_caller(p);
+  statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
+
+  // unmarshal container things associated with this param
+  tmp_stmts = unmarshal_container_refs_caller(p);
+  statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
+      }
+    }
+  }
+
+  /* if function pointer defined unmarshal hidden args*/
+  if(r->function_pointer_defined()) {
+    std::vector<Parameter*> hidden_args = r->hidden_args_;
+    for(std::vector<Parameter*>::iterator it = hidden_args.begin(); it != hidden_args.end(); it ++) {
+      Parameter *p = *it;
+      if(p->out()) {
+  std::vector<CCSTStatement*> tmp_stmts = unmarshal_async_variable_caller(p);
+  statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
+      }
+    }
+  }
+
+  // if anything is marked dealloc. dealloc
+  for (auto p : *r) {
+    std::vector<CCSTStatement*> tmp_statements = dealloc_containers_caller(p,
+      cspace_to_use, r->current_scope());
+    statements.insert(statements.end(), tmp_statements.begin(),
+      tmp_statements.end());
+  }
+
+  return new CCSTCompoundStatement(declarations, statements);
+}
+
+CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use)
+{
+  std::vector<CCSTDeclaration*> declarations;
+  std::vector<CCSTStatement*> statements;
+  /* marshal parameters */
+  for (auto p : *r) {
+    if (p->in()) {
+      std::cout << "going to marshal variable " << p->identifier()
+        << " for function " << r->name() << std::endl;
+      statements.push_back(marshal_variable(p, "in"));
+    }
+  }
+
+  /* if it is a function pointer need to marshal hidden args */
+  if (r->function_pointer_defined()) {
+    std::vector<Parameter*> hidden_args = r->hidden_args_;
+    for (std::vector<Parameter*>::iterator it = hidden_args.begin();
+      it != hidden_args.end(); it++) {
+      Parameter *p = *it;
+      if (p->in()) {
+        std::cout << "going to marshal hidden arg " << p->identifier()
+          << " for function " << r->name() << std::endl;
+        statements.push_back(marshal_variable(p, "in"));
       }
     }
   }
@@ -196,58 +364,53 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   declarations.push_back(new CCSTDeclaration(int_type(), err));
 
   std::vector<CCSTAssignExpr*> lcd_sync_call_args;
-  lcd_sync_call_args.push_back(new CCSTPrimaryExprId(m->channels().at(0)->identifier())); // first channel
-  statements.push_back(new CCSTExprStatement( new CCSTAssignExpr( new CCSTPrimaryExprId("err"), equals(), function_call("lcd_sync_call", lcd_sync_call_args))));
 
-  statements.push_back(if_cond_fail(new CCSTPrimaryExprId("err"), "lcd_sync_call"));
-  
+  lcd_sync_call_args.push_back(
+    new CCSTPrimaryExprId(m->channels().at(0)->identifier())); // first channel
+  statements.push_back(
+    new CCSTExprStatement(
+      new CCSTAssignExpr(new CCSTPrimaryExprId("err"), equals(),
+        function_call("lcd_sync_call", lcd_sync_call_args))));
+
+  statements.push_back(
+    if_cond_fail(new CCSTPrimaryExprId("err"), "lcd_sync_call"));
 
   /* unmarshal appropriate parameters and return value */
   for (auto& p : *r) {
-    if(p->type()->num() != VOID_TYPE) {
-      if(p->out()) {
-	std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_caller(p);
-	statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
+    if (p->type()->num() != VOID_TYPE) {
+      if (p->out()) {
+        std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_caller(p);
+        statements.insert(statements.end(), tmp_stmts.begin(),
+          tmp_stmts.end());
 
-	// unmarshal container things associated with this param
-	tmp_stmts = unmarshal_container_refs_caller(p);
-	statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
+        // unmarshal container things associated with this param
+        tmp_stmts = unmarshal_container_refs_caller(p);
+        statements.insert(statements.end(), tmp_stmts.begin(),
+          tmp_stmts.end());
       }
     }
   }
 
   /* if function pointer defined unmarshal hidden args*/
-  if(r->function_pointer_defined()) {
+  if (r->function_pointer_defined()) {
     std::vector<Parameter*> hidden_args = r->hidden_args_;
-    for(std::vector<Parameter*>::iterator it = hidden_args.begin(); it != hidden_args.end(); it ++) {
+    for (std::vector<Parameter*>::iterator it = hidden_args.begin();
+      it != hidden_args.end(); it++) {
       Parameter *p = *it;
-      if(p->out()) {
-	std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_caller(p);
-	statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
+      if (p->out()) {
+        std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_caller(p);
+        statements.insert(statements.end(), tmp_stmts.begin(),
+          tmp_stmts.end());
       }
     }
   }
 
   // if anything is marked dealloc. dealloc
   for (auto p : *r) {
-    std::vector<CCSTStatement*> tmp_statements = dealloc_containers_caller(p, cspace_to_use, r->current_scope());
-    statements.insert(statements.end(), tmp_statements.begin(), tmp_statements.end());
+    std::vector<CCSTStatement*> tmp_statements = dealloc_containers_caller(p,
+      cspace_to_use, r->current_scope());
+    statements.insert(statements.end(), tmp_statements.begin(),
+      tmp_statements.end());
   }
-
-  /* Todo:  clear capability registers? */
-
-  /* return value to caller */
-  if(r->return_variable()->type()->num() != VOID_TYPE) {
-    // declare return var.
-    declarations.push_back(declare_variable(r->return_variable()));
-
-    // unmarshal return var
-    std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_no_check(r->return_variable());
-    statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
-    statements.push_back(new CCSTReturn(new CCSTPrimaryExprId(r->return_variable()->identifier())));
-  } else {
-    statements.push_back(new CCSTReturn());
-  }
-  
-  return new CCSTCompoundStatement(declarations, statements);  
+  return new CCSTCompoundStatement(declarations, statements);
 }

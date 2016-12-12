@@ -1243,6 +1243,17 @@ class CCSTCompoundStatement : public CCSTStatement
   CCSTCompoundStatement(std::vector<CCSTDeclaration*> decs, std::vector<CCSTStatement*> s); //{this->declarations_ = decs; this->statements_ = s;}
   void add_statement(CCSTStatement *s) { this->statements_.push_back(s); }
   virtual void write(std::ofstream& of, int indent);
+  virtual ~CCSTCompoundStatement() {}
+
+  const std::vector<CCSTDeclaration*>& getdeclarations() const
+  {
+    return declarations_;
+  }
+
+  const std::vector<CCSTStatement*>& getstatements() const
+  {
+    return statements_;
+  }
 };
 
 
