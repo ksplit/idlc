@@ -17,8 +17,9 @@
 #include "ccst.h"
 
 const std::string access_register_mapping(int register_index);
-
 const std::string store_register_mapping(int register_index);
+const std::string load_async_reg_mapping(int idx);
+const std::string store_async_reg_mapping(int register_index);
 
 class Type;
 class Function;

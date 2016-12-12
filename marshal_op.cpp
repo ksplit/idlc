@@ -34,6 +34,18 @@ const std::string store_register_mapping(int idx)
   return register_store_mapping_[idx];
 }
 
+const std::string load_async_reg_mapping(int idx)
+{
+  Assert(idx < LCD_MAX_REGS, "Illegal register access\n");
+  return ipc_reg_access_mapping_[idx];
+}
+
+const std::string store_async_reg_mapping(int idx)
+{
+  Assert(idx < LCD_MAX_REGS, "Illegal register access\n");
+  return ipc_reg_store_mapping_[idx];
+}
+
 /* Registers code*/
 /* 
  * Finds next free register, then
@@ -206,6 +218,7 @@ MarshalPrepareVisitor::MarshalPrepareVisitor(Registers *r)
 Marshal_type* MarshalPrepareVisitor::visit(UnresolvedType *ut)
 {
   Assert(1 == 0, "Error: cannot marshal an unresolved type\n");
+  return NULL;
 }
 
 Marshal_type* MarshalPrepareVisitor::visit(Channel *c)
@@ -269,6 +282,7 @@ Marshal_type* MarshalPrepareVisitor::visit(ProjectionConstructorType *pct)
 Marshal_type* MarshalPrepareVisitor::visit(InitializeType *it)
 {
   Assert( 1 == 0, "Error: cannot prepare marshal for initialize type\n");
+  return NULL;
 }
 
 Marshal_type* MarshalPrepareVisitor::visit(BoolType *bt)
