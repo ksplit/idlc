@@ -227,3 +227,50 @@ CCSTStatement* marshal(CCSTPostFixExpr *v, int reg)
   
   return new CCSTExprStatement(function_call(store_reg_func, store_reg_args));
 }
+
+CCSTStatement* marshal_variable_async(Variable *v, const std::string& direction)
+{
+  std::vector<CCSTDeclaration*> declarations;
+  std::vector<CCSTStatement*> statements;
+
+  if (v->container() != 0x0) {
+    // marshal container
+    std::cout << "trying to marshal container " <<  v->container()->identifier() << std::endl;
+    statements.push_back(marshal_variable_async(v->container(), direction));
+  }
+
+  if (v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) { // projection
+    // loop through fields
+    ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
+    Assert(pt != 0x0, "Error: dynamic cast to projection failed!\n");
+
+    for (auto pf : *pt) {
+      if ((direction == "in" && pf->in())
+        || (direction == "out" && pf->out())) {
+        statements.push_back(marshal_variable_async(pf, direction));
+      }
+    }
+
+  } else if (v->type()->num() == VOID_TYPE) {
+    return marshal_void_pointer(v);
+  } else {
+    std::cout << "marshalling variable " <<  v->identifier() << std::endl;
+    Assert(v->marshal_info() != 0x0, "Error: marshalling info is null\n");
+    statements.push_back(marshal_async(access(v), v->marshal_info()->get_register()));
+  }
+
+  return new CCSTCompoundStatement(declarations, statements);
+}
+
+CCSTStatement* marshal_async(CCSTPostFixExpr *v, int reg)
+{
+  const std::string& store_reg_func = store_async_reg_mapping(reg);
+
+  std::vector<CCSTAssignExpr*> store_reg_args;
+  std::vector<CCSTAssignExpr*> cptr_args;
+  store_reg_args.push_back(new CCSTPrimaryExprId("request"));
+  cptr_args.push_back(v);
+  store_reg_args.push_back(function_call("cptr_val", cptr_args));
+
+  return new CCSTExprStatement(function_call(store_reg_func, store_reg_args));
+}

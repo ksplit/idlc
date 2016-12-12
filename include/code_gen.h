@@ -110,12 +110,15 @@ std::vector<CCSTStatement*> unmarshal_variable_no_check(Variable *v); // complet
 std::vector<CCSTStatement*> unmarshal_variable_callee(Variable *v);
 std::vector<CCSTStatement*> unmarshal_variable_caller(Variable *v);
 std::vector<CCSTStatement*> unmarshal_container_refs_caller(Variable *v);
+std::vector<CCSTStatement*> unmarshal_async_variable_caller(Variable *v);
 
 // marshal.cpp
 CCSTStatement* marshal_variable(Variable *v, const std::string& direction); // complete
+CCSTStatement* marshal_variable_async(Variable *v, const std::string& direction);
 std::vector<CCSTStatement*> marshal_variable_callee(Variable *v); // complete
 std::vector<CCSTStatement*> marshal_variable_no_check(Variable *v); // complete
 CCSTStatement* marshal(CCSTPostFixExpr *v, int reg); // complete
+CCSTStatement* marshal_async(CCSTPostFixExpr *v, int reg);
 // Common function for marshalling void pointer across domains
 CCSTStatement* marshal_void_pointer(Variable *v);
 

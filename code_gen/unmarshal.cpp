@@ -82,6 +82,38 @@ std::vector<CCSTStatement*> unmarshal_variable_caller(Variable *v)
   return statements;
 }
 
+// unmarshals variable.
+std::vector<CCSTStatement*> unmarshal_async_variable_caller(Variable *v)
+{
+  std::vector<CCSTStatement*> statements;
+
+  if(v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
+    ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
+    Assert(pt != 0x0, "Error: dynamic cast to projection failed!\n");
+
+    for (auto pf : *pt) {
+      if(pf->out()) {
+  std::vector<CCSTStatement*> tmp_stmt = unmarshal_async_variable_caller(pf);
+  statements.insert(statements.end(), tmp_stmt.begin(), tmp_stmt.end());
+      }
+    }
+
+  } else {
+    Assert(v->marshal_info() != 0x0, "Error: variable has no marshalling information\n");
+
+    int reg = v->marshal_info()->get_register();
+    const std::string& reg_func = load_async_reg_mapping(reg);
+    std::vector<CCSTAssignExpr*> reg_func_args_empty;
+
+    statements.push_back(new CCSTExprStatement(new CCSTAssignExpr(access(v)
+                  , equals()
+                  , function_call(reg_func
+                      , reg_func_args_empty))));
+  }
+
+  return statements;
+}
+
 
 // unmarshals variable. and sets in container if there is a container.
 std::vector<CCSTStatement*> unmarshal_variable_callee(Variable *v)
