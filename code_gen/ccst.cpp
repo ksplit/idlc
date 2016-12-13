@@ -1631,6 +1631,9 @@ void CCSTDeclaration::write(std::ofstream& of, int indent)
     it != decs_.end(); ++it) {
     CCSTInitDeclarator *init_dec = *it;
     init_dec->write(of, 0);
+
+    if (*it != decs_.back())
+      of << ", ";
   }
   of << ";";
   of << "\n";
