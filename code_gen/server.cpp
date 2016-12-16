@@ -156,6 +156,17 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
     }
   }
 
+  Channel *c = r->getcurrentscope()->outer_scope_->getactiveChannel();
+  if (c) {
+    std::cout << "### Rpc " << r->name() << " ac:  " << c->chName << std::endl;
+  } else {
+    // Check if there exists a global module level channel
+    c = m->module_scope()->activeChannel;
+  }
+  Channel::ChannelType type;
+  if (c) {
+    type = c->chType;
+  }
   // TODO: unmarshal channel refs;
 
   // allocate/initiliaze and link these
@@ -163,7 +174,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
     std::cout << "Parameter is " << p->identifier() << std::endl;
     statements.push_back(
       allocate_and_link_containers_callee(p,
-        m->cspaces_.at(0)->identifier()));
+        m->cspaces_.at(0)->identifier(), type));
   }
 
   // allocate things which are not containers
@@ -206,7 +217,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   // unmarshal rest of parameters. rest means not a container reference.
   for (auto p : *r) {
     if(p->in()) {
-      std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_callee(p);
+      std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_callee(p, type);
       statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
     }
   }
@@ -235,7 +246,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
 
   // allocate return variable // return value cannot have a container?
   statements.push_back(allocate_and_link_containers_callee(r->return_variable()
-							   , m->cspaces_.at(0)->identifier()));
+							   , m->cspaces_.at(0)->identifier(), type));
   statements.push_back(allocate_non_container_variables(r->return_variable()));
   
   // real call
@@ -258,14 +269,14 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   /* marshal return params and val */
   for (auto& p : *r) {
     if(p->out()) {
-      std::vector<CCSTStatement*> tmp_stmts = marshal_variable_callee(p);
+      std::vector<CCSTStatement*> tmp_stmts = marshal_variable_callee(p, type);
       statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
     }
   }
 
   // marshal return val;
   if(r->return_variable()->type()->num() != VOID_TYPE) {
-    std::vector<CCSTStatement*> tmp_stmts = marshal_variable_no_check(r->return_variable());
+    std::vector<CCSTStatement*> tmp_stmts = marshal_variable_no_check(r->return_variable(), type);
     statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
   }
 

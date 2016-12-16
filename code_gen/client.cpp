@@ -171,12 +171,16 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   Channel *c = r->getcurrentscope()->outer_scope_->getactiveChannel();
   if (c) {
     std::cout << "### Rpc " << r->name() << " ac:  " << c->chName << std::endl;
+  } else {
+    // Check if there exists a global module level channel
+    c = m->module_scope()->activeChannel;
   }
+
   CCSTCompoundStatement *updates;
   if (c && c->getChannelType() == Channel::ChannelType::AsyncChannel) {
     updates = async_call(r, c, cspace_to_use);
   } else {
-    updates = sync_call(r, m, cspace_to_use);
+    updates = sync_call(r, m, cspace_to_use, c);
   }
 
   std::vector<CCSTDeclaration*> __tmp_declarations = updates->getdeclarations();
@@ -188,12 +192,6 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   /* Todo:  clear capability registers? */
   /* return value to caller */
   if(r->return_variable()->type()->num() != VOID_TYPE) {
-    // declare return var.
-    declarations.push_back(declare_variable(r->return_variable()));
-
-    // unmarshal return var
-    std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_no_check(r->return_variable());
-    statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
     statements.push_back(new CCSTReturn(new CCSTPrimaryExprId(r->return_variable()->identifier())));
   } else {
     statements.push_back(new CCSTReturn());
@@ -261,7 +259,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
   for (auto p : *r) {
     if(p->in()) {
       std::cout << " ASYNC marshal variable " << p->identifier() <<  " for function " <<  r->name() << std::endl;
-      statements.push_back(marshal_variable_async(p, "in"));
+      statements.push_back(marshal_variable(p, "in", c->chType));
     }
   }
   /* if it is a function pointer need to marshal hidden args */
@@ -271,7 +269,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
       Parameter *p = *it;
       if(p->in()) {
   std::cout << " ASYNC going to marshal hidden arg " << p->identifier() << " for function " <<  r->name() << std::endl;
-  statements.push_back(marshal_variable_async(p, "in"));
+  statements.push_back(marshal_variable(p, "in", c->chType));
       }
     }
   }
@@ -292,11 +290,11 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
   for (auto& p : *r) {
     if(p->type()->num() != VOID_TYPE) {
       if(p->out()) {
-  std::vector<CCSTStatement*> tmp_stmts = unmarshal_async_variable_caller(p);
+  std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_caller(p, c->chType);
   statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
 
   // unmarshal container things associated with this param
-  tmp_stmts = unmarshal_container_refs_caller(p);
+  tmp_stmts = unmarshal_container_refs_caller(p, c->chType);
   statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
       }
     }
@@ -308,7 +306,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
     for(std::vector<Parameter*>::iterator it = hidden_args.begin(); it != hidden_args.end(); it ++) {
       Parameter *p = *it;
       if(p->out()) {
-  std::vector<CCSTStatement*> tmp_stmts = unmarshal_async_variable_caller(p);
+  std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_caller(p, c->chType);
   statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
       }
     }
@@ -322,10 +320,24 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
       tmp_statements.end());
   }
 
+  if(r->return_variable()->type()->num() != VOID_TYPE) {
+    // declare return var.
+    declarations.push_back(declare_variable(r->return_variable()));
+
+    // unmarshal return var
+    std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_no_check(r->return_variable(), c->chType);
+    statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
+  }
+  std::vector<CCSTAssignExpr*> ipc_recv_end_args;
+  std::vector<CCSTAssignExpr*> chnl_to_fipc_args;
+  chnl_to_fipc_args.push_back(new CCSTPrimaryExprId(c->chName));
+  ipc_recv_end_args.push_back(function_call("thc_channel_to_fipc", chnl_to_fipc_args));
+  ipc_recv_end_args.push_back(new CCSTPrimaryExprId("response"));
+  statements.push_back(new CCSTExprStatement(function_call("fipc_recv_msg_end", ipc_recv_end_args)));
   return new CCSTCompoundStatement(declarations, statements);
 }
 
-CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use)
+CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use, Channel *c)
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
@@ -334,7 +346,7 @@ CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use)
     if (p->in()) {
       std::cout << "going to marshal variable " << p->identifier()
         << " for function " << r->name() << std::endl;
-      statements.push_back(marshal_variable(p, "in"));
+      statements.push_back(marshal_variable(p, "in", c->chType));
     }
   }
 
@@ -347,7 +359,7 @@ CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use)
       if (p->in()) {
         std::cout << "going to marshal hidden arg " << p->identifier()
           << " for function " << r->name() << std::endl;
-        statements.push_back(marshal_variable(p, "in"));
+        statements.push_back(marshal_variable(p, "in", c->chType));
       }
     }
   }
@@ -355,7 +367,7 @@ CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use)
   /* marshal function tag */
   std::string *func_type = new std::string(r->name());
   std_string_toupper(*func_type);
-  statements.push_back(marshal(new CCSTEnumConst(*func_type), 0));
+  statements.push_back(marshal(new CCSTEnumConst(*func_type), 0, c->chType));
 
   /* make remote call using appropriate channel */
 
@@ -379,12 +391,12 @@ CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use)
   for (auto& p : *r) {
     if (p->type()->num() != VOID_TYPE) {
       if (p->out()) {
-        std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_caller(p);
+        std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_caller(p, c->chType);
         statements.insert(statements.end(), tmp_stmts.begin(),
           tmp_stmts.end());
 
         // unmarshal container things associated with this param
-        tmp_stmts = unmarshal_container_refs_caller(p);
+        tmp_stmts = unmarshal_container_refs_caller(p, c->chType);
         statements.insert(statements.end(), tmp_stmts.begin(),
           tmp_stmts.end());
       }
@@ -398,7 +410,7 @@ CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use)
       it != hidden_args.end(); it++) {
       Parameter *p = *it;
       if (p->out()) {
-        std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_caller(p);
+        std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_caller(p, c->chType);
         statements.insert(statements.end(), tmp_stmts.begin(),
           tmp_stmts.end());
       }
@@ -412,5 +424,15 @@ CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use)
     statements.insert(statements.end(), tmp_statements.begin(),
       tmp_statements.end());
   }
+
+  if(r->return_variable()->type()->num() != VOID_TYPE) {
+    // declare return var.
+    declarations.push_back(declare_variable(r->return_variable()));
+
+    // unmarshal return var
+    std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_no_check(r->return_variable(), c->chType);
+    statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
+  }
+
   return new CCSTCompoundStatement(declarations, statements);
 }

@@ -26,7 +26,7 @@ CCSTFile* generate_client_source(Module *m, std::vector<Include*> includes); // 
 
 CCSTCompoundStatement* caller_body(Rpc *r, Module *m); // todo complete
 CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use);
-CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use);
+CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use, Channel *c);
 
 std::vector<CCSTStatement*> marshal_in_parameters(std::vector<Parameter*> params); // complete
 
@@ -107,29 +107,26 @@ CCSTParamTypeList* parameter_list(std::vector<Parameter*> params); // complete
 // add marshal and unmarshal cpp files to this
 
 // unmarshal.cpp
-CCSTPostFixExprAssnExpr* unmarshal_variable(Variable *v); 
-std::vector<CCSTStatement*> unmarshal_variable_no_check(Variable *v); // complete
-std::vector<CCSTStatement*> unmarshal_variable_callee(Variable *v);
-std::vector<CCSTStatement*> unmarshal_variable_caller(Variable *v);
-std::vector<CCSTStatement*> unmarshal_container_refs_caller(Variable *v);
-std::vector<CCSTStatement*> unmarshal_async_variable_caller(Variable *v);
+CCSTPostFixExprAssnExpr* unmarshal_variable(Variable *v, Channel::ChannelType type);
+std::vector<CCSTStatement*> unmarshal_variable_no_check(Variable *v, Channel::ChannelType type); // complete
+std::vector<CCSTStatement*> unmarshal_variable_callee(Variable *v, Channel::ChannelType type);
+std::vector<CCSTStatement*> unmarshal_variable_caller(Variable *v, Channel::ChannelType type);
+std::vector<CCSTStatement*> unmarshal_container_refs_caller(Variable *v, Channel::ChannelType type);
 
 // marshal.cpp
-CCSTStatement* marshal_variable(Variable *v, const std::string& direction); // complete
-CCSTStatement* marshal_variable_async(Variable *v, const std::string& direction);
-std::vector<CCSTStatement*> marshal_variable_callee(Variable *v); // complete
-std::vector<CCSTStatement*> marshal_variable_no_check(Variable *v); // complete
-CCSTStatement* marshal(CCSTPostFixExpr *v, int reg); // complete
-CCSTStatement* marshal_async(CCSTPostFixExpr *v, int reg);
+CCSTStatement* marshal_variable(Variable *v, const std::string& direction, Channel::ChannelType type); // complete
+std::vector<CCSTStatement*> marshal_variable_callee(Variable *v, Channel::ChannelType type); // complete
+std::vector<CCSTStatement*> marshal_variable_no_check(Variable *v, Channel::ChannelType type); // complete
+CCSTStatement* marshal(CCSTPostFixExpr *v, int reg, Channel::ChannelType type); // complete
 // Common function for marshalling void pointer across domains
 CCSTStatement* marshal_void_pointer(Variable *v);
 
 // containers.cpp
 std::vector<CCSTAssignExpr*> container_of_args(CCSTPostFixExpr *struct_pointer, const std::string& type_name, const std::string& field_name); // complete
 std::vector<CCSTStatement*> container_of(Variable *v, const std::string& cspace); // complete
-CCSTCompoundStatement* set_remote_ref(Variable *v); // complete
-CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const std::string& cspace);
-CCSTStatement* lookup_variable_container(Variable *v);
+CCSTCompoundStatement* set_remote_ref(Variable *v, Channel::ChannelType type); // complete
+CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const std::string& cspace, Channel::ChannelType type);
+CCSTStatement* lookup_variable_container(Variable *v, Channel::ChannelType type);
 CCSTStatement* alloc_variable(Variable *v); // complete
 CCSTStatement* allocate_non_container_variables(Variable *v);
 CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const std::string& cspace);

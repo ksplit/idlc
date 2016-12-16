@@ -70,7 +70,7 @@ std::vector<CCSTStatement*> container_of(Variable *v, const std::string& cspace)
   return statements;
 }
 
-CCSTCompoundStatement* set_remote_ref(Variable *v)
+CCSTCompoundStatement* set_remote_ref(Variable *v, Channel::ChannelType type)
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
@@ -103,13 +103,13 @@ CCSTCompoundStatement* set_remote_ref(Variable *v)
   if(my_cptr->marshal_info() != 0x0) {
     statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(access(other_cptr)
 								   , equals()
-								   , unmarshal_variable(my_cptr))));
+								   , unmarshal_variable(my_cptr, type))));
   }
   
   return new CCSTCompoundStatement(declarations, statements);
 }
 
-CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const std::string& cspace)
+CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const std::string& cspace, Channel::ChannelType type)
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
@@ -119,9 +119,9 @@ CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const st
     if(v->alloc_callee()) {
       statements.push_back(alloc_insert_variable_container(v, cspace));
       // store remote reference;
-      statements.push_back(set_remote_ref(v)); 
+      statements.push_back(set_remote_ref(v, type));
     } else { // lookup 
-      statements.push_back(lookup_variable_container(v));
+      statements.push_back(lookup_variable_container(v, type));
     }
   }
 
@@ -130,7 +130,7 @@ CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const st
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
 
     for (auto pf : *pt) {
-      statements.push_back(allocate_and_link_containers_callee(pf, cspace));
+      statements.push_back(allocate_and_link_containers_callee(pf, cspace, type));
 
       // link
       if( v->container() != 0x0 && pf->container() != 0x0 ) {
@@ -160,7 +160,7 @@ CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const st
 }
 
 /* has already been declared at v->container()->identifier() */
-CCSTStatement* lookup_variable_container(Variable *v)
+CCSTStatement* lookup_variable_container(Variable *v, Channel::ChannelType type)
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
@@ -177,7 +177,7 @@ CCSTStatement* lookup_variable_container(Variable *v)
   Assert(my_ref_field != 0x0, "Error: could not find my_ref field in projection\n");
 
   std::vector<CCSTAssignExpr*> __cptr_args;
-  __cptr_args.push_back( unmarshal_variable( get_cptr_field( my_ref_field )));
+  __cptr_args.push_back( unmarshal_variable( get_cptr_field( my_ref_field ), type));
 
   lookup_args.push_back(function_call("__cptr", __cptr_args)); // ref we get from __cptr(reg_whatever())
   lookup_args.push_back( new CCSTUnaryExprCastExpr( reference()
