@@ -112,7 +112,7 @@ std::vector<CCSTStatement*> unmarshal_variable_no_check(Variable *v, Channel::Ch
 std::vector<CCSTStatement*> unmarshal_variable_callee(Variable *v, Channel::ChannelType type);
 std::vector<CCSTStatement*> unmarshal_variable_caller(Variable *v, Channel::ChannelType type);
 std::vector<CCSTStatement*> unmarshal_container_refs_caller(Variable *v, Channel::ChannelType type);
-
+std::vector<CCSTStatement*> unmarshal_void_pointer(Variable *v);
 // marshal.cpp
 CCSTStatement* marshal_variable(Variable *v, const std::string& direction, Channel::ChannelType type); // complete
 std::vector<CCSTStatement*> marshal_variable_callee(Variable *v, Channel::ChannelType type); // complete
