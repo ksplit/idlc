@@ -23,7 +23,7 @@ class CCSTStructDeclarator;
 class CCSTPointer;
 class CCSTDirectDeclarator;
 class CCSTDirectDecId;
-class CCSTDirectDecDec ;
+class CCSTDirectDecDec;
 class CCSTDirectDecConstExpr;
 class CCSTDirectDecParamTypeList;
 class CCSTDirectDecIdList;
@@ -109,169 +109,185 @@ const std::string indentation(unsigned int level);
 
 class CCSTBase
 {
- public:
+public:
   virtual void write(std::ofstream& of, int indent) = 0;
+  virtual ~CCSTBase()
+  {
+  }
 };
 
-class CCSTFile : public CCSTBase
+class CCSTFile: public CCSTBase
 {
   std::vector<CCSTExDeclaration*> defs_;
- public:
-  CCSTFile(std::vector<CCSTExDeclaration*> defs); //{this->defs_ = defs;}
+public:
+  CCSTFile(std::vector<CCSTExDeclaration*> defs);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTExDeclaration : public CCSTBase
+class CCSTExDeclaration: public CCSTBase
 {
   /*
-  <external-declaration> ::= <function-definition>
-                         | <declaration>
-  */
- public:
+   <external-declaration> ::= <function-definition>
+   | <declaration>
+   */
+public:
   virtual void write(std::ofstream& of, int indent) = 0;
 };
 
 class CCSTDeclarator;
-class CCSTInitDeclarator : public CCSTBase
+class CCSTInitDeclarator: public CCSTBase
 {
   /*
-    
-<init-declarator> ::= <declarator>
-                    | <declarator> = <initializer>
+
+   <init-declarator> ::= <declarator>
+   | <declarator> = <initializer>
    */
   CCSTDeclarator *dec_;
   CCSTInitializer *init_;
- public:
+public:
   CCSTInitDeclarator() {};
-  CCSTInitDeclarator(CCSTDeclarator *dec, CCSTInitializer *init); //{this->dec_ = dec; this->init_ = init;}
-  CCSTInitDeclarator(CCSTDeclarator *dec); //{this->dec_ = dec; this->init_ = NULL;}
+  CCSTInitDeclarator(CCSTDeclarator *dec, CCSTInitializer *init);
+  CCSTInitDeclarator(CCSTDeclarator *dec);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTDeclarator : public CCSTInitDeclarator // this seems incorrect
+class CCSTDeclarator: public CCSTInitDeclarator // this seems incorrect
 {
   /*
-    <declarator> ::= {<pointer>}? <direct-declarator>
+   <declarator> ::= {<pointer>}? <direct-declarator>
    */
   CCSTPointer *pointer_;
   CCSTDirectDeclarator *d_dec_;
- public:
-  CCSTDeclarator(CCSTPointer *pointer, CCSTDirectDeclarator *d_dec); //{this->pointer_ = pointer; this->d_dec_ = d_dec;}
+public:
+  CCSTDeclarator() {};
+  CCSTDeclarator(CCSTPointer *pointer, CCSTDirectDeclarator *d_dec);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTMacro : public CCSTExDeclaration
+class CCSTMacro: public CCSTExDeclaration
 {
   std::string macro_name;
   std::vector<CCSTAssignExpr*> data_args;
   bool is_terminal;
- public:
-  CCSTMacro(const std::string& name, std::vector<CCSTAssignExpr*> data_args, bool is_terminal) {
-	this->macro_name = name;
-	this->data_args = data_args;
-	this->is_terminal = is_terminal;
+public:
+  CCSTMacro(const std::string& name, std::vector<CCSTAssignExpr*> data_args,
+    bool is_terminal)
+  {
+    this->macro_name = name;
+    this->data_args = data_args;
+    this->is_terminal = is_terminal;
   }
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTFuncDef : public CCSTExDeclaration
+class CCSTFuncDef: public CCSTExDeclaration
 {
   /* <function-definition> ::= 
-     {<declaration-specifier>}* <declarator> {<declaration>}* <compound-statement>
-  */
+   {<declaration-specifier>}* <declarator> {<declaration>}* <compound-statement>
+   */
   std::vector<CCSTDecSpecifier*> specifiers_;
   CCSTDeclarator *ret_;
   std::vector<CCSTDeclaration*> decs_;
   CCSTCompoundStatement *body_;
   std::vector<CCSTMacro*> attributes_;
- public:
-  CCSTFuncDef(std::vector<CCSTDecSpecifier*> specifiers, CCSTDeclarator *ret, std::vector<CCSTDeclaration*> decs, CCSTCompoundStatement *body); //{this->specifiers_ = specifiers; this->ret_ = ret; this->decs_ = decs; this->body_ = body;}
-  CCSTFuncDef(std::vector<CCSTDecSpecifier*> specifiers, CCSTDeclarator *ret, std::vector<CCSTDeclaration*> decs, CCSTCompoundStatement *body, std::vector<CCSTMacro*> attribs);
+public:
+  CCSTFuncDef(std::vector<CCSTDecSpecifier*> specifiers, CCSTDeclarator *ret,
+    std::vector<CCSTDeclaration*> decs, CCSTCompoundStatement *body);
+  CCSTFuncDef(std::vector<CCSTDecSpecifier*> specifiers, CCSTDeclarator *ret,
+    std::vector<CCSTDeclaration*> decs, CCSTCompoundStatement *body,
+    std::vector<CCSTMacro*> attribs);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTDeclaration : public CCSTExDeclaration
+class CCSTDeclaration: public CCSTExDeclaration
 {
   /*
-    <declaration> ::=  {<declaration-specifier>}+ {<init-declarator>}*
+   <declaration> ::=  {<declaration-specifier>}+ {<init-declarator>}*
    */
 
- public:
-  std::vector<CCSTDecSpecifier*>specifier_;
+public:
+  virtual ~CCSTDeclaration()
+  {
+  }
+  std::vector<CCSTDecSpecifier*> specifier_;
   std::vector<CCSTInitDeclarator*> decs_;
   std::vector<CCSTMacro*> attributes_;
-  CCSTDeclaration(std::vector<CCSTDecSpecifier*> specifier, std::vector<CCSTInitDeclarator*> decs); //{this->specifier_ = specifier; this->decs_ = decs;}
   CCSTDeclaration(std::vector<CCSTDecSpecifier*> specifier,
-			std::vector<CCSTMacro*> attribs,
-			std::vector<CCSTInitDeclarator*> decs);
+    std::vector<CCSTInitDeclarator*> decs);
+  CCSTDeclaration(std::vector<CCSTDecSpecifier*> specifier,
+    std::vector<CCSTMacro*> attribs, std::vector<CCSTInitDeclarator*> decs);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTDecSpecifier : public CCSTBase
+class CCSTDecSpecifier: public CCSTBase
 {
   /*
-    <declaration-specifier> ::= <storage-class-specifier>
-                          | <type-specifier>
-                          | <type-qualifier>
+   <declaration-specifier> ::= <storage-class-specifier>
+   | <type-specifier>
+   | <type-qualifier>
    */
- public:
+public:
   virtual void write(std::ofstream& of, int indent) = 0;
 
 };
 
-enum sto_class_t {auto_t, register_local_t, static_t, extern_t, typedef_t};
+enum sto_class_t
+{
+  auto_t, register_local_t, static_t, extern_t, typedef_t
+};
 
-class CCSTStoClassSpecifier : public CCSTDecSpecifier
+class CCSTStoClassSpecifier: public CCSTDecSpecifier
 {
   // is this even encessary?
   /*
-    <storage-class-specifier> ::= auto
-                            | register
-                            | static
-                            | extern
-                            | typedef
+   <storage-class-specifier> ::= auto
+   | register
+   | static
+   | extern
+   | typedef
    */
   sto_class_t val_;
- public:
-  CCSTStoClassSpecifier(sto_class_t val); //{this->val_ = val;}
+public:
+  CCSTStoClassSpecifier(sto_class_t val);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTSpecifierQual : public CCSTDecSpecifier
+class CCSTSpecifierQual: public CCSTDecSpecifier
 {
   /*
-    <specifier-qualifier> ::= <type-specifier>
-                        | <type-qualifier>
+   <specifier-qualifier> ::= <type-specifier>
+   | <type-qualifier>
    */
- public:
+public:
   virtual void write(std::ofstream& of, int indent) = 0;
 };
 
-class CCSTTypeSpecifier : public CCSTSpecifierQual // slightly different from c_bnf
+class CCSTTypeSpecifier: public CCSTSpecifierQual // slightly different from c_bnf
 {
   /*
-    <type-specifier> ::= void
-                   | char
-                   | short
-                   | int
-                   | long
-                   | float
-                   | double
-                   | signed
-                   | unsigned
-                   | <struct-or-union-specifier>
-                   | <enum-specifier>
-                   | <typedef-name>
+   <type-specifier> ::= void
+   | char
+   | short
+   | int
+   | long
+   | float
+   | double
+   | signed
+   | unsigned
+   | <struct-or-union-specifier>
+   | <enum-specifier>
+   | <typedef-name>
 
    */
- public:
+public:
   virtual void write(std::ofstream& of, int indent) = 0;
 };
 
-class CCSTSimpleTypeSpecifier : public CCSTTypeSpecifier
+class CCSTSimpleTypeSpecifier: public CCSTTypeSpecifier
 {
 public:
-  enum TypeSpecifier {
+  enum TypeSpecifier
+  {
     VoidTypeSpec = 0,
     CharTypeSpec,
     ShortTypeSpec,
@@ -290,960 +306,1019 @@ public:
   virtual void write(std::ofstream& of, int indent);
 };
 
-enum struct_union_t {struct_t, union_t}; // probably unecessary
+enum struct_union_t
+{
+  struct_t, union_t
+};
+// probably unecessary
 
-class CCSTStructUnionSpecifier : public CCSTTypeSpecifier
+class CCSTStructUnionSpecifier: public CCSTTypeSpecifier
 {
   /*
-    <struct-or-union-specifier> ::= <struct-or-union> <identifier> { {<struct-declaration>}+ }
-                              | <struct-or-union> { {<struct-declaration>}+ }
-                              | <struct-or-union> <identifier>
-  */
+   <struct-or-union-specifier> ::= <struct-or-union> <identifier> { {<struct-declaration>}+ }
+   | <struct-or-union> { {<struct-declaration>}+ }
+   | <struct-or-union> <identifier>
+   */
   struct_union_t s_or_u_;
   std::string id_;
   std::vector<CCSTStructDeclaration*> struct_dec_;
- public:
-  CCSTStructUnionSpecifier(struct_union_t s_or_u, const std::string& id); //{this->s_or_u_ = s_or_u; this->id_ = id;}
-  CCSTStructUnionSpecifier(struct_union_t s_or_u, const std::string& id, std::vector<CCSTStructDeclaration*> struct_dec); //{this->s_or_u_ = s_or_u; this->id_ = id; this->struct_dec_ = struct_dec;}
-  CCSTStructUnionSpecifier(struct_union_t s_or_u, std::vector<CCSTStructDeclaration*> struct_dec); //{this->s_or_u_ = s_or_u; this->id_ = ""; this->struct_dec_ = struct_dec;}
+public:
+  CCSTStructUnionSpecifier(struct_union_t s_or_u, const std::string& id);
+  CCSTStructUnionSpecifier(struct_union_t s_or_u, const std::string& id,
+    std::vector<CCSTStructDeclaration*> struct_dec);
+  CCSTStructUnionSpecifier(struct_union_t s_or_u,
+    std::vector<CCSTStructDeclaration*> struct_dec);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTStructDeclaration : public CCSTBase
+class CCSTStructDeclaration: public CCSTBase
 {
   /*
-    <struct-declaration> ::= {<specifier-qualifier>}* <struct-declarator-list>
+   <struct-declaration> ::= {<specifier-qualifier>}* <struct-declarator-list>
    */
   std::vector<CCSTSpecifierQual*> spec_qual_;
   CCSTStructDecList *dec_list_;
- public:
-  CCSTStructDeclaration(std::vector<CCSTSpecifierQual*> spec_qual, CCSTStructDecList *dec_list); //{this->spec_qual_ = spec_qual; this->dec_list_ = dec_list;}
+public:
+  CCSTStructDeclaration(std::vector<CCSTSpecifierQual*> spec_qual,
+    CCSTStructDecList *dec_list);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTStructDecList : public CCSTBase
+class CCSTStructDecList: public CCSTBase
 {
   /*
-    <struct-declarator-list> ::= <struct-declarator>
-                           | <struct-declarator-list> , <struct-declarator>
+   <struct-declarator-list> ::= <struct-declarator>
+   | <struct-declarator-list> , <struct-declarator>
    */
   std::vector<CCSTStructDeclarator*> struct_decs_;
- public:
+public:
   CCSTStructDecList();
-  CCSTStructDecList(std::vector<CCSTStructDeclarator*> struct_decs); //{this->struct_decs_ = struct_decs;}
+  CCSTStructDecList(std::vector<CCSTStructDeclarator*> struct_decs);
   virtual void write(std::ofstream& of, int indent);
 };
 
-
-
-class CCSTStructDeclarator : public CCSTStructDecList
+class CCSTStructDeclarator: public CCSTStructDecList
 {
   /*
-  <struct-declarator> ::= <declarator>
-                      | <declarator> : <constant-expression>
-                      | : <constant-expression>
-  */
+   <struct-declarator> ::= <declarator>
+   | <declarator> : <constant-expression>
+   | : <constant-expression>
+   */
   CCSTDeclarator *dec_;
   CCSTConstExpr *expr_;
- public:
+public:
   CCSTStructDeclarator();
-  CCSTStructDeclarator(CCSTDeclarator *dec); //{this->dec_ = dec; this->expr_ = NULL;}
-  CCSTStructDeclarator(CCSTDeclarator *dec, CCSTConstExpr *expr); //{this->dec_ = dec; this->expr_ = expr;}
-  CCSTStructDeclarator(CCSTConstExpr *expr); //{this->dec_ = NULL; this->expr_ = expr;}
+  CCSTStructDeclarator(CCSTDeclarator *dec);
+  CCSTStructDeclarator(CCSTDeclarator *dec, CCSTConstExpr *expr);
+  CCSTStructDeclarator(CCSTConstExpr *expr);
   virtual void write(std::ofstream& of, int indent);
 };
 
 // probably does not need to be a class.
-enum type_qualifier {none_t, const_t, volatile_t};
+enum type_qualifier
+{
+  none_t, const_t, volatile_t
+};
 
-class CCSTAbstDeclarator : public CCSTBase
+class CCSTAbstDeclarator: public CCSTBase
 {
   /*
-    <abstract-declarator> ::= <pointer>
-                        | <pointer> <direct-abstract-declarator>
-                        | <direct-abstract-declarator>
+   <abstract-declarator> ::= <pointer>
+   | <pointer> <direct-abstract-declarator>
+   | <direct-abstract-declarator>
    */
   CCSTPointer *p_;
   CCSTDirectAbstDeclarator *d_abs_dec_;
- public:
+public:
   CCSTAbstDeclarator();
-  CCSTAbstDeclarator(CCSTPointer *p, CCSTDirectAbstDeclarator *d_abs_dec); //{this->p_ = p; this->d_abs_dec_ = d_abs_dec;}
+  CCSTAbstDeclarator(CCSTPointer *p, CCSTDirectAbstDeclarator *d_abs_dec);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTPointer : public CCSTAbstDeclarator
+class CCSTPointer: public CCSTAbstDeclarator
 {
   /*
-    <pointer> ::= * {<type-qualifier>}* {<pointer>}?
+   <pointer> ::= * {<type-qualifier>}* {<pointer>}?
    */
   std::vector<type_qualifier> type_q_;
   CCSTPointer *p_;
 
- public:
-  CCSTPointer(std::vector<type_qualifier> type_q, CCSTPointer *p); //{this->type_q_ = type_q; this->p_ = p;}
-  CCSTPointer(); //{this->p_ = NULL;}
-  CCSTPointer(std::vector<type_qualifier> type_q); //{this->type_q_ = type_q; this->p_ = NULL;}
-  CCSTPointer(CCSTPointer *p); //{this->p_ = p;}
+public:
+  CCSTPointer(std::vector<type_qualifier> type_q, CCSTPointer *p);
+  CCSTPointer();
+  CCSTPointer(std::vector<type_qualifier> type_q);
+  CCSTPointer(CCSTPointer *p);
   virtual void write(std::ofstream& of, int indent);
 };
 
-
-
-class CCSTDirectDeclarator : public CCSTBase
+class CCSTDirectDeclarator: public CCSTBase
 {
   /*
-    <direct-declarator> ::= <identifier>
-                      | ( <declarator> )
-                      | <direct-declarator> [ {<constant-expression>}? ]
-                      | <direct-declarator> ( <parameter-type-list> )
-                      | <direct-declarator> ( {<identifier>}* )
+   <direct-declarator> ::= <identifier>
+   | ( <declarator> )
+   | <direct-declarator> [ {<constant-expression>}? ]
+   | <direct-declarator> ( <parameter-type-list> )
+   | <direct-declarator> ( {<identifier>}* )
    */
- public:
+public:
   virtual void write(std::ofstream& of, int indent) = 0;
-  
+
 };
 
-class CCSTDirectDecId : public CCSTDirectDeclarator
+class CCSTDirectDecId: public CCSTDirectDeclarator
 {
   /*
-    <direct-declarator> ::= <identifier>
-                      | ( <declarator> )
-                      | <direct-declarator> [ {<constant-expression>}? ]
-                      | <direct-declarator> ( <parameter-type-list> )
-                      | <direct-declarator> ( {<identifier>}* )
+   <direct-declarator> ::= <identifier>
+   | ( <declarator> )
+   | <direct-declarator> [ {<constant-expression>}? ]
+   | <direct-declarator> ( <parameter-type-list> )
+   | <direct-declarator> ( {<identifier>}* )
    */
   std::string id_;
- public:
-  CCSTDirectDecId(const std::string& id); //{this->id_ = id;}
+public:
+  CCSTDirectDecId(const std::string& id);
   virtual void write(std::ofstream& of, int indent);
 
 };
 
-class CCSTDirectDecDec : public CCSTDirectDeclarator
+class CCSTDirectDecDec: public CCSTDirectDeclarator
 {
   /*
-    <direct-declarator> ::= <identifier>
-                      | ( <declarator> )
-                      | <direct-declarator> [ {<constant-expression>}? ]
-                      | <direct-declarator> ( <parameter-type-list> )
-                      | <direct-declarator> ( {<identifier>}* )
+   <direct-declarator> ::= <identifier>
+   | ( <declarator> )
+   | <direct-declarator> [ {<constant-expression>}? ]
+   | <direct-declarator> ( <parameter-type-list> )
+   | <direct-declarator> ( {<identifier>}* )
    */
   CCSTDeclarator *dec_;
- public:
-  CCSTDirectDecDec(CCSTDeclarator *dec); //{this->dec_ = dec;}
+public:
+  CCSTDirectDecDec(CCSTDeclarator *dec);
   virtual void write(std::ofstream& of, int indent);
-  
+
 };
-class CCSTDirectDecConstExpr : public CCSTDirectDeclarator
+class CCSTDirectDecConstExpr: public CCSTDirectDeclarator
 {
   /*
-    <direct-declarator> ::= <identifier>
-                      | ( <declarator> )
-                      | <direct-declarator> [ {<constant-expression>}? ]
-                      | <direct-declarator> ( <parameter-type-list> )
-                      | <direct-declarator> ( {<identifier>}* )
+   <direct-declarator> ::= <identifier>
+   | ( <declarator> )
+   | <direct-declarator> [ {<constant-expression>}? ]
+   | <direct-declarator> ( <parameter-type-list> )
+   | <direct-declarator> ( {<identifier>}* )
    */
   CCSTDirectDeclarator *direct_dec_;
-  CCSTConstExpr *const_expr_; // if NULL
- public:
-  CCSTDirectDecConstExpr(CCSTDirectDeclarator *direct_dec, CCSTConstExpr *const_expr); //{this->direct_dec_ = direct_dec; this->const_expr_ = const_expr;}
-  CCSTDirectDecConstExpr(CCSTDirectDeclarator *direct_dec); //{this->direct_dec_ = direct_dec; this->const_expr_ = NULL;}
+  CCSTConstExpr *const_expr_;
+public:
+  CCSTDirectDecConstExpr(CCSTDirectDeclarator *direct_dec,
+    CCSTConstExpr *const_expr);
+  CCSTDirectDecConstExpr(CCSTDirectDeclarator *direct_dec);
   virtual void write(std::ofstream& of, int indent);
 
 };
 
-class CCSTDirectDecParamTypeList : public CCSTDirectDeclarator
+class CCSTDirectDecParamTypeList: public CCSTDirectDeclarator
 {
   /*
-    <direct-declarator> ::= <identifier>
-                      | ( <declarator> )
-                      | <direct-declarator> [ {<constant-expression>}? ]
-                      | <direct-declarator> ( <parameter-type-list> )
-                      | <direct-declarator> ( {<identifier>}* )
+   <direct-declarator> ::= <identifier>
+   | ( <declarator> )
+   | <direct-declarator> [ {<constant-expression>}? ]
+   | <direct-declarator> ( <parameter-type-list> )
+   | <direct-declarator> ( {<identifier>}* )
    */
   CCSTDirectDeclarator * direct_dec_;
   CCSTParamTypeList *p_t_list_;
- public:
-  CCSTDirectDecParamTypeList(CCSTDirectDeclarator *direct_dec, CCSTParamTypeList *p_t_list); //{this->direct_dec_ = direct_dec; this->p_t_list_ = p_t_list;}
+public:
+  CCSTDirectDecParamTypeList(CCSTDirectDeclarator *direct_dec,
+    CCSTParamTypeList *p_t_list);
   virtual void write(std::ofstream& of, int indent);
 
 };
 
-class CCSTDirectDecIdList : public CCSTDirectDeclarator
+class CCSTDirectDecIdList: public CCSTDirectDeclarator
 {
   /*
-    <direct-declarator> ::= <identifier>
-                      | ( <declarator> )
-                      | <direct-declarator> [ {<constant-expression>}? ]
-                      | <direct-declarator> ( <parameter-type-list> )
-                      | <direct-declarator> ( {<identifier>}* )
+   <direct-declarator> ::= <identifier>
+   | ( <declarator> )
+   | <direct-declarator> [ {<constant-expression>}? ]
+   | <direct-declarator> ( <parameter-type-list> )
+   | <direct-declarator> ( {<identifier>}* )
    */
   CCSTDirectDeclarator *direct_dec_;
   std::vector<std::string> ids_;
- public:
-  CCSTDirectDecIdList(CCSTDirectDeclarator *direct_dec, const std::vector<std::string>& ids); //{this->direct_dec_ = direct_dec; this->ids_ = ids;}
+public:
+  CCSTDirectDecIdList(CCSTDirectDeclarator *direct_dec,
+    const std::vector<std::string>& ids);
   virtual void write(std::ofstream& of, int indent);
-  
-};
 
+};
 
 // is this right?
-class CCSTConstExpr : public CCSTBase
+class CCSTConstExpr: public CCSTBase
 {
   /*
-    <constant-expression> ::= <conditional-expression>
+   <constant-expression> ::= <conditional-expression>
    */
   CCSTCondExpr *cond_expr_;
- public:
-  CCSTConstExpr(CCSTCondExpr *cond_expr); //{this->cond_expr_ = cond_expr;}
+public:
+  CCSTConstExpr(CCSTCondExpr *cond_expr);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTStatement : public CCSTBase
+class CCSTStatement: public CCSTBase
 {
   /*
-    <statement> ::= <labeled-statement>
-              | <expression-statement>
-              | <compound-statement>
-              | <selection-statement>
-              | <iteration-statement>
-              | <jump-statement>
+   <statement> ::= <labeled-statement>
+   | <expression-statement>
+   | <compound-statement>
+   | <selection-statement>
+   | <iteration-statement>
+   | <jump-statement>
    */
- public:
+public:
   virtual void write(std::ofstream& of, int indent) = 0;
 };
 
-class CCSTPreprocessor : public CCSTExDeclaration
+class CCSTPreprocessor: public CCSTExDeclaration
 {
- /*
-  * control-line = include <pathname>
-  * 		| include "pathname"
-  */
+  /*
+   * control-line = include <pathname>
+   * 		| include "pathname"
+   */
   std::string pathname;
   bool relative;
- public:
+public:
   CCSTPreprocessor(const std::string&path, bool relative);
   virtual void write(std::ofstream& of, int indent);
 };
 
-
 class CCSTExpression;
 
-class CCSTExprStatement : public CCSTStatement
+class CCSTExprStatement: public CCSTStatement
 {
   /*
-    <expression-statement> ::= {<expression>}? ;
+   <expression-statement> ::= {<expression>}? ;
    */
   CCSTExpression *expr_;
- public:
+public:
   CCSTExprStatement();
-  CCSTExprStatement(CCSTExpression *expr); //{this->expr_ = expr;}
+  CCSTExprStatement(CCSTExpression *expr);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTExpression : public CCSTBase
+class CCSTExpression: public CCSTBase
 {
   /*
-    <expression> ::= <assignment-expression>
-               | <expression> , <assignment-expression>
+   <expression> ::= <assignment-expression>
+   | <expression> , <assignment-expression>
    */
   std::vector<CCSTAssignExpr*> assn_exprs_;
- public:
+public:
   CCSTExpression();
-  CCSTExpression(std::vector<CCSTAssignExpr*> assn); //{this->assn_exprs_ = assn;}
+  CCSTExpression(std::vector<CCSTAssignExpr*> assn);
   virtual void write(std::ofstream& of, int indent);
 };
 
-
-class CCSTAssignExpr : public CCSTExpression
+class CCSTAssignExpr: public CCSTExpression
 {
   /*
-    <assignment-expression> ::= <conditional-expression>
-                          | <unary-expression> <assignment-operator> <assignment-expression>
+   <assignment-expression> ::= <conditional-expression>
+   | <unary-expression> <assignment-operator> <assignment-expression>
    */
 
   CCSTUnaryExpr *unary_expr_;
   CCSTAssignOp *assn_op_;
   CCSTAssignExpr *assn_expr_;
- public:
-    CCSTAssignExpr();
-  CCSTAssignExpr(CCSTUnaryExpr *unary_expr, CCSTAssignOp *assn_op, CCSTAssignExpr *assn_expr); //{this->unary_expr_ = unary_expr; this->assn_op_ = assn_op; this->assn_expr_ = assn_expr; }
+public:
+  CCSTAssignExpr();
+  CCSTAssignExpr(CCSTUnaryExpr *unary_expr, CCSTAssignOp *assn_op,
+    CCSTAssignExpr *assn_expr);
   virtual void write(std::ofstream& of, int indent);
 };
 
-
-class CCSTCondExpr : public CCSTAssignExpr
+class CCSTCondExpr: public CCSTAssignExpr
 {
   /*
-    <conditional-expression> ::= <logical-or-expression>
-                           | <logical-or-expression> ? <expression> : <conditional-expression>
+   <conditional-expression> ::= <logical-or-expression>
+   | <logical-or-expression> ? <expression> : <conditional-expression>
    */
   CCSTLogicalOrExpr *log_or_expr_;
   CCSTExpression *expr_;
   CCSTCondExpr *cond_expr_;
- public:
+public:
   CCSTCondExpr();
-  CCSTCondExpr(CCSTLogicalOrExpr *log_or_expr, CCSTExpression *expr, CCSTCondExpr *cond_expr); //{this->log_or_expr_ = log_or_expr; this->expr_ = expr; this->cond_expr_ = cond_expr;}
+  CCSTCondExpr(CCSTLogicalOrExpr *log_or_expr, CCSTExpression *expr,
+    CCSTCondExpr *cond_expr);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTLogicalOrExpr : public CCSTCondExpr
+class CCSTLogicalOrExpr: public CCSTCondExpr
 {
   /*
-    <logical-or-expression> ::= <logical-and-expression>
-                          | <logical-or-expression || <logical-and-expression>
+   <logical-or-expression> ::= <logical-and-expression>
+   | <logical-or-expression || <logical-and-expression>
    */
   CCSTLogicalAndExpr *and_;
   CCSTLogicalOrExpr *or_;
- public:
+public:
   CCSTLogicalOrExpr();
-  CCSTLogicalOrExpr(CCSTLogicalOrExpr *or__, CCSTLogicalAndExpr *and__); //{this->and_ = and__; this->or_ = or__;}
+  CCSTLogicalOrExpr(CCSTLogicalOrExpr *or__, CCSTLogicalAndExpr *and__);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTLogicalAndExpr : public CCSTLogicalOrExpr
+class CCSTLogicalAndExpr: public CCSTLogicalOrExpr
 {
   /*
-    <logical-and-expression> ::= <inclusive-or-expression>
-                           | <logical-and-expression && <inclusive-or-expression>
+   <logical-and-expression> ::= <inclusive-or-expression>
+   | <logical-and-expression && <inclusive-or-expression>
    */
   CCSTLogicalAndExpr *and_;
   CCSTInclusiveOrExpr *or_;
- public:
+public:
   CCSTLogicalAndExpr();
-  CCSTLogicalAndExpr(CCSTLogicalAndExpr *and__, CCSTInclusiveOrExpr *or__); //{this->and_ = and; this->or_ = or;}
+  CCSTLogicalAndExpr(CCSTLogicalAndExpr *and__, CCSTInclusiveOrExpr *or__);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTInclusiveOrExpr : public CCSTLogicalAndExpr
+class CCSTInclusiveOrExpr: public CCSTLogicalAndExpr
 {
   /*
-    <inclusive-or-expression> ::= <exclusive-or-expression>
-                            | <inclusive-or-expression> | <exclusive-or-expression>
+   <inclusive-or-expression> ::= <exclusive-or-expression>
+   | <inclusive-or-expression> | <exclusive-or-expression>
    */
   CCSTInclusiveOrExpr *in_or_;
   CCSTXorExpr *xor_;
- public:
+public:
   CCSTInclusiveOrExpr();
-  CCSTInclusiveOrExpr(CCSTInclusiveOrExpr *in_or, CCSTXorExpr *xor__); //{this->in_or_ = in_or; this->xor_ = xor;}
+  CCSTInclusiveOrExpr(CCSTInclusiveOrExpr *in_or, CCSTXorExpr *xor__);
   virtual void write(std::ofstream& of, int indent);
 
 };
 
-class CCSTXorExpr : public CCSTInclusiveOrExpr
+class CCSTXorExpr: public CCSTInclusiveOrExpr
 {
   /*
-    <exclusive-or-expression> ::= <and-expression>
-                            | <exclusive-or-expression> ^ <and-expression>
+   <exclusive-or-expression> ::= <and-expression>
+   | <exclusive-or-expression> ^ <and-expression>
    */
   CCSTXorExpr *xor_;
   CCSTAndExpr *and_;
- public:
+public:
   CCSTXorExpr();
-  CCSTXorExpr(CCSTXorExpr *xor__, CCSTAndExpr *and__); //{this->xor_ = xor; this->and_ = and;}
+  CCSTXorExpr(CCSTXorExpr *xor__, CCSTAndExpr *and__);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTAndExpr : public CCSTXorExpr
+class CCSTAndExpr: public CCSTXorExpr
 {
   /*
-    
-    <and-expression> ::= <equality-expression>
-                      | <and-expression> & <equality-expression>
+
+   <and-expression> ::= <equality-expression>
+   | <and-expression> & <equality-expression>
    */
   CCSTAndExpr *and_;
   CCSTEqExpr *eq_;
- public:
+public:
   CCSTAndExpr();
-  CCSTAndExpr(CCSTAndExpr *and__, CCSTEqExpr *eq); //{this->and_ = and; this->eq_ = eq;}
+  CCSTAndExpr(CCSTAndExpr *and__, CCSTEqExpr *eq);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTEqExpr : public CCSTAndExpr
+class CCSTEqExpr: public CCSTAndExpr
 {
   /*
-    <equality-expression> ::= <relational-expression>
-                        | <equality-expression> == <relational-expression>
-                        | <equality-expression> != <relational-expression>
+   <equality-expression> ::= <relational-expression>
+   | <equality-expression> == <relational-expression>
+   | <equality-expression> != <relational-expression>
    */
   bool equal_;
   CCSTEqExpr *eq_expr_;
   CCSTRelationalExpr *r_expr_;
- public:
+public:
   CCSTEqExpr();
-  CCSTEqExpr(bool equal, CCSTEqExpr *eq_expr, CCSTRelationalExpr *r_expr); //{this->equal_ = equal; this->eq_expr_ = eq_expr; this->r_expr_ = r_expr;}
+  CCSTEqExpr(bool equal, CCSTEqExpr *eq_expr, CCSTRelationalExpr *r_expr);
   virtual void write(std::ofstream& of, int indent);
-  
+
 };
 
 class CCSTShiftExpr;
 
-enum relational_op {lessthan_t, greaterthan_t, lessthaneq_t, greaterthaneq_t};
-class CCSTRelationalExpr : public CCSTEqExpr
+enum relational_op
+{
+  lessthan_t, greaterthan_t, lessthaneq_t, greaterthaneq_t
+};
+class CCSTRelationalExpr: public CCSTEqExpr
 {
   /*
-    <relational-expression> ::= <shift-expression>
-                          | <relational-expression> < <shift-expression>
-                          | <relational-expression> > <shift-expression>
-                          | <relational-expression> <= <shift-expression>
-                          | <relational-expression> >= <shift-expression>
+   <relational-expression> ::= <shift-expression>
+   | <relational-expression> < <shift-expression>
+   | <relational-expression> > <shift-expression>
+   | <relational-expression> <= <shift-expression>
+   | <relational-expression> >= <shift-expression>
    */
   relational_op op_;
   CCSTRelationalExpr *r_expr_;
   CCSTShiftExpr *s_expr_;
- public:
+public:
   CCSTRelationalExpr();
-  CCSTRelationalExpr(relational_op op, CCSTRelationalExpr *r_expr, CCSTShiftExpr *s_expr); //{this->op_ = op; this->r_expr_ = r_expr; this->s_expr_ = s_expr;}
+  CCSTRelationalExpr(relational_op op, CCSTRelationalExpr *r_expr,
+    CCSTShiftExpr *s_expr);
   virtual void write(std::ofstream& of, int indent);
-  
+
 };
 
-enum shift_op {leftshift_t, rightshift_t};
+enum shift_op
+{
+  leftshift_t, rightshift_t
+};
 
-class CCSTShiftExpr : public CCSTRelationalExpr
+class CCSTShiftExpr: public CCSTRelationalExpr
 {
   /*
-    <shift-expression> ::= <additive-expression>
-                     | <shift-expression> << <additive-expression>
-                     | <shift-expression> >> <additive-expression>
+   <shift-expression> ::= <additive-expression>
+   | <shift-expression> << <additive-expression>
+   | <shift-expression> >> <additive-expression>
    */
   shift_op shift_;
   CCSTShiftExpr *s_expr_;
   CCSTAdditiveExpr *a_expr_;
- public:
+public:
   CCSTShiftExpr();
-  CCSTShiftExpr(shift_op shift, CCSTShiftExpr *s_expr, CCSTAdditiveExpr *a_expr); //{this->shift_ = shift; this->s_expr_ = s_expr; this->a_expr_ = a_expr;}
+  CCSTShiftExpr(shift_op shift, CCSTShiftExpr *s_expr,
+    CCSTAdditiveExpr *a_expr);
   virtual void write(std::ofstream& of, int indent);
 };
 
-enum additive_op { plus_t, minus_t};
-class CCSTAdditiveExpr : public CCSTShiftExpr
-{ 
+enum additive_op
+{
+  plus_t, minus_t
+};
+class CCSTAdditiveExpr: public CCSTShiftExpr
+{
   /*
-  <additive-expression> ::= <multiplicative-expression>
-                        | <additive-expression> + <multiplicative-expression>
-                        | <additive-expression> - <multiplicative-expression>
-  */
+   <additive-expression> ::= <multiplicative-expression>
+   | <additive-expression> + <multiplicative-expression>
+   | <additive-expression> - <multiplicative-expression>
+   */
   additive_op op_;
   CCSTAdditiveExpr *a_expr_;
   CCSTMultExpr *m_expr_;
- public:
+public:
   CCSTAdditiveExpr();
-  CCSTAdditiveExpr(additive_op op, CCSTAdditiveExpr *a_expr, CCSTMultExpr *m_expr); //{this->op_ = op; this->a_expr_ = a_expr; this->m_expr_ = m_expr;}
+  CCSTAdditiveExpr(additive_op op, CCSTAdditiveExpr *a_expr,
+    CCSTMultExpr *m_expr);
   virtual void write(std::ofstream& of, int indent);
 };
 
-enum mult_op {multiply_t, divide_t, mod_t};
+enum mult_op
+{
+  multiply_t, divide_t, mod_t
+};
 
-class CCSTMultExpr : public CCSTAdditiveExpr
+class CCSTMultExpr: public CCSTAdditiveExpr
 {
   /*
-    <multiplicative-expression> ::= <cast-expression>
-                              | <multiplicative-expression> * <cast-expression>
-                             | <multiplicative-expression> / <cast-expression>
-                              | <multiplicative-expression> % <cast-expression>
+   <multiplicative-expression> ::= <cast-expression>
+   | <multiplicative-expression> * <cast-expression>
+   | <multiplicative-expression> / <cast-expression>
+   | <multiplicative-expression> % <cast-expression>
    */
   mult_op op_;
   CCSTMultExpr *m_expr_;
   CCSTCastExpr *c_expr_;
- public:
+public:
   CCSTMultExpr();
-  CCSTMultExpr(mult_op op, CCSTMultExpr *m_expr, CCSTCastExpr *c_expr); //{this->op_ = op; this->m_expr_ = m_expr; this->c_expr_ = c_expr;}
+  CCSTMultExpr(mult_op op, CCSTMultExpr *m_expr, CCSTCastExpr *c_expr);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTCastExpr : public CCSTMultExpr
+class CCSTCastExpr: public CCSTMultExpr
 {
   /*
-    <cast-expression> ::= <unary-expression>
-                    | ( <type-name> ) <cast-expression>
+   <cast-expression> ::= <unary-expression>
+   | ( <type-name> ) <cast-expression>
    */
   CCSTTypeName *cast_type_;
   CCSTCastExpr *cast_expr_;
- public:
+public:
   CCSTCastExpr();
-  CCSTCastExpr(CCSTTypeName *cast_type, CCSTCastExpr *cast_expr); //{this->cast_type_ = cast_type; this->cast_expr_ = cast_expr;}
+  CCSTCastExpr(CCSTTypeName *cast_type, CCSTCastExpr *cast_expr);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTUnaryExpr : public CCSTCastExpr
+class CCSTUnaryExpr: public CCSTCastExpr
 {
   /*
-    <unary-expression> ::= <postfix-expression>
-                     | ++ <unary-expression>
-                     | -- <unary-expression>
-                     | <unary-operator> <cast-expression>
-                     | sizeof <unary-expression>
-                     | sizeof <type-name>
+   <unary-expression> ::= <postfix-expression>
+   | ++ <unary-expression>
+   | -- <unary-expression>
+   | <unary-operator> <cast-expression>
+   | sizeof <unary-expression>
+   | sizeof <type-name>
    */
- public:
+public:
   virtual void write(std::ofstream& of, int indent) = 0;
 };
 
-class CCSTUnaryExprCastExpr : public CCSTUnaryExpr
+class CCSTUnaryExprCastExpr: public CCSTUnaryExpr
 {
   /*
-    <unary-expression> ::= <postfix-expression>
-                     | ++ <unary-expression>
-                     | -- <unary-expression>
-                     | <unary-operator> <cast-expression>
-                     | sizeof <unary-expression>
-                     | sizeof <type-name>
+   <unary-expression> ::= <postfix-expression>
+   | ++ <unary-expression>
+   | -- <unary-expression>
+   | <unary-operator> <cast-expression>
+   | sizeof <unary-expression>
+   | sizeof <type-name>
    */
   // *name
   CCSTUnaryOp *unary_op_;
   CCSTCastExpr *cast_expr_;
- public:
+public:
   CCSTUnaryExprCastExpr();
-  CCSTUnaryExprCastExpr(CCSTUnaryOp *unary_op, CCSTCastExpr *cast_expr); //{this->unary_op_ = unary_op; this->cast_expr_ = cast_expr;}
+  CCSTUnaryExprCastExpr(CCSTUnaryOp *unary_op, CCSTCastExpr *cast_expr);
   virtual void write(std::ofstream& of, int indent);
 };
 
-enum incr_decr_ops {increment_t, decrement_t};
-class CCSTUnaryExprOpOp : public CCSTUnaryExpr
+enum incr_decr_ops
+{
+  increment_t, decrement_t
+};
+class CCSTUnaryExprOpOp: public CCSTUnaryExpr
 {
   /*
-    <unary-expression> ::= <postfix-expression>
-                     | ++ <unary-expression>
-                     | -- <unary-expression>
-                     | <unary-operator> <cast-expression>
-                     | sizeof <unary-expression>
-                     | sizeof <type-name>
+   <unary-expression> ::= <postfix-expression>
+   | ++ <unary-expression>
+   | -- <unary-expression>
+   | <unary-operator> <cast-expression>
+   | sizeof <unary-expression>
+   | sizeof <type-name>
    */
   incr_decr_ops op_;
   CCSTUnaryExpr *unary_expr_;
- public:
+public:
   CCSTUnaryExprOpOp();
-  CCSTUnaryExprOpOp(incr_decr_ops op, CCSTUnaryExpr *unary_expr); //{this->unary_expr_ = unary_expr; this->op_ = op;}
+  CCSTUnaryExprOpOp(incr_decr_ops op, CCSTUnaryExpr *unary_expr);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTUnaryExprSizeOf : public CCSTUnaryExpr
+class CCSTUnaryExprSizeOf: public CCSTUnaryExpr
 {
   /*
-    <unary-expression> ::= <postfix-expression>
-                     | ++ <unary-expression>
-                     | -- <unary-expression>
-                     | <unary-operator> <cast-expression>
-                     | sizeof <unary-expression>
-                     | sizeof <type-name>
+   <unary-expression> ::= <postfix-expression>
+   | ++ <unary-expression>
+   | -- <unary-expression>
+   | <unary-operator> <cast-expression>
+   | sizeof <unary-expression>
+   | sizeof <type-name>
    */
   CCSTUnaryExpr *unary_expr_;
   CCSTTypeName *type_name_;
- public:
+public:
   CCSTUnaryExprSizeOf();
-  CCSTUnaryExprSizeOf(CCSTUnaryExpr *unary_expr); //{this->unary_expr_ = unary_expr; this->type_name_ = NULL;}
-  CCSTUnaryExprSizeOf(CCSTTypeName *type_name); //{this->type_name_  = type_name; this->unary_expr_ = NULL;}
+  CCSTUnaryExprSizeOf(CCSTUnaryExpr *unary_expr);
+  CCSTUnaryExprSizeOf(CCSTTypeName *type_name);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTPostFixExpr : public CCSTUnaryExpr
+class CCSTPostFixExpr: public CCSTUnaryExpr
 {
   /*
-    <postfix-expression> ::= <primary-expression>
-                       | <postfix-expression> [ <expression> ]
-                       | <postfix-expression> ( {<assignment-expression>}* )
-                       | <postfix-expression> . <identifier>
-                       | <postfix-expression> -> <identifier>
-                       | <postfix-expression> ++
-                       | <postfix-expression> --
+   <postfix-expression> ::= <primary-expression>
+   | <postfix-expression> [ <expression> ]
+   | <postfix-expression> ( {<assignment-expression>}* )
+   | <postfix-expression> . <identifier>
+   | <postfix-expression> -> <identifier>
+   | <postfix-expression> ++
+   | <postfix-expression> --
    */
- public:
+public:
   virtual void write(std::ofstream& of, int indent) = 0;
 };
 
-class CCSTPostFixExprOpOp : public CCSTPostFixExpr
+class CCSTPostFixExprOpOp: public CCSTPostFixExpr
 {
   /*
-    <postfix-expression> ::= <primary-expression>
-                       | <postfix-expression> [ <expression> ]
-                       | <postfix-expression> ( {<assignment-expression>}* )
-                       | <postfix-expression> . <identifier>
-                       | <postfix-expression> -> <identifier>
-                       | <postfix-expression> ++
-                       | <postfix-expression> --
+   <postfix-expression> ::= <primary-expression>
+   | <postfix-expression> [ <expression> ]
+   | <postfix-expression> ( {<assignment-expression>}* )
+   | <postfix-expression> . <identifier>
+   | <postfix-expression> -> <identifier>
+   | <postfix-expression> ++
+   | <postfix-expression> --
    */
   CCSTPostFixExpr *post_fix_expr_;
- incr_decr_ops op_;
- public:
- CCSTPostFixExprOpOp();
- CCSTPostFixExprOpOp(CCSTPostFixExpr *post_fix_expr, incr_decr_ops op); //{this->post_fix_expr_ = post_fix_expr; this->op_ = op;}
+  incr_decr_ops op_;
+public:
+  CCSTPostFixExprOpOp();
+  CCSTPostFixExprOpOp(CCSTPostFixExpr *post_fix_expr, incr_decr_ops op);
   virtual void write(std::ofstream& of, int indent);
 };
 
-enum accessor {pointer_access_t, object_access_t};
+enum accessor
+{
+  pointer_access_t, object_access_t
+};
 
-class CCSTPostFixExprAccess : public CCSTPostFixExpr
+class CCSTPostFixExprAccess: public CCSTPostFixExpr
 {
   /*
-    <postfix-expression> ::= <primary-expression>
-                       | <postfix-expression> [ <expression> ]
-                       | <postfix-expression> ( {<assignment-expression>}* )
-                       | <postfix-expression> . <identifier>
-                       | <postfix-expression> -> <identifier>
-                       | <postfix-expression> ++
-                       | <postfix-expression> --
+   <postfix-expression> ::= <primary-expression>
+   | <postfix-expression> [ <expression> ]
+   | <postfix-expression> ( {<assignment-expression>}* )
+   | <postfix-expression> . <identifier>
+   | <postfix-expression> -> <identifier>
+   | <postfix-expression> ++
+   | <postfix-expression> --
    */
-  accessor op_; 
+  accessor op_;
   CCSTPostFixExpr *post_fix_expr_;
   std::string id_;
- public:
+public:
   CCSTPostFixExprAccess();
-  CCSTPostFixExprAccess(CCSTPostFixExpr *post_fix_expr, accessor op, const std::string& id); //{this->post_fix_expr_ = post_fix_expr; this->op_ = op;}
+  CCSTPostFixExprAccess(CCSTPostFixExpr *post_fix_expr, accessor op,
+    const std::string& id);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTPostFixExprExpr : public CCSTPostFixExpr
+class CCSTPostFixExprExpr: public CCSTPostFixExpr
 {
   /*
-    <postfix-expression> ::= <primary-expression>
-                       | <postfix-expression> [ <expression> ]
-                       | <postfix-expression> ( {<assignment-expression>}* )
-                       | <postfix-expression> . <identifier>
-                       | <postfix-expression> -> <identifier>
-                       | <postfix-expression> ++
-                       | <postfix-expression> --
+   <postfix-expression> ::= <primary-expression>
+   | <postfix-expression> [ <expression> ]
+   | <postfix-expression> ( {<assignment-expression>}* )
+   | <postfix-expression> . <identifier>
+   | <postfix-expression> -> <identifier>
+   | <postfix-expression> ++
+   | <postfix-expression> --
    */
   CCSTPostFixExpr *post_fix_expr_;
   CCSTExpression *expr_;
- public:
+public:
   CCSTPostFixExprExpr();
   CCSTPostFixExprExpr(CCSTPostFixExpr *post_fix_expr, CCSTExpression *expr);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTPostFixExprAssnExpr : public CCSTPostFixExpr
+class CCSTPostFixExprAssnExpr: public CCSTPostFixExpr
 {
   /*
-    <postfix-expression> ::= <primary-expression>
-                       | <postfix-expression> [ <expression> ]
-                       | <postfix-expression> ( {<assignment-expression>}* )
-                       | <postfix-expression> . <identifier>
-                       | <postfix-expression> -> <identifier>
-                       | <postfix-expression> ++
-                       | <postfix-expression> --
-  */
+   <postfix-expression> ::= <primary-expression>
+   | <postfix-expression> [ <expression> ]
+   | <postfix-expression> ( {<assignment-expression>}* )
+   | <postfix-expression> . <identifier>
+   | <postfix-expression> -> <identifier>
+   | <postfix-expression> ++
+   | <postfix-expression> --
+   */
   CCSTPostFixExpr *post_fix_expr_;
   std::vector<CCSTAssignExpr*> args_;
- public:
+public:
   CCSTPostFixExprAssnExpr();
-  CCSTPostFixExprAssnExpr(CCSTPostFixExpr *post_fix_expr, std::vector<CCSTAssignExpr*> args); //{this->post_fix_expr_ = post_fix_expr; this->assn_expr_ = assn_expr;}
+  CCSTPostFixExprAssnExpr(CCSTPostFixExpr *post_fix_expr,
+    std::vector<CCSTAssignExpr*> args);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTPrimaryExpr : public CCSTPostFixExpr
+class CCSTPrimaryExpr: public CCSTPostFixExpr
 {
   /*
-    <primary-expression> ::= <identifier>
-                       | <constant>
-                       | <string>
-                       | ( <expression> )
+   <primary-expression> ::= <identifier>
+   | <constant>
+   | <string>
+   | ( <expression> )
    */
   CCSTExpression *expr_;
- public:
+public:
   CCSTPrimaryExpr();
-  CCSTPrimaryExpr(CCSTExpression *expr); //{this->expr_ = expr;}
+  CCSTPrimaryExpr(CCSTExpression *expr);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTString : public CCSTPrimaryExpr
+class CCSTString: public CCSTPrimaryExpr
 {
   std::string string_;
- public:
+public:
   CCSTString();
-  CCSTString(const std::string& string); //{this->string_ = string;}
+  CCSTString(const std::string& string);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTPrimaryExprId : public CCSTPrimaryExpr
+class CCSTPrimaryExprId: public CCSTPrimaryExpr
 {
   std::string id_;
- public:
+public:
   CCSTPrimaryExprId();
-  CCSTPrimaryExprId(const std::string& id); //{this->id_ = id;}
+  CCSTPrimaryExprId(const std::string& id);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTConstant : public CCSTPrimaryExpr
+class CCSTConstant: public CCSTPrimaryExpr
 {
   /*
-    <constant> ::= <integer-constant>
-             | <character-constant>
-             | <floating-constant>
-             | <enumeration-constant>
+   <constant> ::= <integer-constant>
+   | <character-constant>
+   | <floating-constant>
+   | <enumeration-constant>
    */
- public:
+public:
   virtual void write(std::ofstream& of, int indent) = 0;
 };
 
-class CCSTInteger : public CCSTConstant
+class CCSTInteger: public CCSTConstant
 {
   int integer_;
- public:
+public:
   CCSTInteger();
   CCSTInteger(int i);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTChar : public CCSTConstant
+class CCSTChar: public CCSTConstant
 {
-  
+
   char c_;
- public:
+public:
   CCSTChar();
-  CCSTChar(char c); //{this->c_ = c;}
+  CCSTChar(char c);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTFloat : public CCSTConstant
+class CCSTFloat: public CCSTConstant
 {
-  
+
   float f_;
   double d_;
   bool float_;
- public:
+public:
   CCSTFloat();
-  CCSTFloat(float f); //{this->f_ = f; this->float_ = true;}
-  CCSTFloat(double d); //{this->d_ = d; this->float_ = false;}
+  CCSTFloat(float f);
+  CCSTFloat(double d);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTEnumConst : public CCSTConstant
+class CCSTEnumConst: public CCSTConstant
 {
-  
+
   // values in enum?
   std::string enum_val_;
- public:
+public:
   CCSTEnumConst();
-  CCSTEnumConst(const std::string& enum_val); //{this->enum_val_ = enum_val;}
+  CCSTEnumConst(const std::string& enum_val);
   virtual void write(std::ofstream& of, int indent);
 };
 
-enum assign_op {equal_t, mult_eq_t, div_eq_t, mod_eq_t, plus_eq_t, minus_eq_t, lshift_eq_t,
-		rshift_eq_t, and_eq_t, xor_eq_t, or_eq_t};
+enum assign_op
+{
+  equal_t,
+  mult_eq_t,
+  div_eq_t,
+  mod_eq_t,
+  plus_eq_t,
+  minus_eq_t,
+  lshift_eq_t,
+  rshift_eq_t,
+  and_eq_t,
+  xor_eq_t,
+  or_eq_t
+};
 
-class CCSTAssignOp  : public CCSTBase
+class CCSTAssignOp: public CCSTBase
 {
   /*
-    <assignment-operator> ::= =
-                        | *=
-                        | /=
-                        | %=
-                        | +=
-                        | -=
-                        | <<=
-                        | >>=
-                        | &=
-                        | ^=
-                        | |=
+   <assignment-operator> ::= =
+   | *=
+   | /=
+   | %=
+   | +=
+   | -=
+   | <<=
+   | >>=
+   | &=
+   | ^=
+   | |=
 
-  */
+   */
   assign_op op_;
- public:
+public:
   CCSTAssignOp();
-  CCSTAssignOp(assign_op op); //{this->op_ = op;}
+  CCSTAssignOp(assign_op op);
   virtual void write(std::ofstream& of, int indent);
 };
 
-enum unary_op {unary_bit_and_t, unary_mult_t, unary_plus_t, unary_minus_t, unary_tilde_t, unary_bang_t};
+enum unary_op
+{
+  unary_bit_and_t,
+  unary_mult_t,
+  unary_plus_t,
+  unary_minus_t,
+  unary_tilde_t,
+  unary_bang_t
+};
 
-class CCSTUnaryOp : public CCSTBase
+class CCSTUnaryOp: public CCSTBase
 {
   // probably overkill
   /*
-    <unary-operator> ::= &
-                   | *
-                   | +
-                   | -
-                   | ~
-                   | !
+   <unary-operator> ::= &
+   | *
+   | +
+   | -
+   | ~
+   | !
    */
   unary_op op_;
- public:
+public:
   CCSTUnaryOp();
-  CCSTUnaryOp(unary_op op); //{this->op_ = op;}
+  CCSTUnaryOp(unary_op op);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTTypeName : public CCSTBase
+class CCSTTypeName: public CCSTBase
 {
   /*
-    <type-name> ::= {<specifier-qualifier>}+ {<abstract-declarator>}?
+   <type-name> ::= {<specifier-qualifier>}+ {<abstract-declarator>}?
    */
   std::vector<CCSTSpecifierQual*> spec_quals_;
   CCSTAbstDeclarator *abs_dec_;
- public:
+public:
   CCSTTypeName();
-  CCSTTypeName(std::vector<CCSTSpecifierQual*> spec_quals, CCSTAbstDeclarator *abs_dec); //{this->spec_quals_ = spec_quals; this->abs_dec_ = abs_dec;}
+  CCSTTypeName(std::vector<CCSTSpecifierQual*> spec_quals,
+    CCSTAbstDeclarator *abs_dec);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTParamTypeList : public CCSTBase
+class CCSTParamTypeList: public CCSTBase
 {
   /*
-    <parameter-type-list> ::= <parameter-list>
-                        | <parameter-list> , ...
+   <parameter-type-list> ::= <parameter-list>
+   | <parameter-list> , ...
    */
   CCSTParamList *p_list_;
   bool ellipsis_;
- public:
+public:
   CCSTParamTypeList();
-  CCSTParamTypeList(CCSTParamList *p_list, bool ellipsis); //{this->p_list_ = p_list; ellipsis_ = ellipsis;}
+  CCSTParamTypeList(CCSTParamList *p_list, bool ellipsis);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTParamList : public CCSTParamTypeList
+class CCSTParamList: public CCSTParamTypeList
 {
   /*
-  <parameter-list> ::= <parameter-declaration>
-                   | <parameter-list> , <parameter-declaration>
+   <parameter-list> ::= <parameter-declaration>
+   | <parameter-list> , <parameter-declaration>
 
-  */
+   */
   std::vector<CCSTParamDeclaration*> p_dec_;
- public:
+public:
   CCSTParamList();
-  CCSTParamList(std::vector<CCSTParamDeclaration*> p_dec); //{this->p_dec_ = p_dec;}
+  CCSTParamList(std::vector<CCSTParamDeclaration*> p_dec);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTParamDeclaration : public CCSTParamList
+class CCSTParamDeclaration: public CCSTParamList
 {
   /*
-    <parameter-declaration> ::= {<declaration-specifier>}+ <declarator>
-                          | {<declaration-specifier>}+ <abstract-declarator>
-                          | {<declaration-specifier>}+
+   <parameter-declaration> ::= {<declaration-specifier>}+ <declarator>
+   | {<declaration-specifier>}+ <abstract-declarator>
+   | {<declaration-specifier>}+
    */
   std::vector<CCSTDecSpecifier*> dec_specs_;
   CCSTDeclarator *dec_;
   CCSTAbstDeclarator *abs_dec_;
- public:
+public:
   CCSTParamDeclaration();
-  CCSTParamDeclaration(std::vector<CCSTDecSpecifier*> dec_specs); //{this->dec_specs_ = dec_specs;}
-  CCSTParamDeclaration(std::vector<CCSTDecSpecifier*> dec_specs, CCSTDeclarator *dec); //{this->dec_specs_ = dec_specs; this->dec_ = dec; this->abs_dec_ = abs_dec;}
-  CCSTParamDeclaration(std::vector<CCSTDecSpecifier*> dec_specs, CCSTAbstDeclarator *abs_dec); //{this->dec_specs_ = dec_specs; this->abs_dec_ = abs_dec; this->dec_ = dec;}
+  CCSTParamDeclaration(std::vector<CCSTDecSpecifier*> dec_specs);
+  CCSTParamDeclaration(std::vector<CCSTDecSpecifier*> dec_specs,
+    CCSTDeclarator *dec);
+  CCSTParamDeclaration(std::vector<CCSTDecSpecifier*> dec_specs,
+    CCSTAbstDeclarator *abs_dec);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTDirectAbstDeclarator : public CCSTAbstDeclarator
+class CCSTDirectAbstDeclarator: public CCSTAbstDeclarator
 {
   /*
-    <direct-abstract-declarator> ::=  ( <abstract-declarator> )
-                               | {<direct-abstract-declarator>}? [ {<constant-expression>}? ]
-                               | {<direct-abstract-declarator>}? ( {<parameter-type-list>|? )
+   <direct-abstract-declarator> ::=  ( <abstract-declarator> )
+   | {<direct-abstract-declarator>}? [ {<constant-expression>}? ]
+   | {<direct-abstract-declarator>}? ( {<parameter-type-list>|? )
    */
-  
+
   CCSTAbstDeclarator *abs_dec_;
   CCSTDirectAbstDeclarator *d_abs_dec_;
   CCSTConstExpr *const_expr_;
   CCSTParamTypeList *param_type_list_;
- public:
+public:
   CCSTDirectAbstDeclarator();
-  CCSTDirectAbstDeclarator(CCSTAbstDeclarator *abs_dec); //{this->abs_dec_ = abs_dec;}
-  CCSTDirectAbstDeclarator(CCSTDirectAbstDeclarator *d_abs_dec, CCSTConstExpr *const_expr); //{this->d_abs_dec_ = d_abs_dec; this->const_expr_ = const_expr;}
-  CCSTDirectAbstDeclarator(CCSTDirectAbstDeclarator *d_abs_dec, CCSTParamTypeList *param_type_list); //{this->d_abs_dec_ = d_abs_dec; this->param_type_list_ = param_type_list;}
+  CCSTDirectAbstDeclarator(CCSTAbstDeclarator *abs_dec);
+  CCSTDirectAbstDeclarator(CCSTDirectAbstDeclarator *d_abs_dec,
+    CCSTConstExpr *const_expr);
+  CCSTDirectAbstDeclarator(CCSTDirectAbstDeclarator *d_abs_dec,
+    CCSTParamTypeList *param_type_list);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTEnumSpecifier : public CCSTTypeSpecifier
+class CCSTEnumSpecifier: public CCSTTypeSpecifier
 {
   /*
-  <enum-specifier> ::= enum <identifier> { <enumerator-list> }
-                   | enum { <enumerator-list> }
-                   | enum <identifier>
-  */
+   <enum-specifier> ::= enum <identifier> { <enumerator-list> }
+   | enum { <enumerator-list> }
+   | enum <identifier>
+   */
   std::string id_;
   CCSTEnumeratorList *el_;
- public:
+public:
   CCSTEnumSpecifier();
-  CCSTEnumSpecifier(const std::string& id, CCSTEnumeratorList *el); //{this->id_ = id; this->el_ = el;}
-  CCSTEnumSpecifier(const std::string& id); //{this->id_ = id; this->el_ = NULL;}
-  CCSTEnumSpecifier(CCSTEnumeratorList *el); //{this->el_ = el; this->id_ = "";}
+  CCSTEnumSpecifier(const std::string& id, CCSTEnumeratorList *el);
+  CCSTEnumSpecifier(const std::string& id);
+  CCSTEnumSpecifier(CCSTEnumeratorList *el);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTEnumeratorList : public CCSTBase
+class CCSTEnumeratorList: public CCSTBase
 {
   /*
-    
-<enumerator-list> ::= <enumerator>
-                    | <enumerator-list> , <enumerator>
+
+   <enumerator-list> ::= <enumerator>
+   | <enumerator-list> , <enumerator>
    */
   std::vector<CCSTEnumerator*> *list_;
- public:
+public:
   CCSTEnumeratorList();
-  CCSTEnumeratorList(std::vector<CCSTEnumerator*> *list); //{this->list_ = list;}
+  CCSTEnumeratorList(std::vector<CCSTEnumerator*> *list);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTEnumerator : public CCSTEnumeratorList
+class CCSTEnumerator: public CCSTEnumeratorList
 {
   /*
-    <enumerator> ::= <identifier>
-               | <identifier> = <constant-expression>
+   <enumerator> ::= <identifier>
+   | <identifier> = <constant-expression>
    */
   std::string id_;
   CCSTConstExpr *ce_;
- public:
-  CCSTEnumerator(const std::string& id, CCSTConstExpr *ce); //{this->id_ = id; this->ce_ = ce;}
-  CCSTEnumerator(const std::string& id); //{this->id_ = id; this->ce_ = NULL;}
+public:
+  CCSTEnumerator(const std::string& id, CCSTConstExpr *ce);
+  CCSTEnumerator(const std::string& id);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTTypedefName : public CCSTTypeSpecifier
+class CCSTTypedefName: public CCSTTypeSpecifier
 {
   /*
-    <typedef-name> ::= <identifier>
+   <typedef-name> ::= <identifier>
    */
   std::string id_;
- public:
-  CCSTTypedefName(const std::string& name); //{this->id_ = name;}
+public:
+  CCSTTypedefName(const std::string& name);
   virtual void write(std::ofstream& of, int indent);
 };
 
-
-
-class CCSTInitializerList : public CCSTBase
+class CCSTInitializerList: public CCSTBase
 {
   /*
-    <initializer-list> ::= <initializer>
-                     | <initializer-list> , <initializer>
+   <initializer-list> ::= <initializer>
+   | <initializer-list> , <initializer>
    */
   std::vector<CCSTInitializer*> init_list_;
- public:
+public:
   CCSTInitializerList();
-  CCSTInitializerList(std::vector<CCSTInitializer*> init_list); //{this->init_list_ = init_list;}
+  CCSTInitializerList(std::vector<CCSTInitializer*> init_list);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTInitializer : public CCSTInitializerList
+class CCSTInitializer: public CCSTInitializerList
 {
   /*
-    
-<initializer> ::= <assignment-expression>
-                | { <initializer-list> }
-                | { <initializer-list> , }
+
+   <initializer> ::= <assignment-expression>
+   | { <initializer-list> }
+   | { <initializer-list> , }
    */
   CCSTAssignExpr *assn_expr_;
   CCSTInitializerList *init_list_;
- public:
-  CCSTInitializer(CCSTAssignExpr *assn_expr); //{this->assn_expr_ = assn_expr;}
-  CCSTInitializer(CCSTInitializerList *init_list); //{this->init_list_ = init_list;}
+public:
+  CCSTInitializer(CCSTAssignExpr *assn_expr);
+  CCSTInitializer(CCSTInitializerList *init_list);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTCompoundStatement : public CCSTStatement
+class CCSTCompoundStatement: public CCSTStatement
 {
   /*
-    <compound-statement> ::= { {<declaration>}* {<statement>}* }
+   <compound-statement> ::= { {<declaration>}* {<statement>}* }
    */
   // is this a body? not necessarily
   std::vector<CCSTDeclaration*> declarations_;
   std::vector<CCSTStatement*> statements_;
- public:
-  CCSTCompoundStatement(std::vector<CCSTDeclaration*> decs, std::vector<CCSTStatement*> s); //{this->declarations_ = decs; this->statements_ = s;}
-  void add_statement(CCSTStatement *s) { this->statements_.push_back(s); }
+public:
+  CCSTCompoundStatement(std::vector<CCSTDeclaration*> decs,
+    std::vector<CCSTStatement*> s);
+  void add_statement(CCSTStatement *s)
+  {
+    this->statements_.push_back(s);
+  }
   virtual void write(std::ofstream& of, int indent);
-  virtual ~CCSTCompoundStatement() {}
+  virtual ~CCSTCompoundStatement()
+  {
+  }
 
   const std::vector<CCSTDeclaration*>& getdeclarations() const
   {
@@ -1256,168 +1331,166 @@ class CCSTCompoundStatement : public CCSTStatement
   }
 };
 
-
-
-class CCSTLabeledStatement : public CCSTStatement
+class CCSTLabeledStatement: public CCSTStatement
 {
   /*
-    <labeled-statement> ::= <identifier> : <statement>
-                      | case <constant-expression> : <statement>
-                      | default : <statement>
+   <labeled-statement> ::= <identifier> : <statement>
+   | case <constant-expression> : <statement>
+   | default : <statement>
    */
- public:
+public:
   virtual void write(std::ofstream& of, int indent) = 0;
 };
 
-class CCSTDefaultLabelStatement : public CCSTLabeledStatement
+class CCSTDefaultLabelStatement: public CCSTLabeledStatement
 {
   CCSTStatement* body_;
- public:
+public:
   CCSTDefaultLabelStatement(CCSTStatement* body);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTPlainLabelStatement : public CCSTLabeledStatement
+class CCSTPlainLabelStatement: public CCSTLabeledStatement
 {
   std::string id_;
   CCSTStatement *stmnt_;
- public:
-  CCSTPlainLabelStatement(const std::string& id, CCSTStatement *stmnt); //{this->id_ = id; this->stmnt_ = stmnt;}
+public:
+  CCSTPlainLabelStatement(const std::string& id, CCSTStatement *stmnt);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTCaseStatement : public CCSTLabeledStatement
+class CCSTCaseStatement: public CCSTLabeledStatement
 {
   CCSTCondExpr *case_label_;
   CCSTStatement *body_;
- public:
-  CCSTCaseStatement(CCSTCondExpr *c, CCSTStatement *body); //{this->case_label_ = c; this->body_ = body;}
+public:
+  CCSTCaseStatement(CCSTCondExpr *c, CCSTStatement *body);
   virtual void write(std::ofstream& of, int indent);
 };
 
-
-
-class CCSTSelectionStatement : public CCSTStatement
+class CCSTSelectionStatement: public CCSTStatement
 {
   /*
-    <selection-statement> ::= if ( <expression> ) <statement>
-                        | if ( <expression> ) <statement> else <statement>
-                        | switch ( <expression> ) <statement>
+   <selection-statement> ::= if ( <expression> ) <statement>
+   | if ( <expression> ) <statement> else <statement>
+   | switch ( <expression> ) <statement>
    */
   virtual void write(std::ofstream& of, int indent) = 0;
 };
 
-class CCSTIfStatement : public CCSTSelectionStatement
+class CCSTIfStatement: public CCSTSelectionStatement
 {
   CCSTExpression *cond_;
   CCSTStatement *body_;
- public:
-  CCSTIfStatement(CCSTExpression *cond, CCSTStatement *body); //{this->cond_ = cond; this->body_ = body;}
+public:
+  CCSTIfStatement(CCSTExpression *cond, CCSTStatement *body);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTIfElseStatement : public CCSTSelectionStatement
+class CCSTIfElseStatement: public CCSTSelectionStatement
 {
   CCSTExpression *cond_;
   CCSTStatement *if_body_;
   CCSTStatement *else_body_;
- public:
-  CCSTIfElseStatement(CCSTExpression *cond, CCSTStatement *if_body, CCSTStatement *else_body); //{this->cond_ = cond; this->if_body_ = if_body; this->else_body_ = else_body;}
+public:
+  CCSTIfElseStatement(CCSTExpression *cond, CCSTStatement *if_body,
+    CCSTStatement *else_body);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTSwitchStatement : public CCSTSelectionStatement
+class CCSTSwitchStatement: public CCSTSelectionStatement
 {
   CCSTExpression *expr_;
   CCSTStatement *body_;
- public:
-  CCSTSwitchStatement(CCSTExpression *expr, CCSTStatement *body); //{this->expr_ = expr; this->body_ = body;}
+public:
+  CCSTSwitchStatement(CCSTExpression *expr, CCSTStatement *body);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTIterationStmnt : public CCSTStatement
+class CCSTIterationStmnt: public CCSTStatement
 {
   /*
-    <iteration-statement> ::= while ( <expression> ) <statement>
-                        | do <statement> while ( <expression> ) ;
-                        | for ( {<expression>}? ; {<expression>}? ; {<expression>}? ) <statement>
+   <iteration-statement> ::= while ( <expression> ) <statement>
+   | do <statement> while ( <expression> ) ;
+   | for ( {<expression>}? ; {<expression>}? ; {<expression>}? ) <statement>
    */
- public:
+public:
   virtual void write(std::ofstream& of, int indent) = 0;
 };
 
-class CCSTWhileLoop : public CCSTIterationStmnt
+class CCSTWhileLoop: public CCSTIterationStmnt
 {
   CCSTExpression *cond_;
   CCSTStatement *body_;
- public:
-  CCSTWhileLoop(CCSTExpression *cond, CCSTStatement *body); //{this->cond_ = cond; this->body_ = body;}
+public:
+  CCSTWhileLoop(CCSTExpression *cond, CCSTStatement *body);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTDoLoop : public CCSTIterationStmnt
+class CCSTDoLoop: public CCSTIterationStmnt
 {
   CCSTExpression *cond_;
   CCSTStatement * body_;
- public:
-  CCSTDoLoop(CCSTStatement *body, CCSTExpression *cond); //{this->body_ = body; this->cond_ = cond;}
+public:
+  CCSTDoLoop(CCSTStatement *body, CCSTExpression *cond);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTForLoop : public CCSTIterationStmnt
-{ 
+class CCSTForLoop: public CCSTIterationStmnt
+{
   CCSTExpression *init_;
   CCSTExpression *cond_;
   CCSTExpression *up_;
   CCSTStatement *body_;
- public:
-  CCSTForLoop(CCSTExpression *init, CCSTExpression *cond, CCSTExpression *up, CCSTStatement *body); //{ this->init_ = init; this->cond_ = cond; this->up_ = up; this->body_ = body;}
+public:
+  CCSTForLoop(CCSTExpression *init, CCSTExpression *cond, CCSTExpression *up,
+    CCSTStatement *body);
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTJumpStmnt : public CCSTStatement
+class CCSTJumpStmnt: public CCSTStatement
 {
   /*
-    <jump-statement> ::= goto <identifier> ;
-                   | continue ;
-                   | break ;
-                   | return {<expression>}? ;
+   <jump-statement> ::= goto <identifier> ;
+   | continue ;
+   | break ;
+   | return {<expression>}? ;
    */
-  
- public:
-  virtual void write(std::ofstream& of, int indent) = 0; //?
-  
+
+public:
+  virtual void write(std::ofstream& of, int indent) = 0;
+
 };
 
-class CCSTGoto : public CCSTJumpStmnt
+class CCSTGoto: public CCSTJumpStmnt
 {
   std::string identifier_;
- public:
-  CCSTGoto(const std::string& id); // {this->identifier_ = id;}
+public:
+  CCSTGoto(const std::string& id);
   virtual void write(std::ofstream& of, int indent);
-  
+
 };
 
-class CCSTContinue : public CCSTJumpStmnt
+class CCSTContinue: public CCSTJumpStmnt
 {
- public:
+public:
   CCSTContinue();
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTBreak : public CCSTJumpStmnt
+class CCSTBreak: public CCSTJumpStmnt
 {
- public:
+public:
   CCSTBreak();
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTReturn : public CCSTJumpStmnt
+class CCSTReturn: public CCSTJumpStmnt
 {
   CCSTExpression *expr_;
- public:
-  CCSTReturn(CCSTExpression *expr);// {this->expr_ = expr;}
-  CCSTReturn(); // {this->expr_ = NULL;}
+public:
+  CCSTReturn(CCSTExpression *expr);
+  CCSTReturn();
   virtual void write(std::ofstream& of, int indent);
 };
 

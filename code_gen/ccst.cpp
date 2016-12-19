@@ -1281,6 +1281,7 @@ CCSTUnaryOp::CCSTUnaryOp()
 
 void CCSTUnaryOp::write(std::ofstream& of, int indent)
 {
+  of << indentation(indent);
   switch (this->op_) {
   case unary_bit_and_t:
     of << "&";
