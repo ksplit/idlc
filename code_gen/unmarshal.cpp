@@ -43,7 +43,7 @@ std::vector<CCSTStatement*> unmarshal_variable_no_check(Variable *v, Channel::Ch
   return statements;
 }
 
-CCSTPostFixExprAssnExpr* unmarshal_variable(Variable *v, Channel::ChannelType type)
+CCSTPostFixExprAssnExpr* unmarshal_variable(Variable *v, Channel::ChannelType type, const std::string& req_resp)
 {
   Assert(v->marshal_info() != 0x0, "Error: no marshal info\n");
   int reg = v->marshal_info()->get_register();
@@ -55,7 +55,7 @@ CCSTPostFixExprAssnExpr* unmarshal_variable(Variable *v, Channel::ChannelType ty
     func_name = access_register_mapping(reg);
   } else {
     func_name = load_async_reg_mapping(reg);
-    access_reg_args.push_back(new CCSTPrimaryExprId("response"));
+    access_reg_args.push_back(new CCSTPrimaryExprId(req_resp));
   }
   return function_call(func_name, access_reg_args);
 }
@@ -201,7 +201,7 @@ std::vector<CCSTStatement*> unmarshal_variable_callee(Variable *v, Channel::Chan
       reg_func= access_register_mapping(reg);
     } else {
       reg_func = load_async_reg_mapping(reg);
-      reg_func_args_empty.push_back(new CCSTPrimaryExprId("response"));
+      reg_func_args_empty.push_back(new CCSTPrimaryExprId("request"));
     }
 
 

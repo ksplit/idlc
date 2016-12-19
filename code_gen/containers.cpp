@@ -103,7 +103,7 @@ CCSTCompoundStatement* set_remote_ref(Variable *v, Channel::ChannelType type)
   if(my_cptr->marshal_info() != 0x0) {
     statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(access(other_cptr)
 								   , equals()
-								   , unmarshal_variable(my_cptr, type))));
+								   , unmarshal_variable(my_cptr, type, "response"))));
   }
   
   return new CCSTCompoundStatement(declarations, statements);
@@ -177,7 +177,7 @@ CCSTStatement* lookup_variable_container(Variable *v, Channel::ChannelType type)
   Assert(my_ref_field != 0x0, "Error: could not find my_ref field in projection\n");
 
   std::vector<CCSTAssignExpr*> __cptr_args;
-  __cptr_args.push_back( unmarshal_variable( get_cptr_field( my_ref_field ), type));
+  __cptr_args.push_back( unmarshal_variable( get_cptr_field( my_ref_field ), type, "request"));
 
   lookup_args.push_back(function_call("__cptr", __cptr_args)); // ref we get from __cptr(reg_whatever())
   lookup_args.push_back( new CCSTUnaryExprCastExpr( reference()

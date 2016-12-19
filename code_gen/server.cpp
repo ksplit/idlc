@@ -204,7 +204,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
     std::vector<CCSTAssignExpr*> chnl_to_fipc_args;
     chnl_to_fipc_args.push_back(new CCSTPrimaryExprId(c->chName));
     ipc_recv_end_args.push_back(function_call("thc_channel_to_fipc", chnl_to_fipc_args));
-    ipc_recv_end_args.push_back(new CCSTPrimaryExprId("response"));
+    ipc_recv_end_args.push_back(new CCSTPrimaryExprId("request"));
     statements.push_back(new CCSTExprStatement(function_call("fipc_recv_msg_end", ipc_recv_end_args)));
   }
   // TODO: unmarshal channel refs;

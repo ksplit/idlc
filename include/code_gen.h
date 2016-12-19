@@ -107,7 +107,7 @@ CCSTParamTypeList* parameter_list(std::vector<Parameter*> params); // complete
 // add marshal and unmarshal cpp files to this
 
 // unmarshal.cpp
-CCSTPostFixExprAssnExpr* unmarshal_variable(Variable *v, Channel::ChannelType type);
+CCSTPostFixExprAssnExpr* unmarshal_variable(Variable *v, Channel::ChannelType type, const std::string& req_resp);
 std::vector<CCSTStatement*> unmarshal_variable_no_check(Variable *v, Channel::ChannelType type); // complete
 std::vector<CCSTStatement*> unmarshal_variable_callee(Variable *v, Channel::ChannelType type);
 std::vector<CCSTStatement*> unmarshal_variable_caller(Variable *v, Channel::ChannelType type);
@@ -117,7 +117,7 @@ std::vector<CCSTStatement*> unmarshal_void_pointer(Variable *v);
 CCSTStatement* marshal_variable(Variable *v, const std::string& direction, Channel::ChannelType type); // complete
 std::vector<CCSTStatement*> marshal_variable_callee(Variable *v, Channel::ChannelType type); // complete
 std::vector<CCSTStatement*> marshal_variable_no_check(Variable *v, Channel::ChannelType type); // complete
-CCSTStatement* marshal(CCSTPostFixExpr *v, int reg, Channel::ChannelType type); // complete
+CCSTStatement* marshal(CCSTPostFixExpr *v, int reg, Channel::ChannelType type, const std::string &req_resp); // complete
 // Common function for marshalling void pointer across domains
 CCSTStatement* marshal_void_pointer(Variable *v);
 CCSTStatement* marshal_void_delayed(Variable *v);

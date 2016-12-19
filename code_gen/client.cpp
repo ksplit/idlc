@@ -233,7 +233,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
     lcd_async_start_args.push_back(new CCSTPrimaryExprId(c->chName));
     lcd_async_start_args.push_back(
       new CCSTUnaryExprCastExpr(reference(),
-        new CCSTPrimaryExprId(c->chName)));
+        new CCSTPrimaryExprId("response")));
 
     statements.push_back(
       new CCSTExprStatement(
@@ -373,7 +373,7 @@ CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use, 
   /* marshal function tag */
   std::string *func_type = new std::string(r->name());
   std_string_toupper(*func_type);
-  statements.push_back(marshal(new CCSTEnumConst(*func_type), 0, c->chType));
+  statements.push_back(marshal(new CCSTEnumConst(*func_type), 0, c->chType, "request"));
 
   /* make remote call using appropriate channel */
 

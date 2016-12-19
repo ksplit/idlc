@@ -164,7 +164,7 @@ CCSTStatement* marshal_variable(Variable *v, const std::string& direction, Chann
   } else {
     std::cout << "marshalling variable " <<  v->identifier() << std::endl;
     Assert(v->marshal_info() != 0x0, "Error: marshalling info is null\n");
-    statements.push_back(marshal(access(v), v->marshal_info()->get_register(), type));
+    statements.push_back(marshal(access(v), v->marshal_info()->get_register(), type, "request"));
   }
   
   return new CCSTCompoundStatement(declarations, statements);
@@ -194,7 +194,7 @@ std::vector<CCSTStatement*> marshal_variable_callee(Variable *v, Channel::Channe
     
   } else {
     Assert(v->marshal_info() != 0x0, "Error: marshal info is null\n");
-    statements.push_back(marshal(access(v), v->marshal_info()->get_register(), type));
+    statements.push_back(marshal(access(v), v->marshal_info()->get_register(), type, "response"));
   }
   
   return statements;
@@ -220,13 +220,13 @@ std::vector<CCSTStatement*> marshal_variable_no_check(Variable *v, Channel::Chan
     
   } else {
     Assert(v->marshal_info() != 0x0, "Error: marshal info is null\n");
-    statements.push_back(marshal(access(v), v->marshal_info()->get_register(), type));
+    statements.push_back(marshal(access(v), v->marshal_info()->get_register(), type, "response"));
   }
   
   return statements;
 }
 
-CCSTStatement* marshal(CCSTPostFixExpr *v, int reg, Channel::ChannelType type)
+CCSTStatement* marshal(CCSTPostFixExpr *v, int reg, Channel::ChannelType type, const std::string &req_resp)
 {
   std::string store_reg_func;
   std::vector<CCSTAssignExpr*> cptr_args;
@@ -236,7 +236,7 @@ CCSTStatement* marshal(CCSTPostFixExpr *v, int reg, Channel::ChannelType type)
     store_reg_func = store_register_mapping(reg);
   } else {
     store_reg_func = store_async_reg_mapping(reg);
-    store_reg_args.push_back(new CCSTPrimaryExprId("request"));
+    store_reg_args.push_back(new CCSTPrimaryExprId(req_resp));
     cptr_args.push_back(v);
     store_reg_args.push_back(function_call("cptr_val", cptr_args));
   }
