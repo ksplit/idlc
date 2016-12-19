@@ -259,7 +259,14 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
   for (auto p : *r) {
     if(p->in()) {
       std::cout << " ASYNC marshal variable " << p->identifier() <<  " for function " <<  r->name() << std::endl;
-      statements.push_back(marshal_variable(p, "in", c->chType));
+      // TODO: Unify instances like this . Refer one more below
+      CCSTCompoundStatement *updates = dynamic_cast<CCSTCompoundStatement*>(marshal_variable(p, "in", c->chType));
+
+      std::vector<CCSTDeclaration*> __tmp_declarations = updates->getdeclarations();
+      std::vector<CCSTStatement*> __tmp_statements = updates->getstatements();
+
+      declarations.insert(declarations.end(), __tmp_declarations.begin(), __tmp_declarations.end());
+      statements.insert(statements.end(), __tmp_statements.begin(), __tmp_statements.end());
     }
   }
   /* if it is a function pointer need to marshal hidden args */
@@ -269,7 +276,13 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
       Parameter *p = *it;
       if(p->in()) {
   std::cout << " ASYNC going to marshal hidden arg " << p->identifier() << " for function " <<  r->name() << std::endl;
-  statements.push_back(marshal_variable(p, "in", c->chType));
+  CCSTCompoundStatement *updates = dynamic_cast<CCSTCompoundStatement*>(marshal_variable(p, "in", c->chType));
+
+  std::vector<CCSTDeclaration*> __tmp_declarations = updates->getdeclarations();
+  std::vector<CCSTStatement*> __tmp_statements = updates->getstatements();
+
+  declarations.insert(declarations.end(), __tmp_declarations.begin(), __tmp_declarations.end());
+  statements.insert(statements.end(), __tmp_statements.begin(), __tmp_statements.end());
       }
     }
   }
