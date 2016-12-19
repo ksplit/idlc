@@ -1,7 +1,8 @@
 #include "code_gen.h"
 
 
-CCSTStatement* marshal_void_pointer(Variable *v) {
+CCSTStatement* marshal_void_pointer(Variable *v)
+{
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
 
@@ -51,12 +52,6 @@ CCSTStatement* marshal_void_pointer(Variable *v) {
 
   std::vector<CCSTAssignExpr*> virt_cptr_args;
   std::vector<CCSTAssignExpr*> gva_args;
-  std::vector<CCSTAssignExpr*> sync_send_args;
-  std::vector<CCSTAssignExpr*> set_cr0_args;
-  std::vector<CCSTAssignExpr*> set_cr0_args2;
-  std::vector<CCSTAssignExpr*> set_r0_args;
-  std::vector<CCSTAssignExpr*> set_r1_args;
-
 
   gva_args.push_back(
     new CCSTCastExpr(new CCSTTypeName(spec_ull2, NULL),
@@ -75,13 +70,6 @@ CCSTStatement* marshal_void_pointer(Variable *v) {
     new CCSTUnaryExprCastExpr(reference(),
       new CCSTPrimaryExprId(v->identifier() + "_offset")));
 
-  sync_send_args.push_back(new CCSTPrimaryExprId("sync_ep"));
-
-  set_r0_args.push_back(new CCSTPrimaryExprId(v->identifier() + "_mem_sz"));
-  set_r1_args.push_back(new CCSTPrimaryExprId(v->identifier() + "_offset"));
-  set_cr0_args.push_back(new CCSTPrimaryExprId(v->identifier() + "_cptr"));
-  set_cr0_args2.push_back(new CCSTPrimaryExprId("CAP_CPTR_NULL"));
-
   statements.push_back(
     new CCSTExprStatement(
       new CCSTAssignExpr(new CCSTPrimaryExprId("sync_ret"), equals(),
@@ -90,7 +78,27 @@ CCSTStatement* marshal_void_pointer(Variable *v) {
   statements.push_back(
     if_cond_fail(new CCSTPrimaryExprId("sync_ret"), "virt to cptr failed"));
 
-  // FIXME: How to delay push. This needs to be pushed after some other code
+  return new CCSTCompoundStatement(declarations, statements);
+}
+
+CCSTStatement* marshal_void_delayed(Variable *v)
+{
+  std::vector<CCSTDeclaration*> declarations;
+  std::vector<CCSTStatement*> statements;
+
+  std::vector<CCSTAssignExpr*> sync_send_args;
+  std::vector<CCSTAssignExpr*> set_cr0_args;
+  std::vector<CCSTAssignExpr*> set_cr0_args2;
+  std::vector<CCSTAssignExpr*> set_r0_args;
+  std::vector<CCSTAssignExpr*> set_r1_args;
+
+  sync_send_args.push_back(new CCSTPrimaryExprId("sync_ep"));
+
+  set_r0_args.push_back(new CCSTPrimaryExprId(v->identifier() + "_mem_sz"));
+  set_r1_args.push_back(new CCSTPrimaryExprId(v->identifier() + "_offset"));
+  set_cr0_args.push_back(new CCSTPrimaryExprId(v->identifier() + "_cptr"));
+  set_cr0_args2.push_back(new CCSTPrimaryExprId("CAP_CPTR_NULL"));
+
   statements.push_back(
     new CCSTExprStatement(
       new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("lcd_set_r0"),

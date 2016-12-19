@@ -285,6 +285,12 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
 
   statements.push_back(if_cond_fail(new CCSTPrimaryExprId("err"), "thc_ipc_call"));
 
+  for (auto p: *r) {
+    if (p->type_->num() == VOID_TYPE) {
+      std::cout << " SYNC send of void pointer " << p->identifier() << " for function " <<  r->name() << std::endl;
+      statements.push_back(marshal_void_delayed(p));
+    }
+  }
 
   /* unmarshal appropriate parameters and return value */
   for (auto& p : *r) {

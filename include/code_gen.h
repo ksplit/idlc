@@ -120,6 +120,7 @@ std::vector<CCSTStatement*> marshal_variable_no_check(Variable *v, Channel::Chan
 CCSTStatement* marshal(CCSTPostFixExpr *v, int reg, Channel::ChannelType type); // complete
 // Common function for marshalling void pointer across domains
 CCSTStatement* marshal_void_pointer(Variable *v);
+CCSTStatement* marshal_void_delayed(Variable *v);
 
 // containers.cpp
 std::vector<CCSTAssignExpr*> container_of_args(CCSTPostFixExpr *struct_pointer, const std::string& type_name, const std::string& field_name); // complete
