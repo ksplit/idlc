@@ -376,13 +376,14 @@ Parameter::Parameter(const Parameter& other) :
 
 void Parameter::create_container_variable(LexicalScope *ls)
 {
+  // FIXME: some conditions in this monstrous if are meaningless. clean it up
   if (this->pointer_count() <= 0 ||
         (this->type_->num() != PROJECTION_TYPE &&
             this->type_->num() != PROJECTION_CONSTRUCTOR_TYPE &&
               this->type_->num() != INITIALIZE_TYPE &&
                 this->type_->num() != FUNCTION_TYPE) ||
         (!this->bind_caller() && !this->bind_callee() &&
-            !this->alloc_caller() && !this->alloc_callee())) {
+          !this->alloc_caller() && !this->alloc_callee() && !this->dealloc_callee())) {
     return;
   }
   Type *tmp = this->type_;
