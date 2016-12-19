@@ -68,6 +68,8 @@ void set_specs(Variable &v, const Value &s)
 
 void set_current_scope(LexicalScope *ls)
 {
+    std::cout << "---> Current scope " << current_scope
+        << " new scope " << ls << std::endl;
     current_scope = ls;
 }
 
@@ -348,6 +350,7 @@ ChanInits	= "channel" Space+ id:Identifier Spacing <ascii 61> Spacing "new" Spac
 
 				Channel *newCh = new Channel(*_id, ct, NULL);
 				// insert channel into type list
+				std::cout << " new channel " << std::hex << newCh << std::dec << std::endl;
 				insertType(*_id, newCh);
 				value = newCh;
 			}}
@@ -367,6 +370,7 @@ Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
 
 					Type *t = getType(*_id);
 					Channel *c = dynamic_cast<Channel*>(t);
+					std::cout << " channel_scope dyncast " << std::hex << c << std::dec << std::endl;
 					Assert(c != NULL, "Dynamic cast from Type to Channel failed");
 					get_current_scope()->setactiveChannel(c);
 					value = new std::string(*_id);
@@ -396,7 +400,10 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
                         std::cout << "### module channel " << *_ch << "\n";
                         if (_ch) {
                             Type *t = getType(*_ch);
+                            std::cout << "channel " << *_ch << " Type information " << t << std::endl;
                             Channel *c = dynamic_cast<Channel*>(t);
+                            if (!c)
+                                std::cout << "dynamic_cast of channel failed\n";
                             module_scope->setactiveChannel(c);
                         } else {
                             module_scope->setactiveChannel(NULL);
@@ -523,6 +530,7 @@ FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* 
 				// XXX: Reset scope to current_unnamed_scope as nested so that nested function pointers
 				// unwind properly. Blindly setting it to current_scope's outer_scope will hit global scope
 				// sooner or later and cause SEGFAULT as global scope doesn't have any outer_scope
+				std::cout << "Setting to current unnamed scope " << std::endl;
 				set_current_scope(get_current_unnamed_scope());
 
 			    value = _p;
@@ -619,12 +627,12 @@ FP_FirstParam	=	t:Type_form s:Specification? pointers:star* Spacing COMMA Spacin
 			    
 			    value = fp;  
 			}}
-			| rpc_special Space+ rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing COMMA Spacing {{
+			| rpc_scope:rpc_special Space+ rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing COMMA Spacing {{
 			    std::vector<Parameter*> *params = (std::vector<Parameter*>*) p.getValue();
 				const std::string *_id = static_cast<const std::string*>(id.getValue());
 
 			    Function *fp = new Function(*_id, new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
-			                                , *params, get_current_scope());
+			                                , *params, (LexicalScope*)rpc_scope.getValue());
 
 			    set_current_scope(get_current_scope()->outer_scope());
 			    value = new FPParameter(fp, 1);
@@ -812,13 +820,13 @@ rpc_special     =      "rpc" {{
 		       }}
 
 
-Rpc		=	rpc_special Space+ t:Type_form pointers:star* Spacing id1:Identifier Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing {{
+Rpc		=	rpc_scope:rpc_special Space+ t:Type_form pointers:star* Spacing id1:Identifier Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing {{
 			    std::vector<Parameter*>* params = (std::vector<Parameter*>*) p.getValue();
 			    std::vector<Parameter*> params_ = *params;
 				const std::string *_id = static_cast<const std::string*>(id1.getValue());
 
 			    Rpc* r = new Rpc(new ReturnVariable((Type *) t.getValue(), count_pointers(pointers), returnVarName())
-			                                       , *_id, params_, get_current_scope());
+			                                       , *_id, params_, (LexicalScope*) rpc_scope.getValue());
 			    
 			    std::cout << "creating an rpc\n";
 			    /*
@@ -828,7 +836,7 @@ Rpc		=	rpc_special Space+ t:Type_form pointers:star* Spacing id1:Identifier Spac
 		            }
 			    */
 
-			    set_current_scope(get_current_scope()->outer_scope()); // leaving current scope
+			    set_current_scope(get_current_unnamed_scope()); // leaving current scope
 			    value = r; 
 			}}  
 
