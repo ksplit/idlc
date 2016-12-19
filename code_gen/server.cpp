@@ -158,7 +158,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
 
   Channel *c = r->getcurrentscope()->outer_scope_->getactiveChannel();
   if (c) {
-    std::cout << "### Rpc " << r->name() << " ac:  " << c->chName << std::endl;
+    std::cout << "### " << __func__ << " Rpc " << r->name() << " ac:  " << c->chName << std::endl;
   } else {
     // Check if there exists a global module level channel
     c = m->module_scope()->activeChannel;
@@ -166,6 +166,46 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   Channel::ChannelType type;
   if (c) {
     type = c->chType;
+  }
+
+  if (type == Channel::AsyncChannel) {
+    std::vector<CCSTDecSpecifier*> spec_fipcm;
+    std::vector<CCSTInitDeclarator*> decs_resp;
+    std::vector<CCSTDecSpecifier*> spec_uint;
+    std::vector<CCSTInitDeclarator*> decs_req_cookie;
+    std::vector<CCSTAssignExpr*> lcd_req_cook_args;
+
+    decs_resp.push_back(
+      new CCSTInitDeclarator(
+        new CCSTDeclarator(pointer(1), new CCSTDirectDecId("response"))));
+
+    decs_req_cookie.push_back(
+      new CCSTInitDeclarator(
+        new CCSTDeclarator(pointer(0), new CCSTDirectDecId("request_cookie"))));
+
+    spec_fipcm.push_back(
+      new CCSTStructUnionSpecifier(struct_t, "fipc_message"));
+
+    spec_uint.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::UnsignedTypeSpec));
+    spec_uint.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
+
+    declarations.push_back(
+      new CCSTDeclaration(spec_fipcm, decs_resp));
+    declarations.push_back(
+          new CCSTDeclaration(spec_uint, decs_req_cookie));
+
+    lcd_req_cook_args.push_back(new CCSTPrimaryExprId("request"));
+
+    statements.push_back(
+      new CCSTExprStatement(
+        new CCSTAssignExpr(new CCSTPrimaryExprId("request_cookie"), equals(),
+          function_call("thc_get_request_cookie", lcd_req_cook_args))));
+    std::vector<CCSTAssignExpr*> ipc_recv_end_args;
+    std::vector<CCSTAssignExpr*> chnl_to_fipc_args;
+    chnl_to_fipc_args.push_back(new CCSTPrimaryExprId(c->chName));
+    ipc_recv_end_args.push_back(function_call("thc_channel_to_fipc", chnl_to_fipc_args));
+    ipc_recv_end_args.push_back(new CCSTPrimaryExprId("response"));
+    statements.push_back(new CCSTExprStatement(function_call("fipc_recv_msg_end", ipc_recv_end_args)));
   }
   // TODO: unmarshal channel refs;
 
@@ -266,6 +306,36 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
     statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
   }
 
+  if (type == Channel::AsyncChannel){
+     std::vector<CCSTDeclaration*> if_body_declarations;
+     std::vector<CCSTStatement*> if_body_statements;
+
+     std::vector<CCSTAssignExpr*> liblcd_err_args;
+     liblcd_err_args.push_back(new CCSTString("error getting response msg"));
+     if_body_statements.push_back(new CCSTExprStatement( function_call("LIBLCD_ERR", liblcd_err_args)));
+
+     std::vector<CCSTAssignExpr*> lcd_exit_args;
+     lcd_exit_args.push_back(new CCSTInteger(-1));
+     // TODO: Change this to return -EIO;
+     if_body_statements.push_back(new CCSTReturn(new CCSTPrimaryExprId("-EIO")));
+       //new CCSTExprStatement(function_call("lcd_exit", lcd_exit_args)));
+
+     CCSTCompoundStatement *if_body = new CCSTCompoundStatement(if_body_declarations, if_body_statements);
+
+     std::vector<CCSTAssignExpr*> lcd_async_start_args;
+     lcd_async_start_args.push_back(new CCSTPrimaryExprId(c->chName));
+     lcd_async_start_args.push_back(
+       new CCSTUnaryExprCastExpr(reference(),
+         new CCSTPrimaryExprId("response")));
+
+     CCSTStatement *iif = new CCSTIfStatement(
+       new CCSTPostFixExprAssnExpr(
+         new CCSTPrimaryExprId("async_msg_blocking_send_start"),
+         lcd_async_start_args), dynamic_cast<CCSTStatement*>(if_body));
+
+     statements.push_back(iif);
+   }
+
   /* marshal return params and val */
   for (auto& p : *r) {
     if(p->out()) {
@@ -280,17 +350,24 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
     statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
   }
 
-  /* make IPC return call */
-  // err = lcd_sync_reply();
-  // if (err) { ...}
-  std::vector<CCSTAssignExpr*> lcd_sync_reply_args_empty;
-  statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("err")
-								 , equals()
-								 , function_call("lcd_sync_reply"
-										 , lcd_sync_reply_args_empty))));
-  statements.push_back(if_cond_fail(new CCSTPrimaryExprId("err")
-				    , "lcd_sync_reply"));
-
+  if (type == Channel::SyncChannel) {
+    /* make IPC return call */
+    // err = lcd_sync_reply();
+    // if (err) { ...}
+    std::vector<CCSTAssignExpr*> lcd_sync_reply_args_empty;
+    statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("err")
+                   , equals()
+                   , function_call("lcd_sync_reply"
+                       , lcd_sync_reply_args_empty))));
+    statements.push_back(if_cond_fail(new CCSTPrimaryExprId("err")
+              , "lcd_sync_reply"));
+  } else {
+    std::vector<CCSTAssignExpr*> ipc_reply_args;
+    ipc_reply_args.push_back(new CCSTPrimaryExprId(c->chName));
+    ipc_reply_args.push_back(new CCSTPrimaryExprId("request_cookie"));
+    ipc_reply_args.push_back(new CCSTPrimaryExprId("response"));
+    statements.push_back(new CCSTExprStatement(function_call("thc_ipc_reply", ipc_reply_args)));
+  }
   return new CCSTCompoundStatement(declarations, statements);
 }
 
