@@ -373,6 +373,8 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
     ipc_reply_args.push_back(new CCSTPrimaryExprId("response"));
     statements.push_back(new CCSTExprStatement(function_call("thc_ipc_reply", ipc_reply_args)));
   }
+
+  statements.push_back(new CCSTReturn(new CCSTPrimaryExprId("ret")));
   return new CCSTCompoundStatement(declarations, statements);
 }
 
