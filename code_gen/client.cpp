@@ -13,10 +13,7 @@ CCSTFile* generate_client_header(Module* mod)
   if (mod->rpc_definitions().empty()) {
     return NULL;
   }
-  std::vector<Rpc*> rpcs = mod->rpc_definitions();
-  for (std::vector<Rpc*>::iterator it = rpcs.begin(); it != rpcs.end();
-      it++) {
-    Rpc *r = *it;
+  for (auto r : *mod) {
     // print definitions of callee functions, all other functions are
     // already declared in the kernel
     if (r->function_pointer_defined()) {
@@ -26,92 +23,94 @@ CCSTFile* generate_client_header(Module* mod)
   return new CCSTFile(definitions);
 }
 
-CCSTFile* generate_client_source(Module* f, std::vector<Include*> includes)
-{ 
+CCSTFile* generate_client_source(Module* m, std::vector<Include*> includes)
+{
   std::vector<CCSTExDeclaration*> definitions;
 
   // Includes
-  for(std::vector<Include*>::iterator it = includes.begin(); it != includes.end(); it ++) {
+  for (std::vector<Include*>::iterator it = includes.begin();
+    it != includes.end(); it++) {
     Include *inc = *it;
-    definitions.push_back(new CCSTPreprocessor(inc->get_path(), inc->is_relative()));
+    definitions.push_back(
+      new CCSTPreprocessor(inc->get_path(), inc->is_relative()));
   }
 
-
   // declare globals
-  std::vector<GlobalVariable*> globals = f->channels(); // if you odn't do this you get use after free heap issues
+  // if you don't do this you get use after free heap issues
+  std::vector<GlobalVariable*> globals = m->channels();
 
-  for(std::vector<GlobalVariable*>::iterator it = globals.begin(); it != globals.end(); it ++) {
+  for (std::vector<GlobalVariable*>::iterator it = globals.begin();
+    it != globals.end(); it++) {
     GlobalVariable *gv = (GlobalVariable*) *it;
     definitions.push_back(declare_static_variable(gv));
   }
 
   // declare cspaces
-  std::vector<GlobalVariable*> cspaces = f->cspaces_;
-  for(std::vector<GlobalVariable*>::iterator it = cspaces.begin(); it != cspaces.end(); it ++) {
+  std::vector<GlobalVariable*> cspaces = m->cspaces_;
+  for (std::vector<GlobalVariable*>::iterator it = cspaces.begin();
+    it != cspaces.end(); it++) {
     GlobalVariable *gv = *it;
     definitions.push_back(declare_static_variable(gv));
   }
 
   // declare channel group
-  definitions.push_back(declare_static_variable(f->channel_group));
+  definitions.push_back(declare_static_variable(m->channel_group));
 
   // create initialization function
-  definitions.push_back(function_definition(interface_init_function_declaration(f)
-					    , caller_interface_init_function_body(f)));
-  
+  definitions.push_back(
+    function_definition(interface_init_function_declaration(m),
+      caller_interface_init_function_body(m)));
+
   // create exit function
-  definitions.push_back(function_definition(interface_exit_function_declaration(f)
-					    , caller_interface_exit_function_body(f)));
+  definitions.push_back(
+    function_definition(interface_exit_function_declaration(m),
+      caller_interface_exit_function_body(m)));
 
   // define container structs
-  
 
-
-  // functions
-  std::vector<Rpc*> rpcs = f->rpc_definitions();
-  for(std::vector<Rpc*>::iterator it = rpcs.begin(); it != rpcs.end(); it ++) {
-    Rpc *r_tmp = (Rpc*) *it;
-    if(r_tmp->function_pointer_defined()) {
-      std::cout << "function pointer defined function\n";
-      definitions.push_back(function_definition(callee_declaration(r_tmp)
-						, callee_body(r_tmp, f)));
+  // define functions
+  for (auto r : *m) {
+    std::cout << "generating function definition for " << r->name()
+      << std::endl;
+    if (r->function_pointer_defined()) {
+      definitions.push_back(
+        function_definition(callee_declaration(r), callee_body(r, m)));
     } else {
-      definitions.push_back(function_definition(function_declaration(r_tmp)
-                                                , caller_body(r_tmp, f)));
+      definitions.push_back(
+        function_definition(function_declaration(r), caller_body(r, m)));
     }
   }
-  
   return new CCSTFile(definitions);
 }
 
 std::vector<CCSTDeclaration*> declare_containers(Variable *v)
 {
   std::vector<CCSTDeclaration*> declarations;
-  
-  if(v->container() != 0x0) {
+
+  if (v->container()) {
     declarations.push_back(declare_variable(v->container()));
   }
 
-  if(v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
+  if (v->type()->num() == PROJECTION_TYPE
+    || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
+
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed.\n");
 
     for (auto pf : *pt) {
-      if(pf->container() != 0x0) {
-	std::vector<CCSTDeclaration*> tmp = declare_containers(pf);
-	declarations.insert(declarations.end(), tmp.begin(), tmp.end());
+      if (pf->container()) {
+        std::vector<CCSTDeclaration*> tmp = declare_containers(pf);
+        declarations.insert(declarations.end(), tmp.begin(), tmp.end());
       }
     }
   }
-  
+
   return declarations;
 }
 
-/*
- * use module to get things like channels and cspaces.
- * or add channel and cspace as a field to an rpc....
- * that way each rpc can have its own channel or something....
- */
+/// use module to get things like channels and cspaces.
+/// or add channel and cspace as a field to an rpc....
+/// that way each rpc can have its own channel or something....
 CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
 {
   std::vector<CCSTDeclaration*> declarations;
@@ -127,13 +126,11 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
 				     
   // for every parameter that has a container. declare containers. then alloc or container of
   for (auto p : *r) {
-    if (p->container() != 0x0) {
+    if (p->container()) {
       // declare containers
       std::vector<CCSTDeclaration*> tmp = declare_containers(p);
       declarations.insert(declarations.end(), tmp.begin(), tmp.end());
-
       statements.push_back(alloc_link_container_caller(p, cspace_to_use));
-
     }
   }
 
@@ -233,7 +230,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
     lcd_async_start_args.push_back(new CCSTPrimaryExprId(c->chName));
     lcd_async_start_args.push_back(
       new CCSTUnaryExprCastExpr(reference(),
-        new CCSTPrimaryExprId("response")));
+        new CCSTPrimaryExprId("request")));
 
     statements.push_back(
       new CCSTExprStatement(
@@ -290,7 +287,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
 
   lcd_async_call_args.push_back(new CCSTPrimaryExprId(c->chName));
   lcd_async_call_args.push_back(new CCSTPrimaryExprId("request"));
-  lcd_async_call_args.push_back(new CCSTUnaryExprCastExpr(reference(), new CCSTPrimaryExprId("request")));
+  lcd_async_call_args.push_back(new CCSTUnaryExprCastExpr(reference(), new CCSTPrimaryExprId("response")));
     statements.push_back(
       new CCSTExprStatement(
         new CCSTAssignExpr(new CCSTPrimaryExprId("err"), equals(),
