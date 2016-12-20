@@ -115,7 +115,7 @@ CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const st
   std::vector<CCSTStatement*> statements;
   
   // when do we want to allocate and when do we want to lookup
-  if(v->container() != 0x0) {
+  if(v->container()) {
     if(v->alloc_callee()) {
       statements.push_back(alloc_insert_variable_container(v, cspace));
       // store remote reference;
@@ -130,8 +130,14 @@ CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const st
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
 
     for (auto pf : *pt) {
-      statements.push_back(allocate_and_link_containers_callee(pf, cspace, type));
-
+      /// If the top level structure is marked dealloc then all projection fields must also
+      /// be deallocated after the RPC is done. So, it's dumb to allocate memory if the
+      /// projection fields are marked alloc.
+      if (v->dealloc_callee()) {
+        pf->set_alloc_callee(false);
+        pf->set_dealloc_callee(true);
+        statements.push_back(allocate_and_link_containers_callee(pf, cspace, type));
+      }
       // link
       if( v->container() != 0x0 && pf->container() != 0x0 ) {
 	if(v->alloc_callee() || pf->alloc_callee()) {
@@ -503,7 +509,7 @@ std::vector<CCSTStatement*> dealloc_container(Variable *v, const std::string& cs
 {
   std::vector<CCSTStatement*> statements;
   
-  if(v->container() != 0x0) {
+  if(v->container()) {
     std::vector<CCSTAssignExpr*> cap_remove_args;
     cap_remove_args.push_back(new CCSTPrimaryExprId(cspace));
 
@@ -768,7 +774,3 @@ std::vector<CCSTStatement*> dealloc_containers_caller(Variable *v, const std::st
 
   return statements;
 }
-
-
-
- 
