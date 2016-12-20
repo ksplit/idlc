@@ -174,7 +174,7 @@ CCSTStatement* lookup_variable_container(Variable *v, Channel::ChannelType type)
   Assert(v->container() != 0x0, "Error: variable has no container\n");
 
   std::vector<CCSTAssignExpr*> lookup_args;
-  lookup_args.push_back(new CCSTPrimaryExprId("cspace_todo")); // lookup args 1
+  lookup_args.push_back(new CCSTPrimaryExprId("cspace")); // lookup args 1
 
   ProjectionType *container = dynamic_cast<ProjectionType*>(v->container()->type());
   Assert(container != 0x0, "Error: variables's container does not have type projection\n");

@@ -266,12 +266,17 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   /* build up real call params */
   std::vector<CCSTAssignExpr*> real_call_params;
   for (auto p : *r) {
-    if(p->container() != 0x0) {
+    if(p->container()) {
       ProjectionType *p_container_type = dynamic_cast<ProjectionType*>(p->container()->type());
       Assert(p_container_type != 0x0, "Error: dynamic cast to projection type failed\n");
       ProjectionField *p_container_real_field = p_container_type->get_field(p->type()->name());
       Assert(p_container_real_field != 0x0, "Error: could not find field in structure\n");
-      real_call_params.push_back(access(p_container_real_field));
+      /// XXX: Is this enough to handle all the cases?
+      if (p->pointer_count() == 1) {
+        real_call_params.push_back(new CCSTPrimaryExpr(new CCSTUnaryExprCastExpr(reference(), access(p_container_real_field))));
+      } else {
+        real_call_params.push_back(access(p_container_real_field));
+      }
     } else {
       real_call_params.push_back(access(p));
     }
