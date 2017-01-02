@@ -142,10 +142,16 @@ Function::Function(const Function& other)
   // copy parameters
   std::vector<Parameter*> parameters_copy;
 
-  for (const auto p : other) {
-    Parameter *copy = new Parameter(*p);
-    parameters_copy.push_back(copy);
+  /// XXX: Do not copy parameters of the function. If the function
+  /// parameter is a forward declaration of a projection, then this
+  /// becomes an infinite loop. So, disable it for now
+  if (0) {
+    for (const auto p : other) {
+      Parameter *copy = new Parameter(*p);
+      parameters_copy.push_back(copy);
+    }
   }
+
   this->parameters_ = parameters_copy;
 
   // don't need to copy scope
@@ -203,6 +209,25 @@ Rpc* Function::to_rpc(ProjectionType *pt)
 
   new_parameters.push_back(new Parameter(tramp_hidden_args, "hidden_args", 1));
 
+  /// XXX: Function pointers of ops structures often have the main structure as
+  /// a function argument. This creates a kind of circular dependency for the IDL.
+  /// When IDL is parsed, it creates an unresolved type if it couldn't find a valid
+  /// type for a projection. Resolve those now.
+  for (auto param : *this) {
+    auto type = param->type();
+    int err;
+    if (type->num() == UNRESOLVED_TYPE) {
+      Type *t = this->current_scope_->lookup(type->name(), &err);
+      if(!t) {
+        std::cout << "Error: could not resolve type " <<  type->name() << std::endl;
+      } else {
+        // free the unresolved type
+        free(param->type_);
+        /// assign new type
+        param->type_ = t;
+      }
+    }
+  }
 
   Rpc* tmp = new Rpc(this->return_var_, this->identifier_, this->parameters_, this->current_scope_);
   tmp->set_function_pointer_defined(true);
