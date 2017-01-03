@@ -109,6 +109,7 @@ CCSTParamTypeList* parameter_list(std::vector<Parameter*> params); // complete
 // unmarshal.cpp
 CCSTPostFixExprAssnExpr* unmarshal_variable(Variable *v, Channel::ChannelType type, const std::string& req_resp);
 std::vector<CCSTStatement*> unmarshal_variable_no_check(Variable *v, Channel::ChannelType type); // complete
+std::vector<CCSTStatement*> unmarshal_return_variable_no_check(Variable *v, Channel::ChannelType type);
 std::vector<CCSTStatement*> unmarshal_variable_callee(Variable *v, Channel::ChannelType type);
 std::vector<CCSTStatement*> unmarshal_variable_caller(Variable *v, Channel::ChannelType type);
 std::vector<CCSTStatement*> unmarshal_container_refs_caller(Variable *v, Channel::ChannelType type);

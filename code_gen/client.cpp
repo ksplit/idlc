@@ -341,7 +341,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
     declarations.push_back(declare_variable(r->return_variable()));
 
     // unmarshal return var
-    std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_no_check(r->return_variable(), c->chType);
+    std::vector<CCSTStatement*> tmp_stmts = unmarshal_return_variable_no_check(r->return_variable(), c->chType);
     statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
   }
   std::vector<CCSTAssignExpr*> ipc_recv_end_args;

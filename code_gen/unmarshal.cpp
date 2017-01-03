@@ -7,22 +7,12 @@
  * This function should never be called on a variable whose type is a projection.
  */
 
-std::vector<CCSTStatement*> unmarshal_variable_no_check(Variable *v, Channel::ChannelType type)
+std::vector<CCSTStatement*> unmarshal_return_variable_no_check(Variable *v, Channel::ChannelType type)
 {
   std::vector<CCSTStatement*> statements;
   
-  if (v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
-    // loop through fields
-    ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
-    Assert(pt != 0x0, "Error: dynamic cast to projection failed!\n");
 
-    for (auto pf : *pt) {
-      std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_no_check(pf, type);
-      statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
-    }
-
-  } else {
-    
+    std::cout << " Unmarshal: var name " << v->identifier() << std::endl;
     Assert(v->marshal_info() != 0x0, "Error: no marshal info\n");
     int reg = v->marshal_info()->get_register();
     std::string func_name;
@@ -34,7 +24,43 @@ std::vector<CCSTStatement*> unmarshal_variable_no_check(Variable *v, Channel::Ch
       func_name = load_async_reg_mapping(reg);
       access_reg_args.push_back(new CCSTPrimaryExprId("response"));
     }
-    
+
+    statements.push_back(new CCSTExprStatement( new CCSTAssignExpr (access(v)
+                    , equals()
+                    , function_call(func_name, access_reg_args))));
+
+
+  return statements;
+}
+
+std::vector<CCSTStatement*> unmarshal_variable_no_check(Variable *v, Channel::ChannelType type)
+{
+  std::vector<CCSTStatement*> statements;
+
+  if (v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
+    // loop through fields
+    ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
+    Assert(pt != 0x0, "Error: dynamic cast to projection failed!\n");
+
+    for (auto pf : *pt) {
+      std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_no_check(pf, type);
+      statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
+    }
+
+  } else {
+    std::cout << " Unmarshal: var name " << v->identifier() << std::endl;
+    Assert(v->marshal_info() != 0x0, "Error: no marshal info\n");
+    int reg = v->marshal_info()->get_register();
+    std::string func_name;
+    std::vector<CCSTAssignExpr*> access_reg_args;
+
+    if (type == Channel::SyncChannel) {
+      func_name = access_register_mapping(reg);
+    } else {
+      func_name = load_async_reg_mapping(reg);
+      access_reg_args.push_back(new CCSTPrimaryExprId("response"));
+    }
+
     statements.push_back(new CCSTExprStatement( new CCSTAssignExpr (access(v)
 								    , equals()
 								    , function_call(func_name, access_reg_args))));
