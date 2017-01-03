@@ -87,6 +87,9 @@ int main(int argc, char ** argv)
         ccst_hdr->write(of_hdr, 0);
         of_hdr << "\n#endif /* " << hdr_macro << " */" << std::endl;
 
+        /// FIXME: Should be generated like this. But how to generate SECTIONS {}
+        /// statements.push_back(new CCSTPreprocessor("liblcd/trampoline.h", false));
+        of_lds << "#include <liblcd/trampoline_link.h>\n\n";
         of_lds << "SECTIONS\n{" << std::endl;
         ccst_lds->write(of_lds, 1);
         of_lds << "}\nINSERT AFTER .text;\n";
