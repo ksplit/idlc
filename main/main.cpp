@@ -50,13 +50,10 @@ int main(int argc, char ** argv)
       /*
        MarshalVisitor* mv = new MarshalVisitor();
        tree->accept(mv, 0x0);*/
-      std::vector<Module*> project_modules = tree->modules();
       // convert func pointer to rpc so that we can generate enums
       tree->function_pointer_to_rpc();
 
-      for (std::vector<Module*>::iterator it = project_modules.begin();
-          it != project_modules.end(); it++) {
-        Module *m = *it;
+      for (auto m : *tree) {
         //FIXME: Looks cluttered. Refactor appropriately
         std::string fname(m->identifier());
         std::string lds_fname(m->identifier());
@@ -112,12 +109,9 @@ int main(int argc, char ** argv)
       tree->prepare_marshal();
       std::cout << "Done doing all setup\n";
 
-      std::vector<Module*> project_modules = tree->modules();
       std::vector<Include*> project_includes = tree->includes();
 
-      for (std::vector<Module*>::iterator it = project_modules.begin();
-          it != project_modules.end(); it++) {
-        Module *m = *it;
+      for (auto m : *tree) {
         if (!m) {
           std::cerr << "Module is null\n";
           exit(0);
@@ -138,13 +132,9 @@ int main(int argc, char ** argv)
 
       std::cout << "Completed callee source writing\n";
     } else if (!strcmp(argv[1], "-clientheader")) {
-      /*
-       */
-       std::vector<Module*> project_modules = tree->modules();
        tree->function_pointer_to_rpc();
-       for (std::vector<Module*>::iterator it = project_modules.begin();
-           it != project_modules.end(); it++) {
-         Module *m = *it;
+
+       for (auto m : *tree) {
          std::string fname (m->identifier());
          fname.append("_caller.h");
 
@@ -184,12 +174,9 @@ int main(int argc, char ** argv)
       tree->prepare_marshal();
       std::cout << "Done doing all setup\n";
 
-      std::vector<Module*> project_modules = tree->modules();
       std::vector<Include*> project_includes = tree->includes();
 
-      for (std::vector<Module*>::iterator it = project_modules.begin();
-          it != project_modules.end(); it++) {
-        Module *m = *it;
+      for (auto m : *tree) {
         if (!m) {
           std::cerr << "Module is null\n";
           exit(0);
