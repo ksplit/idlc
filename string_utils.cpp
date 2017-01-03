@@ -16,12 +16,12 @@ const std::string struct_name(const std::string& name)
 
 const std::string lookup_name(const std::string& name)
 {
-  return new_name(std::string("lookup_"), name);
+  return new_name(std::string("glue_cap_lookup_"), name);
 }
 
 const std::string insert_name(const std::string& name)
 {
-  return new_name(std::string("insert_"), name);
+  return new_name(std::string("glue_cap_insert_"), name);
 }
 
 const std::string cap_init_name(const std::string& name)

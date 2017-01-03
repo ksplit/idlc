@@ -53,14 +53,14 @@ std::vector<CCSTStatement*> container_of(Variable *v, const std::string& cspace)
       Assert(f!= 0x0, "Error: dynamic cast to projection type failed.\n");
       statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("err")
                      , equals()
-                     , function_call(insert_name(f->name()), insert_args))));
+                     , function_call(insert_name(f->name()) + "_type", insert_args))));
     } else {
       ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
       Assert(pt != 0x0, "Error: dynamic cast to projection type failed.\n");
 
       statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("err")
                      , equals()
-                     , function_call(insert_name(pt->real_type()), insert_args))));
+                     , function_call(insert_name(pt->real_type() + "_type"), insert_args))));
     }
     /* do error checking */
     statements.push_back(if_cond_fail(new CCSTPrimaryExprId("err")
@@ -194,7 +194,7 @@ CCSTStatement* lookup_variable_container(Variable *v, Channel::ChannelType type)
 			
   statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("err")
 								 , equals()
-								 , function_call(lookup_name(pt->real_type())
+								 , function_call(lookup_name(pt->real_type()) + + "_type"
 										 , lookup_args))));
   /* do error checking */
   statements.push_back(if_cond_fail(new CCSTPrimaryExprId("err")
@@ -330,7 +330,7 @@ CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const std::s
 
   statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("err")
 								 , equals()
-								 , function_call(insert_name(pt->real_type()), insert_args))));
+								 , function_call(insert_name(pt->real_type()) + "_type", insert_args))));
 
   /* do error checking */
   statements.push_back(if_cond_fail(new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId("err"))
