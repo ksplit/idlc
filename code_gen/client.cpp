@@ -134,7 +134,13 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
       // declare containers
       std::vector<CCSTDeclaration*> tmp = declare_containers(p);
       declarations.insert(declarations.end(), tmp.begin(), tmp.end());
-      statements.push_back(alloc_link_container_caller(p, cspace_to_use));
+
+      CCSTCompoundStatement *updates = alloc_link_container_caller(p, cspace_to_use);
+      std::vector<CCSTDeclaration*> __tmp_declarations = updates->getdeclarations();
+      std::vector<CCSTStatement*> __tmp_statements = updates->getstatements();
+
+      declarations.insert(declarations.end(), __tmp_declarations.begin(), __tmp_declarations.end());
+      statements.insert(statements.end(), __tmp_statements.begin(), __tmp_statements.end());
     }
   }
 
@@ -213,6 +219,11 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
   std::vector<CCSTInitDeclarator*> decs_req;
   std::vector<CCSTInitDeclarator*> decs_resp;
 
+  std::vector<CCSTInitDeclarator*> decs_ret;
+  decs_ret.push_back(new CCSTDeclarator(pointer(0)
+            , new CCSTDirectDecId("ret")));
+  declarations.push_back(new CCSTDeclaration(int_type(), decs_ret));
+
   spec_fipcm.push_back(
     new CCSTStructUnionSpecifier(struct_t, "fipc_message"));
 
@@ -238,9 +249,10 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
 
     statements.push_back(
       new CCSTExprStatement(
-        new CCSTPostFixExprAssnExpr(
-          new CCSTPrimaryExprId("async_msg_blocking_send_start"),
-          lcd_async_start_args)));
+        new CCSTAssignExpr(new CCSTPrimaryExprId("ret"), equals(),
+          new CCSTPostFixExprAssnExpr(
+            new CCSTPrimaryExprId("async_msg_blocking_send_start"),
+            lcd_async_start_args))));
 
     statements.push_back(
       if_cond_fail(new CCSTPrimaryExprId("ret"),
