@@ -379,7 +379,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
 }
 
 
-CCSTFile* generate_server_header(Module *file)
+CCSTFile* generate_server_header(Module *module)
 {
   // #ifndef
   // #define
@@ -387,12 +387,12 @@ CCSTFile* generate_server_header(Module *file)
   // enum-specifier: enum id 
   std::vector<CCSTExDeclaration*> definitions; // = new std::vector<CCSTExDeclaration*>();
   // check if there are rpcs
-  if(!file->rpc_definitions().empty())
+  if(!module->rpc_definitions().empty())
     {
       std::cout << "rpc not empty\n";
-      definitions.push_back(construct_enum(file));
+      definitions.push_back(construct_enum(module));
       // function callee function declarations
-      for (auto r : *file) {
+      for (auto r : *module) {
         // Print declaration only for callee functions.
         // Function pointer callee functions are declared in caller's header
         if (!r->function_pointer_defined()) {
@@ -434,7 +434,7 @@ CCSTDeclaration* callee_declaration(Rpc* r)
               new CCSTDirectDecId("cspace"))));
   p_decs.push_back(
       new CCSTParamDeclaration(
-          type2(r->current_scope()->lookup("cptr_t", &err)),
+          type2(r->current_scope()->lookup("cptr", &err)),
           new CCSTDeclarator(NULL,
               new CCSTDirectDecId("sync_ep"))));
 

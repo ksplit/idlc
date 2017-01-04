@@ -48,9 +48,9 @@ GlobalScope::GlobalScope()
   cptr->set_out(true);
   fields2.push_back(cptr);
   
-  this->type_definitions_.insert( std::pair<std::string, Type*>("cptr_t"
-								, new ProjectionType("cptr_t", "cptr_t", fields2)));
-
+  /// FIXME: This should ideally be a typedef
+  this->type_definitions_.insert( std::pair<std::string, Type*>("cptr",
+        new ProjectionType("cptr", "cptr", fields2)));
 
   // dstore no fields
   std::vector<ProjectionField*> fields3;

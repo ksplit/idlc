@@ -200,11 +200,11 @@ void create_container(const Value &id, std::vector<ProjectionField*> &container_
 
     container_fields.push_back(new ProjectionField(getType(*_id), *_id, 0));
 
-    ProjectionField *other_ref = new ProjectionField(getType("cptr_t"), "other_ref", 0);
+    ProjectionField *other_ref = new ProjectionField(getType("cptr"), "other_ref", 0);
     other_ref->set_out(true);
     container_fields.push_back(other_ref);
 
-    ProjectionField *my_ref = new ProjectionField(getType("cptr_t"), "my_ref", 0);
+    ProjectionField *my_ref = new ProjectionField(getType("cptr"), "my_ref", 0);
     my_ref->set_in(true);
 
     container_fields.push_back(my_ref);
@@ -773,14 +773,14 @@ Parameters	=	f:FirstParam* l:LastParam {{
 
 FirstChannel    = "channel" Space+ id:Identifier Spacing COMMA Spacing {{
 				const std::string *_id = static_cast<const std::string*>(id.getValue());
-		    GlobalVariable *gv = new GlobalVariable(getType("cptr_t"), *_id, 0);
+		    GlobalVariable *gv = new GlobalVariable(getType("cptr"), *_id, 0);
 		    insertVariable(gv);
 		    value = gv;
 		}}
 
 LastChannel     = "channel" Space+ id:Identifier Spacing {{
 				const std::string *_id = static_cast<const std::string*>(id.getValue());
-		    GlobalVariable *gv = new GlobalVariable(getType("cptr_t"), *_id, 0);
+		    GlobalVariable *gv = new GlobalVariable(getType("cptr"), *_id, 0);
 		    insertVariable(gv);
 		    value = gv;
 		}}
@@ -1001,14 +1001,14 @@ Specification	=	OPENS Spacing s:Start* l:Last CLOSES Spacing {{
 
 FirstProjArg    =      "channel" Space+ id:Identifier Spacing COMMA Spacing {{
 				const std::string *name = static_cast<const std::string*>(id.getValue());
-		           ProjectionField *pf = new ProjectionField(getType("cptr_t"), *name, 0);
+		           ProjectionField *pf = new ProjectionField(getType("cptr"), *name, 0);
 			   insertVariable(pf); 
 			   value = pf;
 		       }}
 
 LastProjArg     =      "channel" Space+ id:Identifier Spacing {{
 				const std::string *name = static_cast<const std::string*>(id.getValue());
-				ProjectionField *pf = new ProjectionField(getType("cptr_t"), *name, 0);
+				ProjectionField *pf = new ProjectionField(getType("cptr"), *name, 0);
 				insertVariable(pf);
 				value = pf;
 		       }}
@@ -1027,7 +1027,7 @@ ProjArgs        =       f:FirstProjArg* l:LastProjArg {{
 
 ChanField       =       "channel" Space+ s:Specification? Spacing id:Identifier Spacing SEMI Spacing {{
 				const std::string *name = static_cast<const std::string*>(id.getValue());
-			    ProjectionField *pf = new ProjectionField(getType("cptr_t"), *name, 0);
+			    ProjectionField *pf = new ProjectionField(getType("cptr"), *name, 0);
 			    insertVariable(pf);
 			    set_specs(*pf, s);
 

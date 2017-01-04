@@ -237,8 +237,8 @@ CCSTStatement* marshal(CCSTPostFixExpr *v, int reg, Channel::ChannelType type, c
   } else {
     store_reg_func = store_async_reg_mapping(reg);
     store_reg_args.push_back(new CCSTPrimaryExprId(req_resp));
-    cptr_args.push_back(v);
-    store_reg_args.push_back(function_call("cptr_val", cptr_args));
+    //cptr_args.push_back(v);
+    //store_reg_args.push_back(function_call("cptr_val", cptr_args));
   }
   store_reg_args.push_back(v);
   
