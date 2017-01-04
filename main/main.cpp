@@ -110,7 +110,6 @@ int main(int argc, char ** argv)
       std::cout << "Done doing all setup\n";
 
       std::vector<Include*> project_includes = tree->includes();
-
       for (auto m : *tree) {
         if (!m) {
           std::cerr << "Module is null\n";
@@ -118,8 +117,9 @@ int main(int argc, char ** argv)
         }
 
         std::string fname = new_name(m->identifier(), std::string("_callee.c"));
-
         std::ofstream of_callee(fname);
+
+        project_includes.push_back(new Include(true, "../" + m->identifier() + "_callee.h"));
 
         if (!of_callee.is_open()) {
           std::cerr << "Error: unable to open " << fname << "for writing\n";
@@ -183,8 +183,9 @@ int main(int argc, char ** argv)
         }
 
         std::string fname = new_name(m->identifier(), std::string("_caller.c"));
-
         std::ofstream of_caller(fname);
+
+        project_includes.push_back(new Include(true, "../" + m->identifier() + "_caller.h"));
 
         if (!of_caller.is_open()) {
           std::cerr << "Error: unable to open " << fname << "for writing\n";
