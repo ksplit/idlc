@@ -13,6 +13,10 @@ CCSTFile* generate_client_header(Module* mod)
   if (mod->rpc_definitions().empty()) {
     return NULL;
   }
+  /// generate function declaration for init, exit
+  definitions.push_back(interface_init_function_declaration(mod));
+  definitions.push_back(interface_exit_function_declaration(mod));
+
   for (auto r : *mod) {
     // print definitions of callee functions, all other functions are
     // already declared in the kernel
