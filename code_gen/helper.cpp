@@ -1,13 +1,13 @@
 #include "ccst.h"
 #include "code_gen.h"
 
-CCSTExDeclaration* construct_enum(Module *f)
+CCSTExDeclaration* construct_enum(Module *m)
 {
   std::string enum_name("dispatch_t");
-  std::vector<Rpc*> rpcs = f->rpc_definitions();
+  std::vector<Rpc*> rpcs = m->rpc_definitions();
   CCSTEnumeratorList *el = construct_enumlist(rpcs);
   CCSTEnumSpecifier *e = new CCSTEnumSpecifier(enum_name, el);
-  std::vector<CCSTDecSpecifier*> tmp; // = new std::vector<CCSTDecSpecifier*>();
+  std::vector<CCSTDecSpecifier*> tmp;
   tmp.push_back(e);
   std::vector<CCSTInitDeclarator*> empty;
   CCSTDeclaration *declaration = new CCSTDeclaration(tmp, empty);
@@ -61,7 +61,7 @@ CCSTDeclaration* function_declaration(Rpc* r)
 {
   std::vector<CCSTDecSpecifier*> specifier = type2(r->return_variable()->type());
   
-  std::vector<CCSTInitDeclarator*> func; // = new std::vector<CCSTInitDeclarator*>(); // pointer name, params
+  std::vector<CCSTInitDeclarator*> func;
   CCSTPointer *p = pointer(r->return_variable()->pointer_count());
   
   CCSTDirectDecId *name = new CCSTDirectDecId(r->name());
@@ -78,7 +78,7 @@ CCSTDeclaration* function_pointer_function_declaration(Rpc *r)
 {
   std::vector<CCSTDecSpecifier*> specifier = type2(r->return_variable()->type());
   
-  std::vector<CCSTInitDeclarator*> func; // = new std::vector<CCSTInitDeclarator*>(); // pointer name, params
+  std::vector<CCSTInitDeclarator*> func;
   CCSTPointer *p = pointer(r->return_variable()->pointer_count());
   
   CCSTDirectDecId *name = new CCSTDirectDecId(r->name());

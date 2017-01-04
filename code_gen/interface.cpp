@@ -27,7 +27,10 @@ CCSTDeclaration* interface_init_function_declaration(Module *m)
   std::vector<CCSTParamDeclaration*> param_decs;
   for(std::vector<GlobalVariable*>::iterator it = channels.begin(); it != channels.end(); it ++) {
     GlobalVariable *p = (GlobalVariable*) *it;
-    param_decs.push_back(new CCSTParamDeclaration(type2(p->type()), new CCSTDeclarator(pointer(p->pointer_count()), new CCSTDirectDecId(p->identifier()))));
+    param_decs.push_back(
+      new CCSTParamDeclaration(type2(p->type()),
+        new CCSTDeclarator(pointer(p->pointer_count()),
+          new CCSTDirectDecId(p->identifier()))));
   }
   // TODO: add the channels group thing
   GlobalVariable *extra_param = m->channel_group;
@@ -134,7 +137,7 @@ CCSTCompoundStatement* caller_interface_init_function_body(Module *m)
   std::vector<CCSTAssignExpr*> cap_init_args_empty;
   body_statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("ret")
 								      , equals()
-								      , function_call(cap_init_name(m->identifier())
+								      , function_call("glue_cap_init"
 										      , cap_init_args_empty))));
   // do error checking
   body_statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId("ret"))
@@ -150,7 +153,7 @@ CCSTCompoundStatement* caller_interface_init_function_body(Module *m)
 							, new CCSTPrimaryExprId( gv->identifier())));
     body_statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("ret")
 									, equals()
-									, function_call(cap_create_name(m->identifier())
+									, function_call("glue_cap_create"
 											, cap_create_args))));
     
     // do error checking
@@ -164,7 +167,7 @@ CCSTCompoundStatement* caller_interface_init_function_body(Module *m)
   // failures
   std::vector<CCSTAssignExpr*> cap_exit_args_empty;
   body_statements.push_back(new CCSTPlainLabelStatement("fail2"
-							, new CCSTExprStatement( function_call(cap_exit_name(m->identifier())
+							, new CCSTExprStatement( function_call("glue_cap_exit"
 											       , cap_exit_args_empty))));
 
   body_statements.push_back(new CCSTPlainLabelStatement("fail1"
@@ -218,12 +221,12 @@ CCSTCompoundStatement* caller_interface_exit_function_body(Module *m)
 
     std::vector<CCSTAssignExpr*> cap_destroy_args;
     cap_destroy_args.push_back(new CCSTPrimaryExprId(gv->identifier()));
-    body_statements.push_back(new CCSTExprStatement( function_call(cap_destroy_name(m->identifier())
+    body_statements.push_back(new CCSTExprStatement( function_call("glue_cap_destroy"
 								   , cap_destroy_args)));
   }
   // vfs cap exit
   std::vector<CCSTAssignExpr*> cap_exit_args;
-  body_statements.push_back(new CCSTExprStatement( function_call(cap_exit_name(m->identifier())
+  body_statements.push_back(new CCSTExprStatement( function_call("glue_cap_exit"
 								 , cap_exit_args)));
 
   return new CCSTCompoundStatement(body_declarations, body_statements);
