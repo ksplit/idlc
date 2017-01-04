@@ -1376,6 +1376,8 @@ void CCSTParamList::write(std::ofstream& of, int indent)
       CCSTParamDeclaration *dec = *it;
       dec->write(of, 0);
     }
+  } else {
+    of << "void";
   }
 }
 
