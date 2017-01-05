@@ -546,7 +546,7 @@ class CCSTPreprocessor: public CCSTExDeclaration
   std::string pathname;
   bool relative;
 public:
-  CCSTPreprocessor(const std::string&path, bool relative);
+  CCSTPreprocessor(const std::string& path, bool relative);
   virtual void write(std::ofstream& of, int indent);
 };
 

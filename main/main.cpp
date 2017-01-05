@@ -119,6 +119,7 @@ int main(int argc, char ** argv)
         std::string fname = new_name(m->identifier(), std::string("_callee.c"));
         std::ofstream of_callee(fname);
         std::ofstream of_glue(m->identifier() + "_cap.c");
+        std::ofstream of_dispatch(m->identifier() + "_callee_dispatch.c");
 
         project_includes.push_back(new Include(true, "../" + m->identifier() + "_callee.h"));
 
@@ -129,8 +130,11 @@ int main(int argc, char ** argv)
         }
         CCSTFile* ccst_tree = generate_server_source(m, project_includes);
         CCSTFile *glue_ccst_tree = generate_glue_source(m);
+        CCSTFile *disp_ccst_tree = generate_dispatch(m, "server");
+
         glue_ccst_tree->write(of_glue, 0);
         ccst_tree->write(of_callee, 0);
+        disp_ccst_tree->write(of_dispatch, 0);
       }
 
       std::cout << "Completed callee source writing\n";
@@ -187,6 +191,7 @@ int main(int argc, char ** argv)
 
         std::string fname = new_name(m->identifier(), std::string("_caller.c"));
         std::ofstream of_caller(fname);
+        std::ofstream of_dispatch(m->identifier() + "_caller_dispatch.c");
 
         project_includes.push_back(new Include(true, "../" + m->identifier() + "_caller.h"));
 
@@ -197,7 +202,10 @@ int main(int argc, char ** argv)
         }
 
         CCSTFile* ccst_tree = generate_client_source(m, project_includes);
+        CCSTFile *disp_ccst_tree = generate_dispatch(m, "client");
+
         ccst_tree->write(of_caller, 0);
+        disp_ccst_tree->write(of_dispatch, 0);
       }
       std::cout << "Completed caller source writing\n";
     } else {

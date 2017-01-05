@@ -13,6 +13,11 @@ CCSTFile* generate_client_header(Module* mod)
   if (mod->rpc_definitions().empty()) {
     return NULL;
   }
+
+  /// generate function declaration for sync, async loop
+  definitions.push_back(dispatch_sync_function_declaration());
+  definitions.push_back(dispatch_async_function_declaration(mod));
+
   /// generate function declaration for init, exit
   definitions.push_back(interface_init_function_declaration(mod));
   definitions.push_back(interface_exit_function_declaration(mod));

@@ -3,132 +3,223 @@
 // for std::map
 #include <algorithm>
 
-CCSTDeclaration* dispatch_function_declaration()
+CCSTDeclaration* dispatch_sync_function_declaration()
 {
-  std::vector<CCSTDecSpecifier*>specifier;
-  specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
-  
+  std::vector<CCSTDecSpecifier*> specifier;
+  specifier.push_back(
+    new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
+
   std::vector<CCSTInitDeclarator*> decs;
-  
+
   std::vector<CCSTParamDeclaration*> empty;
-  decs.push_back(new CCSTDeclarator(0x0
-				    , new CCSTDirectDecParamTypeList( new CCSTDirectDecId("dispatch_loop")
-								      , new CCSTParamList(empty))));
+  decs.push_back(
+    new CCSTDeclarator(0x0,
+      new CCSTDirectDecParamTypeList(
+        new CCSTDirectDecId("dispatch_sync_loop"),
+        new CCSTParamList(empty))));
   return new CCSTDeclaration(specifier, decs);
 }
 
-CCSTCompoundStatement* dispatch_loop_body(std::vector<Rpc*> rps)
-{  
-  
+CCSTDeclaration* dispatch_async_function_declaration(Module *mod)
+{
+  std::vector<CCSTDecSpecifier*> specifier;
+  specifier.push_back(
+    new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
+
+  std::vector<CCSTInitDeclarator*> decs;
+  std::vector<CCSTParamDeclaration*> empty;
+  int err;
+  std::vector<CCSTParamDeclaration*> p_decs;
+
+  CCSTDirectDecId* id = new CCSTDirectDecId("dispatch_async_loop");
+
+  p_decs.push_back(
+    new CCSTParamDeclaration(
+      type2(mod->module_scope()->lookup("thc_channel", &err)),
+      new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("channel"))));
+  p_decs.push_back(
+    new CCSTParamDeclaration(
+      type2(mod->module_scope()->lookup("fipc_message", &err)),
+      new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("request"))));
+  p_decs.push_back(
+    new CCSTParamDeclaration(
+      type2(mod->module_scope()->lookup("cspace", &err)),
+      new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("cspace"))));
+  p_decs.push_back(
+    new CCSTParamDeclaration(type2(mod->module_scope()->lookup("cptr", &err)),
+      new CCSTDeclarator(NULL, new CCSTDirectDecId("sync_ep"))));
+
+  CCSTParamList *param_list = new CCSTParamList(p_decs);
+
+  CCSTDirectDecParamTypeList *params = new CCSTDirectDecParamTypeList(id,
+    param_list);
+
+  CCSTDeclarator* declarator = new CCSTDeclarator(NULL, params);
+  std::vector<CCSTInitDeclarator*> init_declarator;
+  init_declarator.push_back(declarator);
+  CCSTDeclaration *func_declaration = new CCSTDeclaration(specifier,
+    init_declarator);
+
+  return func_declaration;
+}
+
+CCSTCompoundStatement* dispatch_sync_loop_body(Module *mod, const std::string &type)
+{
   std::vector<CCSTDeclaration*> decs_in_body;
-  // int ret; 
-  std::vector<CCSTDecSpecifier*> s;// = new std::vector<CCSTDecSpecifier*>();
-  std::vector<CCSTInitDeclarator*> d;// = new std::vector<CCSTInitDeclarator*>();
-  s.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
-  d.push_back(new CCSTDeclarator(0x0, new CCSTDirectDecId("ret")));
-  decs_in_body.push_back(new CCSTDeclaration(s,d));
-  // Declare a variable of type int with name ret
-  
-  
-  /* body statement, switch*/
+  std::vector<CCSTDecSpecifier*> spec;
+  std::vector<CCSTInitDeclarator*> dec;
+  spec.push_back(
+    new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
+  dec.push_back(new CCSTDeclarator(NULL, new CCSTDirectDecId("fn_type")));
+  decs_in_body.push_back(new CCSTDeclaration(spec, dec));
 
+  std::vector<CCSTAssignExpr*> empty_args;
+  CCSTAssignExpr* init_ret = new CCSTAssignExpr(
+    new CCSTPrimaryExprId("fn_type"), new CCSTAssignOp(equal_t),
+    new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("lcd_r0"), empty_args));
 
-  /*  lcd_recv(manufacturer_interface_cap) */
-  /* check ret value, begin */
-  std::vector<CCSTAssignExpr*> args;
-  args.push_back( new CCSTPrimaryExprId("manufacturer_interface_cap"));
-  CCSTAssignExpr* init_ret = new CCSTAssignExpr(new CCSTPrimaryExprId("ret")
-						 , new CCSTAssignOp(equal_t)
-						 , new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("lcd_recv")
-									       ,args));
-  /* check ret value, end */
-
-  /* if ret begin */
-  CCSTIfStatement* if_stmt = new CCSTIfStatement(new CCSTPrimaryExprId("ret")
-						 , new CCSTGoto("out"));
-  /* if ret end */
-
-
-  
-  /* switch statement begin */
+  /// switch statement begins
   std::vector<CCSTStatement*> cases;
-  for(std::vector<Rpc*>::iterator it = rps.begin(); it != rps.end(); it ++)
-    {
-      Rpc* r_tmp = (Rpc*) *it;
-      
-      std::vector<CCSTDeclaration*> case_dec_empty;
+  for (auto rpc : *mod) {
+    std::vector<CCSTDeclaration*> case_dec_empty;
 
-      std::vector<CCSTStatement*> case_body_stmts;
-      std::vector<CCSTAssignExpr*> msg_args;
-      std::string *lcd_msg = new std::string("Calling function ");
-      lcd_msg->append(r_tmp->name());
-      msg_args.push_back(new CCSTString(*lcd_msg));
-      case_body_stmts.push_back(new CCSTExprStatement( new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("LCD_MSG")
-										   , msg_args)));
+    std::vector<CCSTStatement*> case_body_stmts;
+    std::vector<CCSTAssignExpr*> msg_args;
+    std::string *lcd_msg = new std::string("Calling function ");
+    lcd_msg->append(rpc->name());
+    msg_args.push_back(new CCSTString(*lcd_msg));
+    case_body_stmts.push_back(
+      new CCSTExprStatement(
+        new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("LIBLCD_MSG"),
+          msg_args)));
 
-      // make call to callee. 
-      std::vector<CCSTAssignExpr*> args_empty;
-      case_body_stmts.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("ret")
-						   , new CCSTAssignOp(equal_t)
-						   , new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId(r_tmp->callee_name())
-										 , args_empty))));
+    /// make call to callee.
+    std::vector<CCSTAssignExpr*> args_empty;
+    case_body_stmts.push_back(
+      new CCSTReturn(
+        new CCSTPostFixExprAssnExpr(
+          new CCSTPrimaryExprId(rpc->callee_name()), args_empty)));
 
-      case_body_stmts.push_back(new CCSTBreak());
-      CCSTCompoundStatement* case_body = new CCSTCompoundStatement(case_dec_empty
-								   , case_body_stmts);
-      CCSTCaseStatement* tmp_case =  new CCSTCaseStatement(new CCSTPrimaryExprId(r_tmp->enum_name())
-							   , case_body);
-      cases.push_back(tmp_case);
+    case_body_stmts.push_back(new CCSTBreak());
+
+    CCSTCompoundStatement* case_body = new CCSTCompoundStatement(
+      case_dec_empty, case_body_stmts);
+    CCSTCaseStatement* tmp_case = new CCSTCaseStatement(
+      new CCSTPrimaryExprId(rpc->enum_name()), case_body);
+    cases.push_back(tmp_case);
+  }
+
+  /// adding a default case
+  std::vector<CCSTDeclaration*> default_dec_empty;
+  std::vector<CCSTStatement*> default_stmts;
+  std::vector<CCSTAssignExpr*> lcd_msg_args;
+  lcd_msg_args.push_back(new CCSTString("unexpected function type"));
+  default_stmts.push_back(
+    new CCSTExprStatement(
+      new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("LIBLCD_MSG"),
+        lcd_msg_args)));
+  default_stmts.push_back(new CCSTReturn(new CCSTPrimaryExprId("-EINVAL")));
+
+  std::vector<CCSTDeclaration*> switch_dec_empty;
+  CCSTCompoundStatement* switch_body = new CCSTCompoundStatement(
+    switch_dec_empty, cases);
+  CCSTSwitchStatement* dispatch = new CCSTSwitchStatement(
+    new CCSTPrimaryExprId("fn_type"), switch_body);
+  /// switch statement end
+
+  /// put body together
+  std::vector<CCSTStatement*> body_statements;
+  body_statements.push_back(new CCSTExprStatement(init_ret));
+  body_statements.push_back(dispatch);
+  body_statements.push_back(new CCSTReturn(new CCSTInteger(0)));
+  /// body complete
+  return new CCSTCompoundStatement(decs_in_body, body_statements);
+}
+
+CCSTCompoundStatement* dispatch_async_loop_body(Module *mod, const std::string &type)
+{
+  std::vector<CCSTDeclaration*> decs_in_body;
+  std::vector<CCSTDecSpecifier*> spec;
+  std::vector<CCSTInitDeclarator*> dec;
+  spec.push_back(
+    new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
+  dec.push_back(new CCSTDeclarator(NULL, new CCSTDirectDecId("fn_type")));
+  decs_in_body.push_back(new CCSTDeclaration(spec, dec));
+
+  std::vector<CCSTAssignExpr*> async_args;
+  async_args.push_back(new CCSTPrimaryExprId("message"));
+  CCSTAssignExpr* init_ret = new CCSTAssignExpr(
+    new CCSTPrimaryExprId("fn_type"), new CCSTAssignOp(equal_t),
+    new CCSTPostFixExprAssnExpr(
+      new CCSTPrimaryExprId("async_msg_get_fn_type"), async_args));
+
+  /// switch statement begin
+  std::vector<CCSTStatement*> cases;
+  for (auto rpc : *mod) {
+
+    /// Skip rpcs that are not function pointers as they need to be in
+    /// the dispatch loop of the server
+    /// Skip rpcs that are function pointers during server code gen
+    if ((type == "client" && !rpc->function_pointer_defined())
+      || (type == "server" && rpc->function_pointer_defined())) {
+      continue;
     }
-  /* adding a default case */
 
+    std::vector<CCSTDeclaration*> case_dec_empty;
+    std::vector<CCSTStatement*> case_body_stmts;
+    std::vector<CCSTAssignExpr*> msg_args;
+    std::string *lcd_msg = new std::string("Calling function ");
+    lcd_msg->append(rpc->name());
+    msg_args.push_back(new CCSTString(*lcd_msg));
+    case_body_stmts.push_back(
+      new CCSTExprStatement(
+        new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("LIBLCD_MSG"),
+          msg_args)));
+
+    /// make call to callee/caller
+    std::vector<CCSTAssignExpr*> callee_args;
+    callee_args.push_back(new CCSTPrimaryExprId("message"));
+    callee_args.push_back(new CCSTPrimaryExprId("channel"));
+    callee_args.push_back(new CCSTPrimaryExprId("cspace"));
+    callee_args.push_back(new CCSTPrimaryExprId("sync_ep"));
+    case_body_stmts.push_back(
+      new CCSTReturn(
+        new CCSTPostFixExprAssnExpr(
+          new CCSTPrimaryExprId(rpc->callee_name()), callee_args)));
+
+    case_body_stmts.push_back(new CCSTBreak());
+    CCSTCompoundStatement* case_body = new CCSTCompoundStatement(
+      case_dec_empty, case_body_stmts);
+    CCSTCaseStatement* tmp_case = new CCSTCaseStatement(
+      new CCSTPrimaryExprId(rpc->enum_name()), case_body);
+    cases.push_back(tmp_case);
+  }
+
+  /// adding a default case
   std::vector<CCSTDeclaration*> default_dec_empty;
   std::vector<CCSTStatement*> default_stmts;
   std::vector<CCSTAssignExpr*> lcd_msg_args;
   lcd_msg_args.push_back(new CCSTString("Error unknown function"));
-  default_stmts.push_back(new CCSTExprStatement( new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("LCD_MSG")
-									     , lcd_msg_args)));
-  default_stmts.push_back(new CCSTGoto("out"));
-//  CCSTCompoundStatement* default_body =  new CCSTCompoundStatement(default_dec_empty
-//								   , default_stmts);
-  // Just add a break statement in default case for now
-  cases.push_back(new CCSTDefaultLabelStatement(new CCSTBreak()));
-  /* end of adding default case */
+  default_stmts.push_back(
+    new CCSTExprStatement(
+      new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("LIBLCD_MSG"),
+        lcd_msg_args)));
+  default_stmts.push_back(new CCSTReturn(new CCSTPrimaryExprId("-EINVAL")));
 
   std::vector<CCSTDeclaration*> switch_dec_empty;
-  CCSTCompoundStatement* switch_body = new CCSTCompoundStatement(switch_dec_empty, cases);
-  CCSTSwitchStatement* dispatch = new CCSTSwitchStatement(new CCSTPrimaryExprId("ret")
-							  , switch_body);
-  /* switch statement end */
+  CCSTCompoundStatement* switch_body = new CCSTCompoundStatement(
+    switch_dec_empty, cases);
+  CCSTSwitchStatement* dispatch = new CCSTSwitchStatement(
+    new CCSTPrimaryExprId("fn_type"), switch_body);
+  /// switch statement end
 
-  /* error checking if begin */
-  CCSTIfStatement* error_if = new CCSTIfStatement(new CCSTPrimaryExprId("ret")
-						  , new CCSTGoto("out"));
-  /* error checking if end */
-
-    /* for loop begin */
-  std::vector<CCSTDeclaration*> for_declarations_empty;
-  std::vector<CCSTStatement*> for_body_statements;
-  for_body_statements.push_back(new CCSTExprStatement( init_ret));
-  for_body_statements.push_back(if_stmt);
-  for_body_statements.push_back(dispatch);
-  for_body_statements.push_back(error_if);
-  CCSTCompoundStatement *for_body = new CCSTCompoundStatement(for_declarations_empty, for_body_statements);
-  CCSTForLoop* for_loop = new CCSTForLoop(0x0, 0x0, 0x0, for_body); 
-
-  /* for loop end */
-
-  /* labeled statement, out, begin */
-  CCSTPlainLabelStatement* out_label = new CCSTPlainLabelStatement("out", new CCSTReturn());
-  // doesn't return anything;
-  /* labeled statement, out , end */
-  
-  /* put body together */
+  /// put body together
   std::vector<CCSTStatement*> body_statements;
-  body_statements.push_back(for_loop);
-  body_statements.push_back(out_label);
+  body_statements.push_back(new CCSTExprStatement(init_ret));
+  body_statements.push_back(dispatch);
+  body_statements.push_back(new CCSTReturn(new CCSTInteger(0)));
+  /// body complete
   return new CCSTCompoundStatement(decs_in_body, body_statements);
-  /* body complete */
 }
 
 /* body for a callee function
@@ -383,28 +474,29 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
 
 CCSTFile* generate_server_header(Module *module)
 {
-  // #ifndef
-  // #define
-  // #endif
-  // enum-specifier: enum id 
-  std::vector<CCSTExDeclaration*> definitions; // = new std::vector<CCSTExDeclaration*>();
-  // check if there are rpcs
+  std::vector<CCSTExDeclaration*> definitions;
+
+  definitions.push_back(new CCSTPreprocessor("../glue_helper.h", true));
+
+  /// check if there are rpcs
   if(!module->rpc_definitions().empty())
     {
-      std::cout << "rpc not empty\n";
+      /// TODO: This enum list has IDs for both caller and callee. This
+      /// should go to a common header (glue_helper.h)
       definitions.push_back(construct_enum(module));
-      // function callee function declarations
+      /// function callee function declarations
       for (auto r : *module) {
-        // Print declaration only for callee functions.
-        // Function pointer callee functions are declared in caller's header
+        /// Print declaration only for callee functions.
+        /// Function pointer callee functions are declared in caller's header
         if (!r->function_pointer_defined()) {
           definitions.push_back(callee_declaration((Rpc*)r));
         }
       }
     }
-  definitions.push_back(dispatch_function_declaration());
-  CCSTFile *c_file = new CCSTFile(definitions);
-  return c_file;
+  /// generate function declaration for sync, async loop
+  definitions.push_back(dispatch_sync_function_declaration());
+  definitions.push_back(dispatch_async_function_declaration(module));
+  return new CCSTFile(definitions);
 }
 
 CCSTDeclaration* callee_declaration(Rpc* r)
@@ -416,9 +508,8 @@ CCSTDeclaration* callee_declaration(Rpc* r)
   std::vector<CCSTDecSpecifier*> s;
   s.push_back(new  CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
 
-//  CCSTParamDeclaration *parameter = new CCSTParamDeclaration(s);
   int err;
-  std::vector<CCSTParamDeclaration*> p_decs; // = new std::vector<CCSTParamDeclaration*>();
+  std::vector<CCSTParamDeclaration*> p_decs;
   p_decs.push_back(
       new CCSTParamDeclaration(
           type2(r->current_scope()->lookup("fipc_message", &err)),
@@ -508,12 +599,10 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
   }
   
   // print trampoline structs
-  std::vector<Rpc*> rpcs = m->rpc_definitions();
-  for(std::vector<Rpc*>::iterator it = rpcs.begin(); it != rpcs.end(); it ++) {
-    Rpc *r = *it;
-    if (r->function_pointer_defined()) {
+  for (auto rpc : *m) {
+    if (rpc->function_pointer_defined()) {
       int err;
-      Type *t = r->current_scope()->lookup(hidden_args_name(r->name()), &err);
+      Type *t = rpc->current_scope()->lookup(hidden_args_name(rpc->name()), &err);
       Assert(t != 0x0, "Error: failure looking up type\n");
       ProjectionType *pt = dynamic_cast<ProjectionType*>(t);
       Assert(t != 0x0, "Error: dynamic cast to projection type failed!\n");
@@ -533,32 +622,27 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
     definitions.push_back(declare_static_variable(gv));
   }
 
-  std::vector<Rpc*> rps = m->rpc_definitions();
-  for(std::vector<Rpc*>::iterator it = rps.begin(); it != rps.end(); it ++)
-     {
-       Rpc* r_tmp = (Rpc*) *it;
-       if(r_tmp->function_pointer_defined()) {
-	 std::cout << "doing function pointer def\n";
-	 definitions.push_back( function_definition(function_pointer_function_declaration(r_tmp)
-						    ,caller_body(r_tmp, m)));
+  for (auto rpc : *m) {
+    if (rpc->function_pointer_defined()) {
+      std::cout << "doing function pointer def\n";
+      definitions.push_back(
+        function_definition(function_pointer_function_declaration(rpc),
+          caller_body(rpc, m)));
 
-	 definitions.push_back( trampoline_data_macro(r_tmp));
+      definitions.push_back(trampoline_data_macro(rpc));
 
-	 definitions.push_back( function_definition(trampoline_function_declaration(r_tmp)
-						    , trampoline_function_body(r_tmp)));
-       } else {
-	 std::cout << "doing callee_declaration\n";
-	 definitions.push_back( function_definition(callee_declaration(r_tmp)
-						,callee_body(r_tmp, m)));
-       }
-     }
-
-  definitions.push_back(
-    function_definition(dispatch_function_declaration(),
-      dispatch_loop_body(rps)));
+      definitions.push_back(
+        function_definition(trampoline_function_declaration(rpc),
+          trampoline_function_body(rpc)));
+    } else {
+      std::cout << "doing callee_declaration\n";
+      definitions.push_back(
+        function_definition(callee_declaration(rpc), callee_body(rpc, m)));
+    }
+  }
 
   CCSTFile *c_file = new CCSTFile(definitions);
-  std::cout << "in server source gen\n";
+  std::cout << "in server source gen" << std::endl;
   return c_file;
 }
 
@@ -589,7 +673,6 @@ CCSTFile* generate_glue_source(Module *m)
   for (std::vector<LexicalScope*>::iterator it = inner_scopes.begin(); it != inner_scopes.end(); ++it) {
     auto type_defs = (*it)->type_definitions();
     for (std::pair<std::string, Type*> type : type_defs) {
-      std::cout << "==> " << type.first << " \n";
       Type *ty = type.second;
       if (ty->name().find("_container") != std::string::npos) {
         std::string enum_name = ty->name();
@@ -600,7 +683,6 @@ CCSTFile* generate_glue_source(Module *m)
   }
 
   for (auto t : types_map) {
-    std::cout << "\t\t Type name " << t.first << std::endl;
     list->push_back(new CCSTEnumerator(t.second.first));
   }
 
@@ -611,6 +693,59 @@ CCSTFile* generate_glue_source(Module *m)
   std::vector<CCSTInitDeclarator*> empty;
   CCSTDeclaration *declaration = new CCSTDeclaration(tmp, empty);
   statements.push_back(declaration);
+
+  return new CCSTFile(statements);
+}
+
+inline CCSTExDeclaration *prehook_include() {
+  return new CCSTPreprocessor("lcd_config/pre_hook.h", false);
+}
+
+inline CCSTExDeclaration *posthook_include() {
+  return new CCSTPreprocessor("lcd_config/post_hook.h", false);
+}
+
+inline CCSTExDeclaration *liblcd_include() {
+  return new CCSTPreprocessor("liblcd/liblcd.h", false);
+}
+
+inline CCSTExDeclaration *calleeh_include(const std::string &id) {
+  return new CCSTPreprocessor("../" + id + "_callee.h", true);
+}
+
+inline CCSTExDeclaration *callerh_include(const std::string &id) {
+  return new CCSTPreprocessor("../" + id + "_caller.h", true);
+}
+
+CCSTFile* generate_dispatch(Module *m, const std::string &type)
+{
+  std::vector<CCSTExDeclaration*> statements;
+
+  statements.push_back(prehook_include());
+  statements.push_back(liblcd_include());
+
+  if (type == "client") {
+    statements.push_back(callerh_include(m->identifier()));
+  } else if (type == "server") {
+    statements.push_back(calleeh_include(m->identifier()));
+  }
+
+  statements.push_back(posthook_include());
+
+  /// XXX: As of now, all the functions use async mechanism by default.
+  /// In case if some functions need sync communication, it has to be
+  /// marked sync explicitly or some other mechanism has to be found out
+  /// to solve this. Until that, don't generate any code for sync
+  /// dispatch loop
+  if (0) {
+    statements.push_back(
+      function_definition(dispatch_sync_function_declaration(),
+        dispatch_sync_loop_body(m, type)));
+  }
+
+  statements.push_back(
+    function_definition(dispatch_async_function_declaration(m),
+      dispatch_async_loop_body(m, type)));
 
   return new CCSTFile(statements);
 }
