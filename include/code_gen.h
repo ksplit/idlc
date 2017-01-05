@@ -11,6 +11,7 @@
 CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes); // todo complete
 CCSTFile* generate_server_header(Module *m); // std::vector<Include*> includes); // todo complete?
 CCSTFile *generate_callee_lds(Module *mod);
+CCSTFile* generate_glue_source(Module *m);
 
 CCSTCompoundStatement* callee_body(Rpc *r, Module *m); // todo complete  2 functions in the file.....
 

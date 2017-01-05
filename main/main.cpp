@@ -118,6 +118,7 @@ int main(int argc, char ** argv)
 
         std::string fname = new_name(m->identifier(), std::string("_callee.c"));
         std::ofstream of_callee(fname);
+        std::ofstream of_glue(m->identifier() + "_cap.c");
 
         project_includes.push_back(new Include(true, "../" + m->identifier() + "_callee.h"));
 
@@ -127,6 +128,8 @@ int main(int argc, char ** argv)
           exit(0);
         }
         CCSTFile* ccst_tree = generate_server_source(m, project_includes);
+        CCSTFile *glue_ccst_tree = generate_glue_source(m);
+        glue_ccst_tree->write(of_glue, 0);
         ccst_tree->write(of_callee, 0);
       }
 

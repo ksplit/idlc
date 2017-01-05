@@ -1,5 +1,7 @@
 #include "ccst.h"
 #include "code_gen.h"
+// for std::map
+#include <algorithm>
 
 CCSTDeclaration* dispatch_function_declaration()
 {
@@ -573,5 +575,42 @@ CCSTFile *generate_callee_lds(Module *mod)
           new CCSTMacro("LCD_TRAMPOLINE_LINKER_SECTION", data_args, false));
     }
   }
+  return new CCSTFile(statements);
+}
+
+CCSTFile* generate_glue_source(Module *m)
+{
+  std::vector<CCSTExDeclaration*> statements;
+  std::map<std::string, std::pair<std::string,Type*>> types_map;
+  std::vector<CCSTEnumerator*>* list = new std::vector<CCSTEnumerator*>();
+
+  std::vector<LexicalScope*> inner_scopes = m->module_scope()->inner_scopes();
+
+  for (std::vector<LexicalScope*>::iterator it = inner_scopes.begin(); it != inner_scopes.end(); ++it) {
+    auto type_defs = (*it)->type_definitions();
+    for (std::pair<std::string, Type*> type : type_defs) {
+      std::cout << "==> " << type.first << " \n";
+      Type *ty = type.second;
+      if (ty->name().find("_container") != std::string::npos) {
+        std::string enum_name = ty->name();
+        std_string_toupper(enum_name);
+        types_map[ty->name()] = std::pair<std::string,Type*>(enum_name, ty);
+      }
+    }
+  }
+
+  for (auto t : types_map) {
+    std::cout << "\t\t Type name " << t.first << std::endl;
+    list->push_back(new CCSTEnumerator(t.second.first));
+  }
+
+  CCSTEnumeratorList *enum_list = new CCSTEnumeratorList(list);
+  CCSTEnumSpecifier *e = new CCSTEnumSpecifier("glue_type", enum_list);
+  std::vector<CCSTDecSpecifier*> tmp;
+  tmp.push_back(e);
+  std::vector<CCSTInitDeclarator*> empty;
+  CCSTDeclaration *declaration = new CCSTDeclaration(tmp, empty);
+  statements.push_back(declaration);
+
   return new CCSTFile(statements);
 }
