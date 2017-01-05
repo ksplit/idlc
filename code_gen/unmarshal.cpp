@@ -135,19 +135,19 @@ std::vector<CCSTStatement*> unmarshal_void_pointer(Variable *v)
 
   cptr_alloc_args.push_back(
     new CCSTUnaryExprCastExpr(reference(),
-      new CCSTPrimaryExprId(v->identifier() + "_offset")));
+      new CCSTPrimaryExprId(v->identifier() + "_cptr")));
 
   sync_recv_args.push_back(new CCSTPrimaryExprId("sync_ep"));
 
-  set_cr0_args.push_back(
-    new CCSTUnaryExprCastExpr(indirection(),
-      new CCSTPrimaryExprId(v->identifier() + "_cptr")));
+  set_cr0_args.push_back(new CCSTPrimaryExprId(v->identifier() + "_cptr"));
 
   set_cr0_args2.push_back(new CCSTPrimaryExprId("CAP_CPTR_NULL"));
 
   map_virt_args.push_back(new CCSTPrimaryExprId(v->identifier() + "_cptr"));
   map_virt_args.push_back(new CCSTPrimaryExprId("mem_order"));
-  map_virt_args.push_back(new CCSTPrimaryExprId(v->identifier() + "_gva"));
+  map_virt_args.push_back(
+    new CCSTUnaryExprCastExpr(reference(),
+      new CCSTPrimaryExprId(v->identifier() + "_gva")));
 
   statements.push_back(
     new CCSTExprStatement(
@@ -159,7 +159,7 @@ std::vector<CCSTStatement*> unmarshal_void_pointer(Variable *v)
 
   statements.push_back(
     new CCSTExprStatement(
-      new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("lcd_set_r0"),
+      new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("lcd_set_cr0"),
         set_cr0_args)));
 
   statements.push_back(
@@ -169,7 +169,7 @@ std::vector<CCSTStatement*> unmarshal_void_pointer(Variable *v)
 
   statements.push_back(
     new CCSTExprStatement(
-      new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("lcd_set_r0"),
+      new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("lcd_set_cr0"),
         set_cr0_args2)));
 
   statements.push_back(
