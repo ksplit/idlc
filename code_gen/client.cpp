@@ -224,11 +224,6 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
   std::vector<CCSTInitDeclarator*> decs_req;
   std::vector<CCSTInitDeclarator*> decs_resp;
 
-  std::vector<CCSTInitDeclarator*> decs_ret;
-  decs_ret.push_back(new CCSTDeclarator(pointer(0)
-            , new CCSTDirectDecId("ret")));
-  declarations.push_back(new CCSTDeclaration(int_type(), decs_ret));
-
   spec_fipcm.push_back(
     new CCSTStructUnionSpecifier(struct_t, "fipc_message"));
 
@@ -311,10 +306,10 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
   lcd_async_call_args.push_back(new CCSTUnaryExprCastExpr(reference(), new CCSTPrimaryExprId("response")));
     statements.push_back(
       new CCSTExprStatement(
-        new CCSTAssignExpr(new CCSTPrimaryExprId("err"), equals(),
+        new CCSTAssignExpr(new CCSTPrimaryExprId("ret"), equals(),
           function_call("thc_ipc_call", lcd_async_call_args))));
 
-  statements.push_back(if_cond_fail(new CCSTPrimaryExprId("err"), "thc_ipc_call"));
+  statements.push_back(if_cond_fail(new CCSTPrimaryExprId("ret"), "thc_ipc_call"));
 
   for (auto p: *r) {
     if (p->type_->num() == VOID_TYPE) {

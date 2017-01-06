@@ -51,19 +51,19 @@ std::vector<CCSTStatement*> container_of(Variable *v, const std::string& cspace)
     if (v->type()->num() == FUNCTION_TYPE) {
       Function *f = dynamic_cast<Function*>(v->type());
       Assert(f!= 0x0, "Error: dynamic cast to projection type failed.\n");
-      statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("err")
+      statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("ret")
                      , equals()
                      , function_call(insert_name(f->name()) + "_type", insert_args))));
     } else {
       ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
       Assert(pt != 0x0, "Error: dynamic cast to projection type failed.\n");
 
-      statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("err")
+      statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("ret")
                      , equals()
                      , function_call(insert_name(pt->real_type() + "_type"), insert_args))));
     }
     /* do error checking */
-    statements.push_back(if_cond_fail(new CCSTPrimaryExprId("err")
+    statements.push_back(if_cond_fail(new CCSTPrimaryExprId("ret")
 				      , "lcd insert"));
   }
 
