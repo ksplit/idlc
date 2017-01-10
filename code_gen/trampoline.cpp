@@ -104,7 +104,7 @@ CCSTCompoundStatement* trampoline_function_body(Rpc* r)
   /* end new_fp declaration */
 
   /* declare a hidden args instance */
-  declarations.push_back(struct_pointer_declaration(hidden_args_name(r->name()), "hidden_args", r->current_scope()));
+  declarations.push_back(struct_pointer_declaration("trampoline_hidden_args", "hidden_args", r->current_scope()));
 
   // LCD_TRAMPOLINE_PROLOGUE
 
@@ -157,7 +157,7 @@ CCSTCompoundStatement* alloc_init_hidden_args_struct(ProjectionType *pt, Variabl
       // duplicate the trampoline
       // 1. get t_handle field from our hidden args field
       int err;
-      Type *hidden_args_type = ls->lookup(hidden_args_name(pf->type()->name()), &err);
+      Type *hidden_args_type = ls->lookup("trampoline_hidden_args", &err);
       Assert(hidden_args_type != 0x0, "Error: could not find a hidden args type in scope\n");
       ProjectionType *hidden_args_structure = dynamic_cast<ProjectionType*>(hidden_args_type);
       Assert(hidden_args_structure != 0x0, "Error: dynamic cast to projection type failed\n");
@@ -257,7 +257,7 @@ std::vector<CCSTDeclaration*> declare_hidden_args_structures(ProjectionType *pt,
     
     if(pf->type()->num() == FUNCTION_TYPE) { // function
       // declare
-      const std::string& hidden_args_struct_name = hidden_args_name(pf->type()->name());
+      const std::string& hidden_args_struct_name = "trampoline_hidden_args";
       const std::string& var_name = hidden_args_name(append_strings("_"
 							     , construct_list_vars(pf)));
 

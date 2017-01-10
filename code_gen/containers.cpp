@@ -609,7 +609,7 @@ std::vector<CCSTStatement*> dealloc_containers_callee(Variable *v, const std::st
 
 	// delete its t_handle field
 	int err;
-	Type *hidden_args_type = ls->lookup(hidden_args_name(pf->type()->name()), &err);
+	Type *hidden_args_type = ls->lookup("trampoline_hidden_args", &err);
 	Assert(hidden_args_type != 0x0, "Error: could not find a hidden args type in scope\n");
 	ProjectionType *hidden_args_structure = dynamic_cast<ProjectionType*>(hidden_args_type);
 	Assert(hidden_args_structure != 0x0, "Error: dynamic cast to projection type failed\n");

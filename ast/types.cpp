@@ -613,12 +613,14 @@ void ProjectionType::create_trampoline_structs(LexicalScope *ls)
       std::vector<ProjectionField*> trampoline_fields;
       int err;
       trampoline_fields.push_back(new ProjectionField(ls->lookup("void", &err), "struct_container", 1));
-      trampoline_fields.push_back(new ProjectionField(ls->lookup("cspace", &err), "cspace", 1)); // dstore field
-      trampoline_fields.push_back(new ProjectionField(ls->lookup("lcd_trampoline_handle", &err), "t_handle", 1)); // lcd_trampoline handle field
+      trampoline_fields.push_back(new ProjectionField(ls->lookup("cspace", &err), "cspace", 1));
+      trampoline_fields.push_back(new ProjectionField(ls->lookup("lcd_trampoline_handle", &err), "t_handle", 1));
       trampoline_fields.push_back(new ProjectionField(ls->lookup("thc_channel", &err), "async_chnl", 1));
       trampoline_fields.push_back(new ProjectionField(ls->lookup("cptr", &err), "sync_ep", 0));
 
-      const std::string& trampoline_struct_name = hidden_args_name(f->name());
+      const std::string trampoline_struct_name = "trampoline_hidden_args";
+      /// Since this is a map, duplicates are automatically handled
+      /// in case of multiple "trampoline_hidden_args"
       ls->insert(trampoline_struct_name, new ProjectionType(trampoline_struct_name, trampoline_struct_name, trampoline_fields));
     }
   }

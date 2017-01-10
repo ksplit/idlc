@@ -602,7 +602,7 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
   for (auto rpc : *m) {
     if (rpc->function_pointer_defined()) {
       int err;
-      Type *t = rpc->current_scope()->lookup(hidden_args_name(rpc->name()), &err);
+      Type *t = rpc->current_scope()->lookup("trampoline_hidden_args", &err);
       Assert(t != 0x0, "Error: failure looking up type\n");
       ProjectionType *pt = dynamic_cast<ProjectionType*>(t);
       Assert(t != 0x0, "Error: dynamic cast to projection type failed!\n");
@@ -611,6 +611,11 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
       specifier.push_back(struct_declaration(pt));
       std::vector<CCSTInitDeclarator*> empty;
       definitions.push_back(new CCSTDeclaration(specifier, empty));
+
+      /// XXX: struct trampoline_hidden_args need to be defined only
+      /// once despite the number of function pointers.
+      /// So, break after once!
+      break;
     }
   }
   
