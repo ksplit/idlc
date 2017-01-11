@@ -17,31 +17,15 @@
  */
 CCSTDeclaration* interface_init_function_declaration(Module *m)
 {
-  /* returns an int */
   std::vector<CCSTDecSpecifier*> specifier;
   specifier.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
-  
   CCSTDirectDecId *name = new CCSTDirectDecId(glue_name(init_name(m->identifier())));
-  /* init function parameters: the channels specified, and a */
-  std::vector<GlobalVariable*> channels = m->channels();
-  std::vector<CCSTParamDeclaration*> param_decs;
-  for(std::vector<GlobalVariable*>::iterator it = channels.begin(); it != channels.end(); it ++) {
-    GlobalVariable *p = (GlobalVariable*) *it;
-    param_decs.push_back(
-      new CCSTParamDeclaration(type2(p->type()),
-        new CCSTDeclarator(pointer(p->pointer_count()),
-          new CCSTDirectDecId(p->identifier()))));
-  }
-  // TODO: add the channels group thing
-  GlobalVariable *extra_param = m->channel_group;
-  param_decs.push_back(new CCSTParamDeclaration(type2(extra_param->type()), new CCSTDeclarator(pointer(extra_param->pointer_count()), new CCSTDirectDecId(extra_param->identifier()))));
-  
-  CCSTParamTypeList *param_list = new CCSTParamList(param_decs);
-  /* end making params*/								   
+
+  CCSTParamTypeList *param_list = new CCSTParamList();
   CCSTDirectDecParamTypeList *declaration = new CCSTDirectDecParamTypeList(name, param_list);
 
   std::vector<CCSTInitDeclarator*> func;
-  func.push_back(new CCSTDeclarator(0x0, declaration));
+  func.push_back(new CCSTDeclarator(NULL, declaration));
   
   return new CCSTDeclaration(specifier, func);
 }
@@ -59,24 +43,6 @@ CCSTCompoundStatement* callee_interface_init_function_body(Module *m)
   decs.push_back(new CCSTDeclarator(pointer(0)
 				    , new CCSTDirectDecId("ret")));
   body_declarations.push_back(new CCSTDeclaration(int_type(), decs)); // TODO: add int ret;
-
-  // register ipc chnanels with dispatch loop
-  
-  /* int lcd_sync_channel_group_item_init(struct lcd_sync_channel_group_item *c, 
-				cptr_t chnl, int expected_cptrs,
-				int (*dispatch_fn)(
-					struct lcd_sync_channel_group_item *)) */
-
-  /* static struct lcd_sync_channel_group_item vfs_channel;
-static int dispatch_vfs_channel(struct lcd_sync_channel_group_item *channel);
-
-int glue_vfs_init(cptr_t vfs_chnl, struct lcd_sync_channel_group *_group)
-{
-	int ret;
-
-	 Set up ipc channel
-	ret = lcd_sync_channel_group_item_init(&vfs_channel, vfs_chnl, 1,
-					dispatch_vfs_channel);*/
 
   std::vector<GlobalVariable*> channels = m->channels();
   
@@ -119,19 +85,6 @@ CCSTCompoundStatement* caller_interface_init_function_body(Module *m)
   body_declarations.push_back(new CCSTDeclaration(int_type(), decs)); // TODO: add int ret;
 
   std::vector<GlobalVariable*> channels = m->channels();
-  
-  // set globals, which were already declared.
-  for(std::vector<GlobalVariable*>::iterator it = channels.begin(); it != channels.end(); it ++) {
-    GlobalVariable *g = *it;
-    body_statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId(g->identifier())
-									, equals()
-									, new CCSTPrimaryExprId(g->identifier()))));
-  }
-
-  // set lcd_sync_channel_group 
-  body_statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId(m->channel_group->identifier())
-								      , equals()
-								      , new CCSTPrimaryExprId(m->channel_group->identifier()))));
 
   // init cap code..
   std::vector<CCSTAssignExpr*> cap_init_args_empty;
@@ -140,7 +93,7 @@ CCSTCompoundStatement* caller_interface_init_function_body(Module *m)
 								      , function_call("glue_cap_init"
 										      , cap_init_args_empty))));
   // do error checking
-  body_statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId("ret"))
+  body_statements.push_back(if_cond_fail_goto(new CCSTPrimaryExprId("ret")
 					      , "cap init", "fail1"));
 
   // initialize data stores.
@@ -157,7 +110,7 @@ CCSTCompoundStatement* caller_interface_init_function_body(Module *m)
 											, cap_create_args))));
     
     // do error checking
-    body_statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId("ret"))
+    body_statements.push_back(if_cond_fail_goto(new CCSTPrimaryExprId("ret")
 						, "cap create", "fail2"));
   }
   
@@ -201,33 +154,25 @@ CCSTDeclaration* interface_exit_function_declaration(Module *m)
  */
 CCSTCompoundStatement* caller_interface_exit_function_body(Module *m)
 {
-  /* 
-     void glue_vfs_exit(void)
-{
-  Free vfs data store.
-	vfs_cap_destroy(vfs_cspace);
-
-	Tear down cap code
-	vfs_cap_exit();
-}
-   */
   std::vector<CCSTDeclaration*> body_declarations;
   std::vector<CCSTStatement*> body_statements;
 
   // tear down all of the cspaces
   std::vector<GlobalVariable*> cspaces = m->cspaces_;
-  for(std::vector<GlobalVariable*>::iterator it = cspaces.begin(); it != cspaces.end(); it ++) {
+  for (std::vector<GlobalVariable*>::iterator it = cspaces.begin();
+    it != cspaces.end(); it++) {
     GlobalVariable *gv = *it;
 
     std::vector<CCSTAssignExpr*> cap_destroy_args;
     cap_destroy_args.push_back(new CCSTPrimaryExprId(gv->identifier()));
-    body_statements.push_back(new CCSTExprStatement( function_call("glue_cap_destroy"
-								   , cap_destroy_args)));
+    body_statements.push_back(
+      new CCSTExprStatement(
+        function_call("glue_cap_destroy", cap_destroy_args)));
   }
   // vfs cap exit
   std::vector<CCSTAssignExpr*> cap_exit_args;
-  body_statements.push_back(new CCSTExprStatement( function_call("glue_cap_exit"
-								 , cap_exit_args)));
+  body_statements.push_back(
+    new CCSTExprStatement(function_call("glue_cap_exit", cap_exit_args)));
 
   return new CCSTCompoundStatement(body_declarations, body_statements);
 }

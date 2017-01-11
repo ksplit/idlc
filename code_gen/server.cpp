@@ -496,6 +496,11 @@ CCSTFile* generate_server_header(Module *module)
   /// generate function declaration for sync, async loop
   definitions.push_back(dispatch_sync_function_declaration());
   definitions.push_back(dispatch_async_function_declaration(module));
+
+  /// generate function declaration for init, exit
+  definitions.push_back(interface_init_function_declaration(module));
+  definitions.push_back(interface_exit_function_declaration(module));
+
   return new CCSTFile(definitions);
 }
 
@@ -626,6 +631,24 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
     GlobalVariable *gv = *it;
     definitions.push_back(declare_static_variable(gv));
   }
+
+  // declare cspaces
+  std::vector<GlobalVariable*> cspaces = m->cspaces_;
+  for (std::vector<GlobalVariable*>::iterator it = cspaces.begin();
+    it != cspaces.end(); it++) {
+    GlobalVariable *gv = *it;
+    definitions.push_back(declare_static_variable(gv));
+  }
+
+  // create initialization function
+  definitions.push_back(
+    function_definition(interface_init_function_declaration(m),
+      caller_interface_init_function_body(m)));
+
+  // create exit function
+  definitions.push_back(
+    function_definition(interface_exit_function_declaration(m),
+      caller_interface_exit_function_body(m)));
 
   for (auto rpc : *m) {
     if (rpc->function_pointer_defined()) {
