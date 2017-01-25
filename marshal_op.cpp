@@ -137,7 +137,11 @@ void Marshal_void::set_register(int r)
 
 int Marshal_void::get_register()
 {
-  Assert(1 == 0, "Error: this operation is now allowed\n");
+  /// FIXME: Ideally void pointers should be transferred using sync mechanism
+  /// Since the code uses the same methodology of getting registers for all
+  /// kinds of variable, allocate a register.
+  //Assert(1 == 0, "Error: this operation is now allowed\n");
+  return 3;
 }
 
 Marshal_typedef::Marshal_typedef(Marshal_type *type)
