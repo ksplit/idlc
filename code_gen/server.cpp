@@ -168,12 +168,10 @@ CCSTCompoundStatement* dispatch_async_loop_body(Module *mod, const std::string &
     std::vector<CCSTDeclaration*> case_dec_empty;
     std::vector<CCSTStatement*> case_body_stmts;
     std::vector<CCSTAssignExpr*> msg_args;
-    std::string *lcd_msg = new std::string("Calling function ");
-    lcd_msg->append(rpc->name());
-    msg_args.push_back(new CCSTString(*lcd_msg));
+    msg_args.push_back(new CCSTPrimaryExprId(rpc->enum_name()));
     case_body_stmts.push_back(
       new CCSTExprStatement(
-        new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("LIBLCD_MSG"),
+        new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("trace"),
           msg_args)));
 
     /// make call to callee/caller
@@ -187,24 +185,30 @@ CCSTCompoundStatement* dispatch_async_loop_body(Module *mod, const std::string &
         new CCSTPostFixExprAssnExpr(
           new CCSTPrimaryExprId(rpc->callee_name()), callee_args)));
 
-    case_body_stmts.push_back(new CCSTBreak());
     CCSTCompoundStatement* case_body = new CCSTCompoundStatement(
       case_dec_empty, case_body_stmts);
-    CCSTCaseStatement* tmp_case = new CCSTCaseStatement(
+    /// Case statement
+    CCSTCaseStatement* _case = new CCSTCaseStatement(
       new CCSTPrimaryExprId(rpc->enum_name()), case_body);
-    cases.push_back(tmp_case);
+    cases.push_back(_case);
   }
 
   /// adding a default case
   std::vector<CCSTDeclaration*> default_dec_empty;
   std::vector<CCSTStatement*> default_stmts;
   std::vector<CCSTAssignExpr*> lcd_msg_args;
-  lcd_msg_args.push_back(new CCSTString("Error unknown function"));
+  lcd_msg_args.push_back(new CCSTString("unexpected function label: %d"));
+  lcd_msg_args.push_back(new CCSTPrimaryExprId("fn_type"));
   default_stmts.push_back(
     new CCSTExprStatement(
-      new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("LIBLCD_MSG"),
+      new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId("LIBLCD_ERR"),
         lcd_msg_args)));
   default_stmts.push_back(new CCSTReturn(new CCSTPrimaryExprId("-EINVAL")));
+
+  CCSTCompoundStatement* default_body = new CCSTCompoundStatement(
+    default_dec_empty, default_stmts);
+
+  cases.push_back(new CCSTDefaultLabelStatement(default_body));
 
   std::vector<CCSTDeclaration*> switch_dec_empty;
   CCSTCompoundStatement* switch_body = new CCSTCompoundStatement(
