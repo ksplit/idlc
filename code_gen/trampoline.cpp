@@ -141,6 +141,7 @@ CCSTCompoundStatement* alloc_init_hidden_args_struct(ProjectionType *pt, Variabl
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
+  unsigned int lbl = 1;
 
   for (auto pf : *pt) {
     if(pf->type()->num() == FUNCTION_TYPE && pf->alloc_callee()) {
@@ -148,11 +149,13 @@ CCSTCompoundStatement* alloc_init_hidden_args_struct(ProjectionType *pt, Variabl
       statements.push_back(kzalloc_structure(hidden_args_name(pf->type()->name())
 					     ,hidden_args_name(append_strings("_"
 									      , construct_list_vars(pf)))));
+
+      std::string *goto_alloc = new std::string("fail_alloc" + std::to_string(lbl++));
       // error check
-      statements.push_back(if_cond_fail(new CCSTUnaryExprCastExpr( Not()
+      statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr( Not()
 								   , new CCSTPrimaryExprId(hidden_args_name(append_strings("_"
 															   , construct_list_vars(pf)))))
-					, "kzalloc hidden args"));
+					, "kzalloc hidden args", *goto_alloc));
 
       // duplicate the trampoline
       // 1. get t_handle field from our hidden args field
@@ -179,11 +182,12 @@ CCSTCompoundStatement* alloc_init_hidden_args_struct(ProjectionType *pt, Variabl
 								     , equals()
 								     , function_call("LCD_DUP_TRAMPOLINE"
 										     , lcd_dup_args))));
-						       
+
+      std::string *goto_fail_dup = new std::string("fail_dup");
       // error check the duplication
-      statements.push_back(if_cond_fail(new CCSTUnaryExprCastExpr( Not()
+      statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr( Not()
 								   , access(t_handle_field))
-					, "duplicate trampoline"));
+					, "duplicate trampoline", *goto_fail_dup));
 
       // store hidden args in trampoline aka t handle
       ProjectionType *t_handle_structure = dynamic_cast<ProjectionType*>(t_handle_field->type());

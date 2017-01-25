@@ -308,8 +308,9 @@ CCSTStatement* AllocateTypeVisitor::visit(ProjectionType *pt, Variable *v)
     v->set_pointer_count(p_count_save-p_count+1);
     statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(access(v), equals(), function_call("kzalloc", kzalloc_args))));
     /* do error checking */
-    statements.push_back(if_cond_fail(new CCSTUnaryExprCastExpr(Not(), access(v))
-				    , "kzalloc"));
+    std::string *goto_alloc = new std::string("fail_alloc" + std::to_string(p_count));
+    statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr(Not(), access(v))
+				    , "kzalloc", *goto_alloc));
 
     p_count -= 1; 
   }
@@ -323,13 +324,14 @@ CCSTStatement* AllocateTypeVisitor::visit(ProjectionType *pt, Variable *v)
   kzalloc_args.push_back(new CCSTEnumConst("GFP_KERNEL"));
 
   v->set_pointer_count(p_count_save-p_count+1);
+
+  std::string *goto_alloc = new std::string("fail_alloc");
   statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(access(v), equals(), function_call("kzalloc", kzalloc_args))));
 
   /* do error checking */
-  statements.push_back(if_cond_fail(new CCSTUnaryExprCastExpr(Not(), access(v))
-				    , "kzalloc"));
-  
-  
+  statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr(Not(), access(v))
+				    , "kzalloc", *goto_alloc));
+
   v->set_pointer_count(p_count_save);
 
   /* Now need to allocate fields */

@@ -62,9 +62,10 @@ std::vector<CCSTStatement*> container_of(Variable *v, const std::string& cspace)
                      , equals()
                      , function_call(insert_name(pt->real_type() + "_type"), insert_args))));
     }
+    std::string *goto_ins = new std::string("fail_insert");
     /* do error checking */
-    statements.push_back(if_cond_fail(new CCSTPrimaryExprId("ret")
-				      , "lcd insert"));
+    statements.push_back(if_cond_fail_goto(new CCSTPrimaryExprId("ret")
+				      , "lcd insert", *goto_ins));
   }
 
   return statements;
@@ -196,9 +197,11 @@ CCSTStatement* lookup_variable_container(Variable *v, Channel::ChannelType type)
 								 , equals()
 								 , function_call(lookup_name(pt->real_type()) + + "_type"
 										 , lookup_args))));
+
+  std::string *goto_lookup = new std::string("fail_lookup");
   /* do error checking */
-  statements.push_back(if_cond_fail(new CCSTPrimaryExprId("err")
-				    , "lookup"));
+  statements.push_back(if_cond_fail_goto(new CCSTPrimaryExprId("err")
+				    , "lookup", *goto_lookup));
 
   return new CCSTCompoundStatement(declarations, statements);
 }
@@ -305,9 +308,10 @@ CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const std::s
 								 , equals()
 								 , function_call("kzalloc", kzalloc_args))));
 
+  std::string *goto_alloc = new std::string("fail_alloc");
   /* do error checking */
-  statements.push_back(if_cond_fail(new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId(v->container()->identifier()))
-				    , "kzalloc"));
+  statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId(v->container()->identifier()))
+				    , "kzalloc", *goto_alloc));
 
   /* insert container into cspace */
 
@@ -332,9 +336,10 @@ CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const std::s
 								 , equals()
 								 , function_call(insert_name(pt->real_type()) + "_type", insert_args))));
 
+  std::string *goto_insert = new std::string("fail_insert");
   /* do error checking */
-  statements.push_back(if_cond_fail(new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId("err"))
-				    , "lcd insert"));
+  statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId("err"))
+				    , "lcd insert", *goto_insert));
   }
   return new CCSTCompoundStatement(declarations, statements);
 }

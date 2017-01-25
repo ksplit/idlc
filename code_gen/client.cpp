@@ -254,9 +254,10 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
             new CCSTPrimaryExprId("async_msg_blocking_send_start"),
             lcd_async_start_args))));
 
+    std::string *goto_fail_async = new std::string("fail_async");
     statements.push_back(
-      if_cond_fail(new CCSTPrimaryExprId("ret"),
-        "failed to get a send slot"));
+      if_cond_fail_goto(new CCSTPrimaryExprId("ret"),
+        "failed to get a send slot", *goto_fail_async));
 
     async_fntype_args.push_back(new CCSTPrimaryExprId("request"));
     async_fntype_args.push_back(new CCSTPrimaryExprId(r->enum_name()));
@@ -309,7 +310,8 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
         new CCSTAssignExpr(new CCSTPrimaryExprId("ret"), equals(),
           function_call("thc_ipc_call", lcd_async_call_args))));
 
-  statements.push_back(if_cond_fail(new CCSTPrimaryExprId("ret"), "thc_ipc_call"));
+  std::string *goto_ipc = new std::string("fail_ipc");
+  statements.push_back(if_cond_fail_goto(new CCSTPrimaryExprId("ret"), "thc_ipc_call", *goto_ipc));
 
   for (auto p: *r) {
     if (p->type_->num() == VOID_TYPE) {
