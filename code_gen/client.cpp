@@ -226,6 +226,11 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
 
   std::vector<CCSTInitDeclarator*> decs_req;
   std::vector<CCSTInitDeclarator*> decs_resp;
+  std::vector<CCSTInitDeclarator*> decs_ret;
+
+  decs_ret.push_back(new CCSTDeclarator(pointer(0)
+            , new CCSTDirectDecId("ret")));
+  declarations.push_back(new CCSTDeclaration(int_type(), decs_ret));
 
   spec_fipcm.push_back(
     new CCSTStructUnionSpecifier(struct_t, "fipc_message"));
@@ -245,7 +250,12 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
     new CCSTDeclaration(spec_fipcm, decs_resp));
 
   if (c->getChannelType() == Channel::ChannelType::AsyncChannel) {
-    lcd_async_start_args.push_back(new CCSTPrimaryExprId(c->chName));
+    if (r->function_pointer_defined()) {
+      /// XXX: should we access this through the structure
+      lcd_async_start_args.push_back(new CCSTPrimaryExprId("hidden_args->async_chnl"));
+    } else {
+      lcd_async_start_args.push_back(new CCSTPrimaryExprId(c->chName));
+    }
     lcd_async_start_args.push_back(
       new CCSTUnaryExprCastExpr(reference(),
         new CCSTPrimaryExprId("request")));
@@ -307,7 +317,12 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
   }
   std::vector<CCSTAssignExpr*> lcd_async_call_args;
 
-  lcd_async_call_args.push_back(new CCSTPrimaryExprId(c->chName));
+  if (r->function_pointer_defined()) {
+    lcd_async_call_args.push_back(
+      new CCSTPrimaryExprId("hidden_args->async_chnl"));
+  } else {
+    lcd_async_call_args.push_back(new CCSTPrimaryExprId(c->chName));
+  }
   lcd_async_call_args.push_back(new CCSTPrimaryExprId("request"));
   lcd_async_call_args.push_back(new CCSTUnaryExprCastExpr(reference(), new CCSTPrimaryExprId("response")));
     statements.push_back(
@@ -369,7 +384,13 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
   }
   std::vector<CCSTAssignExpr*> ipc_recv_end_args;
   std::vector<CCSTAssignExpr*> chnl_to_fipc_args;
-  chnl_to_fipc_args.push_back(new CCSTPrimaryExprId(c->chName));
+
+  if (r->function_pointer_defined()) {
+    chnl_to_fipc_args.push_back(new CCSTPrimaryExprId("hidden_args->async_chnl"));
+  } else {
+    chnl_to_fipc_args.push_back(new CCSTPrimaryExprId(c->chName));
+  }
+
   ipc_recv_end_args.push_back(function_call("thc_channel_to_fipc", chnl_to_fipc_args));
   ipc_recv_end_args.push_back(new CCSTPrimaryExprId("response"));
   statements.push_back(new CCSTExprStatement(function_call("fipc_recv_msg_end", ipc_recv_end_args)));

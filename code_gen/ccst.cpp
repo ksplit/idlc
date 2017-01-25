@@ -1801,7 +1801,8 @@ CCSTPlainLabelStatement::CCSTPlainLabelStatement(const std::string& id,
 void CCSTPlainLabelStatement::write(std::ofstream& of, int indent)
 {
   of << this->id_ << ":\n";
-  this->stmnt_->write(of, indent);
+  if (this->stmnt_)
+    this->stmnt_->write(of, indent);
 }
 
 CCSTCaseStatement::CCSTCaseStatement(CCSTCondExpr *c, CCSTStatement *body) :
