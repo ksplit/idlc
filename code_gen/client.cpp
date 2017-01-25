@@ -124,6 +124,7 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
+  std::vector<CCSTStatement*> lbl_statements;
   std::string cspace_to_use;
 
   if (r->function_pointer_defined()) {
@@ -197,10 +198,11 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
 
   std::vector<CCSTDeclaration*> __tmp_declarations = updates->getdeclarations();
   std::vector<CCSTStatement*> __tmp_statements = updates->getstatements();
+  std::vector<CCSTStatement*> __tmp_lbl_statements = updates->getlblstatements();
 
   declarations.insert(declarations.end(), __tmp_declarations.begin(), __tmp_declarations.end());
   statements.insert(statements.end(), __tmp_statements.begin(), __tmp_statements.end());
-
+  lbl_statements.insert(lbl_statements.end(), __tmp_lbl_statements.begin(), __tmp_lbl_statements.end());
   /* Todo:  clear capability registers? */
   /* return value to caller */
   if(r->return_variable()->type()->num() != VOID_TYPE) {
@@ -209,13 +211,14 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
     statements.push_back(new CCSTReturn());
   }
   
-  return new CCSTCompoundStatement(declarations, statements);
+  return new CCSTCompoundStatement(declarations, statements, lbl_statements);
 }
 
 CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use)
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
+  std::vector<CCSTStatement*> lbl_statements;
   std::vector<CCSTAssignExpr*> lcd_async_start_args;
   std::vector<CCSTAssignExpr*> async_fntype_args;
   std::vector<CCSTAssignExpr*> fipc_set_0;
@@ -258,6 +261,8 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
     statements.push_back(
       if_cond_fail_goto(new CCSTPrimaryExprId("ret"),
         "failed to get a send slot", *goto_fail_async));
+
+    lbl_statements.push_back(new CCSTPlainLabelStatement(*goto_fail_async, NULL));
 
     async_fntype_args.push_back(new CCSTPrimaryExprId("request"));
     async_fntype_args.push_back(new CCSTPrimaryExprId(r->enum_name()));
@@ -368,7 +373,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
   ipc_recv_end_args.push_back(function_call("thc_channel_to_fipc", chnl_to_fipc_args));
   ipc_recv_end_args.push_back(new CCSTPrimaryExprId("response"));
   statements.push_back(new CCSTExprStatement(function_call("fipc_recv_msg_end", ipc_recv_end_args)));
-  return new CCSTCompoundStatement(declarations, statements);
+  return new CCSTCompoundStatement(declarations, statements, lbl_statements);
 }
 
 CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use, Channel *c)

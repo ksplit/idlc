@@ -1308,9 +1308,15 @@ class CCSTCompoundStatement: public CCSTStatement
   // is this a body? not necessarily
   std::vector<CCSTDeclaration*> declarations_;
   std::vector<CCSTStatement*> statements_;
+  std::vector<CCSTStatement*> lbl_statements;
+
 public:
   CCSTCompoundStatement(std::vector<CCSTDeclaration*> decs,
     std::vector<CCSTStatement*> s);
+
+  CCSTCompoundStatement(std::vector<CCSTDeclaration*> decs,
+    std::vector<CCSTStatement*> s, std::vector<CCSTStatement*> lbls);
+
   void add_statement(CCSTStatement *s)
   {
     this->statements_.push_back(s);
@@ -1328,6 +1334,11 @@ public:
   const std::vector<CCSTStatement*>& getstatements() const
   {
     return statements_;
+  }
+
+  const std::vector<CCSTStatement*>& getlblstatements() const
+  {
+    return lbl_statements;
   }
 };
 

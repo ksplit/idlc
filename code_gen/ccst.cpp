@@ -1759,6 +1759,15 @@ CCSTCompoundStatement::CCSTCompoundStatement(
 {
 }
 
+CCSTCompoundStatement::CCSTCompoundStatement(
+  std::vector<CCSTDeclaration*> decs, std::vector<CCSTStatement*> s,
+  std::vector<CCSTStatement*> lbls) :
+  declarations_(decs),
+  statements_(s),
+  lbl_statements(lbls)
+{
+}
+
 void CCSTCompoundStatement::write(std::ofstream& of, int indent)
 {
 
@@ -1774,6 +1783,11 @@ void CCSTCompoundStatement::write(std::ofstream& of, int indent)
     CCSTStatement *state = *it;
     state->write(of, indent);
     //   of << "\n";
+  }
+  for (std::vector<CCSTStatement*>::iterator it = lbl_statements.begin();
+      it != lbl_statements.end(); ++it) {
+      CCSTStatement *state = *it;
+      state->write(of, indent);
   }
 }
 
