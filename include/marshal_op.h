@@ -97,9 +97,9 @@ class Marshal_bool : public Marshal_type
 
 class Marshal_projection : public Marshal_type
 {
-
+  int register_;
  public:
-  Marshal_projection();
+  Marshal_projection(int r);
   virtual Marshal_type* clone() const { return new Marshal_projection(*this); }
   virtual void set_register( int r);
   virtual int get_register();
