@@ -522,7 +522,7 @@ std::vector<CCSTStatement*> dealloc_container(Variable *v, const std::string& cs
       
     cap_remove_args.push_back(access(my_ref_field)); // access container my ref field
 
-    statements.push_back(new CCSTExprStatement( function_call("cap_remove", cap_remove_args)));
+    statements.push_back(new CCSTExprStatement( function_call("glue_cap_remove", cap_remove_args)));
   }
   return statements;
 }
@@ -671,7 +671,7 @@ std::vector<CCSTStatement*> dealloc_containers_caller(Variable *v, const std::st
       
       cap_remove_args.push_back(access(my_ref_field)); // access container my ref field
       
-      statements.push_back(new CCSTExprStatement( function_call("cap_remove", cap_remove_args)));
+      statements.push_back(new CCSTExprStatement( function_call("glue_cap_remove", cap_remove_args)));
 
       // remove all channels we recieved
       if(v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {

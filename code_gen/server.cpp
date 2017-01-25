@@ -40,10 +40,10 @@ CCSTDeclaration* dispatch_async_function_declaration(Module *mod)
   p_decs.push_back(
     new CCSTParamDeclaration(
       type2(mod->module_scope()->lookup("fipc_message", &err)),
-      new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("request"))));
+      new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("message"))));
   p_decs.push_back(
     new CCSTParamDeclaration(
-      type2(mod->module_scope()->lookup("cspace", &err)),
+      type2(mod->module_scope()->lookup("glue_cspace", &err)),
       new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("cspace"))));
   p_decs.push_back(
     new CCSTParamDeclaration(type2(mod->module_scope()->lookup("cptr", &err)),
@@ -295,7 +295,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
           function_call("thc_get_request_cookie", lcd_req_cook_args))));
     std::vector<CCSTAssignExpr*> ipc_recv_end_args;
     std::vector<CCSTAssignExpr*> chnl_to_fipc_args;
-    chnl_to_fipc_args.push_back(new CCSTPrimaryExprId(c->chName));
+    chnl_to_fipc_args.push_back(new CCSTPrimaryExprId("channel"));
     ipc_recv_end_args.push_back(function_call("thc_channel_to_fipc", chnl_to_fipc_args));
     ipc_recv_end_args.push_back(new CCSTPrimaryExprId("request"));
     statements.push_back(new CCSTExprStatement(function_call("fipc_recv_msg_end", ipc_recv_end_args)));
@@ -414,14 +414,13 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
 
      std::vector<CCSTAssignExpr*> lcd_exit_args;
      lcd_exit_args.push_back(new CCSTInteger(-1));
-     // TODO: Change this to return -EIO;
+
      if_body_statements.push_back(new CCSTReturn(new CCSTPrimaryExprId("-EIO")));
-       //new CCSTExprStatement(function_call("lcd_exit", lcd_exit_args)));
 
      CCSTCompoundStatement *if_body = new CCSTCompoundStatement(if_body_declarations, if_body_statements);
 
      std::vector<CCSTAssignExpr*> lcd_async_start_args;
-     lcd_async_start_args.push_back(new CCSTPrimaryExprId(c->chName));
+     lcd_async_start_args.push_back(new CCSTPrimaryExprId("channel"));
      lcd_async_start_args.push_back(
        new CCSTUnaryExprCastExpr(reference(),
          new CCSTPrimaryExprId("response")));
@@ -461,7 +460,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
               , "lcd_sync_reply"));
   } else {
     std::vector<CCSTAssignExpr*> ipc_reply_args;
-    ipc_reply_args.push_back(new CCSTPrimaryExprId(c->chName));
+    ipc_reply_args.push_back(new CCSTPrimaryExprId("channel"));
     ipc_reply_args.push_back(new CCSTPrimaryExprId("request_cookie"));
     ipc_reply_args.push_back(new CCSTPrimaryExprId("response"));
     statements.push_back(new CCSTExprStatement(function_call("thc_ipc_reply", ipc_reply_args)));
@@ -623,7 +622,6 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
       break;
     }
   }
-  
 
   // globals.
   std::vector<GlobalVariable*> globals = m->channels();

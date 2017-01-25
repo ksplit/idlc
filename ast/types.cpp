@@ -613,7 +613,7 @@ void ProjectionType::create_trampoline_structs(LexicalScope *ls)
       std::vector<ProjectionField*> trampoline_fields;
       int err;
       trampoline_fields.push_back(new ProjectionField(ls->lookup("void", &err), "struct_container", 1));
-      trampoline_fields.push_back(new ProjectionField(ls->lookup("cspace", &err), "cspace", 1));
+      trampoline_fields.push_back(new ProjectionField(ls->lookup("glue_cspace", &err), "cspace", 1));
       trampoline_fields.push_back(new ProjectionField(ls->lookup("lcd_trampoline_handle", &err), "t_handle", 1));
       trampoline_fields.push_back(new ProjectionField(ls->lookup("thc_channel", &err), "async_chnl", 1));
       trampoline_fields.push_back(new ProjectionField(ls->lookup("cptr", &err), "sync_ep", 0));

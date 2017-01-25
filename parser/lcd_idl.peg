@@ -181,7 +181,7 @@ void insertType(const std::string& sym, Type * val) // should this be void?
 
 const char* returnVarName()
 {
-    const char* name = "ret";
+    const char* name = "func_ret";
     while(get_current_scope()->contains_identifier(name)) {
         // append _ on end of name
         std::ostringstream total;
