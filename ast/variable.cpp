@@ -434,7 +434,7 @@ void Parameter::create_container_variable(LexicalScope *ls)
   } else if (this->type_->num() == FUNCTION_TYPE) {
     ProjectionType *container = dynamic_cast<ProjectionType*>(container_t);
     Assert(container != 0x0, "Error: could not dynamically cast to projection\n");
-    const std::string& name = "temp"; //container_name(append_strings("_", construct_list_vars(this)));
+    const std::string& name = container_name(append_strings("_", construct_list_vars(this)));
 
     Parameter *container_var = new Parameter(container, name, 1);
     container_var->set_in(this->in());
