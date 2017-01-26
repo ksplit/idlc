@@ -47,9 +47,41 @@ CCSTFuncDef* function_definition(CCSTDeclaration* function_declaration, CCSTComp
 CCSTParamTypeList* parameter_list(std::vector<Parameter*> params)
 {
   std::vector<CCSTParamDeclaration*> param_decs;
-  for(std::vector<Parameter*>::iterator it = params.begin(); it != params.end(); it ++) {
+  for (std::vector<Parameter*>::iterator it = params.begin();
+    it != params.end(); it++) {
     Parameter *p = (Parameter*) *it;
-    param_decs.push_back(new CCSTParamDeclaration(type2(p->type()), new CCSTDeclarator(pointer(p->pointer_count()), new CCSTDirectDecId(p->identifier()))));
+    /// Handle function pointers separately
+    if (p->type()->num() == FUNCTION_TYPE) {
+      Function *f = dynamic_cast<Function*>(p->type());
+      std::vector<CCSTDecSpecifier*> new_fp_return_type = type2(
+        f->return_var_->type());
+
+      /// loop through rpc parameters and add them to the parameters for the new fp
+      std::vector<CCSTParamDeclaration*> func_pointer_params;
+
+      for (auto p : *f) {
+        std::vector<CCSTDecSpecifier*> fp_param_tmp = type2(p->type());
+        func_pointer_params.push_back(
+          new CCSTParamDeclaration(fp_param_tmp,
+            new CCSTDeclarator(pointer(p->pointer_count()),
+              new CCSTDirectDecId(""))));
+      }
+
+      CCSTDeclarator *dec = new CCSTDeclarator(NULL,
+        new CCSTDirectDecParamTypeList(
+          new CCSTDirectDecDec(
+            new CCSTDeclarator(new CCSTPointer(),
+              new CCSTDirectDecId(f->name()))),
+          new CCSTParamList(func_pointer_params)));
+      param_decs.push_back(new CCSTParamDeclaration(new_fp_return_type, dec));
+
+    } else {
+      /// Handle all other types
+      param_decs.push_back(
+        new CCSTParamDeclaration(type2(p->type()),
+          new CCSTDeclarator(pointer(p->pointer_count()),
+            new CCSTDirectDecId(p->identifier()))));
+    }
   }
 
   return new CCSTParamList(param_decs);
