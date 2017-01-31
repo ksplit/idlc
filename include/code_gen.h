@@ -15,6 +15,10 @@ CCSTFile* generate_glue_source(Module *m);
 CCSTFile* generate_dispatch(Module *m, const std::string &type);
 CCSTFile *generate_common_header(Module *m);
 std::vector<CCSTExDeclaration*> generate_enum_list(Module *m);
+CCSTDeclaration* fn_decl_insert(ProjectionType* pt, Module *m);
+CCSTDeclaration* fn_decl_lookup(ProjectionType* pt, Module *m);
+CCSTCompoundStatement *fn_def_insert(ProjectionType *pt);
+CCSTCompoundStatement *fn_def_lookup(ProjectionType *pt);
 
 CCSTCompoundStatement* callee_body(Rpc *r, Module *m); // todo complete  2 functions in the file.....
 
