@@ -568,65 +568,6 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
     definitions.push_back(new CCSTPreprocessor(inc->get_path(), inc->is_relative()));
   }
 
-  // need to print containers. but scopes container possibly duplicate projections definitions.
-
-  // this feels mildy "hacky"
-  // for each projection look up its container int the environment and print its declaration
-  // if no container int the environment, don't print
-  std::map<std::string, Type*> module_types = m->module_scope()->all_type_definitions();
-  for(std::map<std::string, Type*>::iterator it = module_types.begin(); it != module_types.end(); it ++) {
-    Type *t = (Type*) it->second;
-
-    if(t->num() == PROJECTION_TYPE || t->num() == PROJECTION_CONSTRUCTOR_TYPE) {
-      ProjectionType *pt = dynamic_cast<ProjectionType*>(t);
-      Assert(pt != 0x0, "Error: dynamic cast to projection type failed!\n");
-      
-      if(module_types.find(container_name(pt->name())) != module_types.end()) { // found the container
-	ProjectionType *pt_container = dynamic_cast<ProjectionType*>(module_types[container_name(pt->name())]);
-	Assert(pt_container != 0x0, "Error: dynamic cast to projection type failed\n");
-
-	std::vector<CCSTDecSpecifier*> specifier;
-	specifier.push_back(struct_declaration(pt_container));
-	std::vector<CCSTInitDeclarator*> empty;
-	definitions.push_back(new CCSTDeclaration(specifier, empty));
-      }
-    } else if (t->num() == FUNCTION_TYPE) {
-      Function *f = dynamic_cast<Function*>(t);
-      Assert(f != 0x0, "Error: dynamic cast to projection type failed!\n");
-
-      if(module_types.find(container_name(f->name())) != module_types.end()) { // found the container
-  ProjectionType *pt_container = dynamic_cast<ProjectionType*>(module_types[container_name(f->name())]);
-  Assert(pt_container != 0x0, "Error: dynamic cast to projection type failed\n");
-  std::vector<CCSTDecSpecifier*> specifier;
-  specifier.push_back(struct_declaration(pt_container));
-  std::vector<CCSTInitDeclarator*> empty;
-  definitions.push_back(new CCSTDeclaration(specifier, empty));
-
-      }
-    }
-  }
-  
-  // print trampoline structs
-  for (auto rpc : *m) {
-    if (rpc->function_pointer_defined()) {
-      int err;
-      Type *t = rpc->current_scope()->lookup("trampoline_hidden_args", &err);
-      Assert(t != 0x0, "Error: failure looking up type\n");
-      ProjectionType *pt = dynamic_cast<ProjectionType*>(t);
-      Assert(t != 0x0, "Error: dynamic cast to projection type failed!\n");
-
-      std::vector<CCSTDecSpecifier*> specifier;
-      specifier.push_back(struct_declaration(pt));
-      std::vector<CCSTInitDeclarator*> empty;
-      definitions.push_back(new CCSTDeclaration(specifier, empty));
-
-      /// XXX: struct trampoline_hidden_args need to be defined only
-      /// once despite the number of function pointers.
-      /// So, break after once!
-      break;
-    }
-  }
-
   // globals.
   std::vector<GlobalVariable*> globals = m->channels();
   for(std::vector<GlobalVariable*>::iterator it = globals.begin(); it != globals.end(); it ++) {
@@ -689,41 +630,6 @@ CCSTFile *generate_callee_lds(Module *mod)
           new CCSTMacro("LCD_TRAMPOLINE_LINKER_SECTION", data_args, false));
     }
   }
-  return new CCSTFile(statements);
-}
-
-CCSTFile* generate_glue_source(Module *m)
-{
-  std::vector<CCSTExDeclaration*> statements;
-  std::map<std::string, std::pair<std::string,Type*>> types_map;
-  std::vector<CCSTEnumerator*>* list = new std::vector<CCSTEnumerator*>();
-
-  std::vector<LexicalScope*> inner_scopes = m->module_scope()->inner_scopes();
-
-  for (std::vector<LexicalScope*>::iterator it = inner_scopes.begin(); it != inner_scopes.end(); ++it) {
-    auto type_defs = (*it)->type_definitions();
-    for (std::pair<std::string, Type*> type : type_defs) {
-      Type *ty = type.second;
-      if (ty->name().find("_container") != std::string::npos) {
-        std::string enum_name = ty->name();
-        std_string_toupper(enum_name);
-        types_map[ty->name()] = std::pair<std::string,Type*>(enum_name, ty);
-      }
-    }
-  }
-
-  for (auto t : types_map) {
-    list->push_back(new CCSTEnumerator(t.second.first));
-  }
-
-  CCSTEnumeratorList *enum_list = new CCSTEnumeratorList(list);
-  CCSTEnumSpecifier *e = new CCSTEnumSpecifier("glue_type", enum_list);
-  std::vector<CCSTDecSpecifier*> tmp;
-  tmp.push_back(e);
-  std::vector<CCSTInitDeclarator*> empty;
-  CCSTDeclaration *declaration = new CCSTDeclaration(tmp, empty);
-  statements.push_back(declaration);
-
   return new CCSTFile(statements);
 }
 

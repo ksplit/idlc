@@ -13,6 +13,8 @@ CCSTFile* generate_server_header(Module *m); // std::vector<Include*> includes);
 CCSTFile *generate_callee_lds(Module *mod);
 CCSTFile* generate_glue_source(Module *m);
 CCSTFile* generate_dispatch(Module *m, const std::string &type);
+CCSTFile *generate_common_header(Module *m);
+std::vector<CCSTExDeclaration*> generate_enum_list(Module *m);
 
 CCSTCompoundStatement* callee_body(Rpc *r, Module *m); // todo complete  2 functions in the file.....
 
