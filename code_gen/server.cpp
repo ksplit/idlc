@@ -387,9 +387,19 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   }
 
   // allocate return variable // return value cannot have a container?
-  statements.push_back(allocate_and_link_containers_callee(r->return_variable()
-							   , m->cspaces_.at(0)->identifier(), type));
-  statements.push_back(allocate_non_container_variables(r->return_variable()));
+  /// XXX: Is there any reason to allocate a return variable?
+  /// It is always allocated for us by the kernel even if it's a projection
+  /// because, we modify the sources like that.
+  /// TODO: A lookup is required, but only after the actual call has
+  /// taken place
+  /// This is a bit tricky. When an LCD calls a function in the kernel,
+  /// the return variable is allocated for us by the kernel. On the
+  /// contrary, if kernel calls a function in the LCD that is a function
+  /// pointer, we have to allocate memory for that, but only once.
+  /// For instance, get_stats on a network driver.
+//  statements.push_back(allocate_and_link_containers_callee(r->return_variable()
+//							   , m->cspaces_.at(0)->identifier(), type));
+//  statements.push_back(allocate_non_container_variables(r->return_variable()));
   
   // real call
   if(r->return_variable()->type()->num() == VOID_TYPE) {
