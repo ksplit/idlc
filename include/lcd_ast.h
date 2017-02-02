@@ -412,6 +412,11 @@ class ReturnVariable : public Variable
   Variable* accessor_;
   int pointer_count_;
   Variable *container_;
+  bool in_;
+  bool out_;
+  bool alloc_caller_;
+  bool alloc_callee_;
+
   ReturnVariable();
   ReturnVariable(Type* return_type, int pointer_count, const std::string& id);
   ReturnVariable(const ReturnVariable& other);

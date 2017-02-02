@@ -820,14 +820,14 @@ rpc_special     =      "rpc" {{
 		       }}
 
 
-Rpc		=	rpc_scope:rpc_special Space+ t:Type_form pointers:star* Spacing id1:Identifier Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing {{
+Rpc		=	rpc_scope:rpc_special Space+ t:Type_form s:Specification? pointers:star* Spacing id1:Identifier Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing {{
 			    std::vector<Parameter*>* params = (std::vector<Parameter*>*) p.getValue();
 			    std::vector<Parameter*> params_ = *params;
 				const std::string *_id = static_cast<const std::string*>(id1.getValue());
-
-			    Rpc* r = new Rpc(new ReturnVariable((Type *) t.getValue(), count_pointers(pointers), returnVarName())
-			                                       , *_id, params_, (LexicalScope*) rpc_scope.getValue());
+                ReturnVariable *ret = new ReturnVariable((Type *) t.getValue(), count_pointers(pointers), returnVarName());
+			    Rpc* r = new Rpc(ret, *_id, params_, (LexicalScope*) rpc_scope.getValue());
 			    
+			    set_specs(*ret, s);
 			    std::cout << "creating an rpc\n";
 			    /*
 			    int err = get_current_scope()->insert(r);

@@ -900,12 +900,12 @@ void ReturnVariable::set_out(bool b)
 
 void ReturnVariable::set_alloc_caller(bool b)
 {
-  std::cout << "error this operation not allowed\n";
+  alloc_caller_ = b;
 }
 
 void ReturnVariable::set_alloc_callee(bool b)
 {
-  std::cout << "error this operation not allowed\n";
+  alloc_callee_ = b;
 }
 
 void ReturnVariable::set_dealloc_caller(bool b)
@@ -920,25 +920,22 @@ void ReturnVariable::set_dealloc_callee(bool b)
 
 bool ReturnVariable::in()
 {
-  std::cout << "error this operation not allowed\n";
-  return false;
+  return this->in_;
 }
 
 bool ReturnVariable::out()
 {
-  std::cout << "error this operation not allowed\n";
-  return false;
+  return this->out_;
 }
 
 bool ReturnVariable::alloc_caller()
 {
-  std::cout << "error this operation not allowed\n";
-  return false;
+  return this->alloc_caller_;
 }
+
 bool ReturnVariable::alloc_callee()
 {
-  std::cout << "error this operation not allowed\n";
-  return false;
+  return this->alloc_callee_;
 }
 
 bool ReturnVariable::dealloc_caller()
