@@ -203,6 +203,14 @@ std::vector<CCSTStatement*> unmarshal_variable_callee(Variable *v, Channel::Chan
 {
   std::vector<CCSTStatement*> statements;
 
+  if(v->type()->num() == FUNCTION_TYPE) {
+    /// Nothing needs to be unmarshalled for a function pointer
+    /// Function ptr's container will have to be marshalled and is done
+    /// allocation of its container
+    return statements;
+  }
+
+
   if(v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
     
@@ -251,7 +259,6 @@ std::vector<CCSTStatement*> unmarshal_variable_callee(Variable *v, Channel::Chan
     }
   }
   return statements;
-
 }
 
 std::vector<CCSTStatement*> unmarshal_container_refs_caller(Variable *v, Channel::ChannelType type)

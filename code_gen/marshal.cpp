@@ -147,6 +147,12 @@ CCSTStatement* marshal_variable(Variable *v, const std::string& direction, Chann
     statements.push_back(marshal_variable(v->container(), direction, type));
   }
 
+  if (v->type()->num() == FUNCTION_TYPE) {
+    /// Nothing needs to be marshalled for a function pointer
+    /// Function ptr's container will have to be marshalled and is done above
+    return new CCSTCompoundStatement(declarations, statements);
+  }
+
   if (v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) { // projection
     // loop through fields
     ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
@@ -158,7 +164,6 @@ CCSTStatement* marshal_variable(Variable *v, const std::string& direction, Chann
         statements.push_back(marshal_variable(pf, direction, type));
       }
     }
-    
   } else if (v->type()->num() == VOID_TYPE) {
     return marshal_void_pointer(v);
   } else {
@@ -166,7 +171,6 @@ CCSTStatement* marshal_variable(Variable *v, const std::string& direction, Chann
     Assert(v->marshal_info() != 0x0, "Error: marshalling info is null\n");
     statements.push_back(marshal(access(v), v->marshal_info()->get_register(), type, "request"));
   }
-  
   return new CCSTCompoundStatement(declarations, statements);
 }
 
