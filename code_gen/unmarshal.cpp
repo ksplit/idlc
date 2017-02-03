@@ -107,17 +107,20 @@ std::vector<CCSTStatement*> unmarshal_variable_caller(Variable *v, Channel::Chan
     
     int reg = v->marshal_info()->get_register();
     std::string func_name;
-    if (type == Channel::SyncChannel)
-      func_name = access_register_mapping(reg);
-    else
-      func_name = load_async_reg_mapping(reg);
+    std::vector<CCSTAssignExpr*> access_reg_args;
 
-    std::vector<CCSTAssignExpr*> reg_func_args_empty;
+    if (type == Channel::SyncChannel) {
+      func_name = access_register_mapping(reg);
+    } else {
+      func_name = load_async_reg_mapping(reg);
+      access_reg_args.push_back(new CCSTPrimaryExprId("response"));
+    }
+
     
     statements.push_back(new CCSTExprStatement(new CCSTAssignExpr(access(v)
 								  , equals()
 								  , function_call(func_name
-										  , reg_func_args_empty))));
+										  , access_reg_args))));
   }
   
   return statements;
