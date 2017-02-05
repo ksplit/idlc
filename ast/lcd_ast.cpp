@@ -85,6 +85,7 @@ void Rpc::create_container_variables()
   for (auto p: *this) {
     p->create_container_variable(this->current_scope());
   }
+  this->return_variable()->create_container_variable(this->current_scope());
 }
 
 void Rpc::set_function_pointer_defined(bool b)
@@ -251,22 +252,33 @@ void Rpc::prepare_marshal()
   }
 
   // assign register(s) to return value
-  if (this->explicit_return_->type()->num() != VOID_TYPE)
+  if (this->explicit_return_->type()->num() != VOID_TYPE)  {
     out_params.push_back(this->explicit_return_);
+  }
   if (this->explicit_return_->type()->num() == PROJECTION_TYPE
     || this->explicit_return_->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
     auto *pt = dynamic_cast<ProjectionType*>(this->explicit_return_->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection failed\n");
-    // in 
-    auto tmp = this->marshal_projection_parameters(pt, ""); // everything
-    out_params.insert(out_params.end(), tmp.begin(), tmp.end());
+    if (this->explicit_return_->container()) {
+      auto *pt1 = dynamic_cast<ProjectionType*>(this->explicit_return_->container()->type());
+      Assert(pt1 != 0x0, "Error: dynamic cast to projection failed\n");
+      /// Since we need to pass our reference when calling and get back the
+      /// callee's reference while returning, the param needs to be both
+      /// in and out
+      auto tmp1 = this->marshal_projection_parameters(pt1, "in");
+      auto tmp = this->marshal_projection_parameters(pt1, "out");
+      out_params.insert(out_params.end(), tmp.begin(), tmp.end());
+      in_params.insert(in_params.end(), tmp1.begin(), tmp1.end());
+    }
   }
-
-  /// TODO: make sure register 0 is free for function tag
 
   // marshal prepare the in parameters
   auto *in_reg = new Registers();
   int arr[1];
+  /// make sure register 0 is free for function tag (only for sync)
+  /// This is needed only for sync registers
+  /// TODO: Remove this for async after introducing a sync marker in
+  /// the grammar
   arr[0] = 1;
   in_reg->init(arr, 1, 0x0, 0);
 
@@ -321,6 +333,9 @@ void Rpc::copy_types()
   
   // copy return type
   this->explicit_return_->type_ = this->explicit_return_->type_->clone();
+  if (this->explicit_return_->container_) {
+    this->explicit_return_->container_ = this->explicit_return_->container_->clone();
+  }
 }
 
 void Rpc::set_accessors()
