@@ -671,7 +671,11 @@ ReturnVariable::ReturnVariable(Type *return_type, int pointer_count,
   marshal_info_(NULL),
   accessor_(NULL),
   pointer_count_(pointer_count),
-  container_(NULL)
+  container_(NULL),
+  in_(false),
+  out_(false),
+  alloc_caller_(false),
+  alloc_callee_(false)
 {
 }
 
@@ -682,6 +686,10 @@ ReturnVariable::ReturnVariable(const ReturnVariable& other)
 
   // copy type
   this->type_ = other.type_->clone();
+  this->in_ = other.in_;
+  this->out_ = other.out_;
+  this->alloc_callee_ = other.alloc_callee_;
+  this->alloc_caller_ = other.alloc_caller_;
 
   // copy marshal info
   if(other.marshal_info_ != 0x0) {
@@ -700,7 +708,6 @@ ReturnVariable::ReturnVariable(const ReturnVariable& other)
   } else {
     this->container_ = 0x0;
   }
-  
 }
 
 void ReturnVariable::create_container_variable(LexicalScope *ls)
