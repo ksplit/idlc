@@ -96,19 +96,22 @@ int Registers::allocate_next_free_register()
   return -1;
 }
 
-Marshal_projection::Marshal_projection(int r) :
-  register_(r)
+/* marshal type code */
+
+// placed these here instead of header to avoid compilation errors
+Marshal_projection::Marshal_projection()
 {
 }
 
 void Marshal_projection::set_register(int r)
 {
-  register_ = r;
+  Assert(1 == 0, "Error: this operation is not allowed\n");
 }
 
 int Marshal_projection::get_register()
 {
-  return register_;
+  Assert(1 == 0, "Error: this operation is not allowed\n");
+  return 0;
 }
 
 Marshal_integer::Marshal_integer(int r)
@@ -225,13 +228,13 @@ Marshal_type* MarshalPrepareVisitor::visit(UnresolvedType *ut)
 Marshal_type* MarshalPrepareVisitor::visit(Channel *c)
 {
   std::cout << "marshal prepare visitor channel todo!\n";
-  return NULL;
+  return 0x0;
 }
 
 Marshal_type* MarshalPrepareVisitor::visit(Function *fp)
 {
   std::cout << "Error: cannot allocate a register for functino pointer\n";
-  return NULL;
+  return 0x0;
 }
 
 Marshal_type* MarshalPrepareVisitor::visit(Typedef *td)
@@ -272,15 +275,12 @@ Marshal_type* MarshalPrepareVisitor::visit(ProjectionType *pt)
     pf->set_marshal_info( pf->type()->accept(this) );
   }
   */
-  int r = this->registers_->allocate_next_free_register();
-
-  return new Marshal_projection(r);
+  return new Marshal_projection();
 }
 
 Marshal_type* MarshalPrepareVisitor::visit(ProjectionConstructorType *pct)
 {
-  int r = this->registers_->allocate_next_free_register();
-  return new Marshal_projection(r);
+  return new Marshal_projection();
 }
 
 Marshal_type* MarshalPrepareVisitor::visit(InitializeType *it)
