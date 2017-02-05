@@ -141,7 +141,7 @@ CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const st
 CCSTStatement* lookup_variable_container(Variable *v, Channel::ChannelType type);
 CCSTStatement* alloc_variable(Variable *v); // complete
 CCSTStatement* allocate_non_container_variables(Variable *v);
-CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const std::string& cspace);
+CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const std::string& cspace, bool);
 ProjectionField* get_cptr_field(Variable *v);
 ProjectionField* find_field(ProjectionType *pt, const std::string& field_name);
 CCSTCompoundStatement* alloc_link_container_caller(Variable *v, const std::string& cspace);

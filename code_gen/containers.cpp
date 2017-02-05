@@ -118,7 +118,7 @@ CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const st
   // when do we want to allocate and when do we want to lookup
   if(v->container()) {
     if(v->alloc_callee()) {
-      statements.push_back(alloc_insert_variable_container(v, cspace));
+      statements.push_back(alloc_insert_variable_container(v, cspace, true));
       // store remote reference;
       statements.push_back(set_remote_ref(v, type));
     } else { // lookup 
@@ -281,38 +281,38 @@ CCSTStatement* allocate_non_container_variables(Variable *v)
  * assumes the container has already been declared at v->container()->identifier()
  * inserts container into cspace
  */
-CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const std::string& cspace)
+CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const std::string& cspace, bool alloc)
 {
   // TODO: set other ref;
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
 
   /* Allocate an instance of the container */
+  if (alloc) {
+    /* we only ever allocate containers */
+    Assert(v->container() != 0x0, "Error: variable has no container\n");
   
-  /* we only ever allocate containers */
-  Assert(v->container() != 0x0, "Error: variable has no container\n");
+    /* kzalloc structure */
+    std::vector<CCSTAssignExpr*> kzalloc_args;
 
-  /* kzalloc structure */
-  std::vector<CCSTAssignExpr*> kzalloc_args;
+    TypeNameVisitor *worker = new TypeNameVisitor();
+    CCSTTypeName *type_name = v->container()->type()->accept(worker);
+    delete worker;
+    // For allocating memory for struct foo *foo1;
+    // Use sizeof(struct foo) instead of sizeof(foo1)
+    kzalloc_args.push_back(new CCSTUnaryExprSizeOf(type_name));
+    kzalloc_args.push_back(new CCSTEnumConst("GFP_KERNEL"));
 
-  TypeNameVisitor *worker = new TypeNameVisitor();
-  CCSTTypeName *type_name = v->container()->type()->accept(worker);
-  delete worker;
-  // For allocating memory for struct foo *foo1;
-  // Use sizeof(struct foo) instead of sizeof(foo1)
-  kzalloc_args.push_back(new CCSTUnaryExprSizeOf(type_name));
-  kzalloc_args.push_back(new CCSTEnumConst("GFP_KERNEL"));
+    /* this is ok because container is always a single pointer. */
+    statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId(v->container()->identifier())
+                   , equals()
+                   , function_call("kzalloc", kzalloc_args))));
 
-  /* this is ok because container is always a single pointer. */
-  statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId(v->container()->identifier())
-								 , equals()
-								 , function_call("kzalloc", kzalloc_args))));
-
-  std::string *goto_alloc = new std::string("fail_alloc");
-  /* do error checking */
-  statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId(v->container()->identifier()))
-				    , "kzalloc", *goto_alloc));
-
+    std::string *goto_alloc = new std::string("fail_alloc");
+    /* do error checking */
+    statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId(v->container()->identifier()))
+              , "kzalloc", *goto_alloc));
+  }
   /* insert container into cspace */
 
   /* find my_ref field*/
@@ -329,17 +329,17 @@ CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const std::s
 						  , access(my_ref_field))); // & container->my_ref
 
   if (v->type()->num() != FUNCTION_TYPE) {
-  ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
-  Assert(pt != 0x0, "Error: dynamic cast to projection type failed.\n");
+    ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
+    Assert(pt != 0x0, "Error: dynamic cast to projection type failed.\n");
 
-  statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("err")
-								 , equals()
-								 , function_call(insert_name(pt->real_type()) + "_type", insert_args))));
+    statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("err")
+                   , equals()
+                   , function_call(insert_name(pt->real_type()) + "_type", insert_args))));
 
-  std::string *goto_insert = new std::string("fail_insert");
-  /* do error checking */
-  statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId("err"))
-				    , "lcd insert", *goto_insert));
+    std::string *goto_insert = new std::string("fail_insert");
+    /* do error checking */
+    statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId("err"))
+              , "lcd insert", *goto_insert));
   }
   return new CCSTCompoundStatement(declarations, statements);
 }
@@ -371,7 +371,7 @@ CCSTCompoundStatement* alloc_link_container_caller(Variable *v, const std::strin
   // simple case. v is not a projection
   if(v->type()->num() != PROJECTION_TYPE && v->type()->num() != FUNCTION_TYPE) {
     if(v->alloc_caller()) {
-      return alloc_insert_variable_container(v, cspace);
+      return alloc_insert_variable_container(v, cspace, true);
     } else {
       return new CCSTCompoundStatement(declarations, container_of(v, cspace));
     }
@@ -379,7 +379,7 @@ CCSTCompoundStatement* alloc_link_container_caller(Variable *v, const std::strin
 
   if(v->alloc_caller()) {
     // else it is the projection case.
-    statements.push_back(alloc_insert_variable_container(v, cspace));
+    statements.push_back(alloc_insert_variable_container(v, cspace, true));
 
     if (v->type()->num() == FUNCTION_TYPE)
       goto done;
