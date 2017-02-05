@@ -359,7 +359,11 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
     }
   }
 
-  
+  /// set remote reference in case of return variable being a projection
+  if (r->return_variable()->container()) {
+    statements.push_back(set_remote_ref(r->return_variable(), type));
+  }
+
   /* build up real call params */
   std::vector<CCSTAssignExpr*> real_call_params;
   for (auto p : *r) {
@@ -410,6 +414,12 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
 								  , equals()
 								  , function_call(r->name()
 										  , real_call_params))));
+  }
+
+  if (r->return_variable()->container()) {
+    statements.push_back(
+      insert_variable_container(r->return_variable(),
+        m->cspaces_.at(0)->identifier()));
   }
 
   /* dealloc containers and contents of containers if necessary */

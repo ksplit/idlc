@@ -150,6 +150,23 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
     }
   }
 
+  if (r->return_variable()->container()) {
+    /// declare container variable for return value
+    declarations.push_back(declare_variable(r->return_variable()->container()));
+
+    /// Allocate only the top level container for the retun var projection
+    CCSTCompoundStatement *updates = alloc_link_container_caller_top(
+      r->return_variable(), cspace_to_use);
+    std::vector<CCSTDeclaration*> __tmp_declarations =
+      updates->getdeclarations();
+    std::vector<CCSTStatement*> __tmp_statements = updates->getstatements();
+
+    declarations.insert(declarations.end(), __tmp_declarations.begin(),
+      __tmp_declarations.end());
+    statements.insert(statements.end(), __tmp_statements.begin(),
+      __tmp_statements.end());
+  }
+
   /* projection channel allocation */
   for (auto p : *r) {
     if (p->type_->num() == PROJECTION_TYPE
@@ -298,6 +315,19 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
       statements.insert(statements.end(), __tmp_statements.begin(), __tmp_statements.end());
     }
   }
+
+  /// If ret is a container, its my_ref cptr needs to be marshalled as well
+  if (r->return_variable()->container()) {
+    CCSTCompoundStatement *updates = dynamic_cast<CCSTCompoundStatement*>(marshal_variable(r->return_variable(), "in", c->chType));
+
+    std::vector<CCSTDeclaration*> __tmp_declarations = updates->getdeclarations();
+    std::vector<CCSTStatement*> __tmp_statements = updates->getstatements();
+
+    declarations.insert(declarations.end(), __tmp_declarations.begin(), __tmp_declarations.end());
+    statements.insert(statements.end(), __tmp_statements.begin(), __tmp_statements.end());
+  }
+
+
   /* if it is a function pointer need to marshal hidden args */
   if (r->function_pointer_defined()) {
     std::vector<Parameter*> hidden_args = r->hidden_args_;
@@ -378,9 +408,14 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
     // declare return var.
     declarations.push_back(declare_variable(r->return_variable()));
 
-    // unmarshal return var
-    std::vector<CCSTStatement*> tmp_stmts = unmarshal_return_variable_no_check(r->return_variable(), c->chType);
-    statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
+    if (r->return_variable()->container()) {
+      std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_caller(r->return_variable()->container(), c->chType);
+      statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
+    } else {
+      // unmarshal return var
+      std::vector<CCSTStatement*> tmp_stmts = unmarshal_return_variable_no_check(r->return_variable(), c->chType);
+      statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
+    }
   }
   std::vector<CCSTAssignExpr*> ipc_recv_end_args;
   std::vector<CCSTAssignExpr*> chnl_to_fipc_args;
