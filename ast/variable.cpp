@@ -743,10 +743,11 @@ void ReturnVariable::create_container_variable(LexicalScope *ls)
 
   const std::string& name = container_name(append_strings("_", construct_list_vars(this)));
 
-  ReturnVariable *container_var = new ReturnVariable(container, 1, "");
+  ReturnVariable *container_var = new ReturnVariable(container, 1, name);
   container_var->set_in(this->in());
   container_var->set_out(this->out());
-  
+  container_var->set_alloc_caller(this->alloc_caller());
+
   // save. 
   this->container_ = container_var;
 
