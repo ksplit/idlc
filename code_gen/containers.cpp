@@ -369,6 +369,26 @@ ProjectionField* find_field(ProjectionType *pt, const std::string& field_name)
   return field;
 }
 
+CCSTCompoundStatement* alloc_link_container_caller_top(Variable *v, const std::string& cspace)
+{
+  std::vector<CCSTDeclaration*> declarations;
+  std::vector<CCSTStatement*> statements;
+  // simple case. v is not a projection
+  if(v->type()->num() != PROJECTION_TYPE && v->type()->num() != FUNCTION_TYPE) {
+    if(v->alloc_caller()) {
+      return alloc_insert_variable_container(v, cspace, true);
+    } else {
+      return new CCSTCompoundStatement(declarations, container_of(v, cspace));
+    }
+  }
+
+  if(v->alloc_caller()) {
+    // else it is the projection case.
+    statements.push_back(alloc_insert_variable_container(v, cspace, true));
+  }
+  return new CCSTCompoundStatement(declarations, statements);
+}
+
 CCSTCompoundStatement* alloc_link_container_caller(Variable *v, const std::string& cspace)
 {
   std::vector<CCSTDeclaration*> declarations;
