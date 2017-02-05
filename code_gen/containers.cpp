@@ -277,6 +277,11 @@ CCSTStatement* allocate_non_container_variables(Variable *v)
   return new CCSTCompoundStatement(declarations, statements);
 }
 
+CCSTCompoundStatement* insert_variable_container(Variable *v, const std::string& cspace)
+{
+  return alloc_insert_variable_container(v, cspace, false);
+}
+
 /* this function allocates the variable's container. 
  * assumes the container has already been declared at v->container()->identifier()
  * inserts container into cspace

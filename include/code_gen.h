@@ -145,6 +145,7 @@ CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const std::s
 ProjectionField* get_cptr_field(Variable *v);
 ProjectionField* find_field(ProjectionType *pt, const std::string& field_name);
 CCSTCompoundStatement* alloc_link_container_caller(Variable *v, const std::string& cspace);
+CCSTCompoundStatement* insert_variable_container(Variable *v, const std::string& cspace);
 std::vector<CCSTStatement*> caller_allocate_channels(ProjectionType *pt);
 std::vector<CCSTStatement*> caller_initialize_channels(ProjectionType *pt);
 std::vector<CCSTStatement*> dealloc_containers(Variable *v, const std::string& cspace);
