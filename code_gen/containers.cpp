@@ -292,16 +292,16 @@ CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const std::s
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
 
-  /* Allocate an instance of the container */
+  /// Allocate an instance of the container
   if (alloc) {
-    /* we only ever allocate containers */
+    /// we only ever allocate containers
     Assert(v->container() != 0x0, "Error: variable has no container\n");
   
-    /* kzalloc structure */
+    /// kzalloc structure
     std::vector<CCSTAssignExpr*> kzalloc_args;
 
-    TypeNameVisitor *worker = new TypeNameVisitor();
-    CCSTTypeName *type_name = v->container()->type()->accept(worker);
+    auto *worker = new TypeNameVisitor();
+    auto *type_name = v->container()->type()->accept(worker);
     delete worker;
     // For allocating memory for struct foo *foo1;
     // Use sizeof(struct foo) instead of sizeof(foo1)
@@ -313,18 +313,18 @@ CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const std::s
                    , equals()
                    , function_call("kzalloc", kzalloc_args))));
 
-    std::string *goto_alloc = new std::string("fail_alloc");
+    auto *goto_alloc = new std::string("fail_alloc");
     /* do error checking */
     statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId(v->container()->identifier()))
               , "kzalloc", *goto_alloc));
   }
-  /* insert container into cspace */
 
-  /* find my_ref field*/
-  ProjectionType *container = dynamic_cast<ProjectionType*>(v->container()->type());
+  /// insert container into cspace
+  /// find my_ref field
+  auto *container = dynamic_cast<ProjectionType*>(v->container()->type());
   Assert(container != 0x0, "Error: variables's container does not have type projection\n");
   
-  ProjectionField *my_ref_field = container->get_field("my_ref");
+  auto *my_ref_field = container->get_field("my_ref");
   Assert(my_ref_field != 0x0, "Error: could not find my_ref field in projection\n");
   
   std::vector<CCSTAssignExpr*> insert_args;
@@ -333,19 +333,30 @@ CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const std::s
   insert_args.push_back(new CCSTUnaryExprCastExpr(reference()
 						  , access(my_ref_field))); // & container->my_ref
 
-  if (v->type()->num() != FUNCTION_TYPE) {
-    ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
-    Assert(pt != 0x0, "Error: dynamic cast to projection type failed.\n");
+  if (v->type()->num() == FUNCTION_TYPE) {
+    auto *f = dynamic_cast<Function*>(v->type());
+    Assert(f != NULL, "Error: dynamic cast to function type failed.\n");
+    statements.push_back(
+      new CCSTExprStatement(
+        new CCSTAssignExpr(new CCSTPrimaryExprId("ret"), equals(),
+          function_call(insert_name(f->name()) + "_type", insert_args))));
+  } else {
+    auto *pt = dynamic_cast<ProjectionType*>(v->type());
+    Assert(pt != NULL, "Error: dynamic cast to projection type failed.\n");
 
-    statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("err")
-                   , equals()
-                   , function_call(insert_name(pt->real_type()) + "_type", insert_args))));
-
-    std::string *goto_insert = new std::string("fail_insert");
-    /* do error checking */
-    statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId("err"))
-              , "lcd insert", *goto_insert));
+    statements.push_back(
+      new CCSTExprStatement(
+        new CCSTAssignExpr(new CCSTPrimaryExprId("err"), equals(),
+          function_call(insert_name(pt->real_type()) + "_type", insert_args))));
   }
+
+  auto *goto_insert = new std::string("fail_insert");
+  /// do error checking
+  statements.push_back(
+    if_cond_fail_goto(
+      new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId("err")),
+      "lcd insert", *goto_insert));
+
   return new CCSTCompoundStatement(declarations, statements);
 }
 
