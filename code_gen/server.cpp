@@ -36,7 +36,7 @@ CCSTDeclaration* dispatch_async_function_declaration(Module *mod)
   p_decs.push_back(
     new CCSTParamDeclaration(
       type2(mod->module_scope()->lookup("thc_channel", &err)),
-      new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("channel"))));
+      new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("_channel"))));
   p_decs.push_back(
     new CCSTParamDeclaration(
       type2(mod->module_scope()->lookup("fipc_message", &err)),
@@ -177,7 +177,7 @@ CCSTCompoundStatement* dispatch_async_loop_body(Module *mod, const std::string &
     /// make call to callee/caller
     std::vector<CCSTAssignExpr*> callee_args;
     callee_args.push_back(new CCSTPrimaryExprId("message"));
-    callee_args.push_back(new CCSTPrimaryExprId("channel"));
+    callee_args.push_back(new CCSTPrimaryExprId("_channel"));
     callee_args.push_back(new CCSTPrimaryExprId("cspace"));
     callee_args.push_back(new CCSTPrimaryExprId("sync_ep"));
     case_body_stmts.push_back(
@@ -274,7 +274,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
 
     decs_resp.push_back(
       new CCSTInitDeclarator(
-        new CCSTDeclarator(pointer(1), new CCSTDirectDecId("response"))));
+        new CCSTDeclarator(pointer(1), new CCSTDirectDecId("_response"))));
 
     decs_req_cookie.push_back(
       new CCSTInitDeclarator(
@@ -291,7 +291,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
     declarations.push_back(
           new CCSTDeclaration(spec_uint, decs_req_cookie));
 
-    lcd_req_cook_args.push_back(new CCSTPrimaryExprId("request"));
+    lcd_req_cook_args.push_back(new CCSTPrimaryExprId("_request"));
 
     statements.push_back(
       new CCSTExprStatement(
@@ -299,9 +299,9 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
           function_call("thc_get_request_cookie", lcd_req_cook_args))));
     std::vector<CCSTAssignExpr*> ipc_recv_end_args;
     std::vector<CCSTAssignExpr*> chnl_to_fipc_args;
-    chnl_to_fipc_args.push_back(new CCSTPrimaryExprId("channel"));
+    chnl_to_fipc_args.push_back(new CCSTPrimaryExprId("_channel"));
     ipc_recv_end_args.push_back(function_call("thc_channel_to_fipc", chnl_to_fipc_args));
-    ipc_recv_end_args.push_back(new CCSTPrimaryExprId("request"));
+    ipc_recv_end_args.push_back(new CCSTPrimaryExprId("_request"));
     statements.push_back(new CCSTExprStatement(function_call("fipc_recv_msg_end", ipc_recv_end_args)));
   }
   // TODO: unmarshal channel refs;
@@ -444,10 +444,10 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
      CCSTCompoundStatement *if_body = new CCSTCompoundStatement(if_body_declarations, if_body_statements);
 
      std::vector<CCSTAssignExpr*> lcd_async_start_args;
-     lcd_async_start_args.push_back(new CCSTPrimaryExprId("channel"));
+     lcd_async_start_args.push_back(new CCSTPrimaryExprId("_channel"));
      lcd_async_start_args.push_back(
        new CCSTUnaryExprCastExpr(reference(),
-         new CCSTPrimaryExprId("response")));
+         new CCSTPrimaryExprId("_response")));
 
      CCSTStatement *iif = new CCSTIfStatement(
        new CCSTPostFixExprAssnExpr(
@@ -484,9 +484,9 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
               , "lcd_sync_reply"));
   } else {
     std::vector<CCSTAssignExpr*> ipc_reply_args;
-    ipc_reply_args.push_back(new CCSTPrimaryExprId("channel"));
+    ipc_reply_args.push_back(new CCSTPrimaryExprId("_channel"));
     ipc_reply_args.push_back(new CCSTPrimaryExprId("request_cookie"));
-    ipc_reply_args.push_back(new CCSTPrimaryExprId("response"));
+    ipc_reply_args.push_back(new CCSTPrimaryExprId("_response"));
     statements.push_back(new CCSTExprStatement(function_call("thc_ipc_reply", ipc_reply_args)));
   }
 
@@ -542,12 +542,12 @@ CCSTDeclaration* callee_declaration(Rpc* r)
       new CCSTParamDeclaration(
           type2(r->current_scope()->lookup("fipc_message", &err)),
           new CCSTDeclarator(new CCSTPointer(),
-              new CCSTDirectDecId("request"))));
+              new CCSTDirectDecId("_request"))));
   p_decs.push_back(
       new CCSTParamDeclaration(
           type2(r->current_scope()->lookup("thc_channel", &err)),
           new CCSTDeclarator(new CCSTPointer(),
-              new CCSTDirectDecId("channel"))));
+              new CCSTDirectDecId("_channel"))));
   p_decs.push_back(
       new CCSTParamDeclaration(
           type2(r->current_scope()->lookup("cspace", &err)),

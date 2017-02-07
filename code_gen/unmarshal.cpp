@@ -22,7 +22,7 @@ std::vector<CCSTStatement*> unmarshal_return_variable_no_check(Variable *v, Chan
       func_name = access_register_mapping(reg);
     } else {
       func_name = load_async_reg_mapping(reg);
-      access_reg_args.push_back(new CCSTPrimaryExprId("response"));
+      access_reg_args.push_back(new CCSTPrimaryExprId("_response"));
     }
 
     statements.push_back(new CCSTExprStatement( new CCSTAssignExpr (access(v)
@@ -58,7 +58,7 @@ std::vector<CCSTStatement*> unmarshal_variable_no_check(Variable *v, Channel::Ch
       func_name = access_register_mapping(reg);
     } else {
       func_name = load_async_reg_mapping(reg);
-      access_reg_args.push_back(new CCSTPrimaryExprId("response"));
+      access_reg_args.push_back(new CCSTPrimaryExprId("_response"));
     }
 
     statements.push_back(new CCSTExprStatement( new CCSTAssignExpr (access(v)
@@ -113,7 +113,7 @@ std::vector<CCSTStatement*> unmarshal_variable_caller(Variable *v, Channel::Chan
       func_name = access_register_mapping(reg);
     } else {
       func_name = load_async_reg_mapping(reg);
-      access_reg_args.push_back(new CCSTPrimaryExprId("response"));
+      access_reg_args.push_back(new CCSTPrimaryExprId("_response"));
     }
 
     
@@ -238,7 +238,7 @@ std::vector<CCSTStatement*> unmarshal_variable_callee(Variable *v, Channel::Chan
       reg_func= access_register_mapping(reg);
     } else {
       reg_func = load_async_reg_mapping(reg);
-      reg_func_args_empty.push_back(new CCSTPrimaryExprId("request"));
+      reg_func_args_empty.push_back(new CCSTPrimaryExprId("_request"));
     }
 
 

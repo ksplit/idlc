@@ -257,11 +257,11 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
 
   decs_resp.push_back(
     new CCSTInitDeclarator(
-      new CCSTDeclarator(pointer(1), new CCSTDirectDecId("response"))));
+      new CCSTDeclarator(pointer(1), new CCSTDirectDecId("_response"))));
 
   decs_req.push_back(
     new CCSTInitDeclarator(
-      new CCSTDeclarator(pointer(1), new CCSTDirectDecId("request"))));
+      new CCSTDeclarator(pointer(1), new CCSTDirectDecId("_request"))));
 
   declarations.push_back(
     new CCSTDeclaration(spec_fipcm, decs_req));
@@ -278,7 +278,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
     }
     lcd_async_start_args.push_back(
       new CCSTUnaryExprCastExpr(reference(),
-        new CCSTPrimaryExprId("request")));
+        new CCSTPrimaryExprId("_request")));
 
     statements.push_back(
       new CCSTExprStatement(
@@ -294,7 +294,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
 
     lbl_statements.push_back(new CCSTPlainLabelStatement(*goto_fail_async, NULL));
 
-    async_fntype_args.push_back(new CCSTPrimaryExprId("request"));
+    async_fntype_args.push_back(new CCSTPrimaryExprId("_request"));
     async_fntype_args.push_back(new CCSTPrimaryExprId(r->enum_name()));
 
     statements.push_back(
@@ -356,8 +356,8 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
   } else {
     lcd_async_call_args.push_back(new CCSTPrimaryExprId(c->chName));
   }
-  lcd_async_call_args.push_back(new CCSTPrimaryExprId("request"));
-  lcd_async_call_args.push_back(new CCSTUnaryExprCastExpr(reference(), new CCSTPrimaryExprId("response")));
+  lcd_async_call_args.push_back(new CCSTPrimaryExprId("_request"));
+  lcd_async_call_args.push_back(new CCSTUnaryExprCastExpr(reference(), new CCSTPrimaryExprId("_response")));
     statements.push_back(
       new CCSTExprStatement(
         new CCSTAssignExpr(new CCSTPrimaryExprId("ret"), equals(),
@@ -430,7 +430,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
   }
 
   ipc_recv_end_args.push_back(function_call("thc_channel_to_fipc", chnl_to_fipc_args));
-  ipc_recv_end_args.push_back(new CCSTPrimaryExprId("response"));
+  ipc_recv_end_args.push_back(new CCSTPrimaryExprId("_response"));
   statements.push_back(new CCSTExprStatement(function_call("fipc_recv_msg_end", ipc_recv_end_args)));
   return new CCSTCompoundStatement(declarations, statements, lbl_statements);
 }

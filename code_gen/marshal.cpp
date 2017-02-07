@@ -169,7 +169,7 @@ CCSTStatement* marshal_variable(Variable *v, const std::string& direction, Chann
   } else {
     std::cout << "marshalling variable " <<  v->identifier() << std::endl;
     Assert(v->marshal_info() != 0x0, "Error: marshalling info is null\n");
-    statements.push_back(marshal(access(v), v->marshal_info()->get_register(), type, "request"));
+    statements.push_back(marshal(access(v), v->marshal_info()->get_register(), type, "_request"));
   }
   return new CCSTCompoundStatement(declarations, statements);
 }
@@ -198,7 +198,7 @@ std::vector<CCSTStatement*> marshal_variable_callee(Variable *v, Channel::Channe
     
   } else {
     Assert(v->marshal_info() != 0x0, "Error: marshal info is null\n");
-    statements.push_back(marshal(access(v), v->marshal_info()->get_register(), type, "response"));
+    statements.push_back(marshal(access(v), v->marshal_info()->get_register(), type, "_response"));
   }
   
   return statements;
@@ -224,7 +224,7 @@ std::vector<CCSTStatement*> marshal_variable_no_check(Variable *v, Channel::Chan
     
   } else {
     Assert(v->marshal_info() != 0x0, "Error: marshal info is null\n");
-    statements.push_back(marshal(access(v), v->marshal_info()->get_register(), type, "response"));
+    statements.push_back(marshal(access(v), v->marshal_info()->get_register(), type, "_response"));
   }
   
   return statements;
