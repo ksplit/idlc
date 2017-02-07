@@ -45,14 +45,16 @@ void CCSTFuncDef::write(std::ofstream& of, int indent)
     CCSTDecSpecifier *ds = *it;
     ds->write(of, indent);
   }
-  this->ret_->write(of, 0);
 
+  /// print trampoline attributes after printing return type
   for (std::vector<CCSTMacro*>::iterator it = attributes_.begin();
     it != attributes_.end(); ++it) {
     CCSTMacro *mac = *it;
     of << " ";
     mac->write(of, 0);
   }
+
+  this->ret_->write(of, 0);
 
   for (std::vector<CCSTDeclaration*>::iterator it = decs_.begin();
     it != decs_.end(); ++it) {
