@@ -110,14 +110,15 @@ CCSTCompoundStatement* set_remote_ref(Variable *v, Channel::ChannelType type)
   return new CCSTCompoundStatement(declarations, statements);
 }
 
-CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const std::string& cspace, Channel::ChannelType type)
+CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v,
+  const std::string& cspace, Channel::ChannelType type)
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
-  
+
   // when do we want to allocate and when do we want to lookup
-  if(v->container()) {
-    if(v->alloc_callee()) {
+  if (v->container()) {
+    if (v->alloc_callee()) {
       statements.push_back(alloc_insert_variable_container(v, cspace, true));
       // store remote reference;
       statements.push_back(set_remote_ref(v, type));
@@ -126,8 +127,9 @@ CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const st
     }
   }
 
-  if( v->type()->num() == PROJECTION_TYPE || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
-    ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
+  if (v->type()->num() == PROJECTION_TYPE
+    || v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
+    auto *pt = dynamic_cast<ProjectionType*>(v->type());
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
 
     for (auto pf : *pt) {
@@ -137,31 +139,39 @@ CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const st
       if (v->dealloc_callee()) {
         pf->set_alloc_callee(false);
         pf->set_dealloc_callee(true);
-        statements.push_back(allocate_and_link_containers_callee(pf, cspace, type));
+        statements.push_back(
+          allocate_and_link_containers_callee(pf, cspace, type));
       }
       // link
-      if( v->container() != 0x0 && pf->container() != 0x0 ) {
-	if(v->alloc_callee() || pf->alloc_callee()) {
-	  // container->real_field.pf = pf_container->real_field;
-	  ProjectionType *v_container_type = dynamic_cast<ProjectionType*>(v->container()->type());
-	  Assert(v_container_type != 0x0, "Error: dynamic cast to projection type failed\n");
-	  
-	  ProjectionField *tmp_real_field = find_field(v_container_type
-						       , v->type()->name());
-	  ProjectionField *tmp_this_pf = find_field(dynamic_cast<ProjectionType*>( tmp_real_field->type())
-						    , pf->identifier());
+      if (v->container() != 0x0 && pf->container() != 0x0) {
+        if (v->alloc_callee() || pf->alloc_callee()) {
+          /// if container is marked alloc, insert container as well
+          statements.push_back(
+            alloc_insert_variable_container(pf, cspace, true));
+          // container->real_field.pf = pf_container->real_field;
+          auto *v_container_type =
+            dynamic_cast<ProjectionType*>(v->container()->type());
+          Assert(v_container_type != 0x0,
+            "Error: dynamic cast to projection type failed\n");
 
-	  ProjectionType *container_pf = dynamic_cast<ProjectionType*>(pf->container()->type());
-	  Assert(container_pf != 0x0, "Error: dynamic cast to projection type failed\n");
+          auto *tmp_real_field = find_field(v_container_type,
+            v->type()->name());
+          auto *tmp_this_pf = find_field(
+            dynamic_cast<ProjectionType*>(tmp_real_field->type()),
+            pf->identifier());
 
-	  statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(access(tmp_this_pf)
-									 , equals()
-									 , access(find_field(container_pf
-											     , pf->type()->name())))));								
-	}
+          auto *container_pf =
+            dynamic_cast<ProjectionType*>(pf->container()->type());
+          Assert(container_pf != 0x0,
+            "Error: dynamic cast to projection type failed\n");
+
+          statements.push_back(
+            new CCSTExprStatement(
+              new CCSTAssignExpr(access(tmp_this_pf), equals(),
+                access(find_field(container_pf, pf->type()->name())))));
+        }
       }
     }
-    
   }
   return new CCSTCompoundStatement(declarations, statements);
 }
