@@ -128,12 +128,15 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   std::string cspace_to_use;
 
   if (r->function_pointer_defined()) {
-    // cspace is 1st hidden arg
-    cspace_to_use = r->hidden_args_.at(0)->identifier();
+    /// XXX: For function pointers, cspace is in the first arg of the
+    /// hidden_args pointer. Is this the right way to access it?
+    cspace_to_use = r->hidden_args_.at(0)->identifier() + "->" +
+      dynamic_cast<ProjectionType*>(r->hidden_args_.at(0)->type())->get_field(
+        "cspace")->identifier();
   } else {
     cspace_to_use = m->cspaces_.at(0)->identifier();
   }
-				     
+
   // for every parameter that has a container. declare containers. then alloc or container of
   for (auto p : *r) {
     if (p->container()) {
