@@ -1105,13 +1105,14 @@ ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 			    fields->push_back(pf);
 			    value = fields; 
 			}}
-			| rpc_special Spacing s:Specification? rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing {{
+			| rpc_special Spacing s:Specification? rt:Type_form s_rt:Specification? pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing {{
 				const std::string *name = static_cast<const std::string*>(id.getValue());
 			    std::vector<Parameter*> *params = (std::vector<Parameter*>*) p.getValue();
-			    Function *fp = new Function(*name, new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
-			                               , *params, get_current_scope());
+                ReturnVariable *ret = new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName());
+			    Function *fp = new Function(*name, ret, *params, get_current_scope());
 			    ProjectionField *pf = new ProjectionField(fp, *name, 1);
 			    set_specs(*pf, s);
+			    set_specs(*ret, s_rt);
 
 			    std::vector<ProjectionField*> *fields = new std::vector<ProjectionField*>();
 			    fields->push_back(pf);
