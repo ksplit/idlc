@@ -141,7 +141,7 @@ CCSTCompoundStatement* alloc_init_hidden_args_struct(ProjectionType *pt, Variabl
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
-  unsigned int lbl = 1;
+  unsigned int lbl_no = 1;
 
   for (auto pf : *pt) {
     if(pf->type()->num() == FUNCTION_TYPE && pf->alloc_callee()) {
@@ -150,7 +150,7 @@ CCSTCompoundStatement* alloc_init_hidden_args_struct(ProjectionType *pt, Variabl
 					     ,hidden_args_name(append_strings("_"
 									      , construct_list_vars(pf)))));
 
-      std::string *goto_alloc = new std::string("fail_alloc" + std::to_string(lbl++));
+      std::string *goto_alloc = new std::string("fail_alloc" + std::to_string(lbl_no));
       // error check
       statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr( Not()
 								   , new CCSTPrimaryExprId(hidden_args_name(append_strings("_"
@@ -183,7 +183,7 @@ CCSTCompoundStatement* alloc_init_hidden_args_struct(ProjectionType *pt, Variabl
 								     , function_call("LCD_DUP_TRAMPOLINE"
 										     , lcd_dup_args))));
 
-      std::string *goto_fail_dup = new std::string("fail_dup");
+      std::string *goto_fail_dup = new std::string("fail_dup" + std::to_string(lbl_no++));
       // error check the duplication
       statements.push_back(if_cond_fail_goto(new CCSTUnaryExprCastExpr( Not()
 								   , access(t_handle_field))
