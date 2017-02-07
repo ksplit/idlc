@@ -319,8 +319,8 @@ CCSTStatement* AllocateTypeVisitor::visit(ProjectionType *pt, Variable *v)
   /* allocate the actual structure now */
   std::vector<CCSTAssignExpr*> kzalloc_args;
 
-  /* do sizeof(struct thing) */
-  kzalloc_args.push_back(dereference(new CCSTUnaryExprSizeOf(access(v))));
+  /// sizeof(*var)
+  kzalloc_args.push_back(new CCSTUnaryExprSizeOf(dereference(access(v))));
   kzalloc_args.push_back(new CCSTEnumConst("GFP_KERNEL"));
 
   v->set_pointer_count(p_count_save-p_count+1);
