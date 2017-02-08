@@ -94,7 +94,14 @@ CCSTStatement* marshal_void_delayed(Variable *v)
 
   sync_send_args.push_back(new CCSTPrimaryExprId("sync_ep"));
 
-  set_r0_args.push_back(new CCSTPrimaryExprId(v->identifier() + "_mem_sz"));
+  std::vector<CCSTAssignExpr*> ilog2_args;
+
+  ilog2_args.push_back(
+    new CCSTShiftExpr(rightshift_t,
+      new CCSTPrimaryExprId(v->identifier() + "_mem_sz"),
+      new CCSTPrimaryExprId("PAGE_SHIFT")));
+
+  set_r0_args.push_back(function_call("ilog2", ilog2_args));
   set_r1_args.push_back(new CCSTPrimaryExprId(v->identifier() + "_offset"));
   set_cr0_args.push_back(new CCSTPrimaryExprId(v->identifier() + "_cptr"));
   set_cr0_args2.push_back(new CCSTPrimaryExprId("CAP_CPTR_NULL"));
