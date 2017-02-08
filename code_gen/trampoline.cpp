@@ -266,6 +266,29 @@ CCSTCompoundStatement* alloc_init_hidden_args_struct(ProjectionType *pt, Variabl
 								     , function_call("LCD_HANDLE_TO_TRAMPOLINE"
 										     , handle_to_tramp_args))));
 
+      std::vector<CCSTAssignExpr*> set_mem_xargs;
+      std::vector<CCSTSpecifierQual*> specs;
+      specs.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::UnsignedTypeSpec));
+      specs.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::LongTypeSpec));
+
+      set_mem_xargs.push_back(new CCSTAndExpr(
+        new CCSTCastExpr(new CCSTTypeName(specs, NULL),
+          access(t_handle_field)), new CCSTPrimaryExprId("PAGE_MASK")));
+
+      std::vector<CCSTAssignExpr*> align_args;
+      align_args.push_back(function_call("LCD_TRAMPOLINE_SIZE", lcd_dup_args));
+      align_args.push_back(new CCSTPrimaryExprId("PAGE_SIZE"));
+
+      set_mem_xargs.push_back(
+        new CCSTShiftExpr(rightshift_t, function_call("ALIGN", align_args),
+          new CCSTPrimaryExprId("PAGE_SHIFT")));
+
+      statements.push_back(
+        new CCSTExprStatement(
+          new CCSTAssignExpr(new CCSTPrimaryExprId("ret"), equals(),
+            function_call("set_memory_x", set_mem_xargs))));
+
+      /// restore accessor field
       t_handle_field->set_accessor(accessor_save);
       // end of this if statement.
     } else if (pf->type()->num() == PROJECTION_TYPE || pf->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
