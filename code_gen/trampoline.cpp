@@ -220,6 +220,31 @@ CCSTCompoundStatement* alloc_init_hidden_args_struct(ProjectionType *pt, Variabl
 								     , equals()
 								     , access(cspace))));
 
+      /// store sync_ep in hidden_args struct
+      ProjectionField *hidden_args_syncep_field = hidden_args_structure->get_field("sync_ep");
+      Assert(hidden_args_syncep_field != 0x0, "Error: could not find sync_ep field in hidden args structure\n");
+
+      hidden_args_syncep_field->set_accessor(tmp_hidden_args_param);
+      statements.push_back(new CCSTExprStatement(new CCSTAssignExpr( access(hidden_args_syncep_field)
+                     , equals()
+                     , new CCSTPrimaryExprId("sync_ep"))));
+
+      /// store async_chnl in hidden_args struct
+      ProjectionField *hidden_args_async_chnl_field = hidden_args_structure->get_field("async_chnl");
+      Assert(hidden_args_async_chnl_field != 0x0, "Error: could not find async_chnl field in hidden args structure\n");
+
+      hidden_args_async_chnl_field->set_accessor(tmp_hidden_args_param);
+
+      /// FIXME: In some cases, we may have to access channel parameter
+      /// from the existing hidden_args (passed to us via function
+      /// argument). This is the case if we have to setup trampolines
+      /// from another trampoline. Handling this here means, we need to
+      /// know for which kinda function we are constructing the body.
+      /// More params needed!!! :-/
+      statements.push_back(new CCSTExprStatement(new CCSTAssignExpr( access(hidden_args_async_chnl_field)
+                     , equals()
+                     , new CCSTPrimaryExprId("_channel"))));
+
       // put trampoline in the container. last step
       ProjectionType *v_container_type = dynamic_cast<ProjectionType*>(v->container()->type());
       Assert(v_container_type != 0x0, "Error: dynamic cast to projection type failed\n");
