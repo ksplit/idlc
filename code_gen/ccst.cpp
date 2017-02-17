@@ -1014,7 +1014,7 @@ void CCSTPostFixExprAssnExpr::write(std::ofstream& of, int indent)
   if (!args_.empty()) {
     args_.at(0)->write(of, 0);
     for (auto it = args_.begin() + 1; it != args_.end(); ++it) {
-      of << ", ";
+      of << ",\n\t" << indentation(indent + 1);
       (*it)->write(of, 0);
     }
   }
@@ -1346,7 +1346,7 @@ void CCSTParamList::write(std::ofstream& of, int indent)
   if (!p_dec_.empty()) {
     p_dec_.at(0)->write(of, indent);
     for (auto it = p_dec_.begin() + 1; it != p_dec_.end(); ++it) {
-      of << ", ";
+      of << ",\n\t" << indentation(indent + 1);
       (*it)->write(of, 0);
     }
   } else {
