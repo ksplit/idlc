@@ -46,9 +46,7 @@ CCSTCompoundStatement* callee_interface_init_function_body(Module *m)
 
   std::vector<GlobalVariable*> channels = m->channels();
   
-  for(std::vector<GlobalVariable*>::iterator it = channels.begin(); it != channels.end(); it ++) {
-  
-    GlobalVariable *chan = *it;
+  for (auto chan : channels) {
     std::vector<CCSTAssignExpr*> sync_channel_args;
     sync_channel_args.push_back(new CCSTPrimaryExprId(m->channel_group->identifier())); // &channel_group
     sync_channel_args.push_back(new CCSTPrimaryExprId(chan->identifier())); // channel 
@@ -98,9 +96,7 @@ CCSTCompoundStatement* caller_interface_init_function_body(Module *m)
 
   // initialize data stores.
   std::vector<GlobalVariable*> cspaces = m->cspaces_;
-  for(std::vector<GlobalVariable*>::iterator it = cspaces.begin(); it != cspaces.end(); it ++) {
-    GlobalVariable *gv = *it;
-    
+  for (auto gv : cspaces) {
     std::vector<CCSTAssignExpr*> cap_create_args;
     cap_create_args.push_back(new CCSTUnaryExprCastExpr(reference()
 							, new CCSTPrimaryExprId( gv->identifier())));
@@ -159,10 +155,7 @@ CCSTCompoundStatement* caller_interface_exit_function_body(Module *m)
 
   // tear down all of the cspaces
   std::vector<GlobalVariable*> cspaces = m->cspaces_;
-  for (std::vector<GlobalVariable*>::iterator it = cspaces.begin();
-    it != cspaces.end(); it++) {
-    GlobalVariable *gv = *it;
-
+  for (auto gv : cspaces) {
     std::vector<CCSTAssignExpr*> cap_destroy_args;
     cap_destroy_args.push_back(new CCSTPrimaryExprId(gv->identifier()));
     body_statements.push_back(
@@ -184,9 +177,7 @@ CCSTCompoundStatement* callee_interface_exit_function_body(Module *m)
 
   // tear down cspaces we declared
   std::vector<GlobalVariable*> cspaces = m->cspaces_;
-  for(std::vector<GlobalVariable*>::iterator it = cspaces.begin(); it != cspaces.end(); it ++) {
-    GlobalVariable *gv = *it;
-    
+  for (auto gv : cspaces) {
     std::vector<CCSTAssignExpr*> cap_destroy_args;
     cap_destroy_args.push_back(new CCSTPrimaryExprId(gv->identifier()));
     body_statements.push_back(new CCSTExprStatement( function_call(cap_destroy_name(m->identifier())

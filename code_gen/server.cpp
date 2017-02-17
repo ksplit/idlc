@@ -247,6 +247,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
 
   if(r->function_pointer_defined()) {
     std::vector<Parameter*> hidden_args = r->hidden_args_;
+    /// XXX: Check what is this for
     for(std::vector<Parameter*>::iterator it = hidden_args.begin(); it != hidden_args.end(); it ++) {
 //      Parameter *p = *it;
       // declare hiiden args.
@@ -583,23 +584,19 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
 {
   std::vector<CCSTExDeclaration*> definitions;
 
-  for(std::vector<Include*>::iterator it = includes.begin(); it != includes.end(); it ++) {
-    Include *inc = *it;
+  for (auto inc : includes) {
     definitions.push_back(new CCSTPreprocessor(inc->get_path(), inc->is_relative()));
   }
 
   // globals.
   std::vector<GlobalVariable*> globals = m->channels();
-  for(std::vector<GlobalVariable*>::iterator it = globals.begin(); it != globals.end(); it ++) {
-    GlobalVariable *gv = *it;
+  for (auto gv : globals) {
     definitions.push_back(declare_static_variable(gv));
   }
 
   // declare cspaces
   std::vector<GlobalVariable*> cspaces = m->cspaces_;
-  for (std::vector<GlobalVariable*>::iterator it = cspaces.begin();
-    it != cspaces.end(); it++) {
-    GlobalVariable *gv = *it;
+  for (auto gv : cspaces) {
     definitions.push_back(declare_static_variable(gv));
   }
 
@@ -641,8 +638,8 @@ CCSTFile *generate_callee_lds(Module *mod)
 {
   std::vector<Rpc*> rpcs = mod->rpc_definitions();
   std::vector<CCSTExDeclaration*> statements;
-  for (std::vector<Rpc*>::iterator it = rpcs.begin(); it != rpcs.end(); it++) {
-    Rpc *r = *it;
+
+  for (auto r : rpcs) {
     if (r->function_pointer_defined()) {
       std::vector<CCSTAssignExpr*> data_args;
       data_args.push_back(new CCSTPrimaryExprId(trampoline_func_name(r->name())));

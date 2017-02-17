@@ -546,8 +546,7 @@ ProjectionType::ProjectionType(const ProjectionType& other)
   this->fields_ = fields_copy;
   // copy init_variables;
   std::vector<ProjectionField*> channels;
-  for(std::vector<ProjectionField*>::const_iterator it = other.channels_.begin(); it != other.channels_.end(); it ++) {
-    ProjectionField *original = *it;
+  for (auto original : other.channels_) {
     ProjectionField *copy = new ProjectionField(*original);
     channels.push_back(copy);
   }
@@ -597,8 +596,7 @@ void ProjectionType::resolve_types(LexicalScope *ls)
   }
 
   // channels
-  for(std::vector<ProjectionField*>::iterator it = this->channels_.begin(); it != this->channels_.end(); it ++) {
-    ProjectionField *pf = *it;
+  for (auto pf : channels_) {
     pf->resolve_types(ls);
   }
 }
@@ -651,9 +649,8 @@ ProjectionConstructorType::ProjectionConstructorType(const std::string& id, cons
   this->fields_ = fields;
   this->channels_ = channel_fields;
   
-  for(std::vector<ProjectionField*>::iterator it = channel_params.begin(); it != channel_params.end(); it ++) {
-    ProjectionField *tmp = *it;
-    Variable *v = 0x0;
+  for (auto tmp : channel_params) {
+    Variable *v = NULL;
     this->channel_params_.push_back(std::make_pair(tmp, v));
   }
 }
@@ -673,8 +670,8 @@ ProjectionConstructorType::ProjectionConstructorType(const ProjectionConstructor
   this->fields_ = fields_copy;
   // copy CHANNELS;
   std::vector<ProjectionField*> channels;
-  for(std::vector<ProjectionField*>::const_iterator it = other.channels_.begin(); it != other.channels_.end(); it ++) {
-    ProjectionField *original = *it;
+
+  for (auto original : other.channels_) {
     ProjectionField *copy = new ProjectionField(*original);
     channels.push_back(copy);
   }
@@ -682,8 +679,7 @@ ProjectionConstructorType::ProjectionConstructorType(const ProjectionConstructor
 
   // copy channel params
   std::vector<std::pair<Variable*, Variable*> > channel_params;
-  for(std::vector<std::pair<Variable*,Variable*> >::const_iterator it = other.channel_params_.begin(); it != other.channel_params_.end(); it ++) {
-    std::pair<Variable*,Variable*> tmp = *it;
+  for (auto tmp : other.channel_params_) {
     std::pair<Variable*,Variable*> copy (tmp);
     channel_params.push_back(copy);
   }
@@ -718,14 +714,12 @@ void ProjectionConstructorType::resolve_types(LexicalScope *ls)
   }
 
   // channels
-  for(std::vector<ProjectionField*>::iterator it = this->channels_.begin(); it != this->channels_.end(); it ++) {
-    ProjectionField *pf = *it;
+  for (auto pf : channels_) {
     pf->resolve_types(ls);
   }
 
   // chan params
-  for(std::vector<std::pair<Variable*,Variable*> >::iterator it = this->channel_params_.begin(); it != this->channel_params_.end(); it ++) {
-    std::pair<Variable*,Variable*> tmp = *it;
+  for (auto tmp : channel_params_) {
     tmp.first->resolve_types(ls);
   }
 }
@@ -777,8 +771,7 @@ const std::string& InitializeType::name() const
 
 void InitializeType::resolve_types(LexicalScope *ls)
 {
-  for(std::vector<Variable*>::const_iterator it = this->values_.begin(); it != this->values_.end(); it ++) {
-    Variable *v = *it;
+  for (auto v : values_) {
     v->resolve_types(ls);
   }
 

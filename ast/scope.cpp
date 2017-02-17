@@ -145,9 +145,8 @@ bool LexicalScope::contains_identifier(const std::string& id)
 {
   std::string temp(id);
 
-  for(std::vector<std::string>::iterator it = this->identifiers_.begin(); it != this->identifiers_.end(); it ++) {
-    std::string s = *it;
-    if (s.compare(temp) == 0) {
+  for (auto str : identifiers_) {
+    if (str.compare(temp) == 0) {
       return true;
     }
   }
@@ -267,24 +266,22 @@ LexicalScope* LexicalScope::outer_scope()
 
 void LexicalScope::resolve_types()
 {
-  for(std::map<std::string, Type*>::iterator it = this->type_definitions_.begin(); it != this->type_definitions_.end(); it ++) {
-    it->second->resolve_types(this);
+  for (auto tdefs : type_definitions_) {
+    tdefs.second->resolve_types(this);
   }
 
-  for(std::vector<LexicalScope*>::iterator it = this->inner_scopes_.begin(); it != this->inner_scopes_.end(); it ++) {
-    LexicalScope *ls = (LexicalScope*) *it;
+  for (auto ls : inner_scopes_) {
     ls->resolve_types();
   }
 }
 
 void LexicalScope::create_trampoline_structs()
 {
-  for(std::map<std::string, Type*>::iterator it = this->type_definitions_.begin(); it != this->type_definitions_.end(); it ++) {
-    it->second->create_trampoline_structs(this);
+  for (auto tdefs : type_definitions_) {
+    tdefs.second->create_trampoline_structs(this);
   }
 
-  for(std::vector<LexicalScope*>::iterator it = this->inner_scopes_.begin(); it != this->inner_scopes_.end(); it ++) {
-    LexicalScope *ls = (LexicalScope*) *it;
+  for (auto ls : inner_scopes_) {
     ls->create_trampoline_structs();
   }
 }
@@ -292,10 +289,8 @@ void LexicalScope::create_trampoline_structs()
 std::vector<Rpc*> LexicalScope::function_pointer_to_rpc()
 {
   std::vector<Rpc*> rpcs;
-  for (std::map<std::string, Type*>::iterator it =
-    this->type_definitions_.begin(); it != this->type_definitions_.end();
-    it++) {
-    Type *t = it->second;
+  for (auto tdefs : type_definitions_) {
+    auto *t = tdefs.second;
 
     if (t->num() == PROJECTION_TYPE
       || t->num() == PROJECTION_CONSTRUCTOR_TYPE) { // projection type
@@ -312,9 +307,7 @@ std::vector<Rpc*> LexicalScope::function_pointer_to_rpc()
     // continue
   }
 
-  for (std::vector<LexicalScope*>::iterator it2 = this->inner_scopes_.begin();
-    it2 != this->inner_scopes_.end(); it2++) {
-    LexicalScope *ls = (LexicalScope*) *it2;
+  for (auto ls : inner_scopes_) {
     std::vector<Rpc*> tmp_rpcs = ls->function_pointer_to_rpc();
     rpcs.insert(rpcs.end(), tmp_rpcs.begin(), tmp_rpcs.end());
   }
@@ -339,8 +332,7 @@ std::map<std::string, Type*> LexicalScope::all_types_inner()
 {
   std::map<std::string, Type*> all_defs (this->type_definitions_);
 
-  for(std::vector<LexicalScope*>::iterator it2 = this->inner_scopes_.begin(); it2 != this->inner_scopes_.end(); it2 ++) {
-    LexicalScope *ls = (LexicalScope*) *it2;
+  for (auto ls : inner_scopes_) {
     std::map<std::string, Type*> tmp = ls->all_types_inner();
     all_defs.insert(tmp.begin(), tmp.end());
   }
@@ -359,9 +351,8 @@ std::map<std::string, Type*> LexicalScope::all_type_definitions()
     std::map<std::string, Type*> tmp = this->outer_scope_->all_types_outer();
     all_defs.insert(tmp.begin(), tmp.end());
   }
-  
-  for(std::vector<LexicalScope*>::iterator it2 = this->inner_scopes_.begin(); it2 != this->inner_scopes_.end(); it2 ++) {
-    LexicalScope *ls = (LexicalScope*) *it2;
+
+  for (auto ls : inner_scopes_) {
     std::map<std::string, Type*> tmp = ls->all_types_inner();
     all_defs.insert(tmp.begin(), tmp.end());
   }

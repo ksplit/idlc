@@ -37,8 +37,7 @@ const std::string& SymbolTable::unique_tmp()
  */
 bool SymbolTable::contains(const std::string& symbol)
 {
-  for(std::vector<std::string>::const_iterator it = this->symbols_.begin(); it != this->symbols_.end(); it ++) {
-    std::string str = *it;
+  for (auto str : symbols_) {
     if(str == symbol) {
       return true;
     }
@@ -68,8 +67,7 @@ int SymbolTable::insert(const std::string& symbol)
  */
 int SymbolTable::insert(const std::vector<std::string>& symbols)
 {
-  for(std::vector<std::string>::const_iterator it = symbols.begin(); it != symbols.end(); it ++) {
-    std::string str = *it;
+  for (auto str : symbols_) {
     if (contains(str))
       return -1;
   }

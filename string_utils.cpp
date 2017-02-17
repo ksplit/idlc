@@ -136,9 +136,8 @@ const std::string append_strings(const std::string& delimiter,
 {
   std::string total;
 
-  for (std::vector<std::string>::const_iterator it = strs.begin(); it != strs.end();
-    it++) {
-    total.append(*it);
+  for (auto str : strs) {
+    total.append(str);
     total.append(delimiter);
   }
   //Trim the last underscore to not have __ at the end

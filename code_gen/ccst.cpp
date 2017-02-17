@@ -9,9 +9,7 @@ CCSTFile::CCSTFile(std::vector<CCSTExDeclaration*> defs) :
 
 void CCSTFile::write(std::ofstream& of, int indent)
 {
-  for (std::vector<CCSTExDeclaration*>::iterator it = defs_.begin();
-    it != defs_.end(); ++it) {
-    CCSTExDeclaration *ex_dec = *it;
+  for (auto ex_dec : defs_) {
     ex_dec->write(of, indent);
   }
 }
@@ -40,25 +38,19 @@ CCSTFuncDef::CCSTFuncDef(std::vector<CCSTDecSpecifier*> specifiers,
 
 void CCSTFuncDef::write(std::ofstream& of, int indent)
 {
-  for (std::vector<CCSTDecSpecifier*>::iterator it = specifiers_.begin();
-    it != specifiers_.end(); ++it) {
-    CCSTDecSpecifier *ds = *it;
+  for (auto ds : specifiers_) {
     ds->write(of, indent);
   }
 
   /// print trampoline attributes after printing return type
-  for (std::vector<CCSTMacro*>::iterator it = attributes_.begin();
-    it != attributes_.end(); ++it) {
-    CCSTMacro *mac = *it;
+  for (auto mac : attributes_) {
     of << " ";
     mac->write(of, 0);
   }
 
   this->ret_->write(of, 0);
 
-  for (std::vector<CCSTDeclaration*>::iterator it = decs_.begin();
-    it != decs_.end(); ++it) {
-    CCSTDeclaration *ds = *it;
+  for (auto ds : decs_) {
     ds->write(of, 0);
   }
   // write body
@@ -200,9 +192,7 @@ void CCSTStructUnionSpecifier::write(std::ofstream& of, int indent)
   }
   if (!this->struct_dec_.empty()) {
     of << "{\n";
-    for (std::vector<CCSTStructDeclaration*>::iterator it =
-      struct_dec_.begin(); it != struct_dec_.end(); ++it) {
-      CCSTStructDeclaration *ds = *it;
+    for (auto ds : struct_dec_) {
       ds->write(of, indent + 1);
       of << ";\n";
     }
@@ -221,9 +211,7 @@ void CCSTStructDeclaration::write(std::ofstream& of, int indent)
 {
   of << indentation(indent);
   if (!this->spec_qual_.empty()) {
-    for (std::vector<CCSTSpecifierQual*>::iterator it = spec_qual_.begin();
-      it != spec_qual_.end(); ++it) {
-      CCSTSpecifierQual *ds = *it;
+    for (auto ds : spec_qual_) {
       ds->write(of, 0);
     }
   }
@@ -245,9 +233,7 @@ CCSTStructDecList::CCSTStructDecList(
 void CCSTStructDecList::write(std::ofstream& of, int indent)
 {
   of << indentation(indent);
-  for (std::vector<CCSTStructDeclarator*>::iterator it = struct_decs_.begin();
-    it != struct_decs_.end(); ++it) {
-    CCSTStructDeclarator *ds = *it;
+  for (auto ds : struct_decs_) {
     ds->write(of, 0);
     of << ", "; // if last do not write ,
   }
@@ -336,9 +322,7 @@ CCSTPointer::CCSTPointer(CCSTPointer *p) :
 void CCSTPointer::write(std::ofstream& of, int indent)
 {
   of << indentation(indent) << "*";
-  for (std::vector<type_qualifier>::iterator it = type_q_.begin();
-    it != type_q_.end(); ++it) {
-    type_qualifier tq = *it;
+  for (auto tq : type_q_) {
     switch (tq) {
     case const_t:
       of << "const ";
@@ -381,15 +365,14 @@ void CCSTDirectDecDec::write(std::ofstream& of, int indent)
   of << " )";
 }
 
-CCSTDirectDecConstExpr::CCSTDirectDecConstExpr(
-  CCSTDirectDeclarator *direct_dec, CCSTConstExpr *const_expr) :
+CCSTDirectDecConstExpr::CCSTDirectDecConstExpr(CCSTDirectDeclarator *direct_dec,
+  CCSTConstExpr *const_expr) :
   direct_dec_(direct_dec),
   const_expr_(const_expr)
 {
 }
 
-CCSTDirectDecConstExpr::CCSTDirectDecConstExpr(
-  CCSTDirectDeclarator *direct_dec) :
+CCSTDirectDecConstExpr::CCSTDirectDecConstExpr(CCSTDirectDeclarator *direct_dec) :
   direct_dec_(direct_dec),
   const_expr_()
 {
@@ -448,9 +431,8 @@ void CCSTDirectDecIdList::write(std::ofstream& of, int indent)
     exit(-1);
   }
   of << indentation(indent) << "( ";
-  for (std::vector<std::string>::const_iterator it = ids_.begin();
-    it != ids_.end(); ++it) {
-    of << " " << *it;
+  for (auto id : ids_) {
+    of << " " << id;
     of << ", "; // should i be printing commas
   }
   of << " )";
@@ -462,8 +444,8 @@ CCSTCondExpr::CCSTCondExpr()
   //todo
 }
 
-CCSTCondExpr::CCSTCondExpr(CCSTLogicalOrExpr *log_or_expr,
-  CCSTExpression *expr, CCSTCondExpr *cond_expr) :
+CCSTCondExpr::CCSTCondExpr(CCSTLogicalOrExpr *log_or_expr, CCSTExpression *expr,
+  CCSTCondExpr *cond_expr) :
   log_or_expr_(log_or_expr),
   expr_(expr),
   cond_expr_(cond_expr)
@@ -1012,8 +994,8 @@ void CCSTPostFixExprExpr::write(std::ofstream& of, int indent)
   of << " ]";
 }
 
-CCSTPostFixExprAssnExpr::CCSTPostFixExprAssnExpr(
-  CCSTPostFixExpr *post_fix_expr, std::vector<CCSTAssignExpr*> args) :
+CCSTPostFixExprAssnExpr::CCSTPostFixExprAssnExpr(CCSTPostFixExpr *post_fix_expr,
+  std::vector<CCSTAssignExpr*> args) :
   post_fix_expr_(post_fix_expr),
   args_(args)
 {
@@ -1028,19 +1010,15 @@ void CCSTPostFixExprAssnExpr::write(std::ofstream& of, int indent)
 
   this->post_fix_expr_->write(of, indent);
   of << "(";
-  std::vector<CCSTAssignExpr*> args = this->args_;
-  if (!args.empty()) {
-    args.at(0)->write(of, 0);
 
-    for (std::vector<CCSTAssignExpr*>::iterator it = args.begin() + 1;
-      it != args.end(); ++it) {
+  if (!args_.empty()) {
+    args_.at(0)->write(of, 0);
+    for (auto it = args_.begin() + 1; it != args_.end(); ++it) {
       of << ", ";
-      CCSTAssignExpr *arg = *it;
-      arg->write(of, 0);
+      (*it)->write(of, 0);
     }
   }
   of << ")";
-
 }
 
 CCSTPrimaryExpr::CCSTPrimaryExpr()
@@ -1182,9 +1160,7 @@ CCSTExpression::CCSTExpression(std::vector<CCSTAssignExpr*> assn) :
 
 void CCSTExpression::write(std::ofstream& of, int indent)
 {
-  for (std::vector<CCSTAssignExpr*>::iterator it = assn_exprs_.begin();
-    it != assn_exprs_.end(); ++it) {
-    CCSTAssignExpr *assn = *it;
+  for (auto assn : assn_exprs_) {
     assn->write(of, indent);
   }
 }
@@ -1196,8 +1172,8 @@ CCSTAssignExpr::CCSTAssignExpr() :
 {
 }
 
-CCSTAssignExpr::CCSTAssignExpr(CCSTUnaryExpr *unary_expr,
-  CCSTAssignOp *assn_op, CCSTAssignExpr *assn_expr) :
+CCSTAssignExpr::CCSTAssignExpr(CCSTUnaryExpr *unary_expr, CCSTAssignOp *assn_op,
+  CCSTAssignExpr *assn_expr) :
   unary_expr_(unary_expr),
   assn_op_(assn_op),
   assn_expr_(assn_expr)
@@ -1324,9 +1300,7 @@ CCSTTypeName::CCSTTypeName(std::vector<CCSTSpecifierQual*> spec_quals,
 
 void CCSTTypeName::write(std::ofstream& of, int indent)
 {
-  for (std::vector<CCSTSpecifierQual*>::iterator it = spec_quals_.begin();
-    it != spec_quals_.end(); ++it) {
-    CCSTSpecifierQual *qual = *it;
+  for (auto qual : spec_quals_) {
     qual->write(of, 0);
     of << " ";
   }
@@ -1371,12 +1345,9 @@ void CCSTParamList::write(std::ofstream& of, int indent)
 {
   if (!p_dec_.empty()) {
     p_dec_.at(0)->write(of, indent);
-
-    for (std::vector<CCSTParamDeclaration*>::iterator it = p_dec_.begin() + 1;
-      it != p_dec_.end(); ++it) {
+    for (auto it = p_dec_.begin() + 1; it != p_dec_.end(); ++it) {
       of << ", ";
-      CCSTParamDeclaration *dec = *it;
-      dec->write(of, 0);
+      (*it)->write(of, 0);
     }
   } else {
     of << "void";
@@ -1417,9 +1388,7 @@ CCSTParamDeclaration::CCSTParamDeclaration(
 
 void CCSTParamDeclaration::write(std::ofstream& of, int indent)
 {
-  for (std::vector<CCSTDecSpecifier*>::iterator it = dec_specs_.begin();
-    it != dec_specs_.end(); ++it) {
-    CCSTDecSpecifier *spec = *it;
+  for (auto spec : dec_specs_) {
     spec->write(of, 0);
   }
 
@@ -1467,8 +1436,7 @@ CCSTDirectAbstDeclarator::CCSTDirectAbstDeclarator()
   //todo
 }
 
-CCSTDirectAbstDeclarator::CCSTDirectAbstDeclarator(
-  CCSTAbstDeclarator *abs_dec) :
+CCSTDirectAbstDeclarator::CCSTDirectAbstDeclarator(CCSTAbstDeclarator *abs_dec) :
   abs_dec_(abs_dec)
 {
 }
@@ -1573,15 +1541,14 @@ CCSTEnumeratorList::CCSTEnumeratorList(std::vector<CCSTEnumerator*> *list) :
 
 void CCSTEnumeratorList::write(std::ofstream& of, int indent)
 {
-  if (!list_->empty()) {
-    list_->at(0)->write(of, indent);
-    for (std::vector<CCSTEnumerator*>::iterator it = list_->begin() + 1;
-      it != list_->end(); ++it) {
-      of << ",\n";
-      CCSTEnumerator *l = *it;
-      l->write(of, indent);
-    }
+  if (list_->empty()) {
+    return;
   }
+
+  for (auto l : *list_) {
+      l->write(of, indent);
+      of << ",\n";
+    }
 }
 
 CCSTEnumerator::CCSTEnumerator(const std::string& id, CCSTConstExpr *ce) :
@@ -1619,25 +1586,19 @@ void CCSTTypedefName::write(std::ofstream& of, int indent)
 
 void CCSTDeclaration::write(std::ofstream& of, int indent)
 {
-  for (std::vector<CCSTDecSpecifier*>::iterator it = specifier_.begin();
-    it != specifier_.end(); ++it) {
-    CCSTDecSpecifier *dec_spec = *it;
+  for (auto dec_spec : specifier_) {
     dec_spec->write(of, indent);
   }
 
-  for (std::vector<CCSTMacro*>::iterator it = attributes_.begin();
-    it != attributes_.end(); ++it) {
-    CCSTMacro *mac = *it;
+  for (auto mac : attributes_) {
     std::cout << "--> Writing linkage attribute\n";
     mac->write(of, 0);
   }
 
-  for (std::vector<CCSTInitDeclarator*>::iterator it = decs_.begin();
-    it != decs_.end(); ++it) {
-    CCSTInitDeclarator *init_dec = *it;
+  for (auto init_dec : decs_) {
     init_dec->write(of, 0);
 
-    if (*it != decs_.back())
+    if (init_dec != decs_.back())
       of << ", ";
   }
   of << ";";
@@ -1661,8 +1622,8 @@ void CCSTInitDeclarator::write(std::ofstream& of, int indent)
 {
   // does inheritence cover just declarator case?
   if (this->dec_ == NULL && this->init_ == NULL) {
-    std::cout << "ERR: param null" << typeid(*this).name() << "::"
-      << __func__  << " " << indent << std::endl;
+    std::cout << "ERR: param null" << typeid(*this).name() << "::" << __func__
+      << " " << indent << std::endl;
     exit(-1);
   }
 
@@ -1675,14 +1636,14 @@ void CCSTInitDeclarator::write(std::ofstream& of, int indent)
   }
 }
 
-CCSTInitializer::CCSTInitializer(CCSTAssignExpr *assn_expr)
-: assn_expr_(assn_expr),
+CCSTInitializer::CCSTInitializer(CCSTAssignExpr *assn_expr) :
+  assn_expr_(assn_expr),
   init_list_()
 {
 }
 
-CCSTInitializer::CCSTInitializer(CCSTInitializerList *init_list)
-: assn_expr_(),
+CCSTInitializer::CCSTInitializer(CCSTInitializerList *init_list) :
+  assn_expr_(),
   init_list_(init_list)
 {
 }
@@ -1724,9 +1685,7 @@ CCSTInitializerList::CCSTInitializerList(
 void CCSTInitializerList::write(std::ofstream& of, int indent)
 {
   // TODO
-  for (std::vector<CCSTInitializer*>::iterator it = init_list_.begin();
-    it != init_list_.end(); ++it) {
-    CCSTInitializer *init = *it;
+  for (auto init : init_list_) {
     init->write(of, 0);
     of << ", ";
   }
@@ -1754,16 +1713,15 @@ void CCSTPreprocessor::write(std::ofstream& of, int indent)
     of << ">\n";
 }
 
-CCSTCompoundStatement::CCSTCompoundStatement(
-  std::vector<CCSTDeclaration*> decs, std::vector<CCSTStatement*> s) :
+CCSTCompoundStatement::CCSTCompoundStatement(std::vector<CCSTDeclaration*> decs,
+  std::vector<CCSTStatement*> s) :
   declarations_(decs),
   statements_(s)
 {
 }
 
-CCSTCompoundStatement::CCSTCompoundStatement(
-  std::vector<CCSTDeclaration*> decs, std::vector<CCSTStatement*> s,
-  std::vector<CCSTStatement*> lbls) :
+CCSTCompoundStatement::CCSTCompoundStatement(std::vector<CCSTDeclaration*> decs,
+  std::vector<CCSTStatement*> s, std::vector<CCSTStatement*> lbls) :
   declarations_(decs),
   statements_(s),
   lbl_statements(lbls)
@@ -1773,23 +1731,16 @@ CCSTCompoundStatement::CCSTCompoundStatement(
 void CCSTCompoundStatement::write(std::ofstream& of, int indent)
 {
 
-  for (std::vector<CCSTDeclaration*>::iterator it =
-    this->declarations_.begin(); it != declarations_.end(); ++it) {
-    CCSTDeclaration *dec = *it;
-
+  for (auto dec : declarations_) {
     dec->write(of, indent);
     //    of << "\n";
   }
-  for (std::vector<CCSTStatement*>::iterator it = this->statements_.begin();
-    it != statements_.end(); ++it) {
-    CCSTStatement *state = *it;
+  for (auto state : statements_) {
     state->write(of, indent);
     //   of << "\n";
   }
-  for (std::vector<CCSTStatement*>::iterator it = lbl_statements.begin();
-      it != lbl_statements.end(); ++it) {
-      CCSTStatement *state = *it;
-      state->write(of, indent);
+  for (auto state : lbl_statements) {
+    state->write(of, indent);
   }
 }
 
@@ -2035,24 +1986,19 @@ void CCSTReturn::write(std::ofstream& of, int indent)
 
 void CCSTMacro::write(std::ofstream& of, int indent)
 {
-  std::vector<CCSTAssignExpr*> args = this->data_args;
-
   of << indentation(indent) << this->macro_name << "(";
-
-  if (!args.empty()) {
-    args.at(0)->write(of, 0);
-
-    for (std::vector<CCSTAssignExpr*>::iterator it = args.begin() + 1;
-      it != args.end(); ++it) {
+  if (!data_args.empty()) {
+    data_args.at(0)->write(of, 0);
+    for (auto it = data_args.begin() + 1; it != data_args.end(); ++it) {
       of << ", ";
-      CCSTAssignExpr *arg = *it;
-      arg->write(of, 0);
+      (*it)->write(of, 0);
     }
   }
-  if (this->is_terminal)
+  if (this->is_terminal) {
     of << ");\n";
-  else
+  } else {
     of << ")\n";
+  }
 }
 
 // FIXME: How to handle this efficiently for multiple

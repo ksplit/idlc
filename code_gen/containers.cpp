@@ -478,8 +478,7 @@ std::vector<CCSTStatement*> caller_allocate_channels(ProjectionType *pt)
 {
   std::vector<CCSTStatement*> statements;
   
-  for(std::vector<ProjectionField*>::iterator it = pt->channels_.begin(); it != pt->channels_.end(); it ++) {
-    ProjectionField *pf = *it;
+  for(auto pf : pt->channels_) {
     if(pf->alloc_caller()) { // allocate it.
 
       // ret = lcd_create_sync_endpoint(&fs_container->chnl);
@@ -519,11 +518,9 @@ std::vector<CCSTStatement*> caller_initialize_channels(ProjectionType *pt)
     ProjectionConstructorType *pct = dynamic_cast<ProjectionConstructorType*>(pt);
     Assert(pct != 0x0, "Error: dynamic cast to projection constructor type failed\n");
 
-    for(std::vector<std::pair<Variable*, Variable*> >::iterator it = pct->channel_params_.begin(); it != pct->channel_params_.end(); it ++) {
-      std::pair<Variable*,Variable*> pair = *it;
-        
+    for(auto pair : pct->channel_params_) {
       if(pair.second == 0x0) {
-	std::cout << "pair.second is null, pair.first id is " <<  pair.first->identifier() << std::endl;
+        std::cout << "pair.second is null, pair.first id is " <<  pair.first->identifier() << std::endl;
       }
       /*
 	lcd_sync_channel_group_item_init(&fs_operations_container->chnl,
@@ -606,8 +603,7 @@ std::vector<CCSTStatement*> dealloc_containers_callee(Variable *v, const std::st
 	Assert(pct != 0x0, "Error: dynamic cast to projection constructor type failed\n");
 
 	std::vector<std::pair<Variable*, Variable*> > other_chans = pct->channel_params_;
-	for(std::vector<std::pair<Variable*, Variable*> >::iterator it = other_chans.begin(); it != other_chans.end(); it ++) {
-	  std::pair<Variable*, Variable*> p = *it;
+	for (auto p : other_chans) {
 	  std::vector<CCSTAssignExpr*> lcd_cap_delete_args;
 	  lcd_cap_delete_args.push_back(access(p.first));
 	  statements.push_back(new CCSTExprStatement(function_call("lcd_cap_delete"
@@ -622,8 +618,7 @@ std::vector<CCSTStatement*> dealloc_containers_callee(Variable *v, const std::st
     Assert(tmp != 0x0, "Error: dynamic cast to projection type failed\n");
 
     std::vector<ProjectionField*> chans = tmp->channels_;
-    for(std::vector<ProjectionField*>::iterator it = chans.begin(); it != chans.end(); it ++) {
-      ProjectionField *c = *it;
+    for(auto c : chans) {
       if(c->dealloc_callee()) {
 	std::vector<CCSTAssignExpr*> lcd_cap_delete_args;
 	lcd_cap_delete_args.push_back(access(c));
@@ -730,8 +725,7 @@ std::vector<CCSTStatement*> dealloc_containers_caller(Variable *v, const std::st
 	Assert(pct != 0x0, "Error: dynamic cast to projection constructor type failed\n");
 	
 	std::vector<std::pair<Variable*, Variable*> > other_chans = pct->channel_params_;
-	for(std::vector<std::pair<Variable*, Variable*> >::iterator it = other_chans.begin(); it != other_chans.end(); it ++) {
-	  std::pair<Variable*, Variable*> p = *it;
+  for (auto p : other_chans) {
 	  std::vector<CCSTAssignExpr*> lcd_cap_delete_args;
 	  lcd_cap_delete_args.push_back(access(p.first));
 	  statements.push_back(new CCSTExprStatement(function_call("lcd_cap_delete"
@@ -747,8 +741,7 @@ std::vector<CCSTStatement*> dealloc_containers_caller(Variable *v, const std::st
 
     // remove channels we allocated
     std::vector<ProjectionField*> chans = tmp->channels_;
-    for(std::vector<ProjectionField*>::iterator it = chans.begin(); it != chans.end(); it ++) {
-      ProjectionField *c = *it;
+    for(auto c : chans) {
       if(c->dealloc_caller()) {
 	std::vector<CCSTAssignExpr*> lcd_cap_delete_args;
 	lcd_cap_delete_args.push_back(access(c));

@@ -37,9 +37,7 @@ CCSTFile* generate_client_source(Module* m, std::vector<Include*> includes)
   std::vector<CCSTExDeclaration*> definitions;
 
   // Includes
-  for (std::vector<Include*>::iterator it = includes.begin();
-    it != includes.end(); it++) {
-    Include *inc = *it;
+  for (auto inc : includes) {
     definitions.push_back(
       new CCSTPreprocessor(inc->get_path(), inc->is_relative()));
   }
@@ -48,17 +46,13 @@ CCSTFile* generate_client_source(Module* m, std::vector<Include*> includes)
   // if you don't do this you get use after free heap issues
   std::vector<GlobalVariable*> globals = m->channels();
 
-  for (std::vector<GlobalVariable*>::iterator it = globals.begin();
-    it != globals.end(); it++) {
-    GlobalVariable *gv = (GlobalVariable*) *it;
+  for (auto gv : globals) {
     definitions.push_back(declare_static_variable(gv));
   }
 
   // declare cspaces
   std::vector<GlobalVariable*> cspaces = m->cspaces_;
-  for (std::vector<GlobalVariable*>::iterator it = cspaces.begin();
-    it != cspaces.end(); it++) {
-    GlobalVariable *gv = *it;
+  for (auto gv : cspaces) {
     definitions.push_back(declare_static_variable(gv));
   }
 
@@ -334,8 +328,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
   /* if it is a function pointer need to marshal hidden args */
   if (r->function_pointer_defined()) {
     std::vector<Parameter*> hidden_args = r->hidden_args_;
-    for(std::vector<Parameter*>::iterator it = hidden_args.begin(); it != hidden_args.end(); it ++) {
-      Parameter *p = *it;
+    for (auto p : hidden_args) {
       if(p->in()) {
   std::cout << " ASYNC going to marshal hidden arg " << p->identifier() << " for function " <<  r->name() << std::endl;
   CCSTCompoundStatement *updates = dynamic_cast<CCSTCompoundStatement*>(marshal_variable(p, "in", c->chType));
@@ -390,8 +383,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
   /* if function pointer defined unmarshal hidden args*/
   if(r->function_pointer_defined()) {
     std::vector<Parameter*> hidden_args = r->hidden_args_;
-    for(std::vector<Parameter*>::iterator it = hidden_args.begin(); it != hidden_args.end(); it ++) {
-      Parameter *p = *it;
+    for (auto p : hidden_args) {
       if(p->out()) {
   std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_caller(p, c->chType);
   statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
@@ -450,10 +442,7 @@ CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use, 
 
   /* if it is a function pointer need to marshal hidden args */
   if (r->function_pointer_defined()) {
-    std::vector<Parameter*> hidden_args = r->hidden_args_;
-    for (std::vector<Parameter*>::iterator it = hidden_args.begin();
-      it != hidden_args.end(); it++) {
-      Parameter *p = *it;
+    for (auto p : r->hidden_args_) {
       if (p->in()) {
         std::cout << "going to marshal hidden arg " << p->identifier()
           << " for function " << r->name() << std::endl;
@@ -504,9 +493,7 @@ CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use, 
   /* if function pointer defined unmarshal hidden args*/
   if (r->function_pointer_defined()) {
     std::vector<Parameter*> hidden_args = r->hidden_args_;
-    for (std::vector<Parameter*>::iterator it = hidden_args.begin();
-      it != hidden_args.end(); it++) {
-      Parameter *p = *it;
+    for (auto p : hidden_args) {
       if (p->out()) {
         std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_caller(p, c->chType);
         statements.insert(statements.end(), tmp_stmts.begin(),

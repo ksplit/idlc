@@ -15,15 +15,13 @@ CCSTExDeclaration* construct_enum(Module *m)
   return declaration;
 }
 
-CCSTEnumeratorList* construct_enumlist(std::vector<Rpc *> rps)
+CCSTEnumeratorList* construct_enumlist(std::vector<Rpc *> rpcs)
 {
   // list of functions to put in enum.
   std::vector<CCSTEnumerator*>* list = new std::vector<CCSTEnumerator*>();
-  for(std::vector<Rpc*>::iterator it = rps.begin(); it != rps.end(); it ++)
-    {
-      Rpc *r = *it;
-      list->push_back(new CCSTEnumerator(r->enum_name()));
-    }
+  for (auto r : rpcs) {
+    list->push_back(new CCSTEnumerator(r->enum_name()));
+  }
   CCSTEnumeratorList *enum_list = new CCSTEnumeratorList(list);
   return enum_list;
 }
@@ -47,9 +45,7 @@ CCSTFuncDef* function_definition(CCSTDeclaration* function_declaration, CCSTComp
 CCSTParamTypeList* parameter_list(std::vector<Parameter*> params)
 {
   std::vector<CCSTParamDeclaration*> param_decs;
-  for (std::vector<Parameter*>::iterator it = params.begin();
-    it != params.end(); it++) {
-    Parameter *p = (Parameter*) *it;
+  for (auto p : params) {
     /// Handle function pointers separately
     if (p->type()->num() == FUNCTION_TYPE) {
       Function *f = dynamic_cast<Function*>(p->type());

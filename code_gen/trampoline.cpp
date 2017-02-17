@@ -78,9 +78,7 @@ CCSTCompoundStatement* trampoline_function_body(Rpc* r)
 
   // add hidden args to function pointer arg list
   std::vector<Parameter*> hidden_args = r->hidden_args_;
-  for(std::vector<Parameter*>::iterator it = hidden_args.begin(); it != hidden_args.end(); it ++) {
-    Parameter *p = *it;
-    
+  for (auto p : hidden_args) {
     std::vector<CCSTDecSpecifier*> fp_param_tmp = type2(p->type());
     func_pointer_params.push_back(new CCSTParamDeclaration(fp_param_tmp
 							   , new CCSTDeclarator(pointer(p->pointer_count()), new CCSTDirectDecId(""))));

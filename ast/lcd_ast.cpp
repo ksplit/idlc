@@ -407,8 +407,7 @@ Module::Module(const std::string& id, std::vector<Rpc*> rpc_definitions,
     cspace = new UnresolvedType("glue_cspace");
   }
   // create cspaces.
-  for(std::vector<GlobalVariable*>::iterator it = this->channels_.begin(); it != this->channels_.end(); it ++) {
-    GlobalVariable *gv = *it;
+  for (auto gv : channels_) {
     this->cspaces_.push_back(new GlobalVariable(cspace, cspace_name(gv->identifier()), 1));
   }
   
