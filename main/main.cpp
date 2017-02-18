@@ -77,6 +77,7 @@ int main(int argc, char ** argv)
       tree->copy_types();
       tree->initialize_types();
       tree->set_accessors();
+      tree->modify_specs();
       tree->prepare_marshal();
 
       CCSTFile *ccst_callee_h = generate_server_header(m);
