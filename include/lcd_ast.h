@@ -326,6 +326,7 @@ class Parameter : public Variable
   virtual Variable* container();
   virtual void prepare_marshal(MarshalPrepareVisitor *worker);
   virtual void resolve_types(LexicalScope *ls);
+  void modify_specs();
   virtual void create_container_variable(LexicalScope *ls);
   virtual Type* type();
   virtual void set_marshal_info(Marshal_type* mt);
@@ -710,6 +711,7 @@ class Rpc : public Base
   std::vector<Parameter*> hidden_args_;
   Rpc(ReturnVariable *return_var, const std::string& name, std::vector<Parameter* > parameters, LexicalScope *current_scope);
   void copy_types();
+  void modify_specs();
   unsigned int tag();
   void set_tag(unsigned int t);
   void set_function_pointer_defined(bool b);
@@ -757,6 +759,7 @@ class Module : public Base
   LexicalScope *module_scope();
   void prepare_marshal();
   void resolve_types();
+  void modify_specs();
   void function_pointer_to_rpc();
   void create_trampoline_structs();
   void generate_function_tags(Project *p);
@@ -802,6 +805,7 @@ class Project : public Base
   void create_container_variables();
   void copy_types();
   void set_accessors();
+  void modify_specs();
   void initialize_types();
   void set_copy_container_accessors();
   std::vector<Module*> modules();

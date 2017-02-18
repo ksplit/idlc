@@ -349,6 +349,15 @@ void Rpc::set_accessors()
   }
 }
 
+void Rpc::modify_specs()
+{
+  /// XXX: is it needed for return variable?
+  /// for parameters
+  for (auto p : *this) {
+    p->modify_specs();
+  }
+}
+
 void Rpc::set_copy_container_accessors()
 {
   // return variable
@@ -466,6 +475,13 @@ void Module::set_accessors()
   }
 }
 
+void Module::modify_specs()
+{
+  for (auto rpc: *this) {
+    rpc->modify_specs();
+  }
+}
+
 void Module::initialize_types()
 {
   for (auto rpc: *this) {
@@ -552,6 +568,13 @@ void Project::set_accessors()
 {
   for (auto module: *this) {
     module->set_accessors();
+  }
+}
+
+void Project::modify_specs()
+{
+  for (auto module: *this) {
+    module->modify_specs();
   }
 }
 

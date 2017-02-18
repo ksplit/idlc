@@ -502,6 +502,22 @@ void Parameter::set_accessor(Variable *v)
   }
 }
 
+/// TODO: Should the other conditions be handled?
+void Parameter::modify_specs()
+{
+  if (this->container()) {
+    /// If the spec is bind or dealloc
+    if ((this->bind_caller() && this->bind_callee())
+      || this->dealloc_callee()) {
+      auto *container = dynamic_cast<ProjectionType*>(this->container()->type());
+      auto *other_ref = container->get_field("other_ref");
+
+      /// we should be marshalling other_ref
+      other_ref->set_in(true);
+    }
+  }
+}
+
 Variable* Parameter::accessor()
 {
   return this->accessor_;
