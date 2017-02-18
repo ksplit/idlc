@@ -189,12 +189,18 @@ CCSTStatement* lookup_variable_container(Variable *v, Channel::ChannelType type)
 
   ProjectionType *container = dynamic_cast<ProjectionType*>(v->container()->type());
   Assert(container != 0x0, "Error: variables's container does not have type projection\n");
-  
-  ProjectionField *my_ref_field = container->get_field("my_ref");
-  Assert(my_ref_field != 0x0, "Error: could not find my_ref field in projection\n");
+  ProjectionField *ref_field;
 
+  /// Depending on the specification, pick the reference field
+  if ((v->bind_caller() && v->bind_callee()) || v->dealloc_callee()) {
+    ref_field= container->get_field("other_ref");
+  } else {
+    ref_field= container->get_field("my_ref");
+  }
+
+  Assert(ref_field != 0x0, "Error: could not find my_ref field in projection\n");
   std::vector<CCSTAssignExpr*> __cptr_args;
-  __cptr_args.push_back( unmarshal_variable( get_cptr_field( my_ref_field ), type, "_request"));
+  __cptr_args.push_back(unmarshal_variable(get_cptr_field(ref_field ), type, "_request"));
 
   lookup_args.push_back(function_call("__cptr", __cptr_args)); // ref we get from __cptr(reg_whatever())
   lookup_args.push_back( new CCSTUnaryExprCastExpr( reference()

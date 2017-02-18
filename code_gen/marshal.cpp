@@ -168,6 +168,16 @@ CCSTStatement* marshal_variable(Variable *v, const std::string& direction, Chann
     for (auto pf : *pt) {
       if ((direction == "in" && pf->in())
         || (direction == "out" && pf->out())) {
+
+        /// if the specification is either bind or dealloc, the connection is
+        /// already established. So, there is no need to pass my_ref. However,
+        /// in the callee side, my_ref needs to be unmarshalled. So it would
+        /// be marked as "in" anyways. To handle this, just skip if we meet
+        /// the bind/dealloc specification and the proj_field is "my_ref"
+        if (((v->bind_callee() && v->bind_callee()) || (v->dealloc_callee()))
+          && pf->identifier() == "my_ref") {
+          continue;
+        }
         statements.push_back(marshal_variable(pf, direction, type));
       }
     }
