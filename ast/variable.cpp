@@ -418,6 +418,10 @@ void Parameter::create_container_variable(LexicalScope *ls)
   Parameter *container_var = new Parameter(container, name, 1);
   container_var->set_in(this->in());
   container_var->set_out(this->out());
+  container_var->set_bind_callee(this->bind_callee());
+  container_var->set_bind_caller(this->bind_caller());
+  container_var->set_dealloc_callee(this->dealloc_callee());
+  container_var->set_dealloc_caller(this->dealloc_caller());
 
   // save. 
   this->container_ = container_var;
@@ -1056,7 +1060,12 @@ ProjectionField::ProjectionField(const ProjectionField& other)
 
 void ProjectionField::create_container_variable(LexicalScope *ls)
 {
-  if(this->pointer_count() <= 0 || (this->type_->num() != PROJECTION_TYPE && this->type_->num() != PROJECTION_CONSTRUCTOR_TYPE && this->type_->num() != INITIALIZE_TYPE) || (!this->bind_caller() && !this->bind_callee() && !this->alloc_caller() && !this->alloc_callee())) {
+  if (this->pointer_count() <= 0
+    || (this->type_->num() != PROJECTION_TYPE
+      && this->type_->num() != PROJECTION_CONSTRUCTOR_TYPE
+      && this->type_->num() != INITIALIZE_TYPE)
+    || (!this->bind_caller() && !this->bind_callee() && !this->alloc_caller()
+      && !this->alloc_callee())) {
     return;
   }
   Type *tmp = this->type_;
@@ -1090,6 +1099,11 @@ void ProjectionField::create_container_variable(LexicalScope *ls)
   ProjectionField *container_var = new ProjectionField(container, name, 1);
   container_var->set_in(this->in());
   container_var->set_out(this->out());
+  container_var->set_bind_callee(this->bind_callee());
+  container_var->set_bind_caller(this->bind_caller());
+  container_var->set_dealloc_callee(this->dealloc_callee());
+  container_var->set_dealloc_caller(this->dealloc_caller());
+
 
   // save. 
   this->container_ = container_var;
