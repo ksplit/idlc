@@ -250,6 +250,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
   std::vector<CCSTInitDeclarator*> decs_req;
   std::vector<CCSTInitDeclarator*> decs_resp;
   std::vector<CCSTInitDeclarator*> decs_ret;
+  bool async_sync = false;
 
   decs_ret.push_back(new CCSTDeclarator(pointer(0)
             , new CCSTDirectDecId("ret")));
@@ -320,6 +321,24 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
       declarations.insert(declarations.end(), __tmp_declarations.begin(), __tmp_declarations.end());
       statements.insert(statements.end(), __tmp_statements.begin(), __tmp_statements.end());
     }
+    /// if there is a void pointer, we need to perform an async send,
+    /// followed by sync send, followed by async recv.
+    /// set async_sync to true to facilitate this
+    if (p->type()->num() == VOID_TYPE && !async_sync) {
+      async_sync = true;
+      std::vector<CCSTDecSpecifier*> spec_reqc;
+      std::vector<CCSTInitDeclarator*> decs_reqc;
+
+      spec_reqc.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::UnsignedTypeSpec));
+      spec_reqc.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
+
+      decs_reqc.push_back(
+        new CCSTInitDeclarator(
+          new CCSTDeclarator(pointer(0), new CCSTDirectDecId("request_cookie"))));
+
+      declarations.push_back(
+        new CCSTDeclaration(spec_reqc, decs_reqc));
+    }
   }
 
   /// If ret is a container, its my_ref cptr needs to be marshalled as well
@@ -359,20 +378,52 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
     lcd_async_call_args.push_back(new CCSTPrimaryExprId(c->chName));
   }
   lcd_async_call_args.push_back(new CCSTPrimaryExprId("_request"));
-  lcd_async_call_args.push_back(new CCSTUnaryExprCastExpr(reference(), new CCSTPrimaryExprId("_response")));
-    statements.push_back(
-      new CCSTExprStatement(
-        new CCSTAssignExpr(new CCSTPrimaryExprId("ret"), equals(),
-          function_call("thc_ipc_call", lcd_async_call_args))));
+
+  std::string ipc_call;
+
+  /// async send/call
+  if (async_sync) {
+    lcd_async_call_args.push_back(new CCSTUnaryExprCastExpr(reference(), new CCSTPrimaryExprId("request_cookie")));
+    ipc_call.append("thc_ipc_send_request");
+  } else {
+    lcd_async_call_args.push_back(new CCSTUnaryExprCastExpr(reference(), new CCSTPrimaryExprId("_response")));
+    ipc_call.append("thc_ipc_call");
+  }
+
+  statements.push_back(
+    new CCSTExprStatement(
+      new CCSTAssignExpr(new CCSTPrimaryExprId("ret"), equals(),
+        function_call(ipc_call, lcd_async_call_args))));
 
   std::string *goto_ipc = new std::string("fail_ipc");
-  statements.push_back(if_cond_fail_goto(new CCSTPrimaryExprId("ret"), "thc_ipc_call", *goto_ipc));
+  statements.push_back(if_cond_fail_goto(new CCSTPrimaryExprId("ret"), ipc_call, *goto_ipc));
 
   for (auto p: *r) {
     if (p->type_->num() == VOID_TYPE) {
       std::cout << " SYNC send of void pointer " << p->identifier() << " for function " <<  r->name() << std::endl;
       statements.push_back(marshal_void_delayed(p));
     }
+  }
+
+  /// ipc_recv
+  if (async_sync) {
+    std::vector<CCSTAssignExpr*> lcd_async_recv_args;
+    if (r->function_pointer_defined()) {
+      lcd_async_recv_args.push_back(
+        new CCSTPrimaryExprId("hidden_args->async_chnl"));
+    } else {
+      lcd_async_recv_args.push_back(new CCSTPrimaryExprId(c->chName));
+    }
+
+    lcd_async_recv_args.push_back(new CCSTPrimaryExprId("request_cookie"));
+    lcd_async_recv_args.push_back(
+      new CCSTUnaryExprCastExpr(reference(),
+        new CCSTPrimaryExprId("_response")));
+
+    statements.push_back(
+      new CCSTExprStatement(
+        new CCSTAssignExpr(new CCSTPrimaryExprId("ret"), equals(),
+          function_call("thc_ipc_recv_response", lcd_async_recv_args))));
   }
 
   /* unmarshal appropriate parameters and return value */
