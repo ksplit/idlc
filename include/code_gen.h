@@ -136,7 +136,7 @@ CCSTStatement* marshal_void_delayed(Variable *v);
 // containers.cpp
 std::vector<CCSTAssignExpr*> container_of_args(CCSTPostFixExpr *struct_pointer, const std::string& type_name, const std::string& field_name); // complete
 std::vector<CCSTStatement*> container_of(Variable *v, const std::string& cspace); // complete
-CCSTCompoundStatement* set_remote_ref(Variable *v, Channel::ChannelType type); // complete
+CCSTCompoundStatement* set_remote_ref(Variable *v, Channel::ChannelType type, std::string from);
 CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v, const std::string& cspace, Channel::ChannelType type);
 CCSTStatement* lookup_variable_container(Variable *v, Channel::ChannelType type);
 CCSTStatement* alloc_variable(Variable *v); // complete

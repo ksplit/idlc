@@ -270,7 +270,7 @@ std::vector<CCSTStatement*> unmarshal_container_refs_caller(Variable *v, Channel
 
   if(v->container() != 0x0) {
     if(v->alloc_callee()) { // except a remote ref
-      statements.push_back(set_remote_ref(v, type));
+      statements.push_back(set_remote_ref(v, type, "caller"));
     }
   }
   

@@ -298,12 +298,6 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
       new CCSTExprStatement(
         new CCSTAssignExpr(new CCSTPrimaryExprId("request_cookie"), equals(),
           function_call("thc_get_request_cookie", lcd_req_cook_args))));
-    std::vector<CCSTAssignExpr*> ipc_recv_end_args;
-    std::vector<CCSTAssignExpr*> chnl_to_fipc_args;
-    chnl_to_fipc_args.push_back(new CCSTPrimaryExprId("_channel"));
-    ipc_recv_end_args.push_back(function_call("thc_channel_to_fipc", chnl_to_fipc_args));
-    ipc_recv_end_args.push_back(new CCSTPrimaryExprId("_request"));
-    statements.push_back(new CCSTExprStatement(function_call("fipc_recv_msg_end", ipc_recv_end_args)));
   }
   // TODO: unmarshal channel refs;
 
@@ -313,6 +307,15 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
     statements.push_back(
       allocate_and_link_containers_callee(p,
         m->cspaces_.at(0)->identifier(), type));
+  }
+
+  if (type == Channel::AsyncChannel) {
+    std::vector<CCSTAssignExpr*> ipc_recv_end_args;
+    std::vector<CCSTAssignExpr*> chnl_to_fipc_args;
+    chnl_to_fipc_args.push_back(new CCSTPrimaryExprId("_channel"));
+    ipc_recv_end_args.push_back(function_call("thc_channel_to_fipc", chnl_to_fipc_args));
+    ipc_recv_end_args.push_back(new CCSTPrimaryExprId("_request"));
+    statements.push_back(new CCSTExprStatement(function_call("fipc_recv_msg_end", ipc_recv_end_args)));
   }
 
   // allocate things which are not containers
@@ -362,7 +365,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
 
   /// set remote reference in case of return variable being a projection
   if (r->return_variable()->container()) {
-    statements.push_back(set_remote_ref(r->return_variable(), type));
+    statements.push_back(set_remote_ref(r->return_variable(), type, "callee"));
   }
 
   /* build up real call params */

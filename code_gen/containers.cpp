@@ -71,7 +71,7 @@ std::vector<CCSTStatement*> container_of(Variable *v, const std::string& cspace)
   return statements;
 }
 
-CCSTCompoundStatement* set_remote_ref(Variable *v, Channel::ChannelType type)
+CCSTCompoundStatement* set_remote_ref(Variable *v, Channel::ChannelType type, std::string from)
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
@@ -101,10 +101,17 @@ CCSTCompoundStatement* set_remote_ref(Variable *v, Channel::ChannelType type)
   ProjectionField *other_cptr = other_cptr_t->get_field("cptr");
   Assert(other_cptr != 0x0, "Error: could not find cptr field\n");
 
+  std::string fipc_var;
   if(my_cptr->marshal_info() != 0x0) {
+    if (from == "caller") {
+      fipc_var.append("_response");
+    } else if (from == "callee") {
+      fipc_var.append("_request");
+    }
+
     statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(access(other_cptr)
 								   , equals()
-								   , unmarshal_variable(my_cptr, type, "_response"))));
+								   , unmarshal_variable(my_cptr, type, fipc_var))));
   }
   
   return new CCSTCompoundStatement(declarations, statements);
@@ -121,7 +128,7 @@ CCSTCompoundStatement* allocate_and_link_containers_callee(Variable *v,
     if (v->alloc_callee()) {
       statements.push_back(alloc_insert_variable_container(v, cspace, true));
       // store remote reference;
-      statements.push_back(set_remote_ref(v, type));
+      statements.push_back(set_remote_ref(v, type, "callee"));
     } else { // lookup 
       statements.push_back(lookup_variable_container(v, type));
     }
