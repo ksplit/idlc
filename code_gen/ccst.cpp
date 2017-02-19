@@ -404,13 +404,13 @@ CCSTDirectDecParamTypeList::CCSTDirectDecParamTypeList(
 void CCSTDirectDecParamTypeList::write(std::ofstream& of, int indent)
 {
   if (this->direct_dec_ == NULL) {
-    std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+    std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
     exit(-1);
   }
   this->direct_dec_->write(of, indent);
   of << "(";
   if (this->p_t_list_ == NULL) {
-    std::cout << __func__ << "2 : error2\n";
+    std::cout << __PRETTY_FUNCTION__ << "2 : error2\n";
     exit(-1);
   }
   this->p_t_list_->write(of, 0);
@@ -427,7 +427,7 @@ CCSTDirectDecIdList::CCSTDirectDecIdList(CCSTDirectDeclarator *direct_dec,
 void CCSTDirectDecIdList::write(std::ofstream& of, int indent)
 {
   if (this->direct_dec_ == NULL) {
-    std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+    std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
     exit(-1);
   }
   of << indentation(indent) << "( ";
@@ -466,7 +466,7 @@ CCSTConstExpr::CCSTConstExpr(CCSTCondExpr *cond_expr) :
 void CCSTConstExpr::write(std::ofstream& of, int indent)
 {
   if (this->cond_expr_ == NULL) {
-    std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+    std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
     exit(-1);
   }
   of << "const todo";
@@ -488,7 +488,7 @@ void CCSTLogicalOrExpr::write(std::ofstream& of, int indent)
 {
   if (this->or_ != NULL) {
     if (this->and_ == NULL) {
-      std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+      std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
       exit(-1);
     }
     of << indentation(indent) << "( ";
@@ -519,7 +519,7 @@ void CCSTLogicalAndExpr::write(std::ofstream& of, int indent)
 {
   if (this->and_ != NULL) {
     if (this->or_ == NULL) {
-      std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+      std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
       exit(-1);
     }
     of << indentation(indent) << "( ";
@@ -550,7 +550,7 @@ void CCSTInclusiveOrExpr::write(std::ofstream& of, int indent)
 {
   if (this->in_or_ != NULL) {
     if (this->xor_ == NULL) {
-      std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+      std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
       exit(-1);
     }
     of << indentation(indent) << "( ";
@@ -606,7 +606,7 @@ CCSTAndExpr::CCSTAndExpr(CCSTAndExpr *and_, CCSTEqExpr *eq) :
 void CCSTAndExpr::write(std::ofstream& of, int indent)
 {
   if (this->and_ == NULL || this->eq_ == NULL) {
-    std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+    std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
     exit(-1);
   }
   of << indentation(indent) << "( ";
@@ -634,7 +634,7 @@ CCSTEqExpr::CCSTEqExpr(bool equal, CCSTEqExpr *eq_expr,
 void CCSTEqExpr::write(std::ofstream& of, int indent)
 {
   if (this->eq_expr_ == NULL || this->r_expr_ == NULL) {
-    std::cout << __func__ << "error\n";
+    std::cout << __PRETTY_FUNCTION__ << "error\n";
     exit(-1);
   }
   if (equal_) {
@@ -672,7 +672,7 @@ CCSTRelationalExpr::CCSTRelationalExpr(relational_op op,
 void CCSTRelationalExpr::write(std::ofstream& of, int indent)
 {
   if (this->r_expr_ == NULL || this->s_expr_ == NULL) {
-    std::cout << __func__ << "error\n";
+    std::cout << __PRETTY_FUNCTION__ << "error\n";
     exit(-1);
   }
   of << indentation(indent) << "( ";
@@ -692,7 +692,7 @@ void CCSTRelationalExpr::write(std::ofstream& of, int indent)
     of << " >= ";
     break;
   default: {
-    std::cout << __func__ << "error\n";
+    std::cout << __PRETTY_FUNCTION__ << "error\n";
     exit(-1);
   }
   }
@@ -717,7 +717,7 @@ CCSTShiftExpr::CCSTShiftExpr(shift_op shift, CCSTShiftExpr *s_expr,
 void CCSTShiftExpr::write(std::ofstream& of, int indent)
 {
   if (this->s_expr_ == NULL || this->a_expr_ == NULL) {
-    std::cout << __func__ << "error\n";
+    std::cout << __PRETTY_FUNCTION__ << "error\n";
     exit(-1);
   }
   of << indentation(indent) << "( ";
@@ -731,7 +731,7 @@ void CCSTShiftExpr::write(std::ofstream& of, int indent)
     of << " >> ";
     break;
   default:
-    std::cout << __func__ << "error\n";
+    std::cout << __PRETTY_FUNCTION__ << "error\n";
     exit(-1);
   }
   of << "( ";
@@ -755,7 +755,7 @@ CCSTAdditiveExpr::CCSTAdditiveExpr(additive_op op, CCSTAdditiveExpr *a_expr,
 void CCSTAdditiveExpr::write(std::ofstream& of, int indent)
 {
   if (this->a_expr_ == NULL || this->m_expr_ == NULL) {
-    std::cout << __func__ << "error\n";
+    std::cout << __PRETTY_FUNCTION__ << "error\n";
     exit(-1);
   }
   of << indentation(indent) << "( ";
@@ -769,7 +769,7 @@ void CCSTAdditiveExpr::write(std::ofstream& of, int indent)
     of << " - ";
     break;
   default:
-    std::cout << __func__ << "error\n";
+    std::cout << __PRETTY_FUNCTION__ << "error\n";
     exit(-1);
   }
   of << "( ";
@@ -793,7 +793,7 @@ CCSTMultExpr::CCSTMultExpr(mult_op op, CCSTMultExpr *m_expr,
 void CCSTMultExpr::write(std::ofstream& of, int indent)
 {
   if (this->m_expr_ == NULL || this->c_expr_ == NULL) {
-    std::cout << __func__ << "error\n";
+    std::cout << __PRETTY_FUNCTION__ << "error\n";
     exit(-1);
   }
   of << indentation(indent) << "( ";
@@ -810,7 +810,7 @@ void CCSTMultExpr::write(std::ofstream& of, int indent)
     of << " % ";
     break;
   default:
-    std::cout << __func__ << "error\n";
+    std::cout << __PRETTY_FUNCTION__ << "error\n";
     exit(-1);
   }
   of << "( ";
@@ -832,7 +832,7 @@ CCSTCastExpr::CCSTCastExpr(CCSTTypeName *cast_type, CCSTCastExpr *cast_expr) :
 void CCSTCastExpr::write(std::ofstream& of, int indent)
 {
   if (this->cast_type_ == NULL || this->cast_expr_ == NULL) {
-    std::cout << __func__ << "error\n";
+    std::cout << __PRETTY_FUNCTION__ << "error\n";
     exit(-1);
   }
   of << indentation(indent) << "( ";
@@ -851,7 +851,7 @@ CCSTUnaryExprCastExpr::CCSTUnaryExprCastExpr(CCSTUnaryOp *unary_op,
 void CCSTUnaryExprCastExpr::write(std::ofstream& of, int indent)
 {
   if (this->unary_op_ == NULL || this->cast_expr_ == NULL) {
-    std::cout << __func__ << "error\n";
+    std::cout << __PRETTY_FUNCTION__ << "error\n";
     exit(-1);
   }
   this->unary_op_->write(of, indent);
@@ -868,7 +868,7 @@ CCSTUnaryExprOpOp::CCSTUnaryExprOpOp(incr_decr_ops op,
 void CCSTUnaryExprOpOp::write(std::ofstream& of, int indent)
 {
   if (this->unary_expr_ == NULL) {
-    std::cout << __func__ << "error\n";
+    std::cout << __PRETTY_FUNCTION__ << "error\n";
     exit(-1);
   }
   switch (this->op_) {
@@ -879,7 +879,7 @@ void CCSTUnaryExprOpOp::write(std::ofstream& of, int indent)
     of << indentation(indent) << "-- ";
     break;
   default:
-    std::cout << __func__ << "error\n";
+    std::cout << __PRETTY_FUNCTION__ << "error\n";
     exit(-1);
   }
   this->unary_expr_->write(of, 0);
@@ -910,7 +910,7 @@ void CCSTUnaryExprSizeOf::write(std::ofstream& of, int indent)
     this->type_name_->write(of, 0);
     of << " )";
   } else {
-    std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+    std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
     exit(-1);
   }
 }
@@ -926,7 +926,7 @@ CCSTPostFixExprOpOp::CCSTPostFixExprOpOp(CCSTPostFixExpr *post_fix_expr,
 void CCSTPostFixExprOpOp::write(std::ofstream& of, int indent)
 {
   if (this->post_fix_expr_ == NULL) {
-    std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+    std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
     exit(-1);
   }
   this->post_fix_expr_->write(of, indent);
@@ -939,7 +939,7 @@ void CCSTPostFixExprOpOp::write(std::ofstream& of, int indent)
     of << "--";
     break;
   default: {
-    std::cout << __func__ << "error\n";
+    std::cout << __PRETTY_FUNCTION__ << "error\n";
     exit(-1);
   }
   }
@@ -956,7 +956,7 @@ CCSTPostFixExprAccess::CCSTPostFixExprAccess(CCSTPostFixExpr *post_fix_expr,
 void CCSTPostFixExprAccess::write(std::ofstream& of, int indent)
 {
   if (this->post_fix_expr_ == 0x0 || this->id_ == "") {
-    std::cout << __func__ << "error\n";
+    std::cout << __PRETTY_FUNCTION__ << "error\n";
     exit(-1);
   }
   this->post_fix_expr_->write(of, indent);
@@ -968,7 +968,7 @@ void CCSTPostFixExprAccess::write(std::ofstream& of, int indent)
     of << ".";
     break;
   default: {
-    std::cout << __func__ << "error\n";
+    std::cout << __PRETTY_FUNCTION__ << "error\n";
     exit(-1);
   }
   }
@@ -985,7 +985,7 @@ CCSTPostFixExprExpr::CCSTPostFixExprExpr(CCSTPostFixExpr *post_fix_expr,
 void CCSTPostFixExprExpr::write(std::ofstream& of, int indent)
 {
   if (this->post_fix_expr_ == NULL || this->expr_ == NULL) {
-    std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+    std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
     exit(-1);
   }
   this->post_fix_expr_->write(of, indent);
@@ -1004,7 +1004,7 @@ CCSTPostFixExprAssnExpr::CCSTPostFixExprAssnExpr(CCSTPostFixExpr *post_fix_expr,
 void CCSTPostFixExprAssnExpr::write(std::ofstream& of, int indent)
 {
   if (this->post_fix_expr_ == NULL) {
-    std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+    std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
     exit(-1);
   }
 
@@ -1035,7 +1035,7 @@ CCSTPrimaryExpr::CCSTPrimaryExpr(CCSTExpression *expr) :
 void CCSTPrimaryExpr::write(std::ofstream& of, int indent)
 {
   if (this->expr_ == NULL) {
-    std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+    std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
     exit(-1);
   }
   of << indentation(indent) << "( ";
@@ -1184,7 +1184,7 @@ void CCSTAssignExpr::write(std::ofstream& of, int indent)
 {
   if (this->unary_expr_ == NULL || this->assn_op_ == NULL
     || this->assn_expr_ == NULL) {
-    std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+    std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
     exit(-1);
   }
   this->unary_expr_->write(of, indent);
@@ -1241,7 +1241,7 @@ void CCSTAssignOp::write(std::ofstream& of, int indent)
     of << "|=";
     break;
   default: {
-    std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+    std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
     exit(-1);
   }
   }
@@ -1280,7 +1280,7 @@ void CCSTUnaryOp::write(std::ofstream& of, int indent)
     of << "!";
     break;
   default: {
-    std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+    std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
     exit(-1);
   }
   }
@@ -1323,7 +1323,7 @@ CCSTParamTypeList::CCSTParamTypeList(CCSTParamList *p_list, bool ellipsis) :
 void CCSTParamTypeList::write(std::ofstream& of, int indent)
 {
   if (this->p_list_ == NULL) {
-    std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+    std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
     exit(-1);
   }
   this->p_list_->write(of, indent);
@@ -1396,7 +1396,7 @@ void CCSTParamDeclaration::write(std::ofstream& of, int indent)
     // write nothing
   } else if (this->dec_ == NULL) {
     if (this->abs_dec_ == NULL) {
-      std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+      std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
       exit(-1);
     }
     this->abs_dec_->write(of, 0);
@@ -1421,7 +1421,7 @@ CCSTAbstDeclarator::CCSTAbstDeclarator(CCSTPointer *p,
 void CCSTAbstDeclarator::write(std::ofstream& of, int indent)
 {
   if (this->p_ == NULL) {
-    std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+    std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
     exit(-1);
   }
   this->p_->write(of, indent);
@@ -1470,14 +1470,14 @@ void CCSTDirectAbstDeclarator::write(std::ofstream& of, int indent)
     of << " )";
   } else {
     if (this->d_abs_dec_ == NULL) {
-      std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+      std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
       exit(-1);
     }
     this->d_abs_dec_->write(of, indent);
     if (this->const_expr_ == NULL) {
 
       if (this->param_type_list_ == NULL) {
-        std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+        std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
         exit(-1);
       }
       of << indentation(indent) << "( ";
@@ -1622,7 +1622,7 @@ void CCSTInitDeclarator::write(std::ofstream& of, int indent)
 {
   // does inheritence cover just declarator case?
   if (this->dec_ == NULL && this->init_ == NULL) {
-    std::cout << "ERR: param null" << typeid(*this).name() << "::" << __func__
+    std::cout << "ERR: param null" << typeid(*this).name() << "::" << __PRETTY_FUNCTION__
       << " " << indent << std::endl;
     exit(-1);
   }
@@ -1660,7 +1660,7 @@ void CCSTInitializer::write(std::ofstream& of, int indent)
   // TODO
   if (this->assn_expr_ == NULL) {
     if (this->init_list_ == NULL) {
-      std::cout << typeid(*this).name() << "::" << __func__ << " error\n";
+      std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__ << " error\n";
       exit(-1);
     }
     of << indentation(indent) << "{ ";
