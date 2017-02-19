@@ -561,7 +561,7 @@ CCSTDeclaration* callee_declaration(Rpc* r)
               new CCSTDirectDecId("_channel"))));
   p_decs.push_back(
       new CCSTParamDeclaration(
-          type2(r->current_scope()->lookup("cspace", &err)),
+          type2(r->current_scope()->lookup("glue_cspace", &err)),
           new CCSTDeclarator(new CCSTPointer(),
               new CCSTDirectDecId("cspace"))));
   p_decs.push_back(
