@@ -145,6 +145,15 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
       declarations.insert(declarations.end(), __tmp_declarations.begin(), __tmp_declarations.end());
       statements.insert(statements.end(), __tmp_statements.begin(), __tmp_statements.end());
     }
+    if (p->type()->num() == FUNCTION_TYPE) {
+      auto *p_container_type = dynamic_cast<ProjectionType*>(p->container()->type());
+      Assert(p_container_type != 0x0, "Error: dynamic cast to projection type failed\n");
+      auto *p_container_real_field = p_container_type->get_field(p->type()->name());
+      Assert(p_container_real_field != 0x0, "Error: could not find field in structure\n");
+      statements.push_back(new CCSTExprStatement(
+          new CCSTAssignExpr(access(p_container_real_field), equals(),
+            new CCSTPrimaryExprId(p->type()->name()))));
+    }
   }
 
   if (r->return_variable()->container()) {
