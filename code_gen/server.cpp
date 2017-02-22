@@ -261,12 +261,12 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
     // Check if there exists a global module level channel
     c = m->module_scope()->activeChannel;
   }
-  Channel::ChannelType type;
+  Channel::ChannelType ch_type;
   if (c) {
-    type = c->chType;
+    ch_type = c->chType;
   }
 
-  if (type == Channel::AsyncChannel) {
+  if (ch_type == Channel::AsyncChannel) {
     std::vector<CCSTDecSpecifier*> spec_fipcm;
     std::vector<CCSTInitDeclarator*> decs_resp;
     std::vector<CCSTDecSpecifier*> spec_uint;
@@ -306,10 +306,10 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
     std::cout << "Parameter is " << p->identifier() << std::endl;
     statements.push_back(
       allocate_and_link_containers_callee(p,
-        m->cspaces_.at(0)->identifier(), type));
+        m->cspaces_.at(0)->identifier(), ch_type));
   }
 
-  if (type == Channel::AsyncChannel) {
+  if (ch_type == Channel::AsyncChannel) {
     std::vector<CCSTAssignExpr*> ipc_recv_end_args;
     std::vector<CCSTAssignExpr*> chnl_to_fipc_args;
     chnl_to_fipc_args.push_back(new CCSTPrimaryExprId("_channel"));
@@ -358,14 +358,14 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   // unmarshal rest of parameters. rest means not a container reference.
   for (auto p : *r) {
     if(p->in()) {
-      std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_callee(p, type);
+      std::vector<CCSTStatement*> tmp_stmts = unmarshal_variable_callee(p, ch_type);
       statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
     }
   }
 
   /// set remote reference in case of return variable being a projection
   if (r->return_variable()->container()) {
-    statements.push_back(set_remote_ref(r->return_variable(), type, "callee"));
+    statements.push_back(set_remote_ref(r->return_variable(), ch_type, "callee"));
   }
 
   /* build up real call params */
@@ -389,6 +389,14 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
       } else {
         real_call_params.push_back(access(p_container_real_field));
       }
+    } else if (p->type()->num() == VOID_TYPE) {
+      std::vector<CCSTAssignExpr*> gva_val_args;
+      gva_val_args.push_back(new CCSTPrimaryExprId(p->identifier() + "_gva"));
+
+      real_call_params.push_back(
+        new CCSTCastExpr(new CCSTTypeName(type(p->type()), new CCSTPointer()),
+          new CCSTPrimaryExpr(new CCSTAdditiveExpr(plus_t, function_call("gva_val", gva_val_args),
+            new CCSTPrimaryExprId(p->identifier() + "_offset")))));
     } else {
       real_call_params.push_back(access(p));
     }
@@ -439,7 +447,7 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
     statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
   }
 
-  if (type == Channel::AsyncChannel){
+  if (ch_type == Channel::AsyncChannel){
      std::vector<CCSTDeclaration*> if_body_declarations;
      std::vector<CCSTStatement*> if_body_statements;
 
@@ -471,18 +479,18 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
   /* marshal return params and val */
   for (auto& p : *r) {
     if(p->out()) {
-      std::vector<CCSTStatement*> tmp_stmts = marshal_variable_callee(p, type);
+      std::vector<CCSTStatement*> tmp_stmts = marshal_variable_callee(p, ch_type);
       statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
     }
   }
 
   // marshal return val;
   if(r->return_variable()->type()->num() != VOID_TYPE) {
-    std::vector<CCSTStatement*> tmp_stmts = marshal_variable_no_check(r->return_variable(), type);
+    std::vector<CCSTStatement*> tmp_stmts = marshal_variable_no_check(r->return_variable(), ch_type);
     statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
   }
 
-  if (type == Channel::SyncChannel) {
+  if (ch_type == Channel::SyncChannel) {
     /* make IPC return call */
     // err = lcd_sync_reply();
     // if (err) { ...}
