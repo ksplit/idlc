@@ -403,19 +403,8 @@ void Parameter::create_container_variable(LexicalScope *ls)
   
   // lookup in scope the container for its type. 
   int err;
-  Type *container_t;
-  if (tmp->num() == PROJECTION_TYPE) {
-    auto *pt = dynamic_cast<ProjectionType*>(tmp);
-    Assert(pt != 0x0, "Error: could not cast too projection type\n");
-    container_t = ls->lookup(container_name(pt->real_type_), &err);
-    std::cout << "Just looked up container " << container_name(pt->real_type_)
-      << std::endl;
-  } else {
-    container_t = ls->lookup(container_name(tmp->name()), &err);
-    std::cout << "Just looked up container " << container_name(tmp->name())
-      << std::endl;
-  }
-
+  Type *container_t = ls->lookup(container_name(tmp->name()), &err);
+  std::cout << "Just looked up container " <<  container_name(tmp->name()) << std::endl;
   Assert(container_t != 0x0, "Error: could not find container in scope\n");
 
   if (this->type_->num() == PROJECTION_TYPE) {
