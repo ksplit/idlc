@@ -102,14 +102,14 @@ CCSTDeclaration* function_declaration(Rpc* r)
   return new CCSTDeclaration(specifier, func);
 }
 
-CCSTDeclaration* function_pointer_function_declaration(Rpc *r) 
+CCSTDeclaration* function_pointer_function_declaration(Rpc *r, const std::string &_postfix)
 {
   std::vector<CCSTDecSpecifier*> specifier = type2(r->return_variable()->type());
   
   std::vector<CCSTInitDeclarator*> func;
   CCSTPointer *p = pointer(r->return_variable()->pointer_count());
   
-  CCSTDirectDecId *name = new CCSTDirectDecId(r->name());
+  CCSTDirectDecId *name = new CCSTDirectDecId(r->name() + _postfix);
 
   std::vector<Parameter*> all_params;
 

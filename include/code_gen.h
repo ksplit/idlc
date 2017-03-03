@@ -34,8 +34,8 @@ CCSTDeclaration* dispatch_async_function_declaration(Module *mod);
 CCSTFile* generate_client_header(Module *m); //, std::vector<Include*> includes); // todo empty, maybe unnecessary?
 CCSTFile* generate_client_source(Module *m, std::vector<Include*> includes); // todo complete
 
-CCSTCompoundStatement* caller_body(Rpc *r, Module *m); // todo complete
-CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use);
+CCSTCompoundStatement* caller_body(Rpc *r, Module *m, bool); // todo complete
+CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use, bool);
 CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use, Channel *c);
 
 std::vector<CCSTStatement*> marshal_in_parameters(std::vector<Parameter*> params); // complete
@@ -105,7 +105,7 @@ CCSTDeclaration* interface_exit_function_declaration(Module *m); // complete
 
 CCSTFuncDef* function_definition(CCSTDeclaration *function_declaration, CCSTCompoundStatement *body); // complete
 CCSTDeclaration* function_declaration(Rpc *r); // complete
-CCSTDeclaration* function_pointer_function_declaration(Rpc *r);
+CCSTDeclaration* function_pointer_function_declaration(Rpc *r, const std::string &_postfix);
 
 CCSTParamTypeList* parameter_list(std::vector<Parameter*> params); // complete
 

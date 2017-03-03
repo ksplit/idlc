@@ -624,9 +624,14 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)
   for (auto rpc : *m) {
     if (rpc->function_pointer_defined()) {
       std::cout << "doing function pointer def\n";
+
       definitions.push_back(
-        function_definition(function_pointer_function_declaration(rpc),
-          caller_body(rpc, m)));
+        function_definition(function_pointer_function_declaration(rpc, "_user"),
+          caller_body(rpc, m, true)));
+
+      definitions.push_back(
+        function_definition(function_pointer_function_declaration(rpc, ""),
+          caller_body(rpc, m, false)));
 
       definitions.push_back(trampoline_data_macro(rpc));
 

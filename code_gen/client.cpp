@@ -80,7 +80,7 @@ CCSTFile* generate_client_source(Module* m, std::vector<Include*> includes)
         function_definition(callee_declaration(r), callee_body(r, m)));
     } else {
       definitions.push_back(
-        function_definition(function_declaration(r), caller_body(r, m)));
+        function_definition(function_declaration(r), caller_body(r, m, false)));
     }
   }
   return new CCSTFile(definitions);
@@ -114,7 +114,7 @@ std::vector<CCSTDeclaration*> declare_containers(Variable *v)
 /// use module to get things like channels and cspaces.
 /// or add channel and cspace as a field to an rpc....
 /// that way each rpc can have its own channel or something....
-CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
+CCSTCompoundStatement* caller_body(Rpc *r, Module *m, bool user)
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
@@ -128,60 +128,62 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
       dynamic_cast<ProjectionType*>(r->hidden_args_.at(0)->type())->get_field(
         "cspace")->identifier();
 
-    CCSTExpression *cond = new CCSTUnaryExprCastExpr(Not(),
-      new CCSTPostFixExprAccess(new CCSTPrimaryExprId("current"),
-        pointer_access_t, "ptstate"));
+    /// Insert this only for normal call.
+    if (!user) {
+      CCSTExpression *cond = new CCSTUnaryExprCastExpr(Not(),
+        new CCSTPostFixExprAccess(new CCSTPrimaryExprId("current"),
+          pointer_access_t, "ptstate"));
 
-    std::vector<CCSTDeclaration*> if_body_declarations;
-    std::vector<CCSTStatement*> if_body_statements;
+      std::vector<CCSTDeclaration*> if_body_declarations;
+      std::vector<CCSTStatement*> if_body_statements;
 
-    std::vector<CCSTAssignExpr*> liblcd_msg_args;
-    std::vector<CCSTAssignExpr*> fncall_user_args;
-    std::vector<CCSTDeclaration*> lcd_main_decls;
-    std::vector<CCSTStatement*> lcd_main_stmnts;
-    std::vector<CCSTAssignExpr*> lcd_main_args;
-    std::vector<CCSTDeclaration*> lcdmain_decs;
-    std::vector<CCSTStatement*> lcdmain_stmts;
-
-    liblcd_msg_args.push_back(
-      new CCSTString("Calling from a non-LCD context! creating thc runtime!"));
-    if_body_statements.push_back(
-      new CCSTExprStatement(function_call("LIBLCD_MSG", liblcd_msg_args)));
-
-    std::vector<Parameter*> r_parameters = r->parameters();
-    std::vector<Parameter*> r_hidden_args = r->hidden_args_;
-
-    for (auto p : r_parameters)
-      fncall_user_args.push_back(new CCSTPrimaryExprId(p->identifier()));
-
-    for (auto p : r_hidden_args)
-      fncall_user_args.push_back(new CCSTPrimaryExprId(p->identifier()));
-
-    if (r->return_variable()->type()->num() != VOID_TYPE) {
-      lcdmain_stmts.push_back(
-        new CCSTExprStatement(
-          new CCSTAssignExpr(new CCSTPrimaryExprId("ret"), equals(),
-            function_call(r->name() + "_user", fncall_user_args))));
-    } else {
-      lcdmain_stmts.push_back(
-        new CCSTExprStatement(
-          function_call(r->name() + "_user", fncall_user_args)));
-    }
-
-    if_body_statements.push_back(
-        new CCSTMacro("LCD_MAIN", new CCSTCompoundStatement(lcdmain_decs, lcdmain_stmts),
-          true));
-
-    if (r->return_variable()->type()->num() != VOID_TYPE) {
+      std::vector<CCSTAssignExpr*> liblcd_msg_args;
+      std::vector<CCSTAssignExpr*> fncall_user_args;
+      std::vector<CCSTDeclaration*> lcd_main_decls;
+      std::vector<CCSTStatement*> lcd_main_stmnts;
+      std::vector<CCSTAssignExpr*> lcd_main_args;
+      std::vector<CCSTDeclaration*> lcdmain_decs;
+      std::vector<CCSTStatement*> lcdmain_stmts;
+      liblcd_msg_args.push_back(
+        new CCSTString("Calling from a non-LCD context! creating thc runtime!"));
       if_body_statements.push_back(
-        new CCSTReturn(new CCSTPrimaryExprId("ret")));
-    } else {
-      if_body_statements.push_back(new CCSTReturn());
-    }
+        new CCSTExprStatement(function_call("LIBLCD_MSG", liblcd_msg_args)));
 
-    CCSTCompoundStatement *if_body = new CCSTCompoundStatement(
-      if_body_declarations, if_body_statements);
-    statements.push_back(new CCSTIfStatement(cond, if_body));
+      std::vector<Parameter*> r_parameters = r->parameters();
+      std::vector<Parameter*> r_hidden_args = r->hidden_args_;
+
+      for (auto p : r_parameters)
+        fncall_user_args.push_back(new CCSTPrimaryExprId(p->identifier()));
+
+      for (auto p : r_hidden_args)
+        fncall_user_args.push_back(new CCSTPrimaryExprId(p->identifier()));
+
+      if (r->return_variable()->type()->num() != VOID_TYPE) {
+        lcdmain_stmts.push_back(
+          new CCSTExprStatement(
+            new CCSTAssignExpr(new CCSTPrimaryExprId("ret"), equals(),
+              function_call(r->name() + "_user", fncall_user_args))));
+      } else {
+        lcdmain_stmts.push_back(
+          new CCSTExprStatement(
+            function_call(r->name() + "_user", fncall_user_args)));
+      }
+
+      if_body_statements.push_back(
+          new CCSTMacro("LCD_MAIN", new CCSTCompoundStatement(lcdmain_decs, lcdmain_stmts),
+            true));
+
+      if (r->return_variable()->type()->num() != VOID_TYPE) {
+        if_body_statements.push_back(
+          new CCSTReturn(new CCSTPrimaryExprId("ret")));
+      } else {
+        if_body_statements.push_back(new CCSTReturn());
+      }
+
+      CCSTCompoundStatement *if_body = new CCSTCompoundStatement(
+        if_body_declarations, if_body_statements);
+      statements.push_back(new CCSTIfStatement(cond, if_body));
+    }
   } else {
     cspace_to_use = m->cspaces_.at(0)->identifier();
   }
@@ -269,7 +271,7 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
 
   CCSTCompoundStatement *updates;
   if (c && c->getChannelType() == Channel::ChannelType::AsyncChannel) {
-    updates = async_call(r, c, cspace_to_use);
+    updates = async_call(r, c, cspace_to_use, user);
   } else {
     updates = sync_call(r, m, cspace_to_use, c);
   }
@@ -281,6 +283,11 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   declarations.insert(declarations.end(), __tmp_declarations.begin(), __tmp_declarations.end());
   statements.insert(statements.end(), __tmp_statements.begin(), __tmp_statements.end());
   lbl_statements.insert(lbl_statements.end(), __tmp_lbl_statements.begin(), __tmp_lbl_statements.end());
+  if (user) {
+    std::vector<CCSTAssignExpr*> lcd_exit_args;
+    lcd_exit_args.push_back(new CCSTInteger(0));
+    statements.push_back(new CCSTExprStatement(function_call("lcd_exit", lcd_exit_args)));
+  }
   /* Todo:  clear capability registers? */
   /* return value to caller */
   if(r->return_variable()->type()->num() != VOID_TYPE) {
@@ -292,12 +299,13 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
   return new CCSTCompoundStatement(declarations, statements, lbl_statements);
 }
 
-CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use)
+CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use, bool user)
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
   std::vector<CCSTStatement*> lbl_statements;
   std::vector<CCSTAssignExpr*> lcd_async_start_args;
+  std::vector<CCSTAssignExpr*> dummy_args;
   std::vector<CCSTAssignExpr*> async_fntype_args;
   std::vector<CCSTAssignExpr*> fipc_set_0;
   std::vector<CCSTDecSpecifier*> spec_fipcm;
@@ -338,6 +346,11 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
     lcd_async_start_args.push_back(
       new CCSTUnaryExprCastExpr(reference(),
         new CCSTPrimaryExprId("_request")));
+
+    if (user) {
+      statements.push_back(
+        new CCSTExprStatement(function_call("thc_init", dummy_args)));
+    }
 
     statements.push_back(
       new CCSTExprStatement(
@@ -436,6 +449,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
 
   std::string ipc_call;
 
+
   /// async send/call
   if (async_sync) {
     lcd_async_call_args.push_back(new CCSTUnaryExprCastExpr(reference(), new CCSTPrimaryExprId("request_cookie")));
@@ -445,10 +459,32 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
     ipc_call.append("thc_ipc_call");
   }
 
-  statements.push_back(
-    new CCSTExprStatement(
-      new CCSTAssignExpr(new CCSTPrimaryExprId("ret"), equals(),
-        function_call(ipc_call, lcd_async_call_args))));
+  if (user) {
+    std::vector<CCSTStatement*> async_stmnts;
+    std::vector<CCSTDeclaration*> decs;
+    std::vector<CCSTAssignExpr*> lcd_async_macro_args;
+    std::vector<CCSTDeclaration*> ipcall_decs;
+    std::vector<CCSTStatement*> ipcall_stmts;
+
+    ipcall_stmts.push_back(
+      new CCSTExprStatement(
+        new CCSTAssignExpr(new CCSTPrimaryExprId("ret"), equals(),
+          function_call(ipc_call, lcd_async_call_args))));
+
+    async_stmnts.push_back(
+      new CCSTMacro("ASYNC",
+        new CCSTCompoundStatement(ipcall_decs, ipcall_stmts), true));
+
+    statements.push_back(
+      new CCSTMacro("DO_FINISH", new CCSTCompoundStatement(decs, async_stmnts),
+        true));
+  } else {
+    statements.push_back(
+      new CCSTExprStatement(
+        new CCSTAssignExpr(new CCSTPrimaryExprId("ret"), equals(),
+          function_call(ipc_call, lcd_async_call_args))));
+  }
+
 
   std::string *goto_ipc = new std::string("fail_ipc");
   statements.push_back(if_cond_fail_goto(new CCSTPrimaryExprId("ret"), ipc_call, *goto_ipc));
