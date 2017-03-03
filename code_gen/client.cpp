@@ -127,6 +127,61 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m)
     cspace_to_use = r->hidden_args_.at(0)->identifier() + "->" +
       dynamic_cast<ProjectionType*>(r->hidden_args_.at(0)->type())->get_field(
         "cspace")->identifier();
+
+    CCSTExpression *cond = new CCSTUnaryExprCastExpr(Not(),
+      new CCSTPostFixExprAccess(new CCSTPrimaryExprId("current"),
+        pointer_access_t, "ptstate"));
+
+    std::vector<CCSTDeclaration*> if_body_declarations;
+    std::vector<CCSTStatement*> if_body_statements;
+
+    std::vector<CCSTAssignExpr*> liblcd_msg_args;
+    std::vector<CCSTAssignExpr*> fncall_user_args;
+    std::vector<CCSTDeclaration*> lcd_main_decls;
+    std::vector<CCSTStatement*> lcd_main_stmnts;
+    std::vector<CCSTAssignExpr*> lcd_main_args;
+    std::vector<CCSTDeclaration*> lcdmain_decs;
+    std::vector<CCSTStatement*> lcdmain_stmts;
+
+    liblcd_msg_args.push_back(
+      new CCSTString("Calling from a non-LCD context! creating thc runtime!"));
+    if_body_statements.push_back(
+      new CCSTExprStatement(function_call("LIBLCD_MSG", liblcd_msg_args)));
+
+    std::vector<Parameter*> r_parameters = r->parameters();
+    std::vector<Parameter*> r_hidden_args = r->hidden_args_;
+
+    for (auto p : r_parameters)
+      fncall_user_args.push_back(new CCSTPrimaryExprId(p->identifier()));
+
+    for (auto p : r_hidden_args)
+      fncall_user_args.push_back(new CCSTPrimaryExprId(p->identifier()));
+
+    if (r->return_variable()->type()->num() != VOID_TYPE) {
+      lcdmain_stmts.push_back(
+        new CCSTExprStatement(
+          new CCSTAssignExpr(new CCSTPrimaryExprId("ret"), equals(),
+            function_call(r->name() + "_user", fncall_user_args))));
+    } else {
+      lcdmain_stmts.push_back(
+        new CCSTExprStatement(
+          function_call(r->name() + "_user", fncall_user_args)));
+    }
+
+    if_body_statements.push_back(
+        new CCSTMacro("LCD_MAIN", new CCSTCompoundStatement(lcdmain_decs, lcdmain_stmts),
+          true));
+
+    if (r->return_variable()->type()->num() != VOID_TYPE) {
+      if_body_statements.push_back(
+        new CCSTReturn(new CCSTPrimaryExprId("ret")));
+    } else {
+      if_body_statements.push_back(new CCSTReturn());
+    }
+
+    CCSTCompoundStatement *if_body = new CCSTCompoundStatement(
+      if_body_declarations, if_body_statements);
+    statements.push_back(new CCSTIfStatement(cond, if_body));
   } else {
     cspace_to_use = m->cspaces_.at(0)->identifier();
   }
