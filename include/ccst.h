@@ -164,22 +164,6 @@ public:
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTMacro: public CCSTExDeclaration
-{
-  std::string macro_name;
-  std::vector<CCSTAssignExpr*> data_args;
-  bool is_terminal;
-public:
-  CCSTMacro(const std::string& name, std::vector<CCSTAssignExpr*> data_args,
-    bool is_terminal)
-  {
-    this->macro_name = name;
-    this->data_args = data_args;
-    this->is_terminal = is_terminal;
-  }
-  virtual void write(std::ofstream& of, int indent);
-};
-
 class CCSTFuncDef: public CCSTExDeclaration
 {
   /* <function-definition> ::= 
@@ -1505,4 +1489,30 @@ public:
   virtual void write(std::ofstream& of, int indent);
 };
 
+class CCSTMacro: public CCSTExDeclaration, public CCSTStatement
+{
+  std::string macro_name;
+  std::vector<CCSTAssignExpr*> data_args;
+  CCSTCompoundStatement *cstatement;
+  bool is_terminal;
+public:
+  CCSTMacro(const std::string& name, std::vector<CCSTAssignExpr*> data_args,
+    bool is_terminal) :
+    macro_name(name),
+    data_args(data_args),
+    cstatement(nullptr),
+    is_terminal(is_terminal)
+  {
+  }
+
+  CCSTMacro(const std::string& name, CCSTCompoundStatement *cstatement,
+    bool is_terminal) :
+    macro_name(name),
+    data_args(),
+    cstatement(cstatement),
+    is_terminal(is_terminal)
+  {
+  }
+  virtual void write(std::ofstream& of, int indent);
+};
 #endif

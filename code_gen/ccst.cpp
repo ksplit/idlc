@@ -1976,7 +1976,7 @@ CCSTReturn::CCSTReturn(CCSTExpression *expr) :
 void CCSTReturn::write(std::ofstream& of, int indent)
 {
   if (this->expr_ == NULL) {
-    of << indentation(indent) << "return;";
+    of << indentation(indent) << "return;\n";
   } else {
     of << indentation(indent) << "return ";
     this->expr_->write(of, 0);
@@ -1994,8 +1994,16 @@ void CCSTMacro::write(std::ofstream& of, int indent)
       (*it)->write(of, 0);
     }
   }
+  if (cstatement) {
+    of << "{\n";
+    cstatement->write(of, indent + 1);
+    of << indentation(indent) <<  "}\n";
+  }
   if (this->is_terminal) {
-    of << ");\n";
+    if (cstatement)
+      of << indentation(indent) << ");\n";
+    else
+      of << ");\n";
   } else {
     of << ")\n";
   }
