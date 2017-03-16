@@ -104,7 +104,7 @@ int main(int argc, char ** argv)
         exit(-1);
       }
 
-
+      /// Callee header guard macro
       std::string macro_callee_h("__" + m->identifier() + "_callee_h__");
       std_string_toupper(macro_callee_h);
 
@@ -116,7 +116,15 @@ int main(int argc, char ** argv)
       ccst_callee_c->write(ofs_callee_c, 0);
       ccst_callee_disp->write(ofs_callee_disp, 0);
       ccst_glue->write(ofs_glue, 0);
+
+      /// Common header guard macro
+      std::string macro_common_h("__" + m->identifier() + "_common_h__");
+      std_string_toupper(macro_common_h);
+
+      ofs_common_h << "#ifndef " << macro_common_h << std::endl;
+      ofs_common_h << "#define " << macro_common_h << "\n\n";
       ccst_common_h->write(ofs_common_h, 0);
+      ofs_common_h << "\n#endif /* " << macro_common_h << " */" << std::endl;
 
       /// FIXME: Should be generated like this. But how to generate SECTIONS {}
       /// statements.push_back(new CCSTPreprocessor("liblcd/trampoline.h", false));
@@ -125,6 +133,7 @@ int main(int argc, char ** argv)
       ccst_callee_lds->write(ofs_callee_lds, 1);
       ofs_callee_lds << "}\nINSERT AFTER .text;\n";
 
+      /// Caller header guard macro
       std::string macro_caller_h("__" + m->identifier() + "_caller_h__");
       std_string_toupper(macro_caller_h);
 
