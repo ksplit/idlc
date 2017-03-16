@@ -107,6 +107,7 @@ std::vector<CCSTExDeclaration*> generate_enum_list(Module *m)
     std_string_toupper(enum_name);
     list->push_back(new CCSTEnumerator("GLUE_TYPE_" + enum_name));
   }
+  list->push_back(new CCSTEnumerator("GLUE_NR_TYPES"));
 
   auto *enum_list = new CCSTEnumeratorList(list);
   auto *e = new CCSTEnumSpecifier("glue_type", enum_list);
@@ -135,7 +136,7 @@ CCSTFile* generate_glue_source(Module *m)
       function_definition(fn_decl_insert(proj_type, m),
         fn_def_insert(proj_type)));
     statements.push_back(
-      function_definition(fn_decl_insert(proj_type, m),
+      function_definition(fn_decl_lookup(proj_type, m),
         fn_def_lookup(proj_type)));
   }
   return new CCSTFile(statements);
@@ -237,27 +238,27 @@ CCSTCompoundStatement *fn_def_lookup(ProjectionType *pt)
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
-  std::vector<CCSTAssignExpr*> cspace_ins_args;
+  std::vector<CCSTAssignExpr*> cspace_lookup_args;
   std::string enum_name = pt->name();
   std_string_toupper(enum_name);
   std::vector<CCSTSpecifierQual*> spec_quals;
 
   spec_quals.push_back(new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
 
-  cspace_ins_args.push_back(new CCSTPrimaryExprId("cspace"));
-  cspace_ins_args.push_back(new CCSTPrimaryExprId("c"));
-  cspace_ins_args.push_back(
+  cspace_lookup_args.push_back(new CCSTPrimaryExprId("cspace"));
+  cspace_lookup_args.push_back(new CCSTPrimaryExprId("c"));
+  cspace_lookup_args.push_back(
     new CCSTPostFixExprAccess(
       new CCSTPostFixExprExpr(new CCSTPrimaryExprId("glue_libcap_type_ops"),
         new CCSTPrimaryExprId("GLUE_TYPE_" + enum_name)), object_access_t,
       "libcap_type"));
 
-  cspace_ins_args.push_back(
+  cspace_lookup_args.push_back(
     new CCSTCastExpr(
       new CCSTTypeName(spec_quals, new CCSTPointer(new CCSTPointer())),
       new CCSTPrimaryExprId(pt->name())));
 
   statements.push_back(
-    new CCSTReturn(function_call("glue_cspace_insert", cspace_ins_args)));
+    new CCSTReturn(function_call("glue_cspace_lookup", cspace_lookup_args)));
   return new CCSTCompoundStatement(declarations, statements);
 }
