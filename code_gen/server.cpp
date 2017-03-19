@@ -245,6 +245,12 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
     declarations.insert(declarations.end(), tmp_decs.begin(), tmp_decs.end());
   }
 
+  std::vector<CCSTInitDeclarator*> decs_ret;
+
+  decs_ret.push_back(new CCSTDeclarator(pointer(0)
+            , new CCSTDirectDecId("ret")));
+  declarations.push_back(new CCSTDeclaration(int_type(), decs_ret));
+
   if(r->function_pointer_defined()) {
     std::vector<Parameter*> hidden_args = r->hidden_args_;
     /// XXX: Check what is this for
@@ -488,11 +494,11 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
     // err = lcd_sync_reply();
     // if (err) { ...}
     std::vector<CCSTAssignExpr*> lcd_sync_reply_args_empty;
-    statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("err")
+    statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("ret")
                    , equals()
                    , function_call("lcd_sync_reply"
                        , lcd_sync_reply_args_empty))));
-    statements.push_back(if_cond_fail(new CCSTPrimaryExprId("err")
+    statements.push_back(if_cond_fail(new CCSTPrimaryExprId("ret")
               , "lcd_sync_reply"));
   } else {
     std::vector<CCSTAssignExpr*> ipc_reply_args;

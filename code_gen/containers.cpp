@@ -216,14 +216,14 @@ CCSTStatement* lookup_variable_container(Variable *v, Channel::ChannelType type)
   ProjectionType *pt = dynamic_cast<ProjectionType*>(v->type());
   Assert(pt != 0x0, "Error: dynamic cast failed.\n");
 			
-  statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("err")
+  statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("ret")
 								 , equals()
 								 , function_call(lookup_name(pt->real_type()) + + "_type"
 										 , lookup_args))));
 
   std::string *goto_lookup = new std::string("fail_lookup");
   /* do error checking */
-  statements.push_back(if_cond_fail_goto(new CCSTPrimaryExprId("err")
+  statements.push_back(if_cond_fail_goto(new CCSTPrimaryExprId("ret")
 				    , "lookup", *goto_lookup));
 
   return new CCSTCompoundStatement(declarations, statements);
@@ -369,16 +369,15 @@ CCSTCompoundStatement* alloc_insert_variable_container(Variable *v, const std::s
 
     statements.push_back(
       new CCSTExprStatement(
-        new CCSTAssignExpr(new CCSTPrimaryExprId("err"), equals(),
+        new CCSTAssignExpr(new CCSTPrimaryExprId("ret"), equals(),
           function_call(insert_name(pt->real_type()) + "_type", insert_args))));
   }
 
   auto *goto_insert = new std::string("fail_insert");
   /// do error checking
   statements.push_back(
-    if_cond_fail_goto(
-      new CCSTUnaryExprCastExpr(Not(), new CCSTPrimaryExprId("err")),
-      "lcd insert", *goto_insert));
+    if_cond_fail_goto(new CCSTPrimaryExprId("ret"), "lcd insert",
+      *goto_insert));
 
   return new CCSTCompoundStatement(declarations, statements);
 }
@@ -398,8 +397,7 @@ ProjectionField* get_cptr_field(Variable *v)
 ProjectionField* find_field(ProjectionType *pt, const std::string& field_name)
 {
   ProjectionField *field = pt->get_field(field_name);
-  Assert(field != 0x0, "Error: could not find field\n");
-  
+  Assert(field != 0x0, "Error: could not find field %s\n", field_name.c_str());
   return field;
 }
 
@@ -499,13 +497,13 @@ std::vector<CCSTStatement*> caller_allocate_channels(ProjectionType *pt)
       lcd_create_sync_endpoint_args.push_back(new CCSTUnaryExprCastExpr(reference()
 									, access(pf)));
 
-      statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("err")
+      statements.push_back(new CCSTExprStatement( new CCSTAssignExpr(new CCSTPrimaryExprId("ret")
 								     , equals()
 								     , function_call("lcd_create_sync_endpoint"
 										     , lcd_create_sync_endpoint_args))));
 
       // error checking
-      statements.push_back(if_cond_fail(new CCSTPrimaryExprId("err"), "lcd_create_sync_endpointe"));
+      statements.push_back(if_cond_fail(new CCSTPrimaryExprId("ret"), "lcd_create_sync_endpoint"));
     }
   }
 
