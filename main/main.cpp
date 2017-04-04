@@ -46,8 +46,8 @@ int main(int argc, char ** argv)
       std::string callee_disp = new_name(m->identifier(), std::string("_callee_dispatch.c"));
       std::string callee_lds = new_name(m->identifier(), std::string("_callee.lds.S"));
 
-      std::string glue = new_name(m->identifier(), std::string("_cap.c"));
-      std::string common_h = new_name(m->identifier(), std::string("_common.h"));
+      std::string glue_helper_c = new_name(m->identifier(), std::string("_glue_helper.c"));
+      std::string glue_helper_h = new_name(m->identifier(), std::string("_glue_helper.h"));
 
       std::string caller_h = new_name(m->identifier(), std::string("_caller.h"));
       std::string caller_c = new_name(m->identifier(), std::string("_caller.c"));
@@ -58,8 +58,8 @@ int main(int argc, char ** argv)
       std::ofstream ofs_callee_disp(callee_disp);
       std::ofstream ofs_callee_lds(callee_lds);
 
-      std::ofstream ofs_glue(glue);
-      std::ofstream ofs_common_h(common_h);
+      std::ofstream ofs_glue_helper_c(glue_helper_c);
+      std::ofstream ofs_glue_helper_h(glue_helper_h);
 
       std::ofstream ofs_caller_h(caller_h);
       std::ofstream ofs_caller_c(caller_c);
@@ -89,14 +89,14 @@ int main(int argc, char ** argv)
       CCSTFile *ccst_caller_c = generate_client_source(m, caller_includes);
       CCSTFile *ccst_caller_disp = generate_dispatch(m, "client");
 
-      CCSTFile *ccst_glue = generate_glue_source(m);
-      CCSTFile *ccst_common_h = generate_common_header(m);
+      CCSTFile *ccst_glue_c = generate_glue_source(m);
+      CCSTFile *ccst_glue_h = generate_common_header(m);
 
       if (!ofs_callee_h.is_open() || !ofs_callee_c.is_open()
         || !ofs_callee_disp.is_open() || !ofs_callee_lds.is_open()
-        || !ofs_glue.is_open() || !ofs_caller_h.is_open()
+        || !ofs_glue_helper_c.is_open() || !ofs_caller_h.is_open()
         || !ofs_caller_c.is_open() || !ofs_caller_disp.is_open()
-        || !ofs_common_h.is_open()) {
+        || !ofs_glue_helper_h.is_open()) {
 
         std::cerr
           << "Unable to open one or more files for writing! Exiting ... "
@@ -115,16 +115,16 @@ int main(int argc, char ** argv)
 
       ccst_callee_c->write(ofs_callee_c, 0);
       ccst_callee_disp->write(ofs_callee_disp, 0);
-      ccst_glue->write(ofs_glue, 0);
+      ccst_glue_c->write(ofs_glue_helper_c, 0);
 
       /// Common header guard macro
-      std::string macro_common_h("__" + m->identifier() + "_common_h__");
-      std_string_toupper(macro_common_h);
+      std::string macro_glhlpr_h("__" + m->identifier() + "_glue_helper_h__");
+      std_string_toupper(macro_glhlpr_h);
 
-      ofs_common_h << "#ifndef " << macro_common_h << std::endl;
-      ofs_common_h << "#define " << macro_common_h << "\n\n";
-      ccst_common_h->write(ofs_common_h, 0);
-      ofs_common_h << "\n#endif /* " << macro_common_h << " */" << std::endl;
+      ofs_glue_helper_h << "#ifndef " << macro_glhlpr_h << std::endl;
+      ofs_glue_helper_h << "#define " << macro_glhlpr_h << "\n\n";
+      ccst_glue_h->write(ofs_glue_helper_h, 0);
+      ofs_glue_helper_h << "\n#endif /* " << macro_glhlpr_h << " */" << std::endl;
 
       /// FIXME: Should be generated like this. But how to generate SECTIONS {}
       /// statements.push_back(new CCSTPreprocessor("liblcd/trampoline.h", false));
