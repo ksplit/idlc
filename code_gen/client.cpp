@@ -489,6 +489,8 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c, std::string &cspace_to_use
   std::string *goto_ipc = new std::string("fail_ipc");
   statements.push_back(if_cond_fail_goto(new CCSTPrimaryExprId("ret"), ipc_call, *goto_ipc));
 
+  lbl_statements.push_back(new CCSTPlainLabelStatement(*goto_ipc, NULL));
+
   for (auto p: *r) {
     if (p->type_->num() == VOID_TYPE) {
       std::cout << " SYNC send of void pointer " << p->identifier() << " for function " <<  r->name() << std::endl;

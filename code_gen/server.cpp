@@ -233,6 +233,8 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
 {
   std::vector<CCSTDeclaration*> declarations;
   std::vector<CCSTStatement*> statements;
+  std::vector<CCSTStatement*> lbl_statements;
+
   // allocate necessary container things
   
   /* code that loops through parameters and allocates/initializes whatever necessary before marshalling*/
@@ -339,9 +341,10 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m)
       ProjectionType *pt = dynamic_cast<ProjectionType*>(p->type());
       Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
       
-      std::vector<CCSTDeclaration*> tmp_decs = declare_hidden_args_structures(pt, r->current_scope());
-      declarations.insert(declarations.end(), tmp_decs.begin(), tmp_decs.end());
-      
+      if (p->alloc_callee() || p->alloc_caller()) {
+        std::vector<CCSTDeclaration*> tmp_decs = declare_hidden_args_structures(pt, r->current_scope());
+        declarations.insert(declarations.end(), tmp_decs.begin(), tmp_decs.end());
+      }
       // allocate hidden args structures
       Variable* cspace;
       if(p->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
