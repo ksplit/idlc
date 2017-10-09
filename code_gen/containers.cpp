@@ -444,12 +444,13 @@ CCSTCompoundStatement* alloc_link_container_caller(Variable *v, const std::strin
     Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
     
     for (auto pf : *pt) {
-
+      //auto *ptype = dynamic_cast<ProjectionType*>(v->type());
       ProjectionType *v_container_type = dynamic_cast<ProjectionType*>(v->container()->type());
       Assert(v_container_type != 0x0, "Error: dynamic cast to projection type failed\n");
 
       ProjectionType *tmp = dynamic_cast<ProjectionType*>( find_field(v_container_type
-								      , v->type()->name())->type());
+                                                                     , v->type()->name())->type());
+//								      , ptype->real_type())->type());
       ProjectionField *tmp_field = find_field(tmp, pf->identifier());
       if(pf->container() != 0x0) {
 	statements.push_back(alloc_link_container_caller(pf, cspace));
