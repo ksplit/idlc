@@ -104,6 +104,7 @@ Type *getType(const std::string& type)
     LexicalScope *ls = get_current_scope();
     if(!ls) {
         std::cout << "current scope is null\n";
+        ls = get_current_module_scope();
     }
     std::cout << "!Looking up for: " << type << " in scope: " << ls << "\n";
 
@@ -409,8 +410,10 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
                             module_scope->setactiveChannel(NULL);
                         }
                     }
-
-			      set_current_scope(get_current_scope()->outer_scope()); // leaving current scope	  
+                  if (get_current_scope())
+    			      set_current_scope(get_current_scope()->outer_scope()); // leaving current scope
+                  else
+                      set_current_scope(get_current_module_scope());
 				  const std::string *name = static_cast<const std::string*>(id.getValue());
 			      value = new Module(*name, rpcs, channels2, module_scope); 
 			  }}
@@ -921,7 +924,8 @@ Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id
 			    container_fields.insert(container_fields.end(), channels.begin(), channels.end());	    
 
 			    const std::string container_name_str = container_name(*_id);
-			    ProjectionType * container = new ProjectionType(container_name_str, container_name_str, container_fields);
+			    const std::string real_type_container = container_name(*_type);
+			    ProjectionType * container = new ProjectionType(container_name_str, real_type_container, container_fields);
 			    std::cout << "inserting projection type with name " <<  container_name_str << std::endl;
 			    insertType(container_name_str, container);
 			    // finished creating constructor
