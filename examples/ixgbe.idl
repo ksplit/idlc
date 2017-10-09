@@ -1,0 +1,356 @@
+/*
+rpc void __percpu *__alloc_percpu(size_t size, size_t align) ;
+rpc __alloc_workqueue_key(const char *fmt, unsigned int flags, int max_active, ;
+rpc projection workqueue_struct *__alloc_workqueue_key(const char *fmt, ;
+rpc #define arch_dma_alloc_attrs arch_dma_alloc_attrs ;
+rpc bool arch_dma_alloc_attrs(projection device **dev, gfp_t *gfp) ;
+rpc #define arch_dma_alloc_attrs(dev, flag) (true) ;
+rpc int call_netdevice_notifiers(unsigned long val, projection net_device *dev) ;
+rpc bool cancel_work_sync(projection work_struct *work) ;
+rpc unsigned long _copy_from_user(void *to, const void __user *from, unsigned n) ;
+rpc unsigned long _copy_to_user(void __user *to, const void *from, unsigned n) ;
+
+rpc void destroy_workqueue(projection workqueue_struct *wq) ;
+rpc int dev_addr_add(projection net_device *dev, const unsigned char *addr, ;
+rpc int dev_addr_del(projection net_device *dev, const unsigned char *addr, ;
+rpc projection rtnl_link_stats64 *dev_get_stats(struct net_device *dev, ;
+rpc static inline int device_set_wakeup_enable(projection device *dev, bool enable) ;
+rpc void _dev_info(const projection device *dev, const char *fmt, ...) ;
+rpc void __dev_kfree_skb_any(projection sk_buff *skb, enum skb_free_reason reason) ;
+rpc extern void *devm_kmalloc(projection device *dev, size_t size, gfp_t gfp) __malloc; ;
+rpc unsigned long dev_trans_start(projection net_device *dev) ;
+rpc void dev_warn(const projection device *dev, const char *fmt, ...) ;
+rpc projection dma_map_ops *dma_ops = &nommu_dma_ops; ;
+rpc void *dma_pool_alloc(projection dma_pool *pool, gfp_t mem_flags, ;
+rpc projection dma_pool *dma_pool_create(const char *name, struct device *dev, ;
+rpc void dma_pool_destroy(projection dma_pool *pool) ;
+rpc void dma_pool_free(projection dma_pool *pool, void *vaddr, dma_addr_t dma) ;
+rpc int dma_supported(projection device *dev, u64 mask) ;
+rpc static inline int dma_supported(projection device *dev, u64 mask) ;
+rpc void dql_completed(projection dql *dql, unsigned int count) ;
+rpc void dql_reset(projection dql *dql) ;
+
+rpc void __dynamic_netdev_dbg(projection _ddebug *descriptor, ;
+rpc u32 eth_get_headlen(void *data, unsigned int len) ;
+rpc int eth_platform_get_mac_address(projection device *dev, u8 *mac_addr) ;
+rpc u32 ethtool_op_get_link(projection net_device *dev) ;
+rpc int ethtool_op_get_ts_info(projection net_device *dev, struct ethtool_ts_info *info) ;
+rpc __be16 eth_type_trans(projection sk_buff *skb, struct net_device *dev) ;
+rpc void free_percpu(void __percpu *ptr) ;
+
+
+rpc void iounmap(volatile void __iomem *addr) ;
+
+rpc int ipv6_find_hdr(const projection sk_buff *skb, unsigned int *offset, ;
+rpc void __local_bh_enable_ip(unsigned long ip, unsigned int cnt) ;
+
+
+// NAPI - Rx path
+rpc projection sk_buff *__napi_alloc_skb(struct napi_struct *napi, unsigned int len, ;
+rpc void napi_complete_done(projection napi_struct *n, int work_done) ;
+rpc void napi_consume_skb(projection sk_buff *skb, int budget) ;
+rpc void napi_disable(projection napi_struct *n) ;
+rpc void napi_gro_flush(projection napi_struct *napi, bool flush_old) ;
+rpc gro_result_t napi_gro_receive(projection napi_struct *napi, struct sk_buff *skb) ;
+rpc bool napi_hash_del(projection napi_struct *napi) ;
+rpc void __napi_schedule_irqoff(projection napi_struct *n) ;
+
+// NETIF - for what?
+rpc int ndo_dflt_fdb_add(projection ndmsg *ndm, ;
+rpc projection net_device *netdev_all_upper_get_next_dev_rcu(struct net_device *dev, ;
+rpc void netdev_features_change(projection net_device *dev) ;
+rpc void netdev_rss_key_fill(void *buffer, size_t len) ;
+rpc void netif_carrier_off(projection net_device *dev) ;
+rpc void netif_carrier_on(projection net_device *dev) ;
+rpc void netif_device_attach(projection net_device *dev) ;
+rpc void netif_device_detach(projection net_device *dev) ;
+rpc void netif_napi_del(projection napi_struct *napi) ;
+rpc int netif_receive_skb(projection sk_buff *skb) ;
+rpc void netif_schedule_queue(projection netdev_queue *txq) ;
+rpc static inline int netif_set_real_num_rx_queues(projection net_device *dev, ;
+rpc int netif_set_real_num_rx_queues(projection net_device *dev, unsigned int rxq) ;
+rpc int netif_set_real_num_tx_queues(projection net_device *dev, unsigned int txq) ;
+rpc static inline int netif_set_xps_queue(projection net_device *dev, ;
+rpc int netif_set_xps_queue(projection net_device *dev, const struct cpumask *mask, ;
+rpc void netif_tx_stop_all_queues(projection net_device *dev) ;
+rpc void netif_tx_wake_queue(projection netdev_queue *dev_queue) ;
+rpc void netif_wake_subqueue(projection net_device *dev, u16 queue_index) ;
+rpc projection nlattr *nla_find(const struct nlattr *head, int len, int attrtype) ;
+rpc projection timespec ns_to_timespec(const s64 nsec) ;
+
+// for PCI
+rpc static inline int pci_cleanup_aer_uncorrect_error_status(projection pci_dev *dev) ;
+rpc static inline projection pci_dev *pci_dev_get(struct pci_dev *dev) { return NULL; } ;
+rpc #define pci_dev_put(dev) do { } while (0) ;
+rpc static inline void pci_disable_device(projection pci_dev *dev) { } ;
+rpc static inline void pci_disable_msi(projection pci_dev *dev) { } ;
+rpc static inline void pci_disable_msix(projection pci_dev *dev) { } ;
+rpc static inline int pci_disable_pcie_error_reporting(projection pci_dev *dev) ;
+rpc static inline void pci_disable_sriov(projection pci_dev *dev) { } ;
+rpc static inline int pci_enable_msi_range(projection pci_dev *dev, int minvec, ;
+rpc static inline int pci_enable_msix_range(projection pci_dev *dev, ;
+rpc static inline int pci_enable_pcie_error_reporting(projection pci_dev *dev) ;
+rpc static inline int pci_enable_sriov(projection pci_dev *dev, int nr_virtfn) ;
+rpc static inline int pci_find_ext_capability(projection pci_dev *dev, int cap) ;
+rpc static inline projection pci_dev *pci_get_device(unsigned int vendor, ;
+rpc static inline int pci_num_vf(projection pci_dev *dev) { return 0; } ;
+rpc static inline int __pci_register_driver(projection pci_driver *drv, ;
+rpc static inline void pci_restore_state(projection pci_dev *dev) { } ;
+rpc static inline int pci_save_state(projection pci_dev *dev) { return 0; } ;
+rpc static inline void pci_set_master(projection pci_dev *dev) { } ;
+rpc static inline int pci_set_power_state(projection pci_dev *dev, pci_power_t state) ;
+rpc static inline int pci_sriov_set_totalvfs(projection pci_dev *dev, u16 numvfs) ;
+rpc static inline int pci_vfs_assigned(projection pci_dev *dev) ;
+rpc static inline int pci_wake_from_d3(projection pci_dev *dev, bool enable) ;
+
+// Rx path - skb utils
+rpc int pskb_expand_head(projection sk_buff *skb, int nhead, int ntail, ;
+rpc unsigned char *__pskb_pull_tail(projection sk_buff *skb, int delta) ;
+rpc int ___pskb_trim(projection sk_buff *skb, unsigned int len) ;
+rpc void skb_add_rx_frag(projection sk_buff *skb, int i, struct page *page, int off, ;
+rpc int skb_checksum_help(projection sk_buff *skb) ;
+rpc int __weak skb_copy_bits(const projection sk_buff *skb, int offset, void *to, ;
+rpc int skb_copy_bits(const projection sk_buff *skb, int offset, void *to, int len) ;
+rpc int skb_pad(projection sk_buff *skb, int pad) ;
+rpc unsigned char *skb_put(projection sk_buff *skb, unsigned int len) ;
+rpc void skb_tstamp_tx(projection sk_buff *orig_skb, ;
+
+// PTP - disable!
+rpc bool queue_work_on(int cpu, projection workqueue_struct *wq, ;
+
+// IRQ
+rpc projection mic_irq* (*request_threaded_irq)(struct mbus_device *mbdev, ;
+rpc int request_threaded_irq(unsigned int irq, irq_handler_t handler, ;
+rpc void synchronize_irq(unsigned int irq) ;
+rpc int irq_set_affinity_hint(unsigned int irq, const projection cpumask *m) ;
+rpc void free_irq(unsigned int irq, void *dev_id) ;
+
+// DMA
+rpc projection scatterlist *sg_next(struct scatterlist *sg) ;
+rpc static inline projection scatterlist *sg_next(struct scatterlist *sg) ;
+
+rpc int simple_open(projection inode *inode, struct file *file) ;
+rpc ssize_t simple_read_from_buffer(void __user *to, size_t count, loff_t *ppos, ;
+rpc ssize_t simple_write_to_buffer(void *to, size_t available, loff_t *ppos, ;
+
+// Timers - likely for napi
+rpc u64 timecounter_cyc2time(projection timecounter *tc, ;
+rpc void timecounter_init(projection timecounter *tc, ;
+rpc u64 timecounter_read(projection timecounter *tc) ;
+rpc int mod_timer(projection timer_list *timer, unsigned long expires) ;
+rpc void init_timer_key(projection timer_list *timer, unsigned int flags, ;
+rpc ktime_t ktime_get_with_offset(enum tk_offsets offs) ;
+rpc int del_timer_sync(projection timer_list *timer) ;
+
+// Error
+rpc void warn_slowpath_fmt(const char *file, int line, const char *fmt, ...) ;
+rpc void warn_slowpath_null(const char *file, int line) ;
+*/
+
+include <lcd_config/pre_hook.h>
+
+include <libcap.h>
+include <liblcd/liblcd.h>
+include <liblcd/sync_ipc_poll.h>
+include <liblcd/glue_cspace.h>
+include "../../ixgbe_common.h"
+
+include <lcd_config/post_hook.h>
+
+module ixgbe(channel c) {
+    channel ixgbe_async = new async(c);
+    use ixgbe_async;
+
+    {
+        projection <struct module> module {
+        }
+
+        projection <struct sk_buff> sk_buff {
+        }
+
+        projection <struct pci_dev> pci_dev {
+        }
+
+        projection <struct device> device {
+        }
+
+        projection <struct pci_device_id> pci_device_id {
+        }
+  
+        projection <struct net_device> net_device { }
+
+        projection <struct rtnl_link_stats64> rtnl_link_stats64 {
+            //unsigned int tx_bytes;
+            //unsigned int tx_packets;
+        }
+
+        projection <struct net_device> netdev_empty {
+        }
+
+        projection <struct net_device_ops> net_device_ops {
+            // Use netdev->stats
+//            rpc [alloc(callee)] int (*ndo_init)(projection net_device [bind] *dev);
+//            rpc [alloc] void (*ndo_uninit)(projection net_device [bind] *dev);
+            rpc [alloc] int (*ndo_open)(projection netdev_empty [bind] *dev);
+            rpc [alloc] int (*ndo_stop)(projection netdev_empty [bind] *dev);
+            rpc [alloc] int (*ndo_start_xmit)(projection sk_buff *skb, projection net_device [bind] *dev);
+            rpc [alloc] unsigned short (*ndo_select_queue)(projection netdev_empty [bind] *dev,
+						                projection sk_buff *skb,
+						                void *accel_priv,
+						                rpc [alloc] unsigned short (*fallback)(projection netdev_empty [bind] *dev,
+                        				       projection sk_buff *skb));
+            rpc [alloc] void (*ndo_set_rx_mode)(projection netdev_empty [bind] *dev);
+            rpc [alloc] int (*ndo_validate_addr)(projection net_device [bind] *dev);
+            rpc [alloc] int (*ndo_set_mac_address)(projection netdev_empty [bind] *dev, void *addr);
+            rpc [alloc] int (*ndo_change_mtu)(projection netdev_empty [bind] *dev, int new_mtu);
+            rpc [alloc] void (*ndo_tx_timeout)(projection netdev_empty [bind] *dev);
+            rpc [alloc] int (*ndo_set_tx_maxrate)(projection netdev_empty [bind] *dev,
+						      int queue_index,
+						      unsigned int maxrate);
+            rpc [alloc] projection rtnl_link_stats64* (*ndo_get_stats64)(projection netdev_empty [bind] *dev,
+                                                     projection rtnl_link_stats64 *stats);
+
+
+
+            // Stub function. Use a placeholder netdev_empty
+            // calls eth_mac_addr function. Use a placeholder netdev_empty
+            // Doesn't use netdev struct. Use a placeholder netdev_empty
+        }
+
+        projection <struct net_device> net_device_reg {
+            unsigned int flags;
+            unsigned int priv_flags;
+            unsigned long long features;
+            unsigned long long hw_features;
+//            unsigned long long hw_enc_features;
+            projection net_device_ops [alloc(caller)] *netdev_ops;
+//            unsigned long long gso_partial_features;
+//            unsigned long long mpls_features;
+//            unsigned long long vlan_features;
+//            unsigned int		min_mtu;
+//            unsigned int		max_mtu;
+        }
+
+        projection <struct pci_driver> pci_driver {
+            char *name;
+            rpc [alloc] int (*probe)(projection pci_dev [alloc(callee)] *dev, projection pci_device_id *id);
+            rpc [alloc] void (*remove) (projection pci_dev [dealloc(callee)] *dev);
+        }
+
+        rpc int __pci_register_driver(
+                    projection pci_driver [alloc(callee)] *drv,
+                    projection module [alloc(callee)] *owner,
+                    char* name);
+
+        rpc void pci_unregister_driver(projection pci_driver [dealloc(callee)] *drv);
+
+        rpc projection net_device [alloc(caller),in,out] *alloc_etherdev_mqs(int sizeof_priv,
+                unsigned int txqs, unsigned int rxqs);
+
+        rpc int register_netdev(projection net_device_reg [alloc(callee)] *dev);
+        rpc void ether_setup(projection net_device [bind] *dev);
+        rpc int eth_mac_addr(projection net_device [bind] *dev, void *p);
+        rpc int eth_validate_addr(projection net_device [bind] *dev);
+        rpc void free_netdev(projection net_device [bind] *dev);
+        rpc void netif_carrier_off(projection net_device [bind] *dev);
+        rpc void netif_carrier_on(projection net_device [bind] *dev);
+        rpc void netif_device_attach(projection net_device [bind] *dev);
+        rpc void netif_device_detach(projection net_device [bind] *dev);
+        rpc int netif_set_real_num_rx_queues(projection net_device [bind] *dev, unsigned int rxq);
+        rpc int netif_set_real_num_tx_queues(projection net_device [bind] *dev, unsigned int txq);
+        rpc void consume_skb(projection sk_buff *skb);
+        rpc void unregister_netdev(projection net_device_reg [bind] *dev);
+        rpc int eth_platform_get_mac_address(projection device *dev, void *mac_addr);
+        rpc int dev_addr_add(projection net_device [bind] *dev, const void *addr, unsigned char addr_type);
+        rpc int dev_addr_del(projection net_device [bind] *dev, const void *addr, unsigned char addr_type);
+        rpc int device_set_wakeup_enable(projection device *dev, bool enable);
+        rpc void netif_tx_stop_all_queues(projection net_device [bind] *dev);
+        rpc void netif_tx_wake_queue(projection net_device [bind] *dev_queue);
+    }
+    {
+        projection <struct pci_dev> pci_dev { }
+        projection <struct pci_bus> pci_bus { }
+
+        /* pci helpers */
+        rpc int pci_disable_pcie_error_reporting(projection pci_dev *dev);
+        rpc int pci_bus_read_config_word(projection pci_bus *bus, unsigned int devfn,
+			     int where, unsigned short [out] *val);
+        rpc int pci_bus_write_config_word(projection pci_bus [bind] *bus, unsigned int devfn,
+			     int where, unsigned short [in] val);
+
+        rpc int pci_cleanup_aer_uncorrect_error_status(projection pci_dev *dev);
+        rpc void pci_disable_device(projection pci_dev *dev);
+
+        /* XXX: IRQ stuff - Disable'em all */
+        /*
+        rpc void pci_disable_msi(projection pci_dev *dev);
+        rpc int pci_enable_msi_range(projection pci_dev *dev, int minvec, int maxvec);
+        */
+
+        rpc void pci_disable_msix(projection pci_dev *dev);
+        rpc int pci_enable_msix_range(projection pci_dev *dev, void *entries, int minvec, int maxvec);
+
+        rpc int pci_enable_pcie_error_reporting(projection pci_dev *dev);
+        rpc int pcie_capability_read_word(projection pci_dev *dev, int pos, unsigned short *val);
+
+        rpc int pcie_get_minimum_link(projection pci_dev *dev, int *speed,
+			  int *width);
+        rpc int pci_enable_device_mem(projection pci_dev *dev);
+
+        rpc int pci_request_selected_regions(projection pci_dev *dev, int type, const char *reg);
+        rpc int pci_request_selected_regions_exclusive(projection pci_dev *dev, int type, const char *reg);
+        rpc void pci_set_master(projection pci_dev *dev);    
+        rpc int pci_save_state(projection pci_dev *dev);
+        rpc void pci_restore_state(projection pci_dev *dev);
+        rpc void pci_release_selected_regions(projection pci_dev *dev, int r);
+        rpc int pci_select_bars(projection pci_dev *dev, unsigned long flags);
+        rpc int pci_wake_from_d3(projection pci_dev *dev, bool enable);
+    }
+    {
+        projection <struct net_device> net_device { }
+
+        projection <struct mdio_if_info> mdio_if_info {
+	        projection net_device [bind] *dev;
+	        unsigned int [out] mmds;
+	        rpc [alloc] int (*mdio_read)(projection net_device *dev, int prtad, int devad,
+			         unsigned short addr);
+	        rpc [alloc] int (*mdio_write)(projection net_device *dev, int prtad, int devad,
+			          unsigned short addr, unsigned short val);
+        }
+        rpc int mdio45_probe(projection mdio_if_info [alloc(callee)] *mdio, int [in,out] prtad);
+    }
+    {
+        rpc void _free_irq(unsigned int irq, int dev_id);
+    }
+    {
+        projection <struct net_device> net_device { }
+
+        rpc int __hw_addr_sync_dev(
+		       projection net_device [bind] *dev1,
+		       rpc [alloc] int (*sync)(projection net_device [bind] *dev, unsigned char *mac),
+		       rpc [alloc] int (*unsync)(projection net_device [bind] *dev, unsigned char *mac));
+        rpc void __hw_addr_unsync_dev(
+    	       projection net_device [bind] *dev1);
+    }
+    {
+        projection <struct napi_struct> napi_struct { }
+
+        projection <struct net_device> net_device { }
+
+        projection <struct sk_buff> sk_buff { }
+
+        rpc void netif_napi_add(projection net_device [bind] *dev, projection napi_struct *napi,
+		    rpc [alloc] int (*poll)(projection napi_struct *napi, int budget), int weight);
+
+        rpc void netif_napi_del(projection napi_struct *napi);
+        rpc void napi_disable(projection napi_struct *n);
+        rpc void napi_consume_skb(projection sk_buff *skb, int budget);
+        rpc void netif_wake_subqueue(projection net_device [bind] *dev, unsigned short queue_index);
+        rpc int netif_receive_skb(projection sk_buff *skb);
+        rpc int napi_gro_receive(projection napi_struct *napi, projection sk_buff *skb);
+        rpc void __napi_alloc_skb(projection napi_struct *napi, unsigned int len, int gfp_mask);
+        rpc unsigned short eth_type_trans(projection sk_buff *skb, projection net_device [bind] *dev);
+        rpc void skb_add_rx_frag(projection sk_buff *skb, int i, unsigned long page, int off, int size, unsigned int truesize);
+        rpc unsigned int eth_get_headlen(unsigned long data, unsigned int len);
+    }
+}

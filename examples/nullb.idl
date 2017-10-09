@@ -1,0 +1,99 @@
+module nullb(channel c) {
+    projection <struct bio> bio {
+
+    }
+    projection <struct blk_mq_hw_ctx> blk_mq_hw_ctx {
+
+    }
+
+    projection <struct blk_mq_ops> blk_mq_ops {
+        rpc int (*queue_rq_fn)(struct blk_mq_hw_ctx *, const struct blk_mq_queue_data *);
+        rpc projection blk_mq_hw_ctx *(map_queue_fn)(struct request_queue *, const int);
+        rpc enum blk_eh_timer_return (*timeout_fn)(struct request *, bool);
+        rpc int (*init_hctx_fn)(struct blk_mq_hw_ctx *, void *, unsigned int);
+        rpc void (*exit_hctx_fn)(struct blk_mq_hw_ctx *, unsigned int);
+        rpc int (*init_request_fn)(void *, struct request *, unsigned int,
+                        unsigned int, unsigned int);
+        rpc void (*exit_request_fn)(void *, struct request *, unsigned int,
+                        unsigned int);
+
+        rpc void (*busy_iter_fn)(struct blk_mq_hw_ctx *, struct request *, void *, bool);
+
+
+        softirq_done_fn *complete;
+    }
+
+    projection <struct blk_mq_tag_set> blk_mq_tag_set {
+        projection blk_mq_ops *ops;
+    }
+    projection <struct gendisk> gendisk {
+
+    }
+    projection <struct hrtimer> hrtimer {
+
+    }
+    projection <struct kernel_param> kernel_param {
+
+    }
+    projection <struct llist_node> llist_node {
+
+    }
+    projection <struct lock_class_key> lock_class_key {
+
+    }
+    projection <struct mutex> mutex {
+
+    }
+    projection <struct request> request {
+
+    }
+    projection <struct request_queue> request_queue {
+
+    }
+
+
+    rpc void bio_endio(projection bio *bio, int);
+
+    rpc void blk_complete_request(projection request *rq);
+    rpc void blk_end_request_all(projection request *rq, int error);
+    rpc void blk_mq_complete_request(projection request *rq);
+    rpc void blk_mq_end_request(projection request *rq, int error);
+    rpc void blk_mq_free_tag_set(projection blk_mq_tag_set *set);
+    rpc void blk_mq_start_request(projection request *rq);
+    rpc void blk_queue_logical_block_size(projection request_queue *rq, unsigned short size);
+
+    rpc void blk_queue_physical_block_size(projection request_queue *rq, unsigned int);
+    rpc void blk_queue_prep_rq(projection request_queue *rq, prep_rq_fn *pfn);
+    rpc void blk_queue_softirq_done(projection request_queue *rq, softirq_done_fn *);
+    rpc void del_gendisk(projection gendisk *gp);
+    rpc void finish_wait(wait_queue_head_t *q, wait_queue_t *wait);
+    rpc void __init_waitqueue_head(wait_queue_head_t *q, const char *name, projection lock_class_key *);
+    rpc void io_schedule(void);
+    rpc void kfree(const void *mem);
+    rpc void mutex_lock(projection mutex *lock);
+    rpc void mutex_unlock(projection mutex *lock);
+    rpc void prepare_to_wait(wait_queue_head_t *q, wait_queue_t *wait, int state);
+    rpc void put_disk(projection gendisk *disk);
+
+    rpc void __wake_up(wait_queue_head_t *q, unsigned int mode, int nr, void *key);
+
+    rpc int autoremove_wake_function(wait_queue_t *wait, unsigned mode, int sync, void *key);
+    rpc projection blk_mq_hw_ctx *blk_mq_map_queue(projection request_queue *, const int ctx_index);
+
+    // add_dev
+    rpc int blk_mq_alloc_tag_set(projection blk_mq_tag_set *set);
+    rpc projection request_queue *blk_mq_init_queue(projection blk_mq_tag_set *q);
+    rpc projection request_queue *blk_alloc_queue_node(gfp_t flags, int sz);
+    rpc void blk_queue_make_request(projection request_queue *rq, make_request_fn *);
+    rpc projection request_queue *blk_init_queue_node(request_fn_proc *rfn, spinlock_t *lock, int node_id);
+    rpc projection gendisk *alloc_disk_node(int minors, int node_id);
+    rpc void blk_queue_logical_block_size(projection request_queue *rq, unsigned short size);
+    rpc void blk_queue_physical_block_size(projection request_queue *rq, unsigned int);
+    rpc void add_disk(projection gendisk *disk);
+    rpc void blk_cleanup_queue(projection request_queue *rq);
+
+    // init and exit
+    rpc int register_blkdev(unsigned int devno, const char *name);
+    rpc void unregister_blkdev(unsigned int, const char *name);
+    rpc void hrtimer_init(projection hrtimer *timer, clockid_t which_clock, enum hrtimer_mode mode);
+}

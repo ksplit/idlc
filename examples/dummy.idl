@@ -1,0 +1,131 @@
+/*
+rpc int __sched _cond_resched(void ) ;
+rpc int _cond_resched(void ) { return 0; } ;
+rpc void consume_skb(projection sk_buff *skb) ;
+rpc void ether_setup(projection net_device *dev) ;
+rpc int eth_mac_addr(projection net_device *dev, void *p) ;
+rpc int eth_validate_addr(projection net_device *dev) ;
+rpc void free_netdev(projection net_device *dev) ;
+rpc void netif_carrier_off(projection net_device *dev) ;
+rpc void netif_carrier_on(projection net_device *dev) ;
+rpc int register_netdevice(projection net_device *dev) ;
+rpc int __rtnl_link_register(projection rtnl_link_ops *ops) ;
+rpc void __rtnl_link_unregister(projection rtnl_link_ops *ops) ;
+rpc void rtnl_link_unregister(projection rtnl_link_ops *ops) ;
+rpc void rtnl_lock(void ) ;
+rpc void rtnl_unlock(void ) ;
+rpc size_t strlcpy(char *dest, const char *src, size_t size) ;
+rpc size_t strlcpy(char *dest, const char *src, size_t size) ;
+rpc size_t __weak strlcpy(char *dest, const char *src, size_t size) ;
+*/
+
+include <lcd_config/pre_hook.h>
+
+include <libcap.h>
+include <liblcd/liblcd.h>
+include <liblcd/sync_ipc_poll.h>
+include <liblcd/glue_cspace.h>
+include "../../glue_helper.h"
+
+include <lcd_config/post_hook.h>
+
+module nullnet(channel c) {
+    channel net_async = new async(c);
+    use net_async;
+    {
+        projection <struct rtnl_link_stats64> rtnl_link_stats64 {
+            //unsigned int tx_bytes;
+            //unsigned int tx_packets;
+        }
+
+        projection <struct sk_buff> sk_buff {
+        }
+
+        projection <struct pcpu_dstats> pcpu_dstats {
+
+        }
+
+        projection <struct net_device> net_device_stats {
+            projection pcpu_dstats [bind(callee)] *dstats;
+        }
+
+        projection <struct net_device> netdev_empty {
+        }
+
+        projection <struct net_device_ops> net_device_ops {
+            // Use netdev->stats
+            rpc [alloc(callee)] int (*ndo_init)(projection net_device_stats [bind] *dev);
+            rpc [alloc] void (*ndo_uninit)(projection net_device_stats [bind] *dev);
+            rpc [alloc] int (*ndo_start_xmit)(projection sk_buff *skb, projection net_device_stats [bind] *dev);
+            rpc [alloc] int (*ndo_validate_addr)(projection net_device_stats [bind] *dev);
+            rpc [alloc] projection rtnl_link_stats64* (*ndo_get_stats64)(projection net_device_stats [bind] *dev,
+                                                     projection rtnl_link_stats64 *storage);
+
+            // Stub function. Use a placeholder netdev_empty
+            rpc [alloc] void (*ndo_set_rx_mode)(projection netdev_empty [bind] *dev);
+            // calls eth_mac_addr function. Use a placeholder netdev_empty
+            rpc [alloc] int (*ndo_set_mac_address)(projection netdev_empty [bind] *dev, void *addr);
+            // Doesn't use netdev struct. Use a placeholder netdev_empty
+            rpc [alloc] int (*ndo_change_carrier)(projection netdev_empty [bind] *dev, bool new_carrier);
+        }
+
+        projection <struct nlattr> nlattr {
+        }
+ 
+        projection <struct ethtool_drvinfo> ethtool_drvinfo {
+            //string driver;
+            //string version;
+        }
+
+        projection <struct ethtool_ops> ethtool_ops {
+            rpc [alloc] void (*get_drvinfo)(projection netdev_empty [bind] *dev, projection ethtool_drvinfo *info);        
+        }
+
+        projection <struct net_device> net_device_setup {
+            unsigned int flags;
+            unsigned int priv_flags;
+            unsigned long long features;
+            unsigned long long hw_features;
+            unsigned long long hw_enc_features;
+            projection net_device_ops [alloc(caller)] *netdev_ops;
+            projection ethtool_ops *ethtool_ops;
+            rpc [alloc] void (*destructor)(projection netdev_empty *dev);
+        }
+
+        projection <struct rtnl_link_ops> rtnl_link_ops {
+            //string kind;
+            rpc void (*setup)(projection net_device_setup *dev);
+            rpc [alloc] int (*validate)(projection nlattr **tb, projection nlattr **data);
+        }
+
+        projection <struct net_device> net_device {       
+            projection net_device_ops [bind]/*[alloc(callee)]*/ *netdev_ops;
+            projection rtnl_link_ops [bind]/*[alloc(callee)]*/ *rtnl_link_ops;
+        }
+
+        rpc int __rtnl_link_register(projection rtnl_link_ops [alloc(callee)] *ops);
+        rpc void __rtnl_link_unregister(projection rtnl_link_ops [bind] *ops);
+        rpc void rtnl_link_unregister(projection rtnl_link_ops [dealloc(callee)] *ops);
+        rpc projection net_device [alloc(caller),in,out] *alloc_netdev_mqs(int sizeof_priv, const char *name,
+                unsigned char name_assign_type,
+                rpc [alloc,in] void (*setup)(projection net_device *dev),
+                unsigned int txqs, unsigned int rxqs);
+
+/*        rpc projection net_device *alloc_netdev_mqs2(int sizeof_priv, const char *name,
+                unsigned char name_assign_type,
+                projection rtnl_link_stats64 *stats); */
+
+        rpc int register_netdevice(projection net_device [bind] *dev);
+        rpc void ether_setup(projection net_device [bind] *dev);
+        rpc int eth_mac_addr(projection net_device [bind] *dev, void *p);
+        rpc int eth_validate_addr(projection net_device [bind] *dev);
+        rpc void free_netdev(projection net_device [bind] *dev);
+        rpc void netif_carrier_off(projection net_device [bind] *dev);
+        rpc void netif_carrier_on(projection net_device [bind] *dev);
+    }
+    {
+        projection <struct sk_buff> sk_buff {
+        }  
+        rpc void consume_skb(projection sk_buff [alloc(caller)] *skb);    
+    }
+}
