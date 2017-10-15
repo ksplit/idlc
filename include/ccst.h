@@ -107,16 +107,8 @@ class CCSTMacro;
 
 const std::string indentation(unsigned int level);
 
-class CCSTBase
-{
-public:
-  virtual void write(std::ofstream& of, int indent) = 0;
-  virtual ~CCSTBase()
-  {
-  }
-};
 
-class CCSTFile: public CCSTBase
+class CCSTFile
 {
   std::vector<CCSTExDeclaration*> defs_;
 public:
@@ -124,7 +116,7 @@ public:
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTExDeclaration: public CCSTBase
+class CCSTExDeclaration
 {
   /*
    <external-declaration> ::= <function-definition>
@@ -135,7 +127,7 @@ public:
 };
 
 class CCSTDeclarator;
-class CCSTInitDeclarator: public CCSTBase
+class CCSTInitDeclarator
 {
   /*
 
@@ -203,7 +195,7 @@ public:
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTDecSpecifier: public CCSTBase
+class CCSTDecSpecifier
 {
   /*
    <declaration-specifier> ::= <storage-class-specifier>
@@ -315,7 +307,7 @@ public:
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTStructDeclaration: public CCSTBase
+class CCSTStructDeclaration
 {
   /*
    <struct-declaration> ::= {<specifier-qualifier>}* <struct-declarator-list>
@@ -328,7 +320,7 @@ public:
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTStructDecList: public CCSTBase
+class CCSTStructDecList
 {
   /*
    <struct-declarator-list> ::= <struct-declarator>
@@ -364,7 +356,7 @@ enum type_qualifier
   none_t, const_t, volatile_t
 };
 
-class CCSTAbstDeclarator: public CCSTBase
+class CCSTAbstDeclarator
 {
   /*
    <abstract-declarator> ::= <pointer>
@@ -395,7 +387,7 @@ public:
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTDirectDeclarator: public CCSTBase
+class CCSTDirectDeclarator
 {
   /*
    <direct-declarator> ::= <identifier>
@@ -496,7 +488,7 @@ public:
 };
 
 // is this right?
-class CCSTConstExpr: public CCSTBase
+class CCSTConstExpr
 {
   /*
    <constant-expression> ::= <conditional-expression>
@@ -507,7 +499,7 @@ public:
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTStatement: public CCSTBase
+class CCSTStatement
 {
   /*
    <statement> ::= <labeled-statement>
@@ -548,7 +540,7 @@ public:
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTExpression: public CCSTBase
+class CCSTExpression
 {
   /*
    <expression> ::= <assignment-expression>
@@ -1064,7 +1056,7 @@ enum assign_op
   or_eq_t
 };
 
-class CCSTAssignOp: public CCSTBase
+class CCSTAssignOp
 {
   /*
    <assignment-operator> ::= =
@@ -1097,7 +1089,7 @@ enum unary_op
   unary_bang_t
 };
 
-class CCSTUnaryOp: public CCSTBase
+class CCSTUnaryOp
 {
   // probably overkill
   /*
@@ -1115,7 +1107,7 @@ public:
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTTypeName: public CCSTBase
+class CCSTTypeName
 {
   /*
    <type-name> ::= {<specifier-qualifier>}+ {<abstract-declarator>}?
@@ -1129,7 +1121,7 @@ public:
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTParamTypeList: public CCSTBase
+class CCSTParamTypeList
 {
   /*
    <parameter-type-list> ::= <parameter-list>
@@ -1216,7 +1208,7 @@ public:
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTEnumeratorList: public CCSTBase
+class CCSTEnumeratorList
 {
   /*
 
@@ -1255,7 +1247,7 @@ public:
   virtual void write(std::ofstream& of, int indent);
 };
 
-class CCSTInitializerList: public CCSTBase
+class CCSTInitializerList
 {
   /*
    <initializer-list> ::= <initializer>

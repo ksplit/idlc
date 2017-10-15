@@ -47,12 +47,9 @@ typedef enum {
 class ASTVisitor;
 class Channel;
 
-class Base
-{			  
- public:
-};
 
-class LexicalScope : public Base
+
+class LexicalScope 
 {
  public:
   LexicalScope *outer_scope_;
@@ -120,7 +117,7 @@ public:
   }
 };
 
-class Type : public Base
+class Type 
 {
  public:
   virtual Type* clone() const = 0;
@@ -215,7 +212,7 @@ class UnresolvedType : public Type
   virtual void create_trampoline_structs(LexicalScope *ls);
 };
 
-class Variable : public Base
+class Variable 
 {
  public:
   virtual Variable* clone() const = 0;
@@ -692,7 +689,7 @@ class ProjectionConstructorType : public ProjectionType
   void initialize(std::vector<Variable*> chans);
 };
 
-class Rpc : public Base
+class Rpc 
 {
   unsigned int tag_;
   SymbolTable *symbol_table_;
@@ -740,7 +737,7 @@ class Rpc : public Base
   }
 };
 
-class Module : public Base
+class Module 
 {
   // const std::string& verbatim_;
   std::string module_name_;
@@ -773,7 +770,7 @@ class Module : public Base
   iterator end() { return rpc_definitions_.end(); }
 };
 
-class Include : public Base
+class Include 
 {
   bool relative_; // true if "" false for <>
   std::string path_;
@@ -787,7 +784,7 @@ class Include : public Base
   }
 };
 
-class Project : public Base
+class Project 
 {
   LexicalScope *project_scope_;
   std::vector<Module*> project_modules_;
