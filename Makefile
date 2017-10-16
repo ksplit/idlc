@@ -6,7 +6,7 @@ idl_h = include/lcd_idl.h
 idl = $(idl_cpp) $(idl_h)
 
 CXXFLAGS = -g -fno-omit-frame-pointer -Iinclude/ #-fsanitize=address
-CXXFLAGS += -MMD -std=c++11 -Wall
+CXXFLAGS += -MMD -std=c++1z -Wall
 CXX = g++
 LDFLAGS = #-lasan
 

@@ -83,11 +83,11 @@ int main(int argc, char ** argv)
       CCSTFile *ccst_callee_h = generate_server_header(m);
       CCSTFile *ccst_callee_lds = generate_callee_lds(m);
       CCSTFile *ccst_callee_c = generate_server_source(m, callee_includes);
-      CCSTFile *ccst_callee_disp = generate_dispatch(m, "server");
+      CCSTFile *ccst_callee_disp = generate_dispatch<false>(m);
 
       CCSTFile *ccst_caller_h = generate_client_header(m);
       CCSTFile *ccst_caller_c = generate_client_source(m, caller_includes);
-      CCSTFile *ccst_caller_disp = generate_dispatch(m, "client");
+      CCSTFile *ccst_caller_disp = generate_dispatch<true>(m);
 
       CCSTFile *ccst_glue_c = generate_glue_source(m);
       CCSTFile *ccst_glue_h = generate_common_header(m);
@@ -108,10 +108,8 @@ int main(int argc, char ** argv)
       std::string macro_callee_h("__" + m->identifier() + "_callee_h__");
       std_string_toupper(macro_callee_h);
 
-      ofs_callee_h << "#ifndef " << macro_callee_h << std::endl;
-      ofs_callee_h << "#define " << macro_callee_h << "\n\n";
+      ofs_callee_h << "#pragma once"<< std::endl;
       ccst_callee_h->write(ofs_callee_h, 0);
-      ofs_callee_h << "\n#endif /* " << macro_callee_h << " */" << std::endl;
 
       ccst_callee_c->write(ofs_callee_c, 0);
       ccst_callee_disp->write(ofs_callee_disp, 0);
@@ -121,14 +119,13 @@ int main(int argc, char ** argv)
       std::string macro_glhlpr_h("__" + m->identifier() + "_glue_helper_h__");
       std_string_toupper(macro_glhlpr_h);
 
-      ofs_glue_helper_h << "#ifndef " << macro_glhlpr_h << std::endl;
-      ofs_glue_helper_h << "#define " << macro_glhlpr_h << "\n\n";
+      ofs_glue_helper_h <<  "#pragma once"<< std::endl;
       ccst_glue_h->write(ofs_glue_helper_h, 0);
-      ofs_glue_helper_h << "\n#endif /* " << macro_glhlpr_h << " */" << std::endl;
+
 
       /// FIXME: Should be generated like this. But how to generate SECTIONS {}
       /// statements.push_back(new CCSTPreprocessor("liblcd/trampoline.h", false));
-      ofs_callee_lds << "#include <liblcd/trampoline_link.h>\n\n";
+      //ofs_callee_lds << "#include <liblcd/trampoline_link.h>\n\n";
       ofs_callee_lds << "SECTIONS\n{" << std::endl;
       ccst_callee_lds->write(ofs_callee_lds, 1);
       ofs_callee_lds << "}\nINSERT AFTER .text;\n";
@@ -137,10 +134,9 @@ int main(int argc, char ** argv)
       std::string macro_caller_h("__" + m->identifier() + "_caller_h__");
       std_string_toupper(macro_caller_h);
 
-      ofs_caller_h << "#ifndef " << macro_caller_h << std::endl;
-      ofs_caller_h << "#define " << macro_caller_h << "\n\n";
+      ofs_caller_h << "#pragma once"<< std::endl;
       ccst_caller_h->write(ofs_caller_h, 0);
-      ofs_caller_h << "\n#endif /* " << macro_caller_h << " */" << std::endl;
+
 
       ccst_caller_c->write(ofs_caller_c, 0);
       ccst_caller_disp->write(ofs_caller_disp, 0);

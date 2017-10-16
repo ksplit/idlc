@@ -250,9 +250,9 @@ CCSTCompoundStatement* caller_body(Rpc *r, Module *m, bool user)
       || p->type_->num() == PROJECTION_CONSTRUCTOR_TYPE)
       && p->alloc_caller()) {
 
-      ProjectionType *pt = dynamic_cast<ProjectionType*>(p->type_);
+      auto pt = dynamic_cast<ProjectionType*>(p->type_);
       Assert(pt != 0x0, "Error: dynamic cast to projection type failed\n");
-      std::vector<CCSTStatement*> tmp_statements = caller_initialize_channels(
+      auto tmp_statements = caller_initialize_channels(
         pt);
       statements.insert(statements.end(), tmp_statements.begin(),
         tmp_statements.end());

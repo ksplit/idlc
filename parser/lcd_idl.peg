@@ -230,14 +230,14 @@ File		=	Spacing i:Include* GlobalScopeDefinitions t:Interface* <eof> {{
 			        modules.push_back((Module*) v2.getValue());
 			    }
 
-			    value = new Project(GlobalScope::instance(), modules, includes); 
+			    value = new Project(LexicalScope::getGlobalScope(), modules, includes); 
 			}}
 
 GlobalScopeDefinitions =      d:Type_Definitions* {{
 		       	          for(Value::iterator it = d.getValues().begin(); it != d.getValues().end(); it ++) { 
 			    	      const Value & v2 = *it;
 			    	      Type *type = (Type*) v2.getValue();
-			    	      bool err = GlobalScope::instance()->insert(type->name().c_str(), type);
+			    	      bool err = LexicalScope::getGlobalScope()->insert(type->name().c_str(), type);
 				      if(!err) {
 				          std::cout << "Error: definition already exists for a type of name "
 				            <<  type->name() << " in global scope" << std::endl;
@@ -419,8 +419,8 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
 			  }}
 
 Interface_special =	  "module" {{
-		  	      LexicalScope *new_scope = new LexicalScope(GlobalScope::instance());
-			      GlobalScope::instance()->add_inner_scope(new_scope);
+		  	      LexicalScope *new_scope = new LexicalScope(LexicalScope::getGlobalScope());
+			      LexicalScope::getGlobalScope()->add_inner_scope(new_scope);
 			      set_current_module_scope(new_scope);
 			      set_current_scope(new_scope);
 			      std::cout << "# Module scope " << new_scope << "\n";

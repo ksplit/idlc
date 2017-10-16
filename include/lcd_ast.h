@@ -7,6 +7,7 @@
 #include <sstream>
 #include <iostream>
 #include <stdio.h>
+#include <memory>
 #include "marshal_op.h"
 #include "symbol_table.h"
 #include "ccst.h"
@@ -51,6 +52,7 @@ class Channel;
 
 class LexicalScope 
 {
+  static LexicalScope *globalScope;
  public:
   LexicalScope *outer_scope_;
   std::map<std::string, Type*> type_definitions_;
@@ -100,21 +102,8 @@ class LexicalScope
   {
     this->activeChannel = activeChannel;
   }
-};
 
-class GlobalScope: public LexicalScope
-{
-  static GlobalScope *instance_;
-public:
-  GlobalScope();
-  virtual void set_outer_scope(LexicalScope *ls);
-  static GlobalScope* instance();
-
-  virtual ~GlobalScope()
-  {
-    if (instance_)
-      delete instance_;
-  }
+  static LexicalScope* getGlobalScope();
 };
 
 class Type 

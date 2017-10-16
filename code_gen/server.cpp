@@ -62,8 +62,8 @@ CCSTDeclaration* dispatch_async_function_declaration(Module *mod)
 
   return func_declaration;
 }
-
-CCSTCompoundStatement* dispatch_sync_loop_body(Module *mod, const std::string &type)
+template<bool client>
+CCSTCompoundStatement* dispatch_sync_loop_body(Module *mod)
 {
   std::vector<CCSTDeclaration*> decs_in_body;
   std::vector<CCSTDecSpecifier*> spec;
@@ -135,8 +135,8 @@ CCSTCompoundStatement* dispatch_sync_loop_body(Module *mod, const std::string &t
   /// body complete
   return new CCSTCompoundStatement(decs_in_body, body_statements);
 }
-
-CCSTCompoundStatement* dispatch_async_loop_body(Module *mod, const std::string &type)
+template<bool client>
+CCSTCompoundStatement* dispatch_async_loop_body(Module *mod)
 {
   std::vector<CCSTDeclaration*> decs_in_body;
   std::vector<CCSTDecSpecifier*> spec;
@@ -160,10 +160,12 @@ CCSTCompoundStatement* dispatch_async_loop_body(Module *mod, const std::string &
     /// Skip rpcs that are not function pointers as they need to be in
     /// the dispatch loop of the server
     /// Skip rpcs that are function pointers during server code gen
-    if ((type == "client" && !rpc->function_pointer_defined())
-      || (type == "server" && rpc->function_pointer_defined())) {
-      continue;
+    if (client){
+      if(!rpc->function_pointer_defined()) continue;
+    }else{
+      if(rpc->function_pointer_defined()) continue;
     }
+
 
     std::vector<CCSTDeclaration*> case_dec_empty;
     std::vector<CCSTStatement*> case_body_stmts;
@@ -663,7 +665,7 @@ CCSTFile *generate_callee_lds(Module *mod)
 {
   std::vector<Rpc*> rpcs = mod->rpc_definitions();
   std::vector<CCSTExDeclaration*> statements;
-
+  statements.push_back(new CCSTPreprocessor("liblcd/trampoline.h", false));
   for (auto r : rpcs) {
     if (r->function_pointer_defined()) {
       std::vector<CCSTAssignExpr*> data_args;
@@ -694,17 +696,17 @@ inline CCSTExDeclaration *calleeh_include(const std::string &id) {
 inline CCSTExDeclaration *callerh_include(const std::string &id) {
   return new CCSTPreprocessor("../" + id + "_caller.h", true);
 }
-
-CCSTFile* generate_dispatch(Module *m, const std::string &type)
+template<bool client>
+CCSTFile* generate_dispatch(Module *m)
 {
   std::vector<CCSTExDeclaration*> statements;
 
   statements.push_back(prehook_include());
   statements.push_back(liblcd_include());
 
-  if (type == "client") {
+  if  (client) {
     statements.push_back(callerh_include(m->identifier()));
-  } else if (type == "server") {
+  } else {
     statements.push_back(calleeh_include(m->identifier()));
   }
 
@@ -715,15 +717,17 @@ CCSTFile* generate_dispatch(Module *m, const std::string &type)
   /// marked sync explicitly or some other mechanism has to be found out
   /// to solve this. Until that, don't generate any code for sync
   /// dispatch loop
-  if (0) {
+  if  (0) {
     statements.push_back(
       function_definition(dispatch_sync_function_declaration(),
-        dispatch_sync_loop_body(m, type)));
+        dispatch_sync_loop_body<client>(m)));
   }
 
   statements.push_back(
     function_definition(dispatch_async_function_declaration(m),
-      dispatch_async_loop_body(m, type)));
+      dispatch_async_loop_body<client>(m)));
 
   return new CCSTFile(statements);
 }
+template CCSTFile* generate_dispatch<true>(Module*);
+template CCSTFile* generate_dispatch<false>(Module*);

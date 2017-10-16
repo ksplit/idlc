@@ -1,119 +1,111 @@
 #include "lcd_ast.h"
 #include <stdio.h>
 
-GlobalScope* GlobalScope::instance_ = 0;
+LexicalScope* LexicalScope::globalScope = 0;
 
-GlobalScope::GlobalScope()
+
+
+LexicalScope* LexicalScope::getGlobalScope()
 {
-  // move this code to wherever we create the root scope.
-  // insert for each built-in in type, add size to type if not done already
-  this->type_definitions_.insert( std::pair<std::string, Type*>("bool", new BoolType()));
-  this->type_definitions_.insert( std::pair<std::string, Type*>("double", new DoubleType()));
-  this->type_definitions_.insert( std::pair<std::string, Type*>("float", new FloatType()));
-  this->type_definitions_.insert( std::pair<std::string,Type*>("void", new VoidType()));
-  this->type_definitions_.insert( std::pair<std::string,Type*>("char"
+  if(!LexicalScope::globalScope){
+    LexicalScope::globalScope = new LexicalScope();
+    LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string, Type*>("bool", new BoolType()));
+  LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string, Type*>("double", new DoubleType()));
+  LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string, Type*>("float", new FloatType()));
+  LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string,Type*>("void", new VoidType()));
+  LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string,Type*>("char"
 					       , new IntegerType(pt_char_t, false, sizeof(char))));
-  this->type_definitions_.insert( std::pair<std::string,Type*>("unsigned char"
+  LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string,Type*>("unsigned char"
 					       , new IntegerType(pt_char_t, true, sizeof(char))));
-  this->type_definitions_.insert( std::pair<std::string,Type*>("short"
+  LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string,Type*>("short"
 					      , new IntegerType(pt_short_t, false, sizeof(short))));
-  this->type_definitions_.insert( std::pair<std::string,Type*>("unsigned short"
+  LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string,Type*>("unsigned short"
 					      , new IntegerType(pt_short_t, true, sizeof(short))));
-  this->type_definitions_.insert( std::pair<std::string,Type*>("int"
+  LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string,Type*>("int"
 					      , new IntegerType(pt_int_t, false, sizeof(int))));
-  this->type_definitions_.insert( std::pair<std::string,Type*>("unsigned int"
+  LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string,Type*>("unsigned int"
 					      , new IntegerType(pt_int_t, true, sizeof(int))));
-  this->type_definitions_.insert( std::pair<std::string,Type*>("long"
+  LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string,Type*>("long"
 					      , new IntegerType(pt_long_t, false, sizeof(long))));
-  this->type_definitions_.insert( std::pair<std::string,Type*>("unsigned long"
+  LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string,Type*>("unsigned long"
 					      , new IntegerType(pt_long_t, true, sizeof(long))));
-  this->type_definitions_.insert( std::pair<std::string,Type*>("long long"
+  LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string,Type*>("long long"
 					      , new IntegerType(pt_longlong_t, false, sizeof(long long))));
-  this->type_definitions_.insert( std::pair<std::string,Type*>("unsigned long long"
+  LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string,Type*>("unsigned long long"
 					      , new IntegerType(pt_longlong_t, true, sizeof(long long))));
-  this->type_definitions_.insert( std::pair<std::string,Type*>("capability"
+  LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string,Type*>("capability"
 					       , new IntegerType(pt_capability_t, false, sizeof(int))));
   // dptpr_t
   std::vector<ProjectionField*> fields;
   int err;
-  fields.push_back(new ProjectionField(this->lookup("unsigned long", &err), "dptr", 0)); // unsigned long dptr;
-  this->type_definitions_.insert( std::pair<std::string, Type*>("dptr_t"
+  fields.push_back(new ProjectionField(LexicalScope::globalScope->lookup("unsigned long", &err), "dptr", 0)); // unsigned long dptr;
+  LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string, Type*>("dptr_t"
 								, new ProjectionType("dptr_t", "dptr_t", fields)));
   
   // cptr_t
   std::vector<ProjectionField*> fields2;
-  ProjectionField *cptr = new ProjectionField(this->lookup("unsigned long", &err), "cptr", 0); // unsigned long cptr;
+  ProjectionField *cptr = new ProjectionField(LexicalScope::globalScope->lookup("unsigned long", &err), "cptr", 0); // unsigned long cptr;
 
   cptr->set_in(true);
   cptr->set_out(true);
   fields2.push_back(cptr);
   
   /// FIXME: This should ideally be a typedef
-  this->type_definitions_.insert( std::pair<std::string, Type*>("cptr",
+  LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string, Type*>("cptr",
         new ProjectionType("cptr", "cptr", fields2)));
 
   // dstore no fields
   std::vector<ProjectionField*> fields3;
-  this->type_definitions_.insert(std::pair<std::string, Type*>("dstore"
+  LexicalScope::globalScope->type_definitions_.insert(std::pair<std::string, Type*>("dstore"
 							       , new ProjectionType("dstore", "dstore", fields3)));
 
   std::vector<ProjectionField*> fields4;
-  fields4.push_back(new ProjectionField(this->lookup("void", &err), "hidden_args", 1));
+  fields4.push_back(new ProjectionField(LexicalScope::globalScope->lookup("void", &err), "hidden_args", 1));
   //fields4.push_back( char trampoline[0]); 
-  this->type_definitions_.insert(std::pair<std::string, Type*>("lcd_trampoline_handle"
+  LexicalScope::globalScope->type_definitions_.insert(std::pair<std::string, Type*>("lcd_trampoline_handle"
 							       , new ProjectionType("lcd_trampoline_handle", "lcd_trampoline_handle", fields4)));
 
   // cspace
   std::vector<ProjectionField*> cspace_fields;
-  this->type_definitions_.insert(std::pair<std::string, Type*>("cspace"
+  LexicalScope::globalScope->type_definitions_.insert(std::pair<std::string, Type*>("cspace"
 							       , new ProjectionType("cspace", "cspace", cspace_fields)));
 
   // cptr_cache
   std::vector<ProjectionField*> cptr_cache_fields;
-  this->type_definitions_.insert(std::pair<std::string, Type*>("cptr_cache"
+  LexicalScope::globalScope->type_definitions_.insert(std::pair<std::string, Type*>("cptr_cache"
 							       , new ProjectionType("cptr_cache", "cptr_cache", cptr_cache_fields)));
 
   // glue_cspace
   std::vector<ProjectionField*> glue_cspace_fields;
-  glue_cspace_fields.push_back(new ProjectionField(this->lookup("cspace", &err), "cspace", 1)); // cspace
-  glue_cspace_fields.push_back(new ProjectionField(this->lookup("cptr_cache", &err), "cptr_cache", 1)); // cptr_cache
+  glue_cspace_fields.push_back(new ProjectionField(LexicalScope::globalScope->lookup("cspace", &err), "cspace", 1)); // cspace
+  glue_cspace_fields.push_back(new ProjectionField(LexicalScope::globalScope->lookup("cptr_cache", &err), "cptr_cache", 1)); // cptr_cache
 
-  this->type_definitions_.insert(std::pair<std::string, Type*>("glue_cspace"
+  LexicalScope::globalScope->type_definitions_.insert(std::pair<std::string, Type*>("glue_cspace"
 							       , new ProjectionType("glue_cspace", "glue_cspace", glue_cspace_fields)));
 
   // lcd_sync_channel_group
   std::vector<ProjectionField*> lcd_sync_channel_group_fields;
-  this->type_definitions_.insert(std::pair<std::string, Type*>("lcd_sync_channel_group"
+  LexicalScope::globalScope->type_definitions_.insert(std::pair<std::string, Type*>("lcd_sync_channel_group"
 							       , new ProjectionType("lcd_sync_channel_group", "lcd_sync_channel_group", lcd_sync_channel_group_fields)));
 
   // struct thc_channel
   std::vector<ProjectionField*> thc_channel_fields;
-  this->type_definitions_.insert(std::pair<std::string, Type*>("thc_channel",
+  LexicalScope::globalScope->type_definitions_.insert(std::pair<std::string, Type*>("thc_channel",
 			  new ProjectionType("thc_channel", "thc_channel", thc_channel_fields)));
 
   // struct trampoline_hidden_args
   std::vector<ProjectionField*> trampoline_hidden_args_fields;
-  this->type_definitions_.insert(std::pair<std::string, Type*>("trampoline_hidden_args",
+  LexicalScope::globalScope->type_definitions_.insert(std::pair<std::string, Type*>("trampoline_hidden_args",
 			  new ProjectionType("trampoline_hidden_args", "trampoline_hidden_args", trampoline_hidden_args_fields)));
 
   std::vector<ProjectionField*> fipc_message_fields;
-  this->type_definitions_.insert(
+  LexicalScope::globalScope->type_definitions_.insert(
       std::pair<std::string, Type*>("fipc_message",
           new ProjectionType("fipc_message", "fipc_message",
               fipc_message_fields)));
-}
 
-GlobalScope* GlobalScope::instance()
-{
-  if(!GlobalScope::instance_)
-    GlobalScope::instance_ = new GlobalScope();
-  return instance_;
-}
-
-void GlobalScope::set_outer_scope(LexicalScope *ls)
-{
-  std::cout << "error:  attempt to set outer scope of global scope\n";
-  return;
+  }
+  return LexicalScope::globalScope;
 }
 
 /* -------------------------------------------------------------- */
@@ -157,8 +149,7 @@ bool LexicalScope::insert(Rpc *r)
 {
   std::string temp(r->name());
   std::pair<std::string, std::vector<Parameter*> > p (temp, r->parameters());
-  std::pair<std::map<std::pair<std::string, std::vector<Parameter*> >, Rpc*>::iterator, bool> ret;
-  ret = this->rpc_definitions_.insert(std::pair<std::pair<std::string, std::vector<Parameter*> >, Rpc*>(p, r));
+  auto ret = this->rpc_definitions_.insert(std::pair<std::pair<std::string, std::vector<Parameter*> >, Rpc*>(p, r));
   return ret.second;
 }
 

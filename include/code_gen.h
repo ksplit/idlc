@@ -12,7 +12,8 @@ CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes); // 
 CCSTFile* generate_server_header(Module *m); // std::vector<Include*> includes); // todo complete?
 CCSTFile *generate_callee_lds(Module *mod);
 CCSTFile* generate_glue_source(Module *m);
-CCSTFile* generate_dispatch(Module *m, const std::string &type);
+template<bool client>
+CCSTFile* generate_dispatch(Module *m);
 CCSTFile *generate_common_header(Module *m);
 std::vector<CCSTExDeclaration*> generate_enum_list(Module *m);
 CCSTDeclaration* fn_decl_insert(ProjectionType* pt, Module *m);
@@ -24,9 +25,11 @@ CCSTCompoundStatement* callee_body(Rpc *r, Module *m); // todo complete  2 funct
 
 CCSTDeclaration* callee_declaration(Rpc *r); // todo complete
 
-CCSTCompoundStatement* dispatch_sync_loop_body(Module *mod, const std::string &type);
+template<bool client>
+CCSTCompoundStatement* dispatch_sync_loop_body(Module *mod);
 CCSTDeclaration* dispatch_sync_function_declaration();
-CCSTCompoundStatement* dispatch_async_loop_body(Module *mod, const std::string &type);
+template<bool client>
+CCSTCompoundStatement* dispatch_async_loop_body(Module *mod);
 CCSTDeclaration* dispatch_async_function_declaration(Module *mod);
 
 // client.cpp
