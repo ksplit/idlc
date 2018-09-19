@@ -21,13 +21,14 @@ int main(int argc, char ** argv)
   if (argc != 2) {
     print_usage();
   }
+  std::cout<<"Enter main\n";
 
   try {
     char* file = argv[1];
 
     // TODO: add support for multiple files, add option to specify
     // which module to compile, put each module in a different file
-    Project * tree = (Project *) Parser::parse(std::string(file));
+    Project * tree = (Project *) Parser::parse(std::string(file));//ah468
 
     ErrorReport* er = ErrorReport::instance();
     if (er->errors()) {
@@ -53,7 +54,7 @@ int main(int argc, char ** argv)
       std::string caller_c = new_name(m->identifier(), std::string("_caller.c"));
       std::string caller_disp = new_name(m->identifier(), std::string("_caller_dispatch.c"));
 
-      std::ofstream ofs_callee_h(callee_h);
+      std::ofstream ofs_callee_h(callee_h);//ah467
       std::ofstream ofs_callee_c(callee_c);
       std::ofstream ofs_callee_disp(callee_disp);
       std::ofstream ofs_callee_lds(callee_lds);

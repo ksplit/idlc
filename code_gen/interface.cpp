@@ -92,7 +92,7 @@ CCSTCompoundStatement* caller_interface_init_function_body(Module *m)
 										      , cap_init_args_empty))));
   // do error checking
   body_statements.push_back(if_cond_fail_goto(new CCSTPrimaryExprId("ret")
-					      , "cap init", "fail1"));
+					      , "cap init", "fail1"));//ah465
 
   // initialize data stores.
   std::vector<GlobalVariable*> cspaces = m->cspaces_;
