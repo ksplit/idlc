@@ -1,4 +1,5 @@
-#include "code_gen.h"//ah462
+#include "code_gen.h"
+//ah note - marshalling implemented here
 
 
 CCSTStatement* marshal_void_pointer(Variable *v)
@@ -140,9 +141,10 @@ CCSTStatement* marshal_void_delayed(Variable *v)
 /*
  * Want this code to be as dumb as possible.
  * The complexity for deciding what to marshal occurs previously.
- * when marshal params list is populated. //ah464
+ * when marshal params list is populated. 
  * This function should never be called on a variable whose type is a projection
  */
+//ah to resolve - when is the params list for marshalling populated?
 CCSTStatement* marshal_variable(Variable *v, const std::string& direction, Channel::ChannelType type)
 {
   std::vector<CCSTDeclaration*> declarations;

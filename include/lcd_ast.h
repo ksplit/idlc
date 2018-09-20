@@ -12,6 +12,8 @@
 #include "symbol_table.h"
 #include "ccst.h"
 
+//ah note - this file contains the defintions of all the constructs that should be present in the output program
+
 class MarshalPrepareVisitor;
 class CCSTStatement;
 class CCSTTypeName;
@@ -773,7 +775,7 @@ class Include
   }
 };
 
-class Project //ah466
+class Project
 {
   LexicalScope *project_scope_;
   std::vector<Module*> project_modules_;

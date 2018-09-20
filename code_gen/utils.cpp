@@ -1,6 +1,7 @@
 #include "ccst.h"
 #include "code_gen.h"
 
+//ah note - code_gen/utils.cpp contains the implementations of the functions actually generating the various expressions in the code output
 
 /*
  * a function that creates the vector of names to be appended together for a var.

@@ -15,6 +15,9 @@
  * Params are cptr_t for each channel, with specified name, 
  * There is an extra param not mentioned in idl "lcd_sync_channel_group". 
  */
+
+//ah note - interface.cpp in code gen folder contributes to generating output for callee code (tested for fail1)
+
 CCSTDeclaration* interface_init_function_declaration(Module *m)
 {
   std::vector<CCSTDecSpecifier*> specifier;
@@ -91,8 +94,9 @@ CCSTCompoundStatement* caller_interface_init_function_body(Module *m)
 								      , function_call("glue_cap_init"
 										      , cap_init_args_empty))));
   // do error checking
+  //ah to resolve - this is is in the caller_interface init function, so why is "cap_init" being output in nullnet_callee.c? Is this a bug?
   body_statements.push_back(if_cond_fail_goto(new CCSTPrimaryExprId("ret")
-					      , "cap init", "fail1"));//ah465
+					      , "cap init", "fail1"));
 
   // initialize data stores.
   std::vector<GlobalVariable*> cspaces = m->cspaces_;

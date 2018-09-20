@@ -212,10 +212,10 @@ void create_container(const Value &id, std::vector<ProjectionField*> &container_
 }
 
 }}
-
+#ah note - the following are the grammar rules. 
 rules:
 
-
+#ah note - the code in the double curly braces are generated verbatim, and compiled to construct the concrete syntax tree, on which passes are made to generate the desired output files (the glue code)
 File		=	Spacing i:Include* GlobalScopeDefinitions t:Interface* <eof> {{
 			    std::vector<Module*> modules;
 			    std::vector<Include*> includes;

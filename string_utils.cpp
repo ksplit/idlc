@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <string>
 
+//ah note - string_utils.cpp contains the implementation of constructing variable and function names
+
 const std::string new_name(const std::string& name,
   const std::string& suffix)
 {
