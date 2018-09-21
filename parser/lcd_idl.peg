@@ -68,8 +68,9 @@ void set_specs(Variable &v, const Value &s)
 
 void set_current_scope(LexicalScope *ls)
 {
-    std::cout << "---> Current scope " << current_scope
-        << " new scope " << ls << std::endl;
+
+    std::cout << "the code printing this statement was supplied by lcd_idl.peg" <<std::endl;
+    std::cout << "---> Current scope " << current_scope << " new scope " << ls << std::endl;
     current_scope = ls;
 }
 

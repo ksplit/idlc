@@ -21,7 +21,7 @@ int main(int argc, char ** argv)
   if (argc != 2) {
     print_usage();
   }
-  std::cout<<"Enter main\n";
+  std::cout<<"[main/main.cpp] Enter main\n";
 
   try {
     char* file = argv[1];

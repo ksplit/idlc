@@ -1,8 +1,9 @@
 #include "lcd_ast.h"
 #include <stdio.h>
+#include <string.h>
 
 LexicalScope* LexicalScope::globalScope = 0;
-
+std::string filename = "ast/scope.cpp";
 
 
 LexicalScope* LexicalScope::getGlobalScope()
@@ -212,7 +213,7 @@ Type* LexicalScope::lookup(const std::string &temp, int *err) {
   }
   else {
     *err = 1;
-    std::cout << "In lookup for type " <<  temp << " is " << std::hex << type_definitions_[temp] << std::dec << std::endl;
+    std::cout << filename <<" In lookup for type " <<  temp << " is " << std::hex << type_definitions_[temp] << std::dec << std::endl;
     return type_definitions_[temp];
   }
 }
