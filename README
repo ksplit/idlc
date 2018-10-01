@@ -20,3 +20,6 @@ serversource
 
 The output file will be under module-name.c  or module-name.h   This is specified in the name 
 file, and could be changed to something more suitable.
+
+For a simple running example that uses vembyr parser see:
+https://github.com/AftabHussain/calculator_vembyr
