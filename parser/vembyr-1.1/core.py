@@ -1,5 +1,4 @@
-# Default class that generates code given some Peg description. Sub-classes
-# should implement every generate_* method
+# ah note - Default class that generates code given some Peg description. Sub-classes should implement every generate_* method. This file contains miscellaneous functions and classes that all other files require.
 class CodeGenerator:
     def __init__(self):
         pass

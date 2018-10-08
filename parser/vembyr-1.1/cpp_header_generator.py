@@ -1,5 +1,5 @@
 # Generates a header file (.h) for the c++ parser generator so that
-# the parser functions can be used in other files
+# the parser functions can be used in other files. Uses an interpreter style
 
 def generate_guard(peg):
     guard = "peg"

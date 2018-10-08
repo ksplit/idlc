@@ -217,6 +217,8 @@ void create_container(const Value &id, std::vector<ProjectionField*> &container_
 rules:
 
 #ah note - the code in the double curly braces are generated verbatim, and compiled to construct the concrete syntax tree, on which passes are made to generate the desired output files (the glue code)
+#ah note - below the pattern "Include* GlobalScopeDefinitions" is stored into the variable i. i is of type Value, which has the following methods: 1) getValue():void* - gets the underlying object the pattern computed in its action, 2) getVAlues():vector<Value> - gets a list of vector objects when * or + is used.
+#ah to resolve - what does <eof> tag mean for parsing?
 File		=	Spacing i:Include* GlobalScopeDefinitions t:Interface* <eof> {{
 			    std::vector<Module*> modules;
 			    std::vector<Include*> includes;

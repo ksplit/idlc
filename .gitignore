@@ -9,3 +9,6 @@ include/lcd_idl.h
 
 #main binary
 compiler
+
+#testing parser
+test

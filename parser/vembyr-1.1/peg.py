@@ -2213,8 +2213,9 @@ if __name__ == '__main__':
     return_code = 0
     parallel = [False]
     separate = [None]
+    #usage is ./peg.py <input file> <--option>
     for arg in sys.argv[1:]:
-        if arg == '--bnf':
+        if arg == '--bnf': 
             doit.append(lambda p: p.generate_bnf())
         elif arg == "--lua":
             import lua_generator
