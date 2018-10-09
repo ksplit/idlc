@@ -1253,6 +1253,7 @@ void ProjectionField::initialize_type()
   }
 }
 
+//ah note - the following is where the marshalling parameters are set
 void ProjectionField::set_in(bool b)
 {
   this->in_ = b;

@@ -19,7 +19,7 @@ class CCSTStatement;
 class CCSTTypeName;
 class Marshal_type;
 class TypeVisitor;
-class MarshalVisitor;
+class MarshalVisitor; //ah note - this class is unused
 class TypeNameVisitor;
 class AllocateTypeVisitor;
 class Variable;
@@ -47,10 +47,8 @@ typedef enum {
   FLOAT_TYPE,
 } types_t;
 
-class ASTVisitor;
+class ASTVisitor;//ah note - this is not used
 class Channel;
-
-
 
 class LexicalScope 
 {
@@ -739,11 +737,12 @@ class Module
   typedef std::vector<Rpc*>::iterator iterator;
 
  public:
-  std::vector<GlobalVariable*> cspaces_;
+  
+  std::vector<GlobalVariable*> cspaces_;// ah note - globals used for cspaces too
   GlobalVariable *channel_group;
   Module(const std::string& id, std::vector<Rpc*> rpc_definitions, std::vector<GlobalVariable*> globals, LexicalScope *ls);
   std::vector<Rpc*> rpc_definitions();  
-  std::vector<GlobalVariable*> channels();
+  std::vector<GlobalVariable*> channels(); //ah note - channels() return a vector of globals instead of channels
   LexicalScope *module_scope();
   void prepare_marshal();
   void resolve_types();
@@ -765,7 +764,7 @@ class Include
 {
   bool relative_; // true if "" false for <>
   std::string path_;
- public:
+  public:
   Include(bool relative, const std::string& path);
   std::string get_path() {
 	  return this->path_;

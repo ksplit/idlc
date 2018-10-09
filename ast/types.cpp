@@ -35,7 +35,7 @@ const std::string& FloatType::name() const
 }
 
 void FloatType::resolve_types(LexicalScope *ls)
-{
+{ //ah to resolve - TODO
   return;
 }
 
@@ -75,7 +75,7 @@ const std::string& DoubleType::name() const
 }
 
 void DoubleType::resolve_types(LexicalScope *ls)
-{
+{//ah to resolve - TODO
   return;
 }
 
@@ -115,7 +115,7 @@ const std::string& BoolType::name() const
 }
 
 void BoolType::resolve_types(LexicalScope *ls)
-{
+{//ah to resolve - TODO
   return;
 }
 
@@ -184,7 +184,7 @@ const std::string& Function::name() const
 }
 
 void Function::resolve_types(LexicalScope *ls)
-{
+{//ah to resolve - TODO
   return;
 }
 
@@ -273,7 +273,7 @@ const std::string& UnresolvedType::name() const
 }
 
 void UnresolvedType::resolve_types(LexicalScope *ls)
-{
+{//ah to resolve - TODO
   return;
 }
 
@@ -317,7 +317,7 @@ int Channel::num()
 }
 
 void Channel::resolve_types(LexicalScope *ls)
-{
+{//ah to resolve - TODO
   return;
 }
 
@@ -385,12 +385,12 @@ const std::string& Typedef::name() const
 
 void Typedef::resolve_types(LexicalScope *ls)
 {
-  // TODO
+  // TODO //ah to resolve - what is resolve_types actually supposed to do?
   return;
 }
 
 void Typedef::create_trampoline_structs(LexicalScope *ls)
-{
+{//ah to resolve - TODO
   return; //todo?
 }
 
