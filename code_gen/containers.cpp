@@ -14,7 +14,7 @@ std::vector<CCSTAssignExpr*> container_of_args(CCSTPostFixExpr *struct_pointer, 
   args.push_back( new CCSTPrimaryExprId(field_name));
   return args;
 }
-
+//ah note - the following function returns the container of a variable for which a container has already been assigned.
 std::vector<CCSTStatement*> container_of(Variable *v, const std::string& cspace)
 {
   std::vector<CCSTStatement*> statements;

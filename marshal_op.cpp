@@ -1,6 +1,6 @@
 #include "marshal_op.h" 
 //ah to resolve - All visits are implemented| how are the registers used?, why are they needed
-
+//see kIDL paper (Spall)
 const static std::vector<std::string> register_access_mapping_ =
   { REG(0), REG(1), REG(2), REG(3), REG(4), REG(5), REG(6), REG(7) };
 

@@ -29,7 +29,7 @@ class Rpc;
 class ProjectionType;
 class Project;
 
-enum PrimType {pt_char_t, pt_short_t, pt_int_t, pt_long_t, pt_longlong_t, pt_capability_t};
+enum PrimType {pt_char_t, pt_short_t, pt_int_t, pt_long_t, pt_longlong_t, pt_capability_t};//ah note - an enum class to distinguish between integer datatypes, instead of using separate classes.
 enum type_k {};
 
 typedef enum {
