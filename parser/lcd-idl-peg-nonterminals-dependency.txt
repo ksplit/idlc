@@ -2,7 +2,7 @@
 based on the current peg grammar. To see all the dependencies
 of a specific nonterminal, look at the entry of that nonterminal, 
 such that its name ends with *, e.g. Include*. If a nonterminal symbol
-ends with [x], it depends to no other nonterminal symbols. In other
+ends with *x, it depends on no other nonterminal symbols. In other
 words, it expands to terminal symbols when its grammar rule is used.
 
 File*
@@ -19,9 +19,16 @@ File*
 ----|Projection_constructor_special
 ----|Spacing*
 -----|Space*
-------|EndOfLine[x]
+------|EndOfLine*x
+------|Line_comment*
+-------|Line_comm_start*x
+-------|Line_comm_rest*
+--------|Line_comm_end*x
+--------|Line_comm_rest
 ------|Comment*
--------|Comment_start[x]
--------|Comment_rest
-------|
+-------|Comment_start*x
+-------|Comment_rest*
+--------|Comment_end*x
+--------|Comment_rest
+
 
