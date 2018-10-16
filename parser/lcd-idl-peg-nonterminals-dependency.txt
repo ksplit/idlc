@@ -1,0 +1,27 @@
+#The following shows dependencies of nonterminal symbols
+based on the current peg grammar. To see all the dependencies
+of a specific nonterminal, look at the entry of that nonterminal, 
+such that its name ends with *, e.g. Include*. If a nonterminal symbol
+ends with [x], it depends to no other nonterminal symbols. In other
+words, it expands to terminal symbols when its grammar rule is used.
+
+File*
+-|Include*
+--|Pathname
+--|Spacing
+--|Space
+-|Interface
+-|GlobalScopeDefinitions*
+--|Type_Definitions*
+---|Typedef
+---|Projection
+---|Projection_constructor
+----|Projection_constructor_special
+----|Spacing*
+-----|Space*
+------|EndOfLine[x]
+------|Comment*
+-------|Comment_start[x]
+-------|Comment_rest
+------|
+
