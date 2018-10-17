@@ -14,7 +14,7 @@ result_peg_8 = rule_Include(stream, result_peg_8.getPosition());
 ```
 - they are in `result_peg_8`,
 
-which is then taken in `Values`..
+which is then taken in `Value` data structure:
 
 ```
 i = result_peg_3.getValues();
