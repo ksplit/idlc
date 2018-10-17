@@ -220,7 +220,7 @@ rules:
 #ah note - below the pattern "Include* GlobalScopeDefinitions" is stored into the variable i. i is of type Value, which has the following methods: 1) getValue():void* - gets the underlying object the pattern computed in its action, 2) getVAlues():vector<Value> - gets a list of vector objects when * or + is used.
 #ah to resolve - what does <eof> tag mean for parsing?
 File		=	Spacing i:Include* GlobalScopeDefinitions t:Interface* <eof> {{
-		            std::cout<<"Passed File rule in peg\n";
+		        std::cout<<"Passed File rule in peg\n";
 			    std::vector<Module*> modules;
 			    std::vector<Include*> includes;
 			
@@ -369,6 +369,9 @@ Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
 					// Should unnamed scope channels be monitored in dispatch loop? Probably yes
 					// *) Add this to global channel list
 					// *) Dispatch loop should monitor all
+
+		        	std::cout<<"Passed Channel_scope rule in peg\n";
+					
 					const std::string *_id = static_cast<const std::string*>(ch.getValue());
 
 					std::cout << "Using channel " << *_id << std::endl;
@@ -496,7 +499,9 @@ String		=	<ascii 34> l:any_letter+ <ascii 34> {{
 
 any_letter	=	[_.,/?<>'; =:%`!@#$^&*()-+{}|\\ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789]
 
-Type_Definitions =	Typedef | Projection {{ std::cout << "done with projection\n"; }}
+Type_Definitions =	Typedef | Projection {{ 
+	        std::cout<<"Passed Type_Definitions = Projection rule in peg\n";
+			std::cout << "done with projection\n"; }}
 		 	| Projection_constructor
 
 Include		 =	"include" Space+ "<" Spacing p:Pathname Spacing ">" Spacing{{
@@ -510,6 +515,8 @@ Include		 =	"include" Space+ "<" Spacing p:Pathname Spacing ">" Spacing{{
 			}}
 
 FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE {{
+
+	            std::cout<<"Passed FP_Parameter in peg\n";
 
 			    std::vector<Parameter*> *params = (std::vector<Parameter*>*) p.getValue();
 				const std::string *_id = static_cast<const std::string*>(id.getValue());
@@ -819,7 +826,8 @@ FP_Parameters	=	f:FP_FirstParam* l:FP_LastParam {{
 			}}
 
 rpc_special     =      "rpc" {{
-		           LexicalScope *tmp = get_current_unnamed_scope();
+               std::cout<<"Passed rpc_special rule in peg\n";
+		       LexicalScope *tmp = get_current_unnamed_scope();
 			   LexicalScope *new_scope = new LexicalScope(tmp);
 			   // dont need to add to inner scope because rpc do not have type definitinos
 			   set_current_scope(new_scope);
@@ -829,6 +837,7 @@ rpc_special     =      "rpc" {{
 
 
 Rpc		=	rpc_scope:rpc_special Space+ t:Type_form s:Specification? pointers:star* Spacing id1:Identifier Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing {{
+				std::cout<<"Passed Rpc rule in peg\n";
 			    std::vector<Parameter*>* params = (std::vector<Parameter*>*) p.getValue();
 			    std::vector<Parameter*> params_ = *params;
 				const std::string *_id = static_cast<const std::string*>(id1.getValue());
@@ -899,7 +908,7 @@ Projection_constructor_special = "projection" {{
 				 }} 
 
 Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPENC Spacing c:ChanField* p:ProjField* CLOSEC Spacing {{
-
+	        	std::cout<<"Passed Projection rule in peg\n";
 			    std::vector<ProjectionField*> channels;
 			    for(Value::iterator it = c.getValues().begin(); it != c.getValues().end(); it ++) {
 			        const Value &v = *it;
@@ -1223,22 +1232,53 @@ Comment_start	=	"/*"
 Comment_end	=	"*/"
 
 
-Line_comm_rest	=	Line_comm_end
-			| . Line_comm_rest
+Line_comm_rest	=	Line_comm_end{{
+               std::cout<<"Passed Line_comm_rest = . Line_comm_end rule in peg\n";
+}}
+			| . Line_comm_rest{{
+               std::cout<<"Passed Line_comm_rest = . Line_comm_rest rule in peg\n";
+}}
 
-Line_comm_start	=	"//"
+Line_comm_start	=	"//"{{
+               std::cout<<"Passed Line_comm_start rule in peg\n";
+}}
 
-Line_comment	=	Line_comm_start Line_comm_rest
+Line_comment	=	Line_comm_start Line_comm_rest{{
+               std::cout<<"Passed Line_comment rule in peg\n";
+}}
 
-Line_comm_end	=	"\n"
+Line_comm_end	=	"\n"{{
+               std::cout<<"Passed Line_comm_end rule in peg\n";
+}}
 
-OPEN		=	"("
-CLOSE		=	")"
-SEMI		=	";"	
-OPENC		=	"{"
-CLOSEC		=	"}"
-OPENA		=	"<"
-CLOSEA		=	">"
-OPENS		=	"["
-CLOSES		=	"]"
-COMMA		=	","
+OPEN		=	"("{{
+               std::cout<<"Passed OPEN rule in peg\n";
+}}
+CLOSE		=	")"{{
+               std::cout<<"Passed CLOSE rule in peg\n";
+}}
+
+SEMI		=	";"	{{
+               std::cout<<"Passed SEMI rule in peg\n";
+}}
+OPENC		=	"{"{{
+               std::cout<<"Passed OPENC rule in peg\n";
+}}
+CLOSEC		=	"}"{{
+               std::cout<<"Passed CLOSEC rule in peg\n";
+}}
+OPENA		=	"<"{{
+               std::cout<<"Passed OPENA rule in peg\n";
+}}
+CLOSEA		=	">"{{
+               std::cout<<"Passed CLOSEA rule in peg\n";
+}}
+OPENS		=	"["{{
+               std::cout<<"Passed OPENS rule in peg\n";
+}}
+CLOSES		=	"]"{{
+               std::cout<<"Passed CLOSES rule in peg\n";
+}}
+COMMA		=	","{{
+               std::cout<<"Passed COMMA rule in peg\n";
+}}
