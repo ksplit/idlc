@@ -28,7 +28,10 @@ int main(int argc, char ** argv)
 
     // TODO: add support for multiple files, add option to specify
     // which module to compile, put each module in a different file
-    	//ah note - this is where the input idl is parsed
+    //ah note - this is where the input idl is parsed. The output of
+    //the parse is a tree. This is the AST, on which we generate the CCST
+    //(the concrete syntax tree) - from which the code is eventually 
+    //generated.
 	Project * tree = (Project *) Parser::parse(std::string(file));
 
     ErrorReport* er = ErrorReport::instance();
@@ -89,7 +92,7 @@ int main(int argc, char ** argv)
       CCSTFile *ccst_callee_disp = generate_dispatch<false>(m);
 
       CCSTFile *ccst_caller_h = generate_client_header(m);
-      CCSTFile *ccst_caller_c = generate_client_source(m, caller_includes);
+      CCSTFile *ccst_caller_c = generate_client_source(m, caller_includes); //ah note - this function generates all the source code for the client (caller.c)
       CCSTFile *ccst_caller_disp = generate_dispatch<true>(m);
 
       CCSTFile *ccst_glue_c = generate_glue_source(m);
