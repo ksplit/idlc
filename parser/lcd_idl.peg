@@ -10,7 +10,7 @@ include: {{
 #include <string>
 #include <stdint.h>
 }}
-
+#ah note - the following code goes directly into parser/lcd_idl.cpp
 code: {{
 
 typedef enum {
@@ -220,6 +220,7 @@ rules:
 #ah note - below the pattern "Include* GlobalScopeDefinitions" is stored into the variable i. i is of type Value, which has the following methods: 1) getValue():void* - gets the underlying object the pattern computed in its action, 2) getVAlues():vector<Value> - gets a list of vector objects when * or + is used.
 #ah to resolve - what does <eof> tag mean for parsing?
 File		=	Spacing i:Include* GlobalScopeDefinitions t:Interface* <eof> {{
+		            std::cout<<"Passed File rule in peg\n";
 			    std::vector<Module*> modules;
 			    std::vector<Include*> includes;
 			
@@ -456,8 +457,9 @@ RealType	=	fp:Identifier? Spacing sp:Identifier Spacing {{ //temporary solution
 			std::string *str = new std::string(total.str());
 			value.value = str->c_str();
 			}}		
-
+#ah to resolve - what is 34 used for??
 String		=	<ascii 34> l:any_letter+ <ascii 34> {{
+			    std::cout<<"Passed String rule\n";
 			    std::ostringstream total;
 			    for(Value::iterator it = l.getValues().begin(); it != l.getValues().end(); it ++)
 			    {
