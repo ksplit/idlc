@@ -1,0 +1,16 @@
+include <kernel.h>
+
+module nullnet(channel c) {
+
+    //TO REPLACE the following
+    channel net_async = new async(c);
+    use net_async;
+    {
+        projection <struct device> device {
+        }
+        projection <struct net_device_ops> net_device_ops {
+           rpc int (*open)(projection device  *dev);
+        }
+    }
+}
+

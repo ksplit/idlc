@@ -1,0 +1,22 @@
+module kernel(channel c) {
+
+    channel net_async = new async(c);
+    use net_async;
+    {
+        projection <struct device> device {
+        }
+
+        projection <struct net_device_ops> net_device_ops {
+           rpc int (*open)(projection device  *dev);
+           rpc [out] int (*close)(projection device  *dev);
+        // if using :
+        // rpc [out] int (*close)(device *dev);
+        // instead of 
+        // rpc [out] int (*close)(projection device  *dev);
+        // Error occurs: the point to which rules are traced successfuly
+        // is shown as follows:
+        // Rule traced as: File -> Interface -> unnamed_scope -> Type_Definitions -> Projection -> ProjField -> Spacing
+
+        }
+    }
+}
