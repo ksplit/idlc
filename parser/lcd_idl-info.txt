@@ -1,0 +1,8 @@
+#This file contains comments on the generated lcd_idl.cpp
+file by the vembyr parser generator after being provided the
+ lcd_idl.peg file.
+
+In the lcd_idl.cpp parser:
+*Each rule function has the following format:
+   
+  rule_<rulename>(Stream & stream, const position) 
