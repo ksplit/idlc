@@ -3,7 +3,7 @@ based on the current peg grammar.
 
 >To see all the dependencies of a specific nonterminal, look at the entry of that nonterminal, 
 where its name ends with a *define, e.g. Include*define. 
->If a nonterminal symbol ends with *no-depens, it depends on no other nonterminal symbols. In other
+>If a nonterminal symbol ends with *none, it depends on no other nonterminal symbols. In other
 words, it expands to terminal symbols when its grammar rule is used.
 >If a nonterminal symbol ends with *derived, it has already been derived in this file.
 >If a nonterminal symbol does not end with anything, it is yet to be defined in this file.
@@ -14,26 +14,29 @@ File*define
 -|Include*define
 --|Pathname
 --|Spacing
---|Space
+--|Space*define
+---|EndOfLine*derived
+---|Comment*derived
+---|Line_comment*derived
 -|Interface
--|GlobalScopeDefinitions*
---|Type_Definitions*
+-|GlobalScopeDefinitions*define
+--|Type_Definitions*define
 ---|Typedef
 ---|Projection
----|Projection_constructor
+---|Projection_constructor*define
 ----|Projection_constructor_special
-----|Spacing*
------|Space*
-------|EndOfLine*x
-------|Line_comment*
--------|Line_comm_start*x
--------|Line_comm_rest*
---------|Line_comm_end*x
---------|Line_comm_rest
-------|Comment*
--------|Comment_start*x
--------|Comment_rest*
---------|Comment_end*x
---------|Comment_rest
+----|Spacing*define
+-----|Space*define
+------|EndOfLine*define
+------|Line_comment*define
+-------|Line_comm_start*none
+-------|Line_comm_rest*define
+--------|Line_comm_end*none
+--------|Line_comm_rest*derived
+------|Comment*define
+-------|Comment_start*none
+-------|Comment_rest*define
+--------|Comment_end*none
+--------|Comment_rest*derived
 
 
