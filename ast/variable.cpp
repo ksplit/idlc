@@ -918,12 +918,12 @@ Variable* ReturnVariable::accessor()
 
 void ReturnVariable::set_in(bool b)
 {
-  std::cout << "error this operation not allowed\n";
+  std::cout << "ReturnVariable::set_in: error this operation not allowed\n";
 }
 
 void ReturnVariable::set_out(bool b)
 {
-  std::cout << "error this operation not allowed\n";
+  std::cout << "ReturnVariable::set_out: error this operation not allowed\n";
 }
 
 void ReturnVariable::set_alloc_caller(bool b)
@@ -938,12 +938,12 @@ void ReturnVariable::set_alloc_callee(bool b)
 
 void ReturnVariable::set_dealloc_caller(bool b)
 {
-  std::cout << "error this operation not allowed\n";
+  std::cout << "ReturnVariable::set_dealloc_caller: error this operation not allowed\n";
 }
 
 void ReturnVariable::set_dealloc_callee(bool b)
 {
-  std::cout << "error this operation not allowed\n";
+  std::cout << "ReturnVariable::set_dealloc_callee: error this operation not allowed\n";
 }
 
 bool ReturnVariable::in()
@@ -968,13 +968,13 @@ bool ReturnVariable::alloc_callee()
 
 bool ReturnVariable::dealloc_caller()
 {
-  std::cout << "error this operation not allowed\n";
+  std::cout << "ReturnVariable::dealloc_caller: error this operation not allowed\n";
   return false;
 }
 
 bool ReturnVariable::dealloc_callee()
 {
-  std::cout << "error this operation not allowed\n";
+  std::cout << "ReturnVariable::dealloc_callee: error this operation not allowed\n";
   return false;
 }
 
