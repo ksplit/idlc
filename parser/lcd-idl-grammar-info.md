@@ -5,10 +5,10 @@
 The following shows dependencies of nonterminal symbols
 based on the current peg grammar. 
 
--To see all the dependencies of a specific nonterminal, look at the entry of that nonterminal, where its name ends with a `*define`, e.g. `Include*define`. 
--If a nonterminal symbol ends with *none, it depends on no other nonterminal symbols. In other words, it expands to terminal symbols when its grammar rule is used.
--If a nonterminal symbol ends with `*derived`, it has already been derived in this file.
--If a nonterminal symbol does not end with anything, it is yet to be defined in this file.
+- To see all the dependencies of a specific nonterminal, look at the entry of that nonterminal, where its name ends with a `*define`, e.g. `Include*define`. 
+- If a nonterminal symbol ends with `*none`, it depends on no other nonterminal symbols. In other words, it expands to terminal symbols when its grammar rule is used.
+- If a nonterminal symbol ends with `*derived`, it has already been derived in this file.
+- If a nonterminal symbol does not end with anything, it is yet to be defined in this file.
 
 [TODO] It would be great if this dependency tree can be automated.
 ```
