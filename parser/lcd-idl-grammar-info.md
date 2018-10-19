@@ -21,7 +21,14 @@ tree the meanings of which are described below:
 - If a nonterminal symbol ends with `*derived`, it has already been derived in this file.
 - If a nonterminal symbol does not end with anything, it is yet to be defined in this file.
 
+- Meanwhile, this can be useful to find out the rule for a specific non terminal. 
+
+```
+grep -n "Space.*=" lcd_idl.peg 
+```
+
 [TODO] It would be great if this dependency tree can be automatically generated.
+
 ```
 File*define
 -|Include*define
