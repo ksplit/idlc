@@ -760,6 +760,12 @@ class Module
   iterator end() { return rpc_definitions_.end(); }
 };
 
+class Require
+{
+ public:
+ std::string interface_name;
+};
+
 class Include 
 {
   bool relative_; // true if "" false for <>
