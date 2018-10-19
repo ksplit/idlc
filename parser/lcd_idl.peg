@@ -426,6 +426,14 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
 			  }} | m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing Require Spacing req_id:Identifier Spacing CLOSEC Spacing {{
 			//ah note - working on this case to accept require keyword
 			//ah TODO need to initialize Require constructor
+			//ah TODO then, we need to use the name of the require variable to resolve the include
+			//we would need to deal. This would require use to search the vector with the names of 
+			//includes.
+			//ah to resolve - but then there is a question: after finding the idl file to be 
+			//included, say kernel.idl, do we move the idl contents of the kernel.idl file into the
+			//current idl file and then parse this idl file, or do we parse the kernel.idl file se-
+			//parately, and pull in the ast of that kernel.idl file into the ast of the current idl
+			//file?
 			const std::string *_req_id = static_cast<const std::string*>(req_id.getValue());
 			std::cout << "Passed Interface (alternate) rule \n";
 			LexicalScope *module_scope = (LexicalScope*) m.getValue();
