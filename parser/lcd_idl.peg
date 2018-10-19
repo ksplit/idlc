@@ -423,7 +423,7 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
 			set_current_scope(get_current_module_scope());
 		const std::string *name = static_cast<const std::string*>(id.getValue());
 		value = new Module(*name, rpcs, channels2, module_scope); 
-			  }} | m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing Require Spacing CLOSEC Spacing {{
+			  }} | m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing Require Spacing req_id:Identifier Spacing CLOSEC Spacing {{
 			      //ah note - working on this case to accept require keyword
 			      std::cout << "Passed Interface (alternate) rule \n";
 			      LexicalScope *module_scope = (LexicalScope*) m.getValue();
