@@ -69,7 +69,7 @@ CCSTCompoundStatement* callee_interface_init_function_body(Module *m)
 }
 
 /* 
- * takes the vector of global variables with also provides the parameters to the function.
+ * takes the vector of global variables which also provides the parameters to the function.
  * 1. What about the generalization of this?
  */
 CCSTCompoundStatement* caller_interface_init_function_body(Module *m)
@@ -94,7 +94,7 @@ CCSTCompoundStatement* caller_interface_init_function_body(Module *m)
 								      , function_call("glue_cap_init"
 										      , cap_init_args_empty))));
   // do error checking
-  //ah to resolve - this is is in the caller_interface init function, so why is "cap_init" being output in nullnet_callee.c? Is this a bug?
+  //ah to resolve - this is in the caller_interface init function, so why is "cap_init" being output in nullnet_callee.c? Is this a bug?
   body_statements.push_back(if_cond_fail_goto(new CCSTPrimaryExprId("ret")
 					      , "cap init", "fail1"));
 
