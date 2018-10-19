@@ -200,16 +200,16 @@ void create_container(const Value &id, std::vector<ProjectionField*> &container_
 {
 	const std::string *_id = static_cast<const std::string*>(id.getValue());
 
-    container_fields.push_back(new ProjectionField(getType(*_id), *_id, 0));
+	container_fields.push_back(new ProjectionField(getType(*_id), *_id, 0));
 
-    ProjectionField *other_ref = new ProjectionField(getType("cptr"), "other_ref", 0);
-    other_ref->set_out(true);
-    container_fields.push_back(other_ref);
+	ProjectionField *other_ref = new ProjectionField(getType("cptr"), "other_ref", 0);
+	other_ref->set_out(true);
+	container_fields.push_back(other_ref);
 
-    ProjectionField *my_ref = new ProjectionField(getType("cptr"), "my_ref", 0);
-    my_ref->set_in(true);
+	ProjectionField *my_ref = new ProjectionField(getType("cptr"), "my_ref", 0);
+	my_ref->set_in(true);
 
-    container_fields.push_back(my_ref);
+	container_fields.push_back(my_ref);
 }
 
 }}
@@ -218,12 +218,13 @@ rules:
 
 #ah note - the code in the double curly braces are generated verbatim, and compiled to construct the concrete syntax tree, on which passes are made to generate the desired output files (the glue code)
 #ah note - below the pattern "Include* GlobalScopeDefinitions" is stored into the variable i. i is of type Value, which has the following methods: 1) getValue():void* - gets the underlying object the pattern computed in its action, 2) getVAlues():vector<Value> - gets a list of vector objects when * or + is used.
-#ah to resolve - what does <eof> tag mean for parsing?
+#<eof> tag - end of file
 File		=	Spacing i:Include* GlobalScopeDefinitions t:Interface* <eof> {{
-		        std::cout<<"Passed File rule in peg\n";
+			    std::cout<<"Passed File rule in peg\n";
 			    std::vector<Module*> modules;
 			    std::vector<Include*> includes;
 			
+				//This is where the includes are filled in
 			    for(Value::iterator it = i.getValues().begin(); it != i.getValues().end(); it ++) {
 			        const Value & v = *it;
 			        includes.push_back((Include*) v.getValue());
@@ -282,8 +283,7 @@ IdentStart	=	[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]
 
 IdentCont	=	IdentStart | [0123456789]
 
-unnamed_scope 	= 	s:unnamed_scope_special new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* Spacing CLOSEC Spacing {{
-		            
+unnamed_scope 	= 	s:unnamed_scope_special new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* Spacing CLOSEC Spacing {{ 
 			    std::vector<Rpc*> *rpcs = new std::vector<Rpc*>();
 			    for(Value::iterator it = r.getValues().begin(); it != r.getValues().end(); it ++) {
 			        const Value &v = *it;
@@ -370,8 +370,7 @@ Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
 					// *) Add this to global channel list
 					// *) Dispatch loop should monitor all
 
-		        	std::cout<<"Passed Channel_scope rule in peg\n";
-					
+					std::cout<<"Passed Channel_scope rule in peg\n";		
 					const std::string *_id = static_cast<const std::string*>(ch.getValue());
 
 					std::cout << "Using channel " << *_id << std::endl;
@@ -385,21 +384,22 @@ Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
 				}}
 
 Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
+			      std::cout << "Passed Interface rule \n";
 			      LexicalScope *module_scope = (LexicalScope*) m.getValue();
 			      std::vector<Rpc*> rpcs;				
 			      std::vector<GlobalVariable*> *channels = (std::vector<GlobalVariable*>*) chans.getValue();  
 			      std::vector<GlobalVariable*> channels2 = *channels;
 
 			      for(Value::iterator it = r.getValues().begin(); it != r.getValues().end(); it ++) {
-                    const Value & v2 = *it;
-                    Rpc *r2 = (Rpc*) v2.getValue();
-                    rpcs.push_back(r2);
+                    	      const Value & v2 = *it;
+                	      Rpc *r2 = (Rpc*) v2.getValue();
+			      rpcs.push_back(r2);
 			      }
 
 			      for(Value::iterator it = r2.getValues().begin(); it != r2.getValues().end(); it ++) {
-                    const Value & v2 = *it;
-                    std::vector<Rpc*> *r_tmp = (std::vector<Rpc*>*) v2.getValue();
-                    rpcs.insert(rpcs.end(), r_tmp->begin(), r_tmp->end());
+			      const Value & v2 = *it;
+			      std::vector<Rpc*> *r_tmp = (std::vector<Rpc*>*) v2.getValue();
+			      rpcs.insert(rpcs.end(), r_tmp->begin(), r_tmp->end());
 			      }
 
                     for(Value::iterator it = ch.getValues().begin(); it != ch.getValues().end(); it ++) {
@@ -417,14 +417,14 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
                             module_scope->setactiveChannel(NULL);
                         }
                     }
-                  if (get_current_scope())
-    			      set_current_scope(get_current_scope()->outer_scope()); // leaving current scope
-                  else
-                      set_current_scope(get_current_module_scope());
-				  const std::string *name = static_cast<const std::string*>(id.getValue());
-			      value = new Module(*name, rpcs, channels2, module_scope); 
-			  }}
-
+		if (get_current_scope())
+			set_current_scope(get_current_scope()->outer_scope()); // leaving current scope
+		else
+			set_current_scope(get_current_module_scope());
+		const std::string *name = static_cast<const std::string*>(id.getValue());
+		value = new Module(*name, rpcs, channels2, module_scope); 
+			  }} 
+                            
 Interface_special =	  "module" {{
 		  	      LexicalScope *new_scope = new LexicalScope(LexicalScope::getGlobalScope());
 			      LexicalScope::getGlobalScope()->add_inner_scope(new_scope);
@@ -908,7 +908,7 @@ Projection_constructor_special = "projection" {{
 				 }} 
 
 Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPENC Spacing c:ChanField* p:ProjField* CLOSEC Spacing {{
-	        	std::cout<<"Passed Projection rule in peg\n";
+	        	    std::cout<<"Passed Projection rule in peg\n";
 			    std::vector<ProjectionField*> channels;
 			    for(Value::iterator it = c.getValues().begin(); it != c.getValues().end(); it ++) {
 			        const Value &v = *it;
