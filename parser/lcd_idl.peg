@@ -423,8 +423,12 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
 			set_current_scope(get_current_module_scope());
 		const std::string *name = static_cast<const std::string*>(id.getValue());
 		value = new Module(*name, rpcs, channels2, module_scope); 
-			  }} 
-                            
+			  }}
+ 
+Require =	"require" {{
+				std::cout<<"Passed Require rule\n";
+}} 
+
 Interface_special =	  "module" {{
 		  	      LexicalScope *new_scope = new LexicalScope(LexicalScope::getGlobalScope());
 			      LexicalScope::getGlobalScope()->add_inner_scope(new_scope);
