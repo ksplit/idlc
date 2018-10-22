@@ -1,6 +1,6 @@
 ## Peg Syntax
 
-- Nonterminals that can take in values are preceded by an identifier
+Nonterminals that can take in values are preceded by an identifier
 keyword, for example, 
 ```
 unnamed_scope 	= 	s:unnamed_scope_special new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* Spacing CLOSEC Spacing {{ 
@@ -12,14 +12,32 @@ new_chans = result_peg_3.getValues();
 
 ## Parser code generation
 
-When a certain rule matches the input, parser code is generated. Let's take a look at the code generated for the rule:
+When a certain rule matches the input, parser code is generated. Let's take a look at what code is generated for the `Interface`rule:
 ```
 Interface       =         m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing
 ```
-An `Interface` in the idl entails the creation of a new scope. Hence we create a new lexical scope, by using the value provided for the `Interface_special` non-terminal, captured in identifer `m` (as shown in the grammar.):
+An `Interface` in the idl entails the creation of a new scope. The creation of the new scope happens in the code generated for `Interface_special`'s rule as shown below:
+```
+ LexicalScope *new_scope = new LexicalScope(LexicalScope::getGlobalScope());
+```
+In order to capture `new_scope` (from `Interface_special`'s parser code) into identifer `m` (in `Interface`'s parser code), we add the following code to the end of `Interface_special`'s parser code:
+
+```
+value = new_scope; 
+```
+
+By seeing the above, and the fact that `m` is supposed to capture the value of `Interface_special` (from `Interface`'s rule), vembyr automatically generates the code necessary to do so:
+
+```
+result_peg_3.setValue(value);
+...
+m = result_peg_3.getValues();
+```
+
+<!-- 
 ```
 LexicalScope *module_scope = (LexicalScope*) m.getValue();
-```
+``` -->
 
 
 ## Nonterminal Dependencies
