@@ -33,11 +33,11 @@ result_peg_3.setValue(value);
 ...
 m = result_peg_3.getValues();
 ```
+Inside the parser code of `Interface` we use the value of `m` to set the scope of the module as follows:
 
-<!-- 
 ```
 LexicalScope *module_scope = (LexicalScope*) m.getValue();
-``` -->
+```
 
 
 ## Nonterminal Dependencies
