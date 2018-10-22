@@ -12,10 +12,15 @@ new_chans = result_peg_3.getValues();
 
 ## Parser code generation
 
-When a certain rule matches the input, parser code is generated. Let's take a look at the code generated for the rule,
+When a certain rule matches the input, parser code is generated. Let's take a look at the code generated for the rule:
 ```
 Interface       =         m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing
 ```
+An `Interface` in the idl entails the creation of a new scope. Hence we create a new lexical scope, by using the value provided for the `Interface_special` non-terminal, captured in identifer `m` (as shown in the grammar.):
+```
+LexicalScope *module_scope = (LexicalScope*) m.getValue();
+```
+
 
 ## Nonterminal Dependencies
 
