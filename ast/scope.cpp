@@ -213,6 +213,7 @@ Type* LexicalScope::lookup(const std::string &temp, int *err) {
   }
   else {
     *err = 1;
+    //ah note - prints a unique id for each type in hex
     std::cout << filename <<" In lookup for type " <<  temp << " is " << std::hex << type_definitions_[temp] << std::dec << std::endl;
     return type_definitions_[temp];
   }
