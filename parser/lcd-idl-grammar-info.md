@@ -10,6 +10,13 @@ These identifer keywords are declared as `Value` variables in the parser that is
 new_chans = result_peg_3.getValues();
 ```
 
+## Parser code generation
+
+When a certain rule matches the input, parser code is generated. Let's take a look at the code generated for the rule,
+```
+Interface       =         m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing
+```
+
 ## Nonterminal Dependencies
 
 Here we show dependencies of nonterminal symbols
