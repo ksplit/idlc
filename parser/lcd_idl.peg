@@ -515,7 +515,7 @@ RealType	=	fp:Identifier? Spacing sp:Identifier Spacing {{ //temporary solution
 			std::string *str = new std::string(total.str());
 			value.value = str->c_str();
 			}}		
-#ah to resolve - what is 34 used for??
+#ah note - what is 34 used for?? -> for double quotes in peg grammar
 String		=	<ascii 34> l:any_letter+ <ascii 34> {{
 			    std::cout<<"Passed String rule\n";
 			    std::ostringstream total;
