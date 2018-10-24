@@ -12,7 +12,9 @@
 #include "symbol_table.h"
 #include "ccst.h"
 
-
+//ah note - the classes LexicalScope, Type, Variable,
+//Rpc, Module, and Project are defined here. These classes 
+//define the front-end ast the IDL input is first parsed into.
 
 class MarshalPrepareVisitor;
 class CCSTStatement;
