@@ -14,7 +14,9 @@
 
 /*ah note - the classes LexicalScope, Type, Variable,
 Rpc, Module, and Project are defined here. These classes 
-define the front-end ast the IDL input is parsed into.
+define the front-end ast the IDL input is parsed into. These classes
+also define functions which allow us to visit the AST produced by the parse
+and make transformations to the AST. 
 
 Project - this class represents the top-most construct of the program, and
 has the highest level of scope. The implementation of Project
