@@ -30,6 +30,10 @@ We also look to add Require to this class. Its implementation is provided in
 lcd_ast.cpp. In the grammar, a module is created in the rule for `Interface`.
 `value = new Module(*name, rpcs, channels2, module_scope);`
 
+LexicalScope - describes a scope for type definitions, variables, and iden-
+tifiers. A new LexicalScope is declared for the following rules in the 
+input peg file: `Projection_constructor_special`, `rpc_special`, `Interface_special`, `pc_unnamed_scope_special`, and `unnamed_scope_special`.
+
 Reference:
 S. Spall, kIDL: Interface Definition Language for the Kernel
 
