@@ -69,8 +69,6 @@ bool alloc_caller(Variable *v, const std::string& side); // complete
 CCSTStructUnionSpecifier* struct_declaration(ProjectionType *pt); // complete
 CCSTDeclaration* declare_and_initialize_container_struct(Variable *v); // complete
 
-
-
 CCSTDeclaration* typedef_declaration(Typedef *t); // todo. totally not done
 CCSTAssignOp* equals(); // complete
 CCSTDeclaration* declare_static_variable(Variable *v); // complete
@@ -111,8 +109,6 @@ CCSTDeclaration* function_declaration(Rpc *r); // complete
 CCSTDeclaration* function_pointer_function_declaration(Rpc *r, const std::string &_postfix);
 
 CCSTParamTypeList* parameter_list(std::vector<Parameter*> params); // complete
-
-
 
 // needed functions.
 // creates a function declaration from a return type, a name and parameters
@@ -162,11 +158,6 @@ std::vector<CCSTStatement*> dealloc_containers_caller(Variable *v, const std::st
 CCSTDeclaration* declare_variable(Variable *v);
 std::vector<CCSTDeclaration*> declare_variables_callee(Variable *v);
 std::vector<CCSTDeclaration*> declare_containers_only_callee(Variable *v);
-
-
-
-
-
 
 // trampoline.cpp
 CCSTCompoundStatement* trampoline_function_body(Rpc *r); // complete.
