@@ -14,13 +14,23 @@
 
 /*ah note - the classes LexicalScope, Type, Variable,
 Rpc, Module, and Project are defined here. These classes 
-define the front-end ast the IDL input is first parsed into.
+define the front-end ast the IDL input is parsed into.
 
 Project - this class represents the top-most construct of the program, and
 has the highest level of scope. The implementation of Project
 is provided in the lcd_ast.cpp file. During parsing a file, 
-a new instance of the project is created in the File rule of the grammar:
-new Project(LexicalScope::getGlobalScope(), modules, includes); 
+a new instance of the project is created in the `File` rule of the grammar:
+`new Project(LexicalScope::getGlobalScope(), modules, includes);`
+A Project is made up of multiple modules.
+
+Module - this class is currently made up of Rpcs, Channels, Cspaces. 
+We also look to add Require to this class. Its implementation is provided in 
+lcd_ast.cpp. In the grammar, a module is created in the rule for `Interface`.
+`value = new Module(*name, rpcs, channels2, module_scope);`
+
+Reference:
+S. Spall, kIDL: Interface Definition Language for the Kernel
+
 */
 
 class MarshalPrepareVisitor;
