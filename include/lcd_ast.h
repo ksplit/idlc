@@ -12,7 +12,7 @@
 #include "symbol_table.h"
 #include "ccst.h"
 
-//ah note - this file contains the defintions of all the constructs that should be present in the output program
+
 
 class MarshalPrepareVisitor;
 class CCSTStatement;

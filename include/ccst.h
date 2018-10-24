@@ -5,6 +5,8 @@
 #include "assert.h"
 #include <fstream>
 
+//ah note - this file contains the definitions of all the constructs that should be present in the output program
+
 class CCSTFile;
 class CCSTAssignExpr;
 class CCSTExDeclaration;
