@@ -12,9 +12,16 @@
 #include "symbol_table.h"
 #include "ccst.h"
 
-//ah note - the classes LexicalScope, Type, Variable,
-//Rpc, Module, and Project are defined here. These classes 
-//define the front-end ast the IDL input is first parsed into.
+/*ah note - the classes LexicalScope, Type, Variable,
+Rpc, Module, and Project are defined here. These classes 
+define the front-end ast the IDL input is first parsed into.
+
+Project - this class represents the top-most construct of the program, and
+has the highest level of scope. The implementation of Project
+is provided in the lcd_ast.cpp file. During parsing a file, 
+a new instance of the project is created in the File rule of the grammar:
+new Project(LexicalScope::getGlobalScope(), modules, includes); 
+*/
 
 class MarshalPrepareVisitor;
 class CCSTStatement;
