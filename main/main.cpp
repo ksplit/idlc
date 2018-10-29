@@ -136,16 +136,22 @@ int main(int argc, char ** argv)
       ccst_callee_lds->write(ofs_callee_lds, 1);
       ofs_callee_lds << "}\nINSERT AFTER .text;\n";
 
-      /// Caller header guard macro
-      std::string macro_caller_h("__" + m->identifier() + "_caller_h__");
-      std_string_toupper(macro_caller_h);
+	/// Caller header guard macro
+	std::string macro_caller_h("__" + m->identifier() + "_caller_h__");
+	std_string_toupper(macro_caller_h);
 
-      ofs_caller_h << "#pragma once"<< std::endl;
-      ccst_caller_h->write(ofs_caller_h, 0);
-
-
-      ccst_caller_c->write(ofs_caller_c, 0);
-      ccst_caller_disp->write(ofs_caller_disp, 0);
+	ofs_caller_h << "#pragma once"<< std::endl;
+      
+	if (ccst_caller_h!=NULL)
+	ccst_caller_h->write(ofs_caller_h, 0);
+	else {
+	 std::cout<<"ccst_caller_h is NULL! Terminating program."<<std::endl;
+	 std::exit(0);
+	}     
+	
+ 
+	ccst_caller_c->write(ofs_caller_c, 0);
+	ccst_caller_disp->write(ofs_caller_disp, 0);
     }
 
     return 0;
