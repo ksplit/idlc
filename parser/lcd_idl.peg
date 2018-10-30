@@ -395,7 +395,7 @@ Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
 				}}
 
 Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
-			      std::cout << "Passed Interface rule \n";
+			      std::cout << "[peg] Passed Interface rule \n";
 			      LexicalScope *module_scope = (LexicalScope*) m.getValue();
 			      std::vector<Rpc*> rpcs;				
 			      std::vector<GlobalVariable*> *channels = (std::vector<GlobalVariable*>*) chans.getValue();  
@@ -437,7 +437,8 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
 			set_current_scope(get_current_module_scope());
 		const std::string *name = static_cast<const std::string*>(id.getValue());
 		value = new Module(*name, rpcs, channels2, module_scope); 
-			  }} | m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* Spacing req:Require* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
+		}} | m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing Require Spacing req_id:Identifier Spacing CLOSEC Spacing {{
+
 			//ah TODO - to keep this rule only after it is finalized for Interface
 			//ah note - working on this case to accept require keyword
 			//ah TODO need to initialize Require constructor
@@ -450,27 +451,28 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
 			//parately, and pull in the ast of that kernel.idl file into the ast of the current idl
 			//file?
 			//const std::string *_req_id = static_cast<const std::string*>(req_id.getValue());
-			std::cout << "Passed Interface (alternate) rule \n";
-			//std::cout << "Requiring "<<*_req_id<<std::endl;
-			LexicalScope *module_scope = (LexicalScope*) m.getValue();
-			std::vector<Rpc*> rpcs;				
-			std::vector<GlobalVariable*> *channels = (std::vector<GlobalVariable*>*) chans.getValue();  
-			std::vector<GlobalVariable*> channels2 = *channels;
+		      const std::string *_req_id = static_cast<const std::string*>(req_id.getValue());
+		      std::cout << "[peg] Passed Interface rule 2"<<std::endl;
+		      LexicalScope *module_scope = (LexicalScope*) m.getValue();
+		      std::vector<Rpc*> rpcs;				
+		      std::vector<GlobalVariable*> *channels = (std::vector<GlobalVariable*>*) chans.getValue();  
+		      std::vector<GlobalVariable*> channels2 = *channels;
 
-			for(Value::iterator it = r.getValues().begin(); it != r.getValues().end(); it ++) {
-                    	const Value & v2 = *it;
-                	Rpc *r2 = (Rpc*) v2.getValue();
-			rpcs.push_back(r2);
-			}
+		      for(Value::iterator it = r.getValues().begin(); it != r.getValues().end(); it ++) {
+		      const Value & v2 = *it;
+		      Rpc *r2 = (Rpc*) v2.getValue();
+		      rpcs.push_back(r2);
+		      }
 
-			for(Value::iterator it = r2.getValues().begin(); it != r2.getValues().end(); it ++) {
-			const Value & v2 = *it;
-			std::vector<Rpc*> *r_tmp = (std::vector<Rpc*>*) v2.getValue();
-			rpcs.insert(rpcs.end(), r_tmp->begin(), r_tmp->end());
-			}
-			std::cout<<"Size of rpcs "<<rpcs.size()<<std::endl;
+		      for(Value::iterator it = r2.getValues().begin(); it != r2.getValues().end(); it ++) {
+		      const Value & v2 = *it;
+		      std::vector<Rpc*> *r_tmp = (std::vector<Rpc*>*) v2.getValue();
+		      rpcs.insert(rpcs.end(), r_tmp->begin(), r_tmp->end());
+		      }
+			
+		      std::cout<<"[peg] Size of rpcs "<<rpcs.size()<<std::endl;
 
-			for(Value::iterator it = ch.getValues().begin(); it != ch.getValues().end(); it ++) {
+                      for(Value::iterator it = ch.getValues().begin(); it != ch.getValues().end(); it ++) {
                         const Value & v2 = *it;
                         std::string *_ch = (std::string*) v2.getValue();
                         std::cout << "### module channel " << *_ch << "\n";
@@ -484,19 +486,18 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
                         } else {
                             module_scope->setactiveChannel(NULL);
                         }
-                    }
-		if (get_current_scope())
+                      }
+		      if (get_current_scope())
 			set_current_scope(get_current_scope()->outer_scope()); // leaving current scope
-		else
+		      else
 			set_current_scope(get_current_module_scope());
-		const std::string *name = static_cast<const std::string*>(id.getValue());
-		value = new Module(*name, rpcs, channels2, module_scope); 
+			const std::string *name = static_cast<const std::string*>(id.getValue());
+			value = new Module(*name, rpcs, channels2, module_scope); 
 }}			 
 
-Require =	"require" Spacing req_id:Identifier Spacing SEMI {{
+Require =	"require" {{
 				std::cout<<"Passed Require rule\n";
 }} 
-
 Interface_special =	  "module" {{
 		    	      std::cout<<"[peg] Passed Interface_special rule."<<std::endl;
 		  	      LexicalScope *new_scope = new LexicalScope(LexicalScope::getGlobalScope());
