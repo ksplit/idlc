@@ -1,7 +1,7 @@
 #include "lcd_ast.h"
 #include "utils.h"
 #include <stdio.h>
-
+#define FILENAME "[lcd_ast.cpp]"
 Rpc::Rpc(ReturnVariable *return_value, const std::string& name,
   std::vector<Parameter*> parameters, LexicalScope *current_scope) :
   tag_(0),
@@ -405,6 +405,10 @@ Module::Module(const std::string& id, std::vector<Rpc*> rpc_definitions,
   channels_(channels),
   rpc_definitions_(rpc_definitions)
 {
+  std::cout<<FILENAME<<" Creating new module"<<std::endl;
+  std::cout<<FILENAME<<" -module name: "<<id<<std::endl;
+  std::cout<<FILENAME<<" -module rpcs size: "<<rpc_definitions.size()<<std::endl;
+
   this->module_scope_->setactiveChannel(ls->activeChannel);
   if (ls->activeChannel) {
     std::cout << "Active channel " << ls->activeChannel->name() << std::endl;
@@ -492,6 +496,8 @@ void Module::initialize_types()
 void Module::function_pointer_to_rpc()
 {
   std::vector<Rpc*> rpcs = this->module_scope()->function_pointer_to_rpc();
+  if (rpcs.size()!=0)
+   std::cout<<"lcd_ast.cpp-Module::function_pointer_to_rpc()-Inserted an rpc for a function pointer."<<std::endl;
   this->rpc_definitions_.insert(this->rpc_definitions_.end(), rpcs.begin(), rpcs.end());
 }
 
@@ -582,6 +588,7 @@ void Project::function_pointer_to_rpc()
 {
   // right now project doesnt have free rpcs.
   for (auto module: *this) {
+    std::cout<<FILENAME<<" invoking function_pointer_to_rpc"<<std::endl;//for debug
     module->function_pointer_to_rpc();
   }
 }

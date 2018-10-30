@@ -3,7 +3,7 @@
 #include <string.h>
 
 LexicalScope* LexicalScope::globalScope = 0;
-std::string filename = "ast/scope.cpp";
+std::string filename = "[ast/scope.cpp]";
 
 
 LexicalScope* LexicalScope::getGlobalScope()
@@ -183,7 +183,7 @@ Variable* LexicalScope::lookup_variable(const std::string& sym, int* err)
 
 std::vector<Rpc*> LexicalScope::rpc_in_scope()
 {
-  std::cout << "rpc in scope lexical scope todo\n";
+  std::cout << filename  <<" rpc in scope lexical scope todo\n";
   std::vector<Rpc*> empty;
   return empty;
 }
@@ -223,7 +223,7 @@ bool LexicalScope::insert(const std::string& symbol, Type *type)
 {
   std::pair<std::map<std::string,Type*>::iterator,bool> ret;
   ret = this->type_definitions_.insert(std::pair<std::string, Type*>(symbol, type));
-  std::cout << "In insert pointer for type " <<  symbol << " is " << type << std::endl;
+  std::cout << filename <<" insert pointer for type " <<  symbol << " is " << type << std::endl;
   return ret.second;
 }
 
@@ -282,18 +282,20 @@ void LexicalScope::create_trampoline_structs()
 std::vector<Rpc*> LexicalScope::function_pointer_to_rpc()
 {
   std::vector<Rpc*> rpcs;
+  std::cout<<filename<<" number of type_definitions "<<type_definitions_.size()<<std::endl;
   for (auto tdefs : type_definitions_) {
     auto *t = tdefs.second;
-
+    std::cout<<filename<<" Scanning type definitions"<<std::endl;
     if (t->num() == PROJECTION_TYPE
       || t->num() == PROJECTION_CONSTRUCTOR_TYPE) { // projection type
       ProjectionType *pt = dynamic_cast<ProjectionType*>(t);
       Assert(pt != 0x0, "Error: dynamic cast to projection type failed!\n");
-
+      std::cout<<filename<<" Inside Projection or Projection Constructor"<<std::endl;
       for (auto pf : *pt) {
         if (pf->type()->num() == FUNCTION_TYPE) { // function pointer field
           Function *f = dynamic_cast<Function*>(pf->type());
           rpcs.push_back(f->to_rpc(pt));
+          std::cout<<filename<<" rpc size check "<<rpcs.size()<<std::endl;
         }
       }
     }

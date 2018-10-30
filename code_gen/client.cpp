@@ -11,8 +11,12 @@ CCSTFile* generate_client_header(Module* mod)
 {
   std::vector<CCSTExDeclaration*> definitions;
   if (mod->rpc_definitions().empty()) {
+    std::cout<<"No rpc definitions, returning null"<<std::endl;
     return NULL;
   }
+  else std::cout<<"Found rpc definition."<<std::endl;
+  std::cout<< "rpc size is : "<<mod->rpc_definitions().size()<<std::endl;	
+  for(Rpc* rpc : mod->rpc_definitions()) std::cout << "rpc name: "<<rpc->name() << std::endl ;
 
   /// generate function declaration for sync, async loop
   definitions.push_back(dispatch_sync_function_declaration());

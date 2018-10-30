@@ -45,7 +45,10 @@ int main(int argc, char ** argv)
     std::vector<Include*> caller_includes = project_includes;
     std::vector<Include*> callee_includes = project_includes;
 
+    int check_num=0;
     for (auto m : *tree) {
+      std::cout<<"Module number "<<check_num<<std::endl;
+      check_num++;
       std::string callee_h = new_name(m->identifier(), std::string("_callee.h"));
       std::string callee_c = new_name(m->identifier(), std::string("_callee.c"));
       std::string callee_disp = new_name(m->identifier(), std::string("_callee_dispatch.c"));
@@ -76,6 +79,7 @@ int main(int argc, char ** argv)
 
       tree->resolve_types();
       tree->create_trampoline_structs();
+      std::cout<<"[main.cpp] invoking function_pointer_to_rpc"<<std::endl;//for debug
       tree->function_pointer_to_rpc();
       tree->generate_function_tags();
       tree->create_container_variables();
@@ -136,22 +140,21 @@ int main(int argc, char ** argv)
       ccst_callee_lds->write(ofs_callee_lds, 1);
       ofs_callee_lds << "}\nINSERT AFTER .text;\n";
 
-	/// Caller header guard macro
-	std::string macro_caller_h("__" + m->identifier() + "_caller_h__");
-	std_string_toupper(macro_caller_h);
+      /// Caller header guard macro
+      std::string macro_caller_h("__" + m->identifier() + "_caller_h__");
+      std_string_toupper(macro_caller_h);
 
-	ofs_caller_h << "#pragma once"<< std::endl;
+      ofs_caller_h << "#pragma once"<< std::endl;
       
-	if (ccst_caller_h!=NULL)
-	ccst_caller_h->write(ofs_caller_h, 0);
-	else {
-	 std::cout<<"ccst_caller_h is NULL! Terminating program."<<std::endl;
-	 std::exit(0);
-	}     
-	
+      if (ccst_caller_h!=NULL)
+      ccst_caller_h->write(ofs_caller_h, 0);
+      else {
+       std::cout<<"ccst_caller_h is NULL! Terminating program."<<std::endl;
+       std::exit(0);
+      }     
  
-	ccst_caller_c->write(ofs_caller_c, 0);
-	ccst_caller_disp->write(ofs_caller_disp, 0);
+      ccst_caller_c->write(ofs_caller_c, 0);
+      ccst_caller_disp->write(ofs_caller_disp, 0);
     }
 
     return 0;

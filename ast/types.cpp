@@ -201,6 +201,7 @@ Rpc* Function::to_rpc(ProjectionType *pt)
   // new_parameters.insert(new_parameters.end(), this->parameters_.begin(), this->parameters_.end());
   int err;
 
+  std::cout<<"[types.cpp] looking up hidden args"<<std::endl;
   Type *tramp_hidden_args = this->current_scope_->lookup("trampoline_hidden_args", &err);
 
   if (!tramp_hidden_args) {
