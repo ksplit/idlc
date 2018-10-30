@@ -220,7 +220,7 @@ rules:
 #ah note - below the pattern "Include* GlobalScopeDefinitions" is stored into the variable i. i is of type Value, which has the following methods: 1) getValue():void* - gets the underlying object the pattern computed in its action, 2) getVAlues():vector<Value> - gets a list of vector objects when * or + is used.
 #<eof> tag - end of file
 File		=	Spacing i:Include* GlobalScopeDefinitions t:Interface* <eof> {{
-			    std::cout<<"Passed File rule in peg\n";
+			    std::cout<<"[peg] Passed File rule."<<std::endl;
 			    std::vector<Module*> modules;
 			    std::vector<Include*> includes;
 			
@@ -239,6 +239,7 @@ File		=	Spacing i:Include* GlobalScopeDefinitions t:Interface* <eof> {{
 			}}
 
 GlobalScopeDefinitions =      d:Type_Definitions* {{
+			    	  std::cout<<"[peg] Passed GlobalScopeDefinitions rule."<<std::endl;
 		       	          for(Value::iterator it = d.getValues().begin(); it != d.getValues().end(); it ++) { 
 			    	      const Value & v2 = *it;
 			    	      Type *type = (Type*) v2.getValue();
@@ -251,6 +252,7 @@ GlobalScopeDefinitions =      d:Type_Definitions* {{
 			      }}
 
 Pathname	= 	p1:PathStart+ {{
+            		    std::cout<<"[peg] Passed Pathname rule."<<std::endl;
 			    std::ostringstream total;
 			    
 			    for(Value::iterator it = p1.getValues().begin(); it != p1.getValues().end(); it ++) {
@@ -265,7 +267,8 @@ Pathname	= 	p1:PathStart+ {{
 
 PathStart      	=	IdentCont | [./~]
 
-Identifier	=	i1:IdentStart i2:IdentCont* {{ 
+Identifier	=	i1:IdentStart i2:IdentCont* {{
+            		    std::cout<<"[peg] Passed Identifier rule."<<std::endl;
 			    std::ostringstream total;
 			    total << (char) (intptr_t) i1.getValue();
 
@@ -283,7 +286,8 @@ IdentStart	=	[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]
 
 IdentCont	=	IdentStart | [0123456789]
 
-unnamed_scope 	= 	s:unnamed_scope_special new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* Spacing CLOSEC Spacing {{ 
+unnamed_scope 	= 	s:unnamed_scope_special new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* Spacing CLOSEC Spacing {{
+            		    std::cout<<"[peg] Passed unnamed_scope rule."<<std::endl;
 			    std::vector<Rpc*> *rpcs = new std::vector<Rpc*>();
 			    for(Value::iterator it = r.getValues().begin(); it != r.getValues().end(); it ++) {
 			        const Value &v = *it;
@@ -311,16 +315,18 @@ unnamed_scope 	= 	s:unnamed_scope_special new_chans:ChanInits* ch:Channel_scope*
 			}}
 			
 unnamed_scope_special = Spacing OPENC Spacing {{
-		      	    LexicalScope *tmp = get_current_module_scope();
-		      	    LexicalScope *new_scope = new LexicalScope(tmp);
+		    	    std::cout<<"[peg] Passed unnamed_scope_special rule."<<std::endl;
+	      	    	    LexicalScope *tmp = get_current_module_scope();
+	      	    	    LexicalScope *new_scope = new LexicalScope(tmp);
 			    tmp->add_inner_scope(new_scope);
 			    set_current_scope(new_scope);
-		        std::cout << "# New Unnamed scope " << new_scope << " from: " << tmp << "\n";
+		            std::cout << "# New Unnamed scope " << new_scope << " from: " << tmp << "\n";
 			    set_current_unnamed_scope(new_scope);
 			    value = new_scope;
 			}}
 
 pc_unnamed_scope_special = Spacing OPENC Spacing {{
+		    	    std::cout<<"[peg] Passed pc_unnamed_scope_special rule."<<std::endl;
 			    LexicalScope *tmp = get_current_scope();
 		      	    LexicalScope *new_scope = new LexicalScope(tmp);
 			    tmp->add_inner_scope(new_scope);
@@ -330,6 +336,7 @@ pc_unnamed_scope_special = Spacing OPENC Spacing {{
 
 
 pc_unnamed_scope=	s:pc_unnamed_scope_special d:Type_Definitions* p:ProjField* Spacing CLOSEC Spacing {{	
+		    	    std::cout<<"[peg] Passed pc_unnamed_scope rule."<<std::endl;
 			    std::cout << "matched a pc unnamed scope\n";
 			    std::vector<ProjectionField*> *fields = new std::vector<ProjectionField*>();
 			    for(Value::iterator it = p.getValues().begin(); it != p.getValues().end(); it ++) {
@@ -342,13 +349,16 @@ pc_unnamed_scope=	s:pc_unnamed_scope_special d:Type_Definitions* p:ProjField* Sp
 			}}
 
 ChanType	= "async" {{
+		    	                std::cout<<"[peg] Passed ChanType async rule."<<std::endl;
 					value = new int(Channel::AsyncChannel);
 				}}
 				| "sync" {{
+		    	                std::cout<<"[peg] Passed ChanType synch rule."<<std::endl;
 					value = new int(Channel::SyncChannel);
 				}}
 
 ChanInits	= "channel" Space+ id:Identifier Spacing <ascii 61> Spacing "new" Space+ type:ChanType Spacing OPEN host_ch:Identifier CLOSE SEMI Spacing {{
+		    	        std::cout<<"[peg] Passed ChanInits rule."<<std::endl;
 				Channel::ChannelType ct = static_cast<Channel::ChannelType>(*((int*)type.getValue()));
 				std::cout << "New channel type: " << ct << " Initialized" << std::endl;
 				const std::string *_id = static_cast<const std::string*>(id.getValue());
@@ -361,6 +371,7 @@ ChanInits	= "channel" Space+ id:Identifier Spacing <ascii 61> Spacing "new" Spac
 			}}
 
 Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
+		    	        	std::cout<<"[peg] Passed Channel_scope rule."<<std::endl;
 					// all functions that is in the current scope and its inner scopes use this
 					// channel for communication unless an unnamed scope overrides it.
 					// Every unnamed scope can override use keyword by specifying which channel its
@@ -402,6 +413,9 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
 			      rpcs.insert(rpcs.end(), r_tmp->begin(), r_tmp->end());
 			      }
 
+			
+		    std::cout<<"Size of rpcs "<<rpcs.size()<<std::endl;
+
                     for(Value::iterator it = ch.getValues().begin(); it != ch.getValues().end(); it ++) {
                         const Value & v2 = *it;
                         std::string *_ch = (std::string*) v2.getValue();
@@ -423,7 +437,8 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
 			set_current_scope(get_current_module_scope());
 		const std::string *name = static_cast<const std::string*>(id.getValue());
 		value = new Module(*name, rpcs, channels2, module_scope); 
-			  }} | m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing Require Spacing req_id:Identifier Spacing CLOSEC Spacing {{
+			  }} | m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* Spacing req:Require* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
+			//ah TODO - to keep this rule only after it is finalized for Interface
 			//ah note - working on this case to accept require keyword
 			//ah TODO need to initialize Require constructor
 			//ah TODO then, we need to use the name of the require variable to resolve the include
@@ -434,8 +449,9 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
 			//current idl file and then parse this idl file, or do we parse the kernel.idl file se-
 			//parately, and pull in the ast of that kernel.idl file into the ast of the current idl
 			//file?
-			const std::string *_req_id = static_cast<const std::string*>(req_id.getValue());
+			//const std::string *_req_id = static_cast<const std::string*>(req_id.getValue());
 			std::cout << "Passed Interface (alternate) rule \n";
+			//std::cout << "Requiring "<<*_req_id<<std::endl;
 			LexicalScope *module_scope = (LexicalScope*) m.getValue();
 			std::vector<Rpc*> rpcs;				
 			std::vector<GlobalVariable*> *channels = (std::vector<GlobalVariable*>*) chans.getValue();  
@@ -452,6 +468,7 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
 			std::vector<Rpc*> *r_tmp = (std::vector<Rpc*>*) v2.getValue();
 			rpcs.insert(rpcs.end(), r_tmp->begin(), r_tmp->end());
 			}
+			std::cout<<"Size of rpcs "<<rpcs.size()<<std::endl;
 
 			for(Value::iterator it = ch.getValues().begin(); it != ch.getValues().end(); it ++) {
                         const Value & v2 = *it;
@@ -476,11 +493,12 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
 		value = new Module(*name, rpcs, channels2, module_scope); 
 }}			 
 
-Require =	"require" {{
+Require =	"require" Spacing req_id:Identifier Spacing SEMI {{
 				std::cout<<"Passed Require rule\n";
 }} 
 
 Interface_special =	  "module" {{
+		    	      std::cout<<"[peg] Passed Interface_special rule."<<std::endl;
 		  	      LexicalScope *new_scope = new LexicalScope(LexicalScope::getGlobalScope());
 			      LexicalScope::getGlobalScope()->add_inner_scope(new_scope);
 			      set_current_module_scope(new_scope);
@@ -490,6 +508,7 @@ Interface_special =	  "module" {{
 			  }}
 
 Typedef		=	 "typedef" Spacing "<" Spacing rt:RealType "," Spacing mt:Type_form ">" Spacing id:Identifier Spacing {{ 
+		    	        std::cout<<"[peg] Passed Typedef rule."<<std::endl;
 				const std::string *_id = static_cast<const std::string*>(id.getValue());
 				const std::string *_rt = static_cast<const std::string*>(rt.getValue());
 
@@ -500,6 +519,7 @@ Typedef		=	 "typedef" Spacing "<" Spacing rt:RealType "," Spacing mt:Type_form "
 Verbatim	=	 "verbatim" Spacing "[" contents:VerbatimContent "]" {{ std::ostringstream total;
 			for(Value::iterator it = contents.getValues().begin(); it != contents.getValues().end(); it ++)
 			{
+		    	std::cout<<"[peg] Passed Verbatim rule."<<std::endl;
 			const Value &v = *it;
 			char letter = (char) (intptr_t) v.getValue();
 			total << letter;     
@@ -555,26 +575,27 @@ String		=	<ascii 34> l:any_letter+ <ascii 34> {{
 any_letter	=	[_.,/?<>'; =:%`!@#$^&*()-+{}|\\ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789]
 
 Type_Definitions =	Typedef | Projection {{ 
-	        std::cout<<"Passed Type_Definitions = Projection rule in peg\n";
+		    	std::cout<<"[peg] Passed Type_Definitions -> Typedef|Projection rule."<<std::endl;
 			std::cout << "done with projection\n"; }}
 		 	| Projection_constructor
 
 Include		 =	"include" Space+ "<" Spacing p:Pathname Spacing ">" Spacing{{
-				const std::string *_path = static_cast<const std::string*>(p.getValue());
+		    	    std::cout<<"[peg] Passed Include rule 1."<<std::endl;
+			    const std::string *_path = static_cast<const std::string*>(p.getValue());
 			    value = new Include(false, *_path);
 			}} 
 			| "include" Space+ <ascii 34> Spacing p:Pathname Spacing <ascii 34> Spacing{{
+		    	    std::cout<<"[peg] Passed Include rule 2."<<std::endl;
 			    std::cout << "parsed an include\n";
-				const std::string *_path = static_cast<const std::string*>(p.getValue());
+			    const std::string *_path = static_cast<const std::string*>(p.getValue());
 			    value = new Include(true, *_path);
 			}}
 
 FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE {{
 
-	            std::cout<<"Passed FP_Parameter in peg\n";
-
+		    	    std::cout<<"[peg] Passed FP_Parameter rule."<<std::endl;
 			    std::vector<Parameter*> *params = (std::vector<Parameter*>*) p.getValue();
-				const std::string *_id = static_cast<const std::string*>(id.getValue());
+			    const std::string *_id = static_cast<const std::string*>(id.getValue());
 
 			    Function *fp = new Function(*_id, new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
 			    	     	       		, *params, get_current_scope());
@@ -607,6 +628,7 @@ FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* 
 			}}
 
 FirstParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:star* Spacing field_id:Identifier Spacing OPEN Spacing args:Arguments Spacing CLOSE Spacing COMMA Spacing {{
+		    	    std::cout<<"[peg] Passed FirstParam rule 1."<<std::endl;
 			    
 			    std::vector<Variable*> *arguments = (std::vector<Variable*>*) args.getValue();
 				const std::string *_id = static_cast<const std::string*>(id.getValue());
@@ -640,6 +662,7 @@ FirstParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers
 			}}	
 
  		|	  t:Type_form s:Specification? pointers:star* Spacing id:Identifier Spacing COMMA Spacing {{
+		    	    std::cout<<"[peg] Passed FirstParam rule 2."<<std::endl;
 			    int p_count = count_pointers(pointers);
 				const std::string *_id = static_cast<const std::string*>(id.getValue());
 			    Parameter *p = new Parameter((Type *) t.getValue(), *_id, p_count); 
@@ -677,6 +700,7 @@ Access		= a1:Access_Start a2:Access_End* {{
 		  }}
 
 FP_FirstParam	=	t:Type_form s:Specification? pointers:star* Spacing COMMA Spacing {{
+		    	    std::cout<<"[peg] Passed FP_FirstParam rule 1."<<std::endl;
 			    FPParameter *fp = new FPParameter((Type*) t.getValue(), count_pointers(pointers));
 			    set_specs(*fp, s);
 
@@ -698,8 +722,9 @@ FP_FirstParam	=	t:Type_form s:Specification? pointers:star* Spacing COMMA Spacin
 			    value = fp;  
 			}}
 			| rpc_scope:rpc_special Space+ rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing COMMA Spacing {{
+		    	    std::cout<<"[peg] Passed FP_FirstParam rule 2."<<std::endl;
 			    std::vector<Parameter*> *params = (std::vector<Parameter*>*) p.getValue();
-				const std::string *_id = static_cast<const std::string*>(id.getValue());
+			    const std::string *_id = static_cast<const std::string*>(id.getValue());
 
 			    Function *fp = new Function(*_id, new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
 			                                , *params, (LexicalScope*)rpc_scope.getValue());
@@ -709,6 +734,7 @@ FP_FirstParam	=	t:Type_form s:Specification? pointers:star* Spacing COMMA Spacin
 			}}
 			  
 LastParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:star* Spacing field_id:Identifier Spacing OPEN Spacing args:Arguments Spacing CLOSE Spacing {{
+		    	    std::cout<<"[peg] Passed LastParam rule 1."<<std::endl;
 			    
 			    std::vector<Variable*> *arguments = (std::vector<Variable*>*) args.getValue();
 				const std::string *_id = static_cast<const std::string*>(id.getValue());
@@ -739,6 +765,7 @@ LastParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 			}}	
 
  		|   t:Type_form s:Specification? pointers:star* Spacing id:Identifier Spacing {{
+		    	    std::cout<<"[peg] Passed LastParam rule 2."<<std::endl;
 			    int p_count = count_pointers(pointers);
 				const std::string *_id = static_cast<const std::string*>(id.getValue());
 
@@ -767,6 +794,7 @@ LastParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 			}}
 
 FP_LastParam	=	t:Type_form s:Specification? pointers:star* Spacing {{
+		    	    std::cout<<"[peg] Passed FP_LastParam rule 1."<<std::endl;
 			    FPParameter *fp = new FPParameter((Type*) t.getValue(), count_pointers(pointers));
 			    set_specs(*fp, s);
 
@@ -788,6 +816,7 @@ FP_LastParam	=	t:Type_form s:Specification? pointers:star* Spacing {{
 			    value = fp;
 			}}
 			|  rpc_special Space+ rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing {{
+		    	    std::cout<<"[peg] Passed FP_LastParam rule 2."<<std::endl;
 			    // todo change return type to return variable and add pointer
 			    std::vector<Parameter*> *params = (std::vector<Parameter*>*) p.getValue();
 				const std::string *_id = static_cast<const std::string*>(id.getValue());
@@ -881,8 +910,8 @@ FP_Parameters	=	f:FP_FirstParam* l:FP_LastParam {{
 			}}
 
 rpc_special     =      "rpc" {{
-               std::cout<<"Passed rpc_special rule in peg\n";
-		       LexicalScope *tmp = get_current_unnamed_scope();
+		    	   std::cout<<"[peg] Passed rpc_special rule."<<std::endl;
+		           LexicalScope *tmp = get_current_unnamed_scope();
 			   LexicalScope *new_scope = new LexicalScope(tmp);
 			   // dont need to add to inner scope because rpc do not have type definitinos
 			   set_current_scope(new_scope);
@@ -892,11 +921,11 @@ rpc_special     =      "rpc" {{
 
 
 Rpc		=	rpc_scope:rpc_special Space+ t:Type_form s:Specification? pointers:star* Spacing id1:Identifier Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing {{
-				std::cout<<"Passed Rpc rule in peg\n";
+		    	    std::cout<<"[peg] Passed Rpc rule."<<std::endl;
 			    std::vector<Parameter*>* params = (std::vector<Parameter*>*) p.getValue();
 			    std::vector<Parameter*> params_ = *params;
-				const std::string *_id = static_cast<const std::string*>(id1.getValue());
-                ReturnVariable *ret = new ReturnVariable((Type *) t.getValue(), count_pointers(pointers), returnVarName());
+			    const std::string *_id = static_cast<const std::string*>(id1.getValue());
+                            ReturnVariable *ret = new ReturnVariable((Type *) t.getValue(), count_pointers(pointers), returnVarName());
 			    Rpc* r = new Rpc(ret, *_id, params_, (LexicalScope*) rpc_scope.getValue());
 			    
 			    set_specs(*ret, s);
@@ -913,6 +942,7 @@ Rpc		=	rpc_scope:rpc_special Space+ t:Type_form s:Specification? pointers:star* 
 			}}  
 
 Projection_constructor =    s:Projection_constructor_special Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPEN Spacing c:ProjArgs Spacing CLOSE Spacing OPENC Spacing cf:ChanField* d:Type_Definitions* p:ProjField* Spacing CLOSEC Spacing {{
+		    	        std::cout<<"[peg] Projection_constructor rule."<<std::endl;
 		       	        std::vector<ProjectionField*> chan_fields;
 				for(Value::iterator it = c.getValues().begin(); it != c.getValues().end(); it ++) {
 			            const Value &v = *it;
@@ -955,6 +985,7 @@ Projection_constructor =    s:Projection_constructor_special Spacing "<" Spacing
 			    }}
 
 Projection_constructor_special = "projection" {{
+		    	             std::cout<<"[peg] Projection_constructor_special rule."<<std::endl;
 			       	     LexicalScope *tmp = get_current_scope();
 			             LexicalScope *new_scope = new LexicalScope(tmp);
 				     tmp->add_inner_scope(new_scope);
@@ -963,7 +994,7 @@ Projection_constructor_special = "projection" {{
 				 }} 
 
 Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPENC Spacing c:ChanField* p:ProjField* CLOSEC Spacing {{
-	        	    std::cout<<"Passed Projection rule in peg\n";
+		    	    std::cout<<"[peg] Projection rule."<<std::endl;
 			    std::vector<ProjectionField*> channels;
 			    for(Value::iterator it = c.getValues().begin(); it != c.getValues().end(); it ++) {
 			        const Value &v = *it;
@@ -1099,7 +1130,8 @@ ProjArgs        =       f:FirstProjArg* l:LastProjArg {{
 			}}
 
 ChanField       =       "channel" Space+ s:Specification? Spacing id:Identifier Spacing SEMI Spacing {{
-				const std::string *name = static_cast<const std::string*>(id.getValue());
+		    	    std::cout<<"[peg] Passed ChanField rule."<<std::endl;
+			    const std::string *name = static_cast<const std::string*>(id.getValue());
 			    ProjectionField *pf = new ProjectionField(getType("cptr"), *name, 0);
 			    insertVariable(pf);
 			    set_specs(*pf, s);
