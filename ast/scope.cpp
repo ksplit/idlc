@@ -8,9 +8,11 @@ std::string filename = "[ast/scope.cpp]";
 
 LexicalScope* LexicalScope::getGlobalScope()
 {
+  std::cout<<filename<<" In getGlobalScope()"<<std::endl;
   if(!LexicalScope::globalScope){
-    LexicalScope::globalScope = new LexicalScope();
-    LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string, Type*>("bool", new BoolType()));
+  std::cout<<filename<<" No global scope, creating one now."<<std::endl;
+  LexicalScope::globalScope = new LexicalScope();
+  LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string, Type*>("bool", new BoolType()));
   LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string, Type*>("double", new DoubleType()));
   LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string, Type*>("float", new FloatType()));
   LexicalScope::globalScope->type_definitions_.insert( std::pair<std::string,Type*>("void", new VoidType()));
@@ -223,6 +225,7 @@ bool LexicalScope::insert(const std::string& symbol, Type *type)
 {
   std::pair<std::map<std::string,Type*>::iterator,bool> ret;
   ret = this->type_definitions_.insert(std::pair<std::string, Type*>(symbol, type));
+  std::cout<<filename<<" type_definitions.size "<< this->type_definitions_.size() << std::endl;
   std::cout << filename <<" insert pointer for type " <<  symbol << " is " << type << std::endl;
   return ret.second;
 }
@@ -242,7 +245,7 @@ void LexicalScope::add_inner_scopes(std::vector<LexicalScope*> scopes)
   this->inner_scopes_.insert(this->inner_scopes_.end(), scopes.begin(), scopes.end());
 }
 
-std::map<std::string, Type*> LexicalScope::type_definitions()
+std::map<std::string, Type*> LexicalScope::type_definitions()//unused-all_type_definitions() functions is used instead
 {
   return this->type_definitions_;
 }
