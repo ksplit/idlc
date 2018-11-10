@@ -6,6 +6,7 @@
 
 std::list<ProjectionType*> get_unique_projections(Module *m)
 {
+  std::cout<<"[glue.cpp] calling get_unique_projections"<<std::endl;
   auto all_types = m->module_scope()->all_type_definitions();
   std::list<ProjectionType*> uniq_projs;
 

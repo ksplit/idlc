@@ -323,6 +323,7 @@ std::map<std::string, Type*> LexicalScope::all_types_outer()
 
   std::map<std::string, Type*> outer_defs = this->outer_scope_->all_types_outer();
   all_defs.insert(outer_defs.begin(), outer_defs.end());
+  std::cout<<filename<<" returning all_defs from all_types_outer(). all_defs size = "<<all_defs.size()<<std::endl;
   return all_defs;
 }
 
@@ -334,7 +335,7 @@ std::map<std::string, Type*> LexicalScope::all_types_inner()
     std::map<std::string, Type*> tmp = ls->all_types_inner();
     all_defs.insert(tmp.begin(), tmp.end());
   }
-  
+  std::cout<<filename<<" returning all_defs from all_types_inner(). all_defs size = "<<all_defs.size()<<std::endl;
   return all_defs;
 }
 
@@ -355,5 +356,6 @@ std::map<std::string, Type*> LexicalScope::all_type_definitions()
     all_defs.insert(tmp.begin(), tmp.end());
   }
   
+  std::cout<<filename<<" returning all_defs from all_types_definitions(). all_defs size = "<<all_defs.size()<<std::endl;
   return all_defs;
 }
