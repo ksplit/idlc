@@ -398,6 +398,10 @@ void Rpc::create_trampoline_structs()
   }
 }
 
+void Require::save_ast_of_required_module(Project * pjt){
+  this->pjt_=pjt;
+}
+
 Module::Module(const std::string& id, std::vector<Rpc*> rpc_definitions,
   std::vector<GlobalVariable*> channels, LexicalScope *ls, std::vector<Require*> requires) :
   module_name_(id),
