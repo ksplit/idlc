@@ -53,6 +53,7 @@ class Parameter;
 class Rpc;
 class ProjectionType;
 class Project;
+class Require;
 
 enum PrimType {pt_char_t, pt_short_t, pt_int_t, pt_long_t, pt_longlong_t, pt_capability_t};//ah note - an enum class to distinguish between integer datatypes, instead of using separate classes.
 enum type_k {};
@@ -751,22 +752,34 @@ class Rpc
   }
 };
 
+class Require
+{
+  std::string required_module_name_;
+  public:
+  Require(const std::string& required_module_name);
+  std::string get_required_module_name() {
+	return this->required_module_name_;
+  }
+};
+
 class Module 
 {
   // const std::string& verbatim_;
   std::string module_name_;
   LexicalScope *module_scope_;
   std::vector<GlobalVariable*> channels_;
-   // create these from the channels in the constructor.
+  // create these from the channels in the constructor.
   std::vector<Rpc*> rpc_definitions_;
+  std::vector<Require*> requires_;
   typedef std::vector<Rpc*>::iterator iterator;
 
  public:
   
   std::vector<GlobalVariable*> cspaces_;// ah note - globals used for cspaces too
   GlobalVariable *channel_group;
-  Module(const std::string& id, std::vector<Rpc*> rpc_definitions, std::vector<GlobalVariable*> globals, LexicalScope *ls);
+  Module(const std::string& id, std::vector<Rpc*> rpc_definitions, std::vector<GlobalVariable*> globals, LexicalScope *ls, std::vector<Require*> requires);
   std::vector<Rpc*> rpc_definitions();  
+  std::vector<Require*> requires();
   std::vector<GlobalVariable*> channels(); //ah note - channels() return a vector of globals instead of channels
   LexicalScope *module_scope();
   void prepare_marshal();
@@ -785,11 +798,6 @@ class Module
   iterator end() { return rpc_definitions_.end(); }
 };
 
-class Require
-{
- public:
- std::string interface_name;
-};
 
 class Include 
 {
