@@ -399,15 +399,17 @@ void Rpc::create_trampoline_structs()
 }
 
 Module::Module(const std::string& id, std::vector<Rpc*> rpc_definitions,
-  std::vector<GlobalVariable*> channels, LexicalScope *ls) :
+  std::vector<GlobalVariable*> channels, LexicalScope *ls, std::vector<Require*> requires) :
   module_name_(id),
   module_scope_(ls),
   channels_(channels),
-  rpc_definitions_(rpc_definitions)
+  rpc_definitions_(rpc_definitions),
+  requires_(requires)
 {
   std::cout<<FILENAME<<" Creating new module"<<std::endl;
   std::cout<<FILENAME<<" -module name: "<<id<<std::endl;
-  std::cout<<FILENAME<<" -module rpcs size: "<<rpc_definitions.size()<<std::endl;
+  std::cout<<FILENAME<<" -rpcs size: "<<rpc_definitions.size()<<std::endl;
+  std::cout<<FILENAME<<" -requires size: "<<requires.size()<<std::endl;
 
   this->module_scope_->setactiveChannel(ls->activeChannel);
   if (ls->activeChannel) {
@@ -436,6 +438,11 @@ Module::Module(const std::string& id, std::vector<Rpc*> rpc_definitions,
 std::vector<Rpc*> Module::rpc_definitions()
 {
   return this->rpc_definitions_;
+}
+
+std::vector<Require*> Module::requires()
+{
+  return this->requires_;
 }
 
 std::vector<GlobalVariable*> Module::channels()
@@ -587,8 +594,8 @@ void Project::modify_specs()
 void Project::function_pointer_to_rpc()
 {
   // right now project doesnt have free rpcs.
+    std::cout<<FILENAME<<" invoking Project::function_pointer_to_rpc"<<std::endl;//for debug
   for (auto module: *this) {
-    std::cout<<FILENAME<<" invoking function_pointer_to_rpc"<<std::endl;//for debug
     module->function_pointer_to_rpc();
   }
 }
@@ -642,6 +649,11 @@ void Project::set_copy_container_accessors()
   for (auto module: *this) {
     module->set_copy_container_accessors();
   }
+}
+
+Require::Require(const std::string& required_module_name) :
+  required_module_name_(required_module_name)
+{
 }
 
 Include::Include(bool relative, const std::string& path) :
