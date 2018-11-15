@@ -16,15 +16,7 @@ void print_usage()
   exit(0);
 }
 
-int process_idl(int argc, char ** argv){
-
-if (argc != 2) {
- print_usage();
-}
-std::cout<<"[main/main.cpp] Enter main\n";
-
-try {
- char* file = argv[1];
+Project * process_idl(std::string input){
 
     // TODO: add support for multiple files, add option to specify
     // which module to compile, put each module in a different file
@@ -32,7 +24,8 @@ try {
     // the parse is a tree. This is the AST, on which we generate the CCST
     // (the concrete syntax tree) - from which the code is eventually 
     // generated.
-	Project * tree = (Project *) Parser::parse(std::string(file));
+    std::cout<<"Parsing: "<<input<<std::endl;
+    Project * tree = (Project *) Parser::parse(input);
 
     ErrorReport* er = ErrorReport::instance();
     if (er->errors()) {
@@ -67,7 +60,7 @@ try {
           std::cout<<"[main.cpp] included header name: "<< included_idl_name <<std::endl;
           if (included_idl_name.compare(required_module) == 0) { 
 	    std::cout<<"[main.cpp] found required module. Invoking parse on the required idl"<<std::endl;
-            require->save_ast_of_required_module((Project *) Parser::parse(included_idl));
+            require->save_ast_of_required_module(process_idl(included_idl));
 	  }
 	}
       }
@@ -179,29 +172,20 @@ try {
       ccst_caller_disp->write(ofs_caller_disp, 0);
     }
 
-    return 0;
-  } catch (const Parser::ParseException & e) {
-    std::cerr << "\n\nALERT!!! - Caught parser exception" << std::endl;
-    std::cerr << e.getReason() << std::endl;
-    exit(0);
-  }
-
-
+    return tree;
 }
 
 int main(int argc, char ** argv)
 {
+if (argc != 2) {
+  print_usage();
+}
+std::cout<<"[main/main.cpp] Enter main\n";
 
-  process_idl(argc, argv);
+try {
+  char* file = argv[1];
 
-//if (argc != 2) {
-//  print_usage();
-//}
-//std::cout<<"[main/main.cpp] Enter main\n";
-
-//try {
- // char* file = argv[1];
-
+  process_idl(std::string(file));
     // TODO: add support for multiple files, add option to specify
     // which module to compile, put each module in a different file
     //ah note - this is where the input idl is parsed. The output of
@@ -334,9 +318,9 @@ int main(int argc, char ** argv)
 //     }
 
 //     return 0;
-//   } catch (const Parser::ParseException & e) {
-//     std::cerr << "\n\nALERT!!! - Caught parser exception" << std::endl;
-//     std::cerr << e.getReason() << std::endl;
-//     exit(0);
-//   }
+   } catch (const Parser::ParseException & e) {
+     std::cerr << "\n\nALERT!!! - Caught parser exception" << std::endl;
+     std::cerr << e.getReason() << std::endl;
+     exit(0);
+   }
 }
