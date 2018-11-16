@@ -396,7 +396,7 @@ Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
 					value = new std::string(*_id);
 				}}
 
-Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing req:Require* Spacing CLOSEC Spacing {{
+Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing req:Require* new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
 
 			//ah TODO - to keep this rule only after it is finalized for Interface
 			//ah note - working on this case to accept require keyword
@@ -506,7 +506,7 @@ Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels
 #		value = new Module(*name, rpcs, channels2, module_scope); 
 #		}} 
 
-Require =	"req" Spacing id:Identifier Spacing{{
+Require =	"require" Spacing id:Identifier Spacing SEMI Spacing {{
 			std::cout<<"Passed Require rule: Identifier : " <<id.getValue()<<" " <<*(static_cast<const std::string*>(id.getValue()))<< std::endl;
 			const std::string *req_id = static_cast<const std::string*>(id.getValue());
 			std::cout<<*req_id<<std::endl;
