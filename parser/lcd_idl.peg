@@ -398,19 +398,6 @@ Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
 
 Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing req:Require* new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
 
-			//ah TODO - to keep this rule only after it is finalized for Interface
-			//ah note - working on this case to accept require keyword
-			//ah TODO need to initialize Require constructor
-			//ah TODO then, we need to use the name of the require variable to resolve the include
-			//we would need to deal. This would require use to search the vector with the names of 
-			//includes.
-			//ah to resolve - but then there is a question: after finding the idl file to be 
-			//included, say kernel.idl, do we move the idl contents of the kernel.idl file into the
-			//current idl file and then parse this idl file, or do we parse the kernel.idl file se-
-			//parately, and pull in the ast of that kernel.idl file into the ast of the current idl
-			//file?
-			//const std::string *_req_id = static_cast<const std::string*>(req_id.getValue());
-		      //const std::string *_req_id = static_cast<const std::string*>(req_id.getValue());
 		      std::cout << "[peg] Passed Interface rule 2"<<std::endl;
 		      LexicalScope *module_scope = (LexicalScope*) m.getValue();
 		      std::vector<Rpc*> rpcs;
@@ -957,7 +944,8 @@ Rpc		=	rpc_scope:rpc_special Space+ t:Type_form s:Specification? pointers:star* 
 			    value = r; 
 			}}  
 
-Projection_constructor =    s:Projection_constructor_special Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPEN Spacing c:ProjArgs Spacing CLOSE Spacing OPENC Spacing cf:ChanField* d:Type_Definitions* p:ProjField* Spacing CLOSEC Spacing {{
+#Projection_constructor =    s:Projection_constructor_special Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPEN Spacing c:ProjArgs Spacing CLOSE Spacing OPENC Spacing cf:ChanField* d:Type_Definitions* p:ProjField* Spacing CLOSEC Spacing {{
+Projection_constructor =    s:Projection_constructor_special Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPEN Spacing c:ProjArgs Spacing CLOSE Spacing OPENC Spacing d:Type_Definitions* p:ProjField* Spacing CLOSEC Spacing {{
 		    	        std::cout<<"[peg] Projection_constructor rule."<<std::endl;
 		       	        std::vector<ProjectionField*> chan_fields;
 				for(Value::iterator it = c.getValues().begin(); it != c.getValues().end(); it ++) {
@@ -1012,10 +1000,44 @@ Projection_constructor_special = "projection" {{
 Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPENC Spacing c:ChanField* p:ProjField* CLOSEC Spacing {{
 		    	    std::cout<<"[peg] Projection rule."<<std::endl;
 			    std::vector<ProjectionField*> channels;
-			    for(Value::iterator it = c.getValues().begin(); it != c.getValues().end(); it ++) {
+
+			    // -- Start of code imported from ChanField rule:
+			    std::cout<<"[peg] Passed ChanField rule."<<std::endl;
+			    const std::string *name = static_cast<const std::string*>(id.getValue());
+			    ProjectionField *pf = new ProjectionField(getType("cptr"), *name, 0);
+			    insertVariable(pf);
+
+			    // ---- NOTE: the following uses the "value" from Specification Rule.
+			    // ---- However, we have ignored the import from the specification rule for now.
+			    // ---- So we have used a dummy value for the Specification Rule value
+			    // ---- for simplicity. 	
+			    unsigned int *s = new unsigned int();
+			    value = s;
+			    set_specs(*pf, value);
+			    // ---- ENDNOTE	
+
+				if (pf->alloc_callee()) {
+				   pf->set_in(true);
+				   pf->set_out(true);
+				} if (pf->alloc_caller()) {
+				   pf->set_in(true); // not sure correct
+				} if (pf->dealloc_callee()) {
+				   pf->set_in(true);
+				} if (pf->dealloc_caller()) {
+				   pf->set_in(true);  // not sure correct
+				} if (pf->bind_callee() && pf->alloc_caller()) {
+				   pf->set_out(true);   
+				} if (pf->bind_caller()) {
+				   pf->set_in(true);
+				}
+
+			    value = pf;
+			    // -- End of code imported from ChanField rule
+
+			    for(Value::iterator it = value.getValues().begin(); it != value.getValues().end(); it ++) {
 			        const Value &v = *it;
-				ProjectionField *pf = (ProjectionField*) v.getValue();	
-				channels.push_back(pf);
+				ProjectionField *pf2 = (ProjectionField*) v.getValue();	
+				channels.push_back(pf2);
 			    }
  
 			    std::vector<ProjectionField *> fields;
@@ -1053,47 +1075,58 @@ Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id
 Proj_type	=  	"struct" Space+ id:Identifier Spacing {{
 			value = id;}}
 
-Keyword		=     	"out" {{ 
+Keyword		=     	"out" {{
+			    std::cout << "Passed Keyword = out rule" << std::endl;
 			    int * x = new int(OUT);
 			    value = x; 
 			}}
 			| "in" {{ 
+			    std::cout << "Passed Keyword = in rule" << std::endl;
 			    int * x = new int(IN);
 			    value = x; 
 			}}
 			| "alloc" Spacing OPEN Spacing "caller" Spacing CLOSE {{
+			    std::cout << "Passed Keyword = alloc caller rule" << std::endl;
 			    int *x = new int(ALLOC_CALLER);
 			    value = x;
 			}}
 			| "alloc" Spacing OPEN Spacing "callee" Spacing CLOSE {{
+			    std::cout << "Passed Keyword = alloc callee rule" << std::endl;
 			    int *x = new int(ALLOC_CALLEE);
 			    value = x;
 			}}
 			| "alloc" {{
+			    std::cout << "Passed Keyword = alloc rule" << std::endl;
 			    int *x = new int(ALLOC_CALLER | ALLOC_CALLEE);
 			    value = x; 
 			}}
 			| "dealloc" Spacing OPEN Spacing "caller" Spacing CLOSE {{
+			    std::cout << "Passed Keyword = dealloc caller rule" << std::endl;
 			    int *x = new int(DEALLOC_CALLER);
 			    value = x;
 			}}
 			| "dealloc" Spacing OPEN Spacing "callee" Spacing CLOSE {{
+			    std::cout << "Passed Keyword = dealloc callee rule" << std::endl;
 			    int *x = new int(DEALLOC_CALLEE);
 			    value = x;
 			}}
 			| "dealloc" {{
+			    std::cout << "Passed Keyword = dealloc" << std::endl;
 			    int *x = new int(DEALLOC_CALLEE | DEALLOC_CALLER);
 			    value = x;
 			}}
 			| "bind" Spacing OPEN Spacing "callee" Spacing CLOSE {{
+			    std::cout << "Passed Keyword = bind callee rule" << std::endl;
 			    int *x = new int(BIND_CALLEE);
 			    value = x;
 			}}
 			| "bind" Spacing OPEN Spacing "caller" Spacing CLOSE {{
+			    std::cout << "Passed Keyword = bind caller rule" << std::endl;
 			    int *x = new int(BIND_CALLER);
 			    value = x;
 			}}
 			| "bind" {{
+			    std::cout << "Passed Keyword = bind rule" << std::endl;
 			    int *x = new int(BIND_CALLER | BIND_CALLEE);
 			    value = x;
 			}}
@@ -1101,8 +1134,10 @@ Keyword		=     	"out" {{
 Start		=	k:Keyword Spacing COMMA Spacing {{ value = k; }}
 
 Specification	=	OPENS Spacing s:Start* l:Last CLOSES Spacing {{
+			    std::cout << "Passed Specification rule" << std::endl;
 			    unsigned int *spec = new unsigned int();
 			    for(Value::iterator it = s.getValues().begin(); it != s.getValues().end(); it ++) {		    
+			    std::cout << "Going through loop in Specification rule." << std::endl;
 			    const Value & v = *it;
 			    int* x = (int*) v.getValue();
 			    if(!x) {
@@ -1145,8 +1180,8 @@ ProjArgs        =       f:FirstProjArg* l:LastProjArg {{
 			    value = channels;
 			}}
 
-ChanField       =       "channel" Space+ s:Specification? Spacing id:Identifier Spacing SEMI Spacing {{
-		    	    std::cout<<"[peg] Passed ChanField rule."<<std::endl;
+ChanField       =       "channel" Space+ s:Specification? Spacing id:Identifier Spacing SEMI Spacing {{	    	    
+			    std::cout<<"[peg] Passed ChanField rule."<<std::endl;
 			    const std::string *name = static_cast<const std::string*>(id.getValue());
 			    ProjectionField *pf = new ProjectionField(getType("cptr"), *name, 0);
 			    insertVariable(pf);
