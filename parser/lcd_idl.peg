@@ -874,14 +874,14 @@ Parameters	=	f:FirstParam* l:LastParam {{
 			}}
 
 FirstChannel    = "channel" Space+ id:Identifier Spacing COMMA Spacing {{
-				const std::string *_id = static_cast<const std::string*>(id.getValue());
+		    const std::string *_id = static_cast<const std::string*>(id.getValue());
 		    GlobalVariable *gv = new GlobalVariable(getType("cptr"), *_id, 0);
 		    insertVariable(gv);
 		    value = gv;
 		}}
 
 LastChannel     = "channel" Space+ id:Identifier Spacing {{
-				const std::string *_id = static_cast<const std::string*>(id.getValue());
+		    const std::string *_id = static_cast<const std::string*>(id.getValue());
 		    GlobalVariable *gv = new GlobalVariable(getType("cptr"), *_id, 0);
 		    insertVariable(gv);
 		    value = gv;
@@ -997,7 +997,8 @@ Projection_constructor_special = "projection" {{
 				     value = new_scope;
 				 }} 
 
-Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPENC Spacing c:ChanField* p:ProjField* CLOSEC Spacing {{
+#Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPENC Spacing c:ChanField* p:ProjField* CLOSEC Spacing {{
+Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPENC Spacing p:ProjField* CLOSEC Spacing {{
 		    	    std::cout<<"[peg] Projection rule."<<std::endl;
 			    std::vector<ProjectionField*> channels;
 
@@ -1034,6 +1035,8 @@ Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id
 			    value = pf;
 			    // -- End of code imported from ChanField rule
 
+			    // TODO - this needs to be fixed - value is not a list. we are looping through a list
+			    // because there may be many ChanFields. 
 			    for(Value::iterator it = value.getValues().begin(); it != value.getValues().end(); it ++) {
 			        const Value &v = *it;
 				ProjectionField *pf2 = (ProjectionField*) v.getValue();	
