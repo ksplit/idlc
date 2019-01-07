@@ -400,11 +400,18 @@ ChanType	= "async" {{
 					value = new int(Channel::SyncChannel);
 				}}
 
-ChanInits	= "channel" Space+ id:Identifier Spacing <ascii 61> Spacing "new" Space+ type:ChanType Spacing OPEN host_ch:Identifier CLOSE SEMI Spacing {{
+ChanInits	= "channel" Space+ Spacing <ascii 61> Spacing "new" Space+ Spacing OPEN host_ch:Identifier CLOSE SEMI Spacing {{
 		    	        std::cout<<"[peg] Passed ChanInits rule."<<std::endl;
-				Channel::ChannelType ct = static_cast<Channel::ChannelType>(*((int*)type.getValue()));
+
+			        // -- CHANNEL CONFIGURATION POINT -- ensure the other channel configuration points are
+				// -- compatible with this setting
+				Channel::ChannelType ct = static_cast<Channel::ChannelType>(*(new int(Channel::AsyncChannel)));
 				std::cout << "New channel type: " << ct << " Initialized" << std::endl;
-				const std::string *_id = static_cast<const std::string*>(id.getValue());
+
+			        // -- CHANNEL CONFIGURATION POINT -- ensure the other channel configuration points are
+				// -- compatible with this setting
+			    	std::string *id = new std::string("net_async");				
+				const std::string *_id = static_cast<const std::string*>(id);
 
 				Channel *newCh = new Channel(*_id, ct, NULL);
 				// insert channel into type list
@@ -915,6 +922,7 @@ Parameters	=	f:FirstParam* l:LastParam {{
 			}}
 
 FirstChannel    = "channel" Space+ id:Identifier Spacing COMMA Spacing {{
+		    std::cout << "Passed FirstChannel rule" << std::endl;
 		    const std::string *_id = static_cast<const std::string*>(id.getValue());
 		    GlobalVariable *gv = new GlobalVariable(getType("cptr"), *_id, 0);
 		    insertVariable(gv);
@@ -922,6 +930,7 @@ FirstChannel    = "channel" Space+ id:Identifier Spacing COMMA Spacing {{
 		}}
 
 LastChannel     = "channel" Space+ id:Identifier Spacing {{
+		    std::cout << "Passed LastChannel rule" << std::endl;
 		    const std::string *_id = static_cast<const std::string*>(id.getValue());
 		    GlobalVariable *gv = new GlobalVariable(getType("cptr"), *_id, 0);
 		    insertVariable(gv);
@@ -985,7 +994,6 @@ Rpc		=	rpc_scope:rpc_special Space+ t:Type_form s:Specification? pointers:star* 
 			    value = r; 
 			}}  
 
-#Projection_constructor =    s:Projection_constructor_special Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPEN Spacing c:ProjArgs Spacing CLOSE Spacing OPENC Spacing cf:ChanField* d:Type_Definitions* p:ProjField* Spacing CLOSEC Spacing {{
 Projection_constructor =    s:Projection_constructor_special Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPEN Spacing c:ProjArgs Spacing CLOSE Spacing OPENC Spacing d:Type_Definitions* p:ProjField* Spacing CLOSEC Spacing {{
 		    	        std::cout<<"[peg] Projection_constructor rule."<<std::endl;
 		       	        std::vector<ProjectionField*> chan_fields;
@@ -1170,13 +1178,15 @@ Specification	=	OPENS Spacing s:Start* l:Last CLOSES Spacing {{
 			}}
 
 FirstProjArg    =      "channel" Space+ id:Identifier Spacing COMMA Spacing {{
-				const std::string *name = static_cast<const std::string*>(id.getValue());
+			   std::cout << "Passed FirstProjArg rule" << std::endl;
+			   const std::string *name = static_cast<const std::string*>(id.getValue());
 		           ProjectionField *pf = new ProjectionField(getType("cptr"), *name, 0);
 			   insertVariable(pf); 
 			   value = pf;
 		       }}
 
 LastProjArg     =      "channel" Space+ id:Identifier Spacing {{
+			   	std::cout << "Passed LastProjArg rule" << std::endl;
 				const std::string *name = static_cast<const std::string*>(id.getValue());
 				ProjectionField *pf = new ProjectionField(getType("cptr"), *name, 0);
 				insertVariable(pf);
@@ -1195,40 +1205,7 @@ ProjArgs        =       f:FirstProjArg* l:LastProjArg {{
 			    value = channels;
 			}}
 
-ChanField       =       "channel" Space+ Spacing SEMI Spacing {{	    	    
-		       	    std::cout<<"[peg] Passed ChanField rule."<<std::endl;
 
-			    //Directly using an artificial value for Specification. The logic for manipulating
-			    //spec values to get a final spec value as done in the Specification Rule is 
-			    //skipped for channels.
-                            Value dummyspec((void*) 0);
-                    	    int * x = new int(IN);
-                    	    dummyspec = x; //assumption
-
-			    //Directly using an artificial value for Identifier.
-			    std::string *id = new std::string("choose an identifier name");				
-			    const std::string *name = static_cast<const std::string*>(id);//assumption
-			    ProjectionField *pf = new ProjectionField(getType("cptr"), *name, 0);
-			    insertVariable(pf);
-			    set_specs(*pf, dummyspec);
-
-				if (pf->alloc_callee()) {
-				   pf->set_in(true);
-				   pf->set_out(true);
-				} if (pf->alloc_caller()) {
-				   pf->set_in(true); // not sure correct
-				} if (pf->dealloc_callee()) {
-				   pf->set_in(true);
-				} if (pf->dealloc_caller()) {
-				   pf->set_in(true);  // not sure correct
-				} if (pf->bind_callee() && pf->alloc_caller()) {
-				   pf->set_out(true);   
-				} if (pf->bind_caller()) {
-				   pf->set_in(true);
-				}
-
-			    value = pf;
-			}}
 
 ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:star* Spacing field_id:Identifier Spacing OPEN Spacing args:Arguments Spacing CLOSE Spacing SEMI Spacing {{
 			    std::vector<Variable*> *arguments = (std::vector<Variable*>*) args.getValue();
@@ -1365,6 +1342,7 @@ Type_form	=	"projection" Space+ n:Identifier Spacing {{
 			    value = getType(*_id); 
 			}}
 			| "channel" Spacing {{  // todo
+			    std::cout << "Passed Type_form = channel rule" << std::endl;
 			    value = new Channel();
 			}}
 			| Qualifier? type
