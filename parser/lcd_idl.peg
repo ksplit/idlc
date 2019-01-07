@@ -1152,17 +1152,19 @@ ProjArgs        =       f:FirstProjArg* l:LastProjArg {{
 			    value = channels;
 			}}
 
-ChanField       =       "channel" Space+ id:Identifier Spacing SEMI Spacing {{	    	    
+ChanField       =       "channel" Space+ Spacing SEMI Spacing {{	    	    
 		       	    std::cout<<"[peg] Passed ChanField rule."<<std::endl;
 
-			    //Directly using a dummy value for Specification. The logic for manipulating
+			    //Directly using an artificial value for Specification. The logic for manipulating
 			    //spec values to get a final spec value as done in the Specification Rule is 
 			    //skipped for channels.
                             Value dummyspec((void*) 0);
-                    	    int * x = new int(IN);//assumption
-                    	    dummyspec = x;
-			
-			    const std::string *name = static_cast<const std::string*>(id.getValue());
+                    	    int * x = new int(IN);
+                    	    dummyspec = x; //assumption
+
+			    //Directly using an artificial value for Identifier.
+			    std::string *id = new std::string("choose an identifier name");				
+			    const std::string *name = static_cast<const std::string*>(id);//assumption
 			    ProjectionField *pf = new ProjectionField(getType("cptr"), *name, 0);
 			    insertVariable(pf);
 			    set_specs(*pf, dummyspec);
