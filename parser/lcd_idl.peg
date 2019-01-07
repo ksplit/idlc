@@ -218,6 +218,41 @@ void create_container(const Value &id, std::vector<ProjectionField*> &container_
 	container_fields.push_back(my_ref);
 }
 
+void getChanFieldsToProjection(std::vector<ProjectionField*> *channels, const std::string id)
+{
+			    std::cout<<"In getChanFieldsToProjection"<<std::endl;
+			    //Directly using an artificial value for Specification. The logic for manipulating
+			    //spec values to get a final spec value as done in the Specification Rule is 
+			    //skipped for channels.
+                            Value dummyspec((void*) 0);
+                    	    int * x = new int(IN);
+                    	    dummyspec = x; //assumption
+
+			    //Directly using an artificial value for Identifier.
+			    const std::string *name = static_cast<const std::string*>(&id);//assumption
+			    ProjectionField *pf = new ProjectionField(getType("cptr"), *name, 0);
+			    insertVariable(pf);
+			    set_specs(*pf, dummyspec);
+
+				if (pf->alloc_callee()) {
+				   pf->set_in(true);
+				   pf->set_out(true);
+				} if (pf->alloc_caller()) {
+				   pf->set_in(true); // not sure correct
+				} if (pf->dealloc_callee()) {
+				   pf->set_in(true);
+				} if (pf->dealloc_caller()) {
+				   pf->set_in(true);  // not sure correct
+				} if (pf->bind_callee() && pf->alloc_caller()) {
+				   pf->set_out(true);   
+				} if (pf->bind_caller()) {
+				   pf->set_in(true);
+				}
+				channels->push_back(pf);
+			        std::cout<<"Exiting getChanFieldsToProjection"<<std::endl;
+}
+
+
 }}
 #ah note - the following are the grammar rules. 
 rules:
@@ -1003,14 +1038,22 @@ Projection_constructor_special = "projection" {{
 				     value = new_scope;
 				 }} 
 
-Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPENC Spacing c:ChanField* p:ProjField* CLOSEC Spacing {{
+Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPENC Spacing p:ProjField* CLOSEC Spacing {{
 		    	    std::cout<<"[peg] Projection rule."<<std::endl;
 			    std::vector<ProjectionField*> channels;
-			    for(Value::iterator it = c.getValues().begin(); it != c.getValues().end(); it ++) {
-			        const Value &v = *it;
-				ProjectionField *pf = (ProjectionField*) v.getValue();	
-				channels.push_back(pf);
-			    }
+
+			    // -- Integrating code from ChanField rule
+			    // -- CHANNEL CONFIGURATION POINT -- ensure the other channel configuration points are
+			    // -- are compatible with this setting.
+			    // getChanFieldsToProjection(&channels, ""); //call this function to add a channel name
+			    // -- End of code integration from ChanField rule
+	
+			    //Don't need the following code block, as we are adding to channels in the function above.
+			    //for(Value::iterator it = c.getValues().begin(); it != c.getValues().end(); it ++) {
+			    //    const Value &v = *it;
+			    //	ProjectionField *pf = (ProjectionField*) v.getValue();	
+			    // 	channels.push_back(pf);
+			    // }
  
 			    std::vector<ProjectionField *> fields;
 			    for(Value::iterator it = p.getValues().begin(); it != p.getValues().end(); it ++)
