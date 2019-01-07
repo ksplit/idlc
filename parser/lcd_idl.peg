@@ -329,7 +329,11 @@ IdentStart	=	[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]
 
 IdentCont	=	IdentStart | [0123456789]
 
-unnamed_scope 	= 	s:unnamed_scope_special new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* Spacing CLOSEC Spacing {{
+#unnamed_scope 	= 	s:unnamed_scope_special new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* Spacing CLOSEC Spacing {{
+unnamed_scope 	= 	s:unnamed_scope_special ch:Channel_scope* d:Type_Definitions* r:Rpc* Spacing CLOSEC Spacing {{
+			    // removed ChanInits from unnamed_scope rule completely. We integrated
+			    // ChanInits functionality in Interface rule. Since we are already performing ChanInits (channel initializations
+			    // in Interface, ignoring it here. --TODO: need to check whether we really need the double initialization.
             		    std::cout<<"[peg] Passed unnamed_scope rule."<<std::endl;
 			    std::vector<Rpc*> *rpcs = new std::vector<Rpc*>();
 			    for(Value::iterator it = r.getValues().begin(); it != r.getValues().end(); it ++) {
@@ -391,27 +395,6 @@ pc_unnamed_scope=	s:pc_unnamed_scope_special d:Type_Definitions* p:ProjField* Sp
 			    value = fields;
 			}}
 
-ChanInits	= "channel" Space+ Spacing <ascii 61> Spacing "new" Space+ Spacing OPEN host_ch:Identifier CLOSE SEMI Spacing {{
-		    	        std::cout<<"[peg] Passed ChanInits rule."<<std::endl;
-
-			        // -- CHANNEL CONFIGURATION POINT -- ensure the other channel configuration points are
-				// -- compatible with this setting
-				Channel::ChannelType ct = static_cast<Channel::ChannelType>(*(new int(Channel::AsyncChannel)));
-				//Channel::ChannelType ct = static_cast<Channel::ChannelType>(*(new int(Channel::SyncChannel)));
-				std::cout << "New channel type: " << ct << " Initialized" << std::endl;
-
-			        // -- CHANNEL CONFIGURATION POINT -- ensure the other channel configuration points are
-				// -- compatible with this setting
-			    	std::string *id = new std::string("net_async");				
-				const std::string *_id = static_cast<const std::string*>(id);
-
-				Channel *newCh = new Channel(*_id, ct, NULL);
-				// insert channel into type list
-				std::cout << " new channel " << std::hex << newCh << std::dec << std::endl;
-				insertType(*_id, newCh);
-				value = newCh;
-			}}
-
 Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
 		    	        	std::cout<<"[peg] Passed Channel_scope rule."<<std::endl;
 					// all functions that is in the current scope and its inner scopes use this
@@ -436,9 +419,28 @@ Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
 					value = new std::string(*_id);
 				}}
 
-Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing req:Require* new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
+Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing req:Require* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
 
 		      std::cout << "[peg] Passed Interface rule 2"<<std::endl;
+
+			    	// -- Begin of code integration from ChanInits rule
+			        // -- CHANNEL CONFIGURATION POINT -- ensure the other channel configuration points are
+				// -- compatible with this setting
+				Channel::ChannelType ct = static_cast<Channel::ChannelType>(*(new int(Channel::AsyncChannel)));
+				//Channel::ChannelType ct = static_cast<Channel::ChannelType>(*(new int(Channel::SyncChannel)));
+				std::cout << "New channel type: " << ct << " Initialized" << std::endl;
+
+			        // -- CHANNEL CONFIGURATION POINT -- ensure the other channel configuration points are
+				// -- compatible with this setting
+			    	std::string *chan_type = new std::string("net_async");				
+				const std::string *_id = static_cast<const std::string*>(chan_type);
+
+				Channel *newCh = new Channel(*_id, ct, NULL);
+				// insert channel into type list
+				std::cout << " new channel " << std::hex << newCh << std::dec << std::endl;
+				insertType(*_id, newCh);
+			    	// -- End of code integration from ChanInits rule
+
 		      LexicalScope *module_scope = (LexicalScope*) m.getValue();
 		      std::vector<Rpc*> rpcs;
 		      std::vector<Require*> requires;				
@@ -998,7 +1000,7 @@ Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id
 		    	    std::cout<<"[peg] Projection rule."<<std::endl;
 			    std::vector<ProjectionField*> channels;
 
-			    // -- Integrating code from ChanField rule
+			    // -- Begin of code integration from ChanField rule
 			    // -- CHANNEL CONFIGURATION POINT -- ensure the other channel configuration points are
 			    // -- are compatible with this setting.
 			    // getChanFieldsToProjection(&channels, ""); //call this function to add a channel name
