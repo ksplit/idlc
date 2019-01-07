@@ -391,21 +391,13 @@ pc_unnamed_scope=	s:pc_unnamed_scope_special d:Type_Definitions* p:ProjField* Sp
 			    value = fields;
 			}}
 
-ChanType	= "async" {{
-		    	                std::cout<<"[peg] Passed ChanType async rule."<<std::endl;
-					value = new int(Channel::AsyncChannel);
-				}}
-				| "sync" {{
-		    	                std::cout<<"[peg] Passed ChanType synch rule."<<std::endl;
-					value = new int(Channel::SyncChannel);
-				}}
-
 ChanInits	= "channel" Space+ Spacing <ascii 61> Spacing "new" Space+ Spacing OPEN host_ch:Identifier CLOSE SEMI Spacing {{
 		    	        std::cout<<"[peg] Passed ChanInits rule."<<std::endl;
 
 			        // -- CHANNEL CONFIGURATION POINT -- ensure the other channel configuration points are
 				// -- compatible with this setting
 				Channel::ChannelType ct = static_cast<Channel::ChannelType>(*(new int(Channel::AsyncChannel)));
+				Channel::ChannelType ct = static_cast<Channel::ChannelType>(*(new int(Channel::SyncChannel)));
 				std::cout << "New channel type: " << ct << " Initialized" << std::endl;
 
 			        // -- CHANNEL CONFIGURATION POINT -- ensure the other channel configuration points are
