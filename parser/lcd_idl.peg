@@ -13,6 +13,12 @@ include: {{
 #ah note - the following code goes directly into parser/lcd_idl.cpp
 code: {{
 
+//The following non-terminals have been removed from the grammar
+//but their functionalities have been retained.
+//To use the funcionalities of any of the following non-terminals,
+//set them to 1, otherwise set them to 0.
+#define CHANFIELD = 0
+
 typedef enum {
     IN = 0x1,
     OUT = 0x2,
@@ -997,50 +1003,13 @@ Projection_constructor_special = "projection" {{
 				     value = new_scope;
 				 }} 
 
-#Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPENC Spacing c:ChanField* p:ProjField* CLOSEC Spacing {{
-Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPENC Spacing p:ProjField* CLOSEC Spacing {{
+Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPENC Spacing c:ChanField* p:ProjField* CLOSEC Spacing {{
 		    	    std::cout<<"[peg] Projection rule."<<std::endl;
 			    std::vector<ProjectionField*> channels;
-
-			    // -- Start of code imported from ChanField rule:
-			    std::cout<<"[peg] Passed ChanField rule."<<std::endl;
-			    const std::string *name = static_cast<const std::string*>(id.getValue());
-			    ProjectionField *pf = new ProjectionField(getType("cptr"), *name, 0);
-			    insertVariable(pf);
-
-			    // ---- NOTE: the following uses the "value" from Specification Rule.
-			    // ---- However, we have ignored the import from the specification rule for now.
-			    // ---- So we have used a dummy value for the Specification Rule value
-			    // ---- for simplicity. 	
-			    unsigned int *s = new unsigned int();
-			    value = s;
-			    set_specs(*pf, value);
-			    // ---- ENDNOTE	
-
-				if (pf->alloc_callee()) {
-				   pf->set_in(true);
-				   pf->set_out(true);
-				} if (pf->alloc_caller()) {
-				   pf->set_in(true); // not sure correct
-				} if (pf->dealloc_callee()) {
-				   pf->set_in(true);
-				} if (pf->dealloc_caller()) {
-				   pf->set_in(true);  // not sure correct
-				} if (pf->bind_callee() && pf->alloc_caller()) {
-				   pf->set_out(true);   
-				} if (pf->bind_caller()) {
-				   pf->set_in(true);
-				}
-
-			    value = pf;
-			    // -- End of code imported from ChanField rule
-
-			    // TODO - this needs to be fixed - value is not a list. we are looping through a list
-			    // because there may be many ChanFields. 
-			    for(Value::iterator it = value.getValues().begin(); it != value.getValues().end(); it ++) {
+			    for(Value::iterator it = c.getValues().begin(); it != c.getValues().end(); it ++) {
 			        const Value &v = *it;
-				ProjectionField *pf2 = (ProjectionField*) v.getValue();	
-				channels.push_back(pf2);
+				ProjectionField *pf = (ProjectionField*) v.getValue();	
+				channels.push_back(pf);
 			    }
  
 			    std::vector<ProjectionField *> fields;
@@ -1183,12 +1152,20 @@ ProjArgs        =       f:FirstProjArg* l:LastProjArg {{
 			    value = channels;
 			}}
 
-ChanField       =       "channel" Space+ s:Specification? Spacing id:Identifier Spacing SEMI Spacing {{	    	    
-			    std::cout<<"[peg] Passed ChanField rule."<<std::endl;
+ChanField       =       "channel" Space+ id:Identifier Spacing SEMI Spacing {{	    	    
+		       	    std::cout<<"[peg] Passed ChanField rule."<<std::endl;
+
+			    //Directly using a dummy value for Specification. The logic for manipulating
+			    //spec values to get a final spec value as done in the Specification Rule is 
+			    //skipped for channels.
+                            Value dummyspec((void*) 0);
+                    	    int * x = new int(IN);//assumption
+                    	    dummyspec = x;
+			
 			    const std::string *name = static_cast<const std::string*>(id.getValue());
 			    ProjectionField *pf = new ProjectionField(getType("cptr"), *name, 0);
 			    insertVariable(pf);
-			    set_specs(*pf, s);
+			    set_specs(*pf, dummyspec);
 
 				if (pf->alloc_callee()) {
 				   pf->set_in(true);
