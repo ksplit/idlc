@@ -404,53 +404,6 @@ pc_unnamed_scope=	s:pc_unnamed_scope_special d:Type_Definitions* p:ProjField* Sp
 			    value = fields;
 			}}
 
-
-#Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
-Channel_scope	= Spacing "use" Space+ Spacing SEMI Spacing {{
-		    	        	std::cout<<"[peg] Passed Channel_scope rule. "<<check_val<<std::endl;
-			    	// -- Begin of code integration from Channel_scope rule
-					// all functions that is in the current scope and its inner scopes use this
-					// channel for communication unless an unnamed scope overrides it.
-					// Every unnamed scope can override use keyword by specifying which channel its
-					// functions would like to use
-					// TODO:
-					// Should unnamed scope channels be monitored in dispatch loop? Probably yes
-					// *) Add this to global channel list
-					// *) Dispatch loop should monitor all
-
-			    	// -- Begin of code integration from ChanInits rule
-			        // -- CHANNEL CONFIGURATION POINT -- ensure the other channel configuration points are
-				// -- compatible with this setting
-				Channel::ChannelType ct = static_cast<Channel::ChannelType>(*(new int(Channel::AsyncChannel)));
-				//Channel::ChannelType ct = static_cast<Channel::ChannelType>(*(new int(Channel::SyncChannel)));
-				std::cout << "New channel type: " << ct << " Initialized" << std::endl;
-
-			        // -- CHANNEL CONFIGURATION POINT -- ensure the other channel configuration points are
-				// -- compatible with this setting
-			    	std::string *chan_type = new std::string("net_async");				
-				const std::string *chan_id = static_cast<const std::string*>(chan_type);
-
-				Channel *newCh = new Channel(*chan_id, ct, NULL);
-				// insert channel into type list
-				std::cout << " new channel " << std::hex << newCh << std::dec << std::endl;
-				insertType(*chan_id, newCh);
-			    	// -- End of code integration from ChanInits rule
-
-			    		std::string *chan_type_to_use = new std::string("net_async");				
-					const std::string *_id = static_cast<const std::string*>(chan_type_to_use);
-
-					std::cout << "Using channel " << *_id << std::endl;
-
-					Type *t = getType(*_id);
-					Channel *c = dynamic_cast<Channel*>(t);
-					std::cout << " channel_scope dyncast " << std::hex << c << std::dec << std::endl;
-					Assert(c != NULL, "Dynamic cast from Type to Channel failed");
-					get_current_scope()->setactiveChannel(c);
-			    	// -- End of code integration from Channel_scope rule
-					value = new std::string(*_id);
-				}}
-
-#Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing req:Require* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
 Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing req:Require* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
 
 		      std::cout << "[peg] Passed Interface rule 2"<<std::endl;
