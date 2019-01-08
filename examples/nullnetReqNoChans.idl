@@ -1,0 +1,13 @@
+include <kernelNoChans.idl>
+
+module nullnet() {
+    require kernelNoChans;
+    {
+        projection <struct device> device {
+        }
+        projection <struct net_device_ops> net_device_ops {
+         rpc int (*open)(projection device  *dev);
+        }
+    }
+}
+

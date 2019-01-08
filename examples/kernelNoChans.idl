@@ -1,0 +1,13 @@
+include <stdlib.idl>
+
+module kernel() {
+
+    {
+        projection <struct foo> foo {
+        }
+        projection <struct bar> bar {
+         rpc int (*open)(projection foo  *ptr);
+        }
+    }
+}
+
