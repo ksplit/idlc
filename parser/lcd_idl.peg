@@ -404,25 +404,45 @@ pc_unnamed_scope=	s:pc_unnamed_scope_special d:Type_Definitions* p:ProjField* Sp
 			    value = fields;
 			}}
 
-Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing req:Require* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
+#Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing req:Require* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
+Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN Spacing CLOSE Spacing OPENC Spacing req:Require* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
 
-		      std::cout << "[peg] Passed Interface rule 2"<<std::endl;
+		      		std::cout << "[peg] Passed Interface rule"<<std::endl;
+
+			    	// -- Begin of code integration from Channels rule
+
+	   	    		//The following stores only one channel variable. (We are using Last Channel only, not using
+		    		//FirstChannel.
+		    		std::vector<GlobalVariable*> *channels = new std::vector<GlobalVariable*>();
+		    		// -- CHANNEL CONFIGURATION POINT -- ensure the other channel configuration points are
+		    		// -- compatible with this setting
+			    	std::string *chan_var_name = new std::string("c");				
+		    	    	const std::string *chan_var = static_cast<const std::string*>(chan_var_name);
+		    	    	GlobalVariable *gv = new GlobalVariable(getType("cptr"), *chan_var, 0);
+			    	//channels->push_back((GlobalVariable*) l.getValue());
+			    	//channels->push_back((GlobalVariable*) chan_var);
+			    	channels->push_back(gv);
+			    	// -- End of code integration from Channels rule
+
 			    	// -- Begin of code integration from Channel_scope rule (Note that this adds one default channel
 				//    to add multiple channels execute the following code as many times -- refactoring it into a separate 
 				//    function -- store them in a vector, and then execute the "Process Channels" code block
 				//    on each item of that vector.
-					// all functions that is in the current scope and its inner scopes use this
-					// channel for communication unless an unnamed scope overrides it.
-					// Every unnamed scope can override use keyword by specifying which channel its
-					// functions would like to use
-					// TODO:
-					// Should unnamed scope channels be monitored in dispatch loop? Probably yes
-					// *) Add this to global channel list
-					// *) Dispatch loop should monitor all
+
+				// all functions that is in the current scope and its inner scopes use this
+				// channel for communication unless an unnamed scope overrides it.
+				// Every unnamed scope can override use keyword by specifying which channel its
+				// functions would like to use
+				// TODO:
+				// Should unnamed scope channels be monitored in dispatch loop? Probably yes
+				// *) Add this to global channel list
+				// *) Dispatch loop should monitor all
 
 			    	// -- Begin of code integration from ChanInits rule
+
 			        // -- CHANNEL CONFIGURATION POINT -- ensure the other channel configuration points are
 				// -- compatible with this setting
+
 				Channel::ChannelType ct = static_cast<Channel::ChannelType>(*(new int(Channel::AsyncChannel)));
 				//Channel::ChannelType ct = static_cast<Channel::ChannelType>(*(new int(Channel::SyncChannel)));
 				std::cout << "New channel type: " << ct << " Initialized" << std::endl;
@@ -436,52 +456,55 @@ Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels
 				// insert channel into type list
 				std::cout << " new channel " << std::hex << newCh << std::dec << std::endl;
 				insertType(*chan_id, newCh);
+
 			    	// -- End of code integration from ChanInits rule
+		
+			      	// -- CHANNEL CONFIGURATION POINT -- ensure the other channel configuration points are
+				// -- compatible with this setting
+			    	std::string *chan_type_to_use = new std::string("net_async");				
+				const std::string *_id = static_cast<const std::string*>(chan_type_to_use);
 
-			    		std::string *chan_type_to_use = new std::string("net_async");				
-					const std::string *_id = static_cast<const std::string*>(chan_type_to_use);
+				std::cout << "Using channel " << *_id << std::endl;
 
-					std::cout << "Using channel " << *_id << std::endl;
+				Type *t = getType(*_id);
+				Channel *c = dynamic_cast<Channel*>(t);
+				std::cout << " channel_scope dyncast " << std::hex << c << std::dec << std::endl;
+				Assert(c != NULL, "Dynamic cast from Type to Channel failed");
+				get_current_scope()->setactiveChannel(c);
 
-					Type *t = getType(*_id);
-					Channel *c = dynamic_cast<Channel*>(t);
-					std::cout << " channel_scope dyncast " << std::hex << c << std::dec << std::endl;
-					Assert(c != NULL, "Dynamic cast from Type to Channel failed");
-					get_current_scope()->setactiveChannel(c);
 			    	// -- End of code integration from Channel_scope rule
 
-		      LexicalScope *module_scope = (LexicalScope*) m.getValue();
-		      std::vector<Rpc*> rpcs;
-		      std::vector<Require*> requires;				
-		      std::vector<GlobalVariable*> *channels = (std::vector<GlobalVariable*>*) chans.getValue();  
-		      std::vector<GlobalVariable*> channels2 = *channels;
+	  		        LexicalScope *module_scope = (LexicalScope*) m.getValue();
+		      		std::vector<Rpc*> rpcs;
+		      		std::vector<Require*> requires;				
+		      		//std::vector<GlobalVariable*> *channels = (std::vector<GlobalVariable*>*) chans.getValue();  
+		      		std::vector<GlobalVariable*> channels2 = *channels;
 
-		      for(Value::iterator it = r.getValues().begin(); it != r.getValues().end(); it ++) {
-		      const Value & v2 = *it;
-		      Rpc *r2 = (Rpc*) v2.getValue();
-		      rpcs.push_back(r2);
-		      }
-		      for(Value::iterator it = req.getValues().begin(); it != req.getValues().end(); it ++) {
-		      const Value & v2 = *it;
-		      Require *req2 = (Require*) v2.getValue();
-		      requires.push_back(req2);
-		      }
+		      		for(Value::iterator it = r.getValues().begin(); it != r.getValues().end(); it ++) {
+		      		const Value & v2 = *it;
+		      		Rpc *r2 = (Rpc*) v2.getValue();
+		      		rpcs.push_back(r2);
+		      		}
+		      		for(Value::iterator it = req.getValues().begin(); it != req.getValues().end(); it ++) {
+		      		const Value & v2 = *it;
+		      		Require *req2 = (Require*) v2.getValue();
+		      		requires.push_back(req2);
+		      		}
 
-		      for(Value::iterator it = r2.getValues().begin(); it != r2.getValues().end(); it ++) {
-		      const Value & v2 = *it;
-		      std::vector<Rpc*> *r_tmp = (std::vector<Rpc*>*) v2.getValue();
-		      rpcs.insert(rpcs.end(), r_tmp->begin(), r_tmp->end());
-		      }
+		      		for(Value::iterator it = r2.getValues().begin(); it != r2.getValues().end(); it ++) {
+		      		const Value & v2 = *it;
+		      		std::vector<Rpc*> *r_tmp = (std::vector<Rpc*>*) v2.getValue();
+		      		rpcs.insert(rpcs.end(), r_tmp->begin(), r_tmp->end());
+		      		}
 			
-		      std::cout<<"[peg] Size of rpcs "<<rpcs.size()<<std::endl;
+		      		std::cout<<"[peg] Size of rpcs "<<rpcs.size()<<std::endl;
 
-		        // -- Start of Process Channels code block (Currently we are only processing one channel)
-                        //for(Value::iterator it = ch.getValues().begin(); it != ch.getValues().end(); it ++) {
-                        //const Value & v2 = *it;
-                        //std::string *_ch = (std::string*) v2.getValue();
-                        //std::cout << "### module channel " << *_ch << "\n";
+		        	// -- Start of Process Channels code block (Currently we are only processing one channel)
+                        	//for(Value::iterator it = ch.getValues().begin(); it != ch.getValues().end(); it ++) {
+                        	//const Value & v2 = *it;
+                        	//std::string *_ch = (std::string*) v2.getValue();
+                        	//std::cout << "### module channel " << *_ch << "\n";
 
-			//
                         std::cout << "### module channel " << *chan_id << "\n";
                         if (chan_id) {
                             Type *t = getType(*chan_id);
@@ -887,34 +910,6 @@ Parameters	=	f:FirstParam* l:LastParam {{
 			    value = params; 
 			}}
 
-FirstChannel    = "channel" Space+ id:Identifier Spacing COMMA Spacing {{
-		    std::cout << "Passed FirstChannel rule" << std::endl;
-		    const std::string *_id = static_cast<const std::string*>(id.getValue());
-		    GlobalVariable *gv = new GlobalVariable(getType("cptr"), *_id, 0);
-		    insertVariable(gv);
-		    value = gv;
-		}}
-
-LastChannel     = "channel" Space+ id:Identifier Spacing {{
-		    std::cout << "Passed LastChannel rule" << std::endl;
-		    const std::string *_id = static_cast<const std::string*>(id.getValue());
-		    GlobalVariable *gv = new GlobalVariable(getType("cptr"), *_id, 0);
-		    insertVariable(gv);
-		    value = gv;
-		}}
-
-Channels        = f:FirstChannel* l:LastChannel {{
-		    std::cout << "Channels rule" << std::endl;
-		    std::vector<GlobalVariable*> *channels = new std::vector<GlobalVariable*>();
-
-		    for(Value::iterator it = f.getValues().begin(); it != f.getValues().end(); it ++) {
-			        const Value & v = *it;
-				GlobalVariable *gv = (GlobalVariable*) v.getValue();
-				channels->push_back(gv);
-			    }
-			    channels->push_back((GlobalVariable*) l.getValue());
-			    value = channels;
-		}}		  
 
 FP_Parameters	=	f:FP_FirstParam* l:FP_LastParam {{
 		            std::cout << "matched fp parameters\n";
