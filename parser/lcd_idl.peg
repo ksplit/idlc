@@ -33,6 +33,8 @@ typedef enum {
 LexicalScope *current_scope;
 LexicalScope *current_module_scope;
 LexicalScope *current_unnamed_scope;
+int check_val;
+
 
 void set_specs(Variable &v, const Value &s)
 {
@@ -329,21 +331,28 @@ IdentStart	=	[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]
 
 IdentCont	=	IdentStart | [0123456789]
 
-unnamed_scope 	= 	s:unnamed_scope_special ch:Channel_scope* d:Type_Definitions* r:Rpc* Spacing CLOSEC Spacing {{
+unnamed_scope 	= 	s:unnamed_scope_special d:Type_Definitions* r:Rpc* Spacing CLOSEC Spacing {{
 			    // removed ChanInits from unnamed_scope rule completely. We integrated
 			    // ChanInits functionality in Interface rule. Since we are already performing ChanInits (channel initializations
 			    // in Interface, ignoring it here. --TODO: need to check whether we really need the double initialization.
-            		    std::cout<<"[peg] Passed unnamed_scope rule."<<std::endl;
+			    // The same treatment was done to Channel_scope rule (see below for note). TODO: need to check whether
+			    // we need Channel_scope here.
+            		    std::cout<<"[peg] Passed unnamed_scope rule."<<check_val<<std::endl;
 			    std::vector<Rpc*> *rpcs = new std::vector<Rpc*>();
 			    for(Value::iterator it = r.getValues().begin(); it != r.getValues().end(); it ++) {
 			        const Value &v = *it;
 				Rpc *r = (Rpc*) v.getValue();
 				rpcs->push_back(r);
 			    }
-			    std::cout << " channel ID " << ch.getValue() << "\n";
 				LexicalScope *sc = (LexicalScope *)s.getValue();
 
-                for(Value::iterator it = ch.getValues().begin(); it != ch.getValues().end(); it ++) {
+
+		// It appears that the following code block is not being used (based on nullnet-require.idl test on the original 
+		// peg grammar, and even on the present peg grammar). In particular, Channel_Scope rule is not
+		// being passed in this context. It is only passed once in Interface rule. Most likely we don't need it again here.
+		// Hence commenting out this codeblock, and removing Channel_Scope from this rule.
+		/*std::cout << " channel ID " << ch.getValue() << "\n";
+                  for(Value::iterator it = ch.getValues().begin(); it != ch.getValues().end(); it ++) {
                   const Value & v2 = *it;
                   std::string *_ch = (std::string*) v2.getValue();
                   std::cout << "### scope channel " << *_ch << "\n";
@@ -354,13 +363,14 @@ unnamed_scope 	= 	s:unnamed_scope_special ch:Channel_scope* d:Type_Definitions* 
                   } else {
                       sc->setactiveChannel(NULL);
                   }
-                }
+                }*/
 
 			    set_current_scope(get_current_scope()->outer_scope()); // leaving current scope
 			    value = rpcs;
 			}}
 			
 unnamed_scope_special = Spacing OPENC Spacing {{
+			    check_val=777; 
 		    	    std::cout<<"[peg] Passed unnamed_scope_special rule."<<std::endl;
 	      	    	    LexicalScope *tmp = get_current_module_scope();
 	      	    	    LexicalScope *new_scope = new LexicalScope(tmp);
@@ -395,8 +405,10 @@ pc_unnamed_scope=	s:pc_unnamed_scope_special d:Type_Definitions* p:ProjField* Sp
 			}}
 
 
-Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
-		    	        	std::cout<<"[peg] Passed Channel_scope rule."<<std::endl;
+#Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
+Channel_scope	= Spacing "use" Space+ Spacing SEMI Spacing {{
+		    	        	std::cout<<"[peg] Passed Channel_scope rule. "<<check_val<<std::endl;
+			    	// -- Begin of code integration from Channel_scope rule
 					// all functions that is in the current scope and its inner scopes use this
 					// channel for communication unless an unnamed scope overrides it.
 					// Every unnamed scope can override use keyword by specifying which channel its
@@ -424,8 +436,8 @@ Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
 				insertType(*chan_id, newCh);
 			    	// -- End of code integration from ChanInits rule
 
-					std::cout<<"Passed Channel_scope rule in peg\n";		
-					const std::string *_id = static_cast<const std::string*>(ch.getValue());
+			    		std::string *chan_type_to_use = new std::string("net_async");				
+					const std::string *_id = static_cast<const std::string*>(chan_type_to_use);
 
 					std::cout << "Using channel " << *_id << std::endl;
 
@@ -434,12 +446,57 @@ Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
 					std::cout << " channel_scope dyncast " << std::hex << c << std::dec << std::endl;
 					Assert(c != NULL, "Dynamic cast from Type to Channel failed");
 					get_current_scope()->setactiveChannel(c);
+			    	// -- End of code integration from Channel_scope rule
 					value = new std::string(*_id);
 				}}
 
-Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing req:Require* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
+#Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing req:Require* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
+Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing req:Require* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
 
 		      std::cout << "[peg] Passed Interface rule 2"<<std::endl;
+			    	// -- Begin of code integration from Channel_scope rule (Note that this adds one default channel
+				//    to add multiple channels execute the following code as many times -- refactoring it into a separate 
+				//    function -- store them in a vector, and then execute the "Process Channels" code block
+				//    on each item of that vector.
+					// all functions that is in the current scope and its inner scopes use this
+					// channel for communication unless an unnamed scope overrides it.
+					// Every unnamed scope can override use keyword by specifying which channel its
+					// functions would like to use
+					// TODO:
+					// Should unnamed scope channels be monitored in dispatch loop? Probably yes
+					// *) Add this to global channel list
+					// *) Dispatch loop should monitor all
+
+			    	// -- Begin of code integration from ChanInits rule
+			        // -- CHANNEL CONFIGURATION POINT -- ensure the other channel configuration points are
+				// -- compatible with this setting
+				Channel::ChannelType ct = static_cast<Channel::ChannelType>(*(new int(Channel::AsyncChannel)));
+				//Channel::ChannelType ct = static_cast<Channel::ChannelType>(*(new int(Channel::SyncChannel)));
+				std::cout << "New channel type: " << ct << " Initialized" << std::endl;
+
+			        // -- CHANNEL CONFIGURATION POINT -- ensure the other channel configuration points are
+				// -- compatible with this setting
+			    	std::string *chan_type = new std::string("net_async");				
+				const std::string *chan_id = static_cast<const std::string*>(chan_type);
+
+				Channel *newCh = new Channel(*chan_id, ct, NULL);
+				// insert channel into type list
+				std::cout << " new channel " << std::hex << newCh << std::dec << std::endl;
+				insertType(*chan_id, newCh);
+			    	// -- End of code integration from ChanInits rule
+
+			    		std::string *chan_type_to_use = new std::string("net_async");				
+					const std::string *_id = static_cast<const std::string*>(chan_type_to_use);
+
+					std::cout << "Using channel " << *_id << std::endl;
+
+					Type *t = getType(*_id);
+					Channel *c = dynamic_cast<Channel*>(t);
+					std::cout << " channel_scope dyncast " << std::hex << c << std::dec << std::endl;
+					Assert(c != NULL, "Dynamic cast from Type to Channel failed");
+					get_current_scope()->setactiveChannel(c);
+			    	// -- End of code integration from Channel_scope rule
+
 		      LexicalScope *module_scope = (LexicalScope*) m.getValue();
 		      std::vector<Rpc*> rpcs;
 		      std::vector<Require*> requires;				
@@ -457,7 +514,6 @@ Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels
 		      requires.push_back(req2);
 		      }
 
-
 		      for(Value::iterator it = r2.getValues().begin(); it != r2.getValues().end(); it ++) {
 		      const Value & v2 = *it;
 		      std::vector<Rpc*> *r_tmp = (std::vector<Rpc*>*) v2.getValue();
@@ -466,13 +522,17 @@ Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels
 			
 		      std::cout<<"[peg] Size of rpcs "<<rpcs.size()<<std::endl;
 
-                      for(Value::iterator it = ch.getValues().begin(); it != ch.getValues().end(); it ++) {
-                        const Value & v2 = *it;
-                        std::string *_ch = (std::string*) v2.getValue();
-                        std::cout << "### module channel " << *_ch << "\n";
-                        if (_ch) {
-                            Type *t = getType(*_ch);
-                            std::cout << "channel " << *_ch << " Type information " << t << std::endl;
+		        // -- Start of Process Channels code block (Currently we are only processing one channel)
+                        //for(Value::iterator it = ch.getValues().begin(); it != ch.getValues().end(); it ++) {
+                        //const Value & v2 = *it;
+                        //std::string *_ch = (std::string*) v2.getValue();
+                        //std::cout << "### module channel " << *_ch << "\n";
+
+			//
+                        std::cout << "### module channel " << *chan_id << "\n";
+                        if (chan_id) {
+                            Type *t = getType(*chan_id);
+                            std::cout << "channel " << *chan_id << " Type information " << t << std::endl;
                             Channel *c = dynamic_cast<Channel*>(t);
                             if (!c)
                                 std::cout << "dynamic_cast of channel failed\n";
@@ -480,7 +540,10 @@ Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels
                         } else {
                             module_scope->setactiveChannel(NULL);
                         }
-                      }
+                        //}
+		        // -- End of Process Channels code block
+
+
 		      if (get_current_scope())
 			set_current_scope(get_current_scope()->outer_scope()); // leaving current scope
 		      else
@@ -499,6 +562,7 @@ Require =	"require" Spacing id:Identifier Spacing SEMI Spacing {{
 
 Interface_special =	  "module" {{
 		    	      std::cout<<"[peg] Passed Interface_special rule."<<std::endl;
+			      check_val = 555;
 		  	      LexicalScope *new_scope = new LexicalScope(LexicalScope::getGlobalScope());
 			      LexicalScope::getGlobalScope()->add_inner_scope(new_scope);
 			      set_current_module_scope(new_scope);
