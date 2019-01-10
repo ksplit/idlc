@@ -1,9 +1,10 @@
-#include "lcd_ast.h"
 #include "lcd_idl.h"
 #include "error.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+#include <fstream>
+#include <regex>
 #include <string.h>
 #include "ccst.h"
 #include "code_gen.h"
@@ -38,7 +39,6 @@ Project * process_idl(std::string input){
     std::vector<Include*> caller_includes = project_includes;
     std::vector<Include*> callee_includes = project_includes;
 
-
     int check_num=0;
     for (auto m : *tree) {
       std::cout<<"Module number "<<check_num<<std::endl;
@@ -56,12 +56,42 @@ Project * process_idl(std::string input){
         for (auto inc : project_includes) {
 	  included_idl = inc->get_path();
           std::cout<<"[main.cpp] included header idl: "<<included_idl<<std::endl;
-          included_idl_name = included_idl.substr(0, included_idl.size()-4);
+
+	  // Preprocessing IDL file - Checking whether the IDL file contains the required module.
+	  // 1. scan the file included for the required module name.
+	  // 2. if it contains it, parse the file and save the parse tree.
+
+	  std::ifstream idl_file;
+	  std::string line;
+  	  idl_file.open(included_idl);
+	  std::string *prepattern = new std::string("(\\s*)(\\t*)(module)(\\s*)(\\t*)(");
+	  std::string *postpattern = new std::string(")(.*)");
+	  std::string *pattern = new std::string(*prepattern + required_module.c_str()+ *postpattern);
+	  std::cout << "pattern: "<< *pattern<<std::endl;
+
+	  while(std::getline(idl_file, line)) {
+	  	std::regex rgx(*pattern);
+	  	std::cout<<"[main.cpp] scanning line: "<<line<<std::endl;	
+    		if (std::regex_match(line, rgx)) {
+	  	  std::cout<<"[main.cpp] matched line: "<<line<<std::endl;	
+	    	  std::cout<<"[main.cpp] this included idl contains the required module. Parsing this idl "<<std::endl;
+            	  require->save_ast_of_required_module(process_idl(included_idl));
+		  break;
+	  	}
+	  }
+  	  idl_file.close();
+
+
+	  // The following logic assumes that the module name is the same as the name of the included idl file. (not using this
+	  // as a file may have multiple modules.)
+          /*included_idl_name = included_idl.substr(0, included_idl.size()-4);
           std::cout<<"[main.cpp] included header name: "<< included_idl_name <<std::endl;
           if (included_idl_name.compare(required_module) == 0) { 
 	    std::cout<<"[main.cpp] found required module. Invoking parse on the required idl"<<std::endl;
             require->save_ast_of_required_module(process_idl(included_idl));
 	  }
+	  */
+
 	}
       }
       std::string callee_h = new_name(m->identifier(), std::string("_callee.h"));
@@ -76,7 +106,7 @@ Project * process_idl(std::string input){
       std::string caller_c = new_name(m->identifier(), std::string("_caller.c"));
       std::string caller_disp = new_name(m->identifier(), std::string("_caller_dispatch.c"));
 
-	//ah note - this is where the final output files of the idl compiler are created
+      //ah note - this is where the final output files of the idl compiler are created
       std::ofstream ofs_callee_h(callee_h);
       std::ofstream ofs_callee_c(callee_c);
       std::ofstream ofs_callee_disp(callee_disp);
