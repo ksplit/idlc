@@ -75,7 +75,7 @@ Project * process_idl(std::string input){
     		if (std::regex_match(line, rgx)) {
 	  	  std::cout<<"[main.cpp] matched line: "<<line<<std::endl;	
 	    	  std::cout<<"[main.cpp] this included idl contains the required module. Parsing this idl "<<std::endl;
-            	  require->save_ast_of_required_module(process_idl(included_idl));
+            	  require->save_ast_of_idl_of_required_module(process_idl(included_idl));
 		  break;
 	  	}
 	  }
@@ -83,12 +83,12 @@ Project * process_idl(std::string input){
 
 
 	  // The following logic assumes that the module name is the same as the name of the included idl file. (not using this
-	  // as a file may have multiple modules.)
+	  // because a file may have multiple modules.)
           /*included_idl_name = included_idl.substr(0, included_idl.size()-4);
           std::cout<<"[main.cpp] included header name: "<< included_idl_name <<std::endl;
           if (included_idl_name.compare(required_module) == 0) { 
 	    std::cout<<"[main.cpp] found required module. Invoking parse on the required idl"<<std::endl;
-            require->save_ast_of_required_module(process_idl(included_idl));
+            require->save_ast_of_idl_of_required_module(process_idl(included_idl));
 	  }
 	  */
 

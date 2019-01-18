@@ -755,13 +755,13 @@ class Rpc
 class Require
 {
   std::string required_module_name_;
-  Project *pjt_;//this is going to contain the entire AST of the module required
+  Project *pjt_;//this is going to contain the entire AST of the idl containing the module required
   public:
   Require(const std::string& required_module_name);
   std::string get_required_module_name() {
 	return this->required_module_name_;
   }
-  void save_ast_of_required_module(Project *pjt);
+  void save_ast_of_idl_of_required_module(Project *pjt);
 };
 
 class Module 

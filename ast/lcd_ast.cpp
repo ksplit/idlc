@@ -398,7 +398,7 @@ void Rpc::create_trampoline_structs()
   }
 }
 
-void Require::save_ast_of_required_module(Project * pjt){
+void Require::save_ast_of_idl_of_required_module(Project * pjt){
   this->pjt_=pjt;
 }
 
