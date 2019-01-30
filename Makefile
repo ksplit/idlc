@@ -14,7 +14,7 @@ LDFLAGS = #-lasan
 CPP_a = $(shell find . -type f ! -path "./parser/vembyr-1.1/*" -name "*.cpp") $(idl_cpp)
 CPP = $(filter-out ./test/%,$(CPP_a))
 OBJ = $(patsubst %.cpp,%.o,$(CPP))
-#ah to resolve - where the .d files are created... Apparently the .cpp files are replaced by .d files, but the .cpp files don't look like C programs, what are they? how are they generated?
+# ah to resolve - where the .d files are created
 DEP = $(patsubst %.cpp,%.d,$(CPP)) 
 
 default: $(bin)
@@ -24,7 +24,7 @@ $(bin): $(OBJ)
 
 main/main.cpp: $(idl_h)
 
-#ah note - vembyr parser invoked and supplied with the rule file
+# ah note - vembyr parser invoked and supplied with the rule file
 
 $(idl_h): parser/lcd_idl.peg 
 	parser/vembyr-1.1/peg.py --h $^ > $@ 

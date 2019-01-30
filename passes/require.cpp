@@ -1,3 +1,5 @@
+// This passes expands requires in a given file.
+
 #include "lcd_idl.h"
 #include "error.h"
 #include <stdio.h>
@@ -9,18 +11,15 @@
 #include "ccst.h"
 #include "code_gen.h"
 #include "require.h"
-
 #include <fstream>
 
-void print_usage()
-{
-  std::cerr << "Usage:\n  ./compiler <idl file>" << std::endl;
-  exit(0);
+void RequirePass::test_func(){
+  std::cout<<"test this function"<<std::endl;
 }
 
-/*
-Project * process_idl(std::string input){
-
+//Project * RequirePass::do_pass(Project * tree){
+Project * RequirePass::do_pass(std::string input){
+    std::cout<<"[RequirePass::do_pass()] Performing RequirePass"<<std::endl;
     // TODO: add support for multiple files, add option to specify
     // which module to compile, put each module in a different file
     // ah note - this is where the input idl is parsed. The output of
@@ -79,7 +78,7 @@ Project * process_idl(std::string input){
     		if (std::regex_match(line, rgx)) {
 	  	  std::cout<<"[main.cpp] matched line: "<<line<<std::endl;	
 	    	  std::cout<<"[main.cpp] this included idl contains the required module. Parsing this idl "<<std::endl;
-            	  require->save_ast(process_idl(included_idl));
+            	  require->save_ast(do_pass(included_idl));
 		  break;
 	  	}
 	  }
@@ -89,19 +88,21 @@ Project * process_idl(std::string input){
 	  // The following logic assumes that the module name is the same as
 	  // the name of the included idl file. (not using this because a file
 	  // may have multiple modules.)
-          
-	  //included_idl_name = included_idl.substr(0, included_idl.size()-4);
-          //std::cout<<"[main.cpp] included header name: "<< included_idl_name <<std::endl;
-          //if (included_idl_name.compare(required_module) == 0) { 
-	  //  std::cout<<"[main.cpp] found required module. Invoking parse on the required idl"<<std::endl;
-          //  require->save_ast_of_idl_of_required_module(process_idl(included_idl));
-	  //}
-	  
+          /*
+	  included_idl_name = included_idl.substr(0, included_idl.size()-4);
+          std::cout<<"[main.cpp] included header name: "<< included_idl_name <<std::endl;
+          if (included_idl_name.compare(required_module) == 0) { 
+	    std::cout<<"[main.cpp] found required module. Invoking parse on the required idl"<<std::endl;
+            require->save_ast_of_idl_of_required_module(process_idl(included_idl));
+	  }
+	  */
 
 	}
       }
       // end of processing required modules
 
+      // The following does code generation. TODO: have this extracted out as a
+      // separate pass on the ast.	
       std::string callee_h = new_name(m->identifier(), std::string("_callee.h"));
       std::string callee_c = new_name(m->identifier(), std::string("_callee.c"));
       std::string callee_disp = new_name(m->identifier(), std::string("_callee_dispatch.c"));
@@ -114,7 +115,7 @@ Project * process_idl(std::string input){
       std::string caller_c = new_name(m->identifier(), std::string("_caller.c"));
       std::string caller_disp = new_name(m->identifier(), std::string("_caller_dispatch.c"));
 
-      //ah note - this is where the final output files of the idl compiler are created
+      // ah note - this is where the final output files of the idl compiler are created
       std::ofstream ofs_callee_h(callee_h);
       std::ofstream ofs_callee_c(callee_c);
       std::ofstream ofs_callee_disp(callee_disp);
@@ -170,7 +171,7 @@ Project * process_idl(std::string input){
         exit(-1);
       }
 
-      /// Callee header guard macro
+      // Callee header guard macro
       std::string macro_callee_h("__" + m->identifier() + "_callee_h__");
       std_string_toupper(macro_callee_h);
 
@@ -214,37 +215,5 @@ Project * process_idl(std::string input){
     }
 
     return tree;
-}*/
-
-int main(int argc, char ** argv) {
-  try {
-	char* file = argv[1];
-	RequirePass *rp = new RequirePass();
-	// This pass recursively parses the included requires and saves the
-	// info in the same ast at once.  TODO: non recursive approach - parse
-	// all the included idls first and then include the ones in the base
-	// ast whenever called. However, those included idls may also have
-	// requires, so we would still need to use the recursive logic.
-	// TODO: need to decide on this. TODO: do the passes on the tree
-	// rather than the idl file. 
-	//rp->do_pass(tree);
-	rp->do_pass(std::string(file));
-	// following passes need to come in here
-	ErrorReport* er = ErrorReport::instance();
-    	if (er->errors()) {
-      		std::cerr << "There were errors during parsing\n";
-      		// TODO: cleanup?
-      		exit(0);
-    	}
-  } catch(const Parser::ParseException & e) {
-         std::cerr << "\n\nALERT!!! - Caught parser exception" << std::endl;
-         std::cerr << e.getReason() << std::endl;
-         exit(0);
-  }
-  
-  if (argc != 2) {
-    print_usage();
-  }
-  std::cout<<"[main/main.cpp] Enter main\n";
 
 }
