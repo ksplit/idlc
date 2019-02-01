@@ -398,8 +398,8 @@ void Rpc::create_trampoline_structs()
   }
 }
 
-void Require::save_ast(Project * pjt){
-  this->pjt_=pjt;
+void Require::save_ast(Module * module){
+  this->module_ = module;
 }
 
 Module::Module(const std::string& id, std::vector<Rpc*> rpc_definitions,

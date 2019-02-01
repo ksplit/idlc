@@ -12,31 +12,31 @@
 #include "symbol_table.h"
 #include "ccst.h"
 
-/*ah note - the classes LexicalScope, Type, Variable,
-Rpc, Module, and Project are defined here. These classes 
-define the front-end ast the IDL input is parsed into. These classes
-also define functions which allow us to visit the AST produced by the parse
-and make transformations to the AST. 
+/*
+ah note - the classes LexicalScope, Type, Variable,
+Rpc, Module, and Project are defined here. These classes define the front-end
+ast the IDL input is parsed into. These classes also define functions which
+allow us to visit the AST produced by the parse and make transformations to the
+AST. 
 
-Project - this class represents the top-most construct of the program, and
-has the highest level of scope. The implementation of Project
-is provided in the lcd_ast.cpp file. During parsing a file, 
-a new instance of the project is created in the `File` rule of the grammar:
-`new Project(LexicalScope::getGlobalScope(), modules, includes);`
-A Project is made up of multiple modules.
+Project - this class represents the top-most construct of the program, and has
+the highest level of scope. The implementation of Project is provided in the
+lcd_ast.cpp file. During parsing a file, a new instance of the project is
+created in the `File` rule of the grammar: `new
+Project(LexicalScope::getGlobalScope(), modules, includes);` A Project is made
+up of multiple modules.
 
-Module - this class is currently made up of Rpcs, Channels, Cspaces. 
-We also look to add Require to this class. Its implementation is provided in 
+Module - this class is currently made up of Rpcs, Channels, Cspaces.  We also
+look to add Require to this class. Its implementation is provided in
 lcd_ast.cpp. In the grammar, a module is created in the rule for `Interface`.
 `value = new Module(*name, rpcs, channels2, module_scope);`
 
 LexicalScope - describes a scope for type definitions, variables, and iden-
-tifiers. A new LexicalScope is declared for the following rules in the 
-input peg file: `Projection_constructor_special`, `rpc_special`, `Interface_special`, `pc_unnamed_scope_special`, and `unnamed_scope_special`.
+tifiers. A new LexicalScope is declared for the following rules in the input
+peg file: `Projection_constructor_special`, `rpc_special`, `Interface_special`,
+`pc_unnamed_scope_special`, and `unnamed_scope_special`.
 
-Reference:
-S. Spall, kIDL: Interface Definition Language for the Kernel
-
+Reference: S. Spall, kIDL: Interface Definition Language for the Kernel 
 */
 
 class MarshalPrepareVisitor;
@@ -54,8 +54,11 @@ class Rpc;
 class ProjectionType;
 class Project;
 class Require;
+class Module;
 
-enum PrimType {pt_char_t, pt_short_t, pt_int_t, pt_long_t, pt_longlong_t, pt_capability_t};//ah note - an enum class to distinguish between integer datatypes, instead of using separate classes.
+// ah note - an enum class to distinguish between integer
+// datatypes, instead of using separate classes.
+enum PrimType {pt_char_t, pt_short_t, pt_int_t, pt_long_t, pt_longlong_t, pt_capability_t};
 enum type_k {};
 
 typedef enum {
@@ -755,13 +758,15 @@ class Rpc
 class Require
 {
   std::string required_module_name_;
-  Project *pjt_;//this is going to contain the entire AST of the idl containing the module required
+  Module *module_;
+
   public:
-  Require(const std::string& required_module_name);
-  std::string get_required_module_name() {
-	return this->required_module_name_;
-  }
-  void save_ast_of_idl_of_required_module(Project *pjt);
+
+   Require(const std::string& required_module_name);
+   std::string get_required_module_name() {
+   return this->required_module_name_;
+   }
+   void save_ast(Module *module);
 };
 
 class Module 
