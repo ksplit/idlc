@@ -33,18 +33,17 @@ std::map<std::string, Module*> moduleMap;
 
  Pass Approach:
 
- 1. Parse all the included idl files in an IDL recursively storing
- their asts in a map. - TODO: handle cyclic dependency case, else we
- may be looping between two idl files that include each other, or
- multiple idl files that form a cycle.  
+ 1. Parse all the included idl files in an IDL recursively storing their asts
+in a map. - TODO: handle cyclic dependency case, else we may be looping between
+two idl files that include each other, or multiple idl files that form a cycle.  
 
- 2. Go through the map, and generate a new map containing module
- names and asts of those modules only. - CAVEAT: this technique
- assumes module names are unique across all the idl files.  TODO:
- need to handle the case where the module names may not be unique
- across idl files.  
+ 2. Go through the map, and generate a new map containing module names and asts
+of those modules only. - CAVEAT: this technique assumes module names are unique
+across all the idl files.  TODO: need to handle the case where the module names
+may not be unique across idl files.  
 
- 3. Save refs to these modules in all the require nodes  recursively.
+ 3. Save refs to these modules in all the require nodes recursively - i.e.
+expanding the require nodes of each module before saving them.
 */  
 Project * RequirePass::do_pass(std::string input){
 	std::cout<<__FILE__<<"- Performing RequirePass"<<std::endl;
@@ -58,16 +57,20 @@ Project * RequirePass::do_pass(std::string input){
 
 Project * resolve_requires(Project * tree){
 	for (auto m : *tree) {
-	  std::vector<Require*> module_requires = m->requires();
-	  std::string required_module;
-	  for (auto require : module_requires) {
-            required_module = require->get_required_module_name();
-	    require->save_ast(moduleMap.find(required_module)->second);
-	  }
+	  expand_module_requires(m);
 	}
 	return tree;
 }
 
+Module * expand_module_requires(Module * m){
+	std::vector<Require*> module_requires = m->requires();
+	std::string required_module;
+	for (auto require : module_requires) {
+          required_module = require->get_required_module_name();
+	  require->save_ast(expand_module_requires(moduleMap.find(required_module)->second));
+	}
+	return m;
+}
 
 void print_maps(){
 	std::map<std::string,Project*>::iterator itr1;
@@ -108,7 +111,7 @@ Project * process_includes(std::string input){
 	  included_idl = inc->get_path();
           std::cout<<__FILE__<<"- included header idl: "<<inc->get_path()<<std::endl;
 	  idlMap.insert(std::pair<std::string, Project*>(std::string(included_idl), process_includes(included_idl)));
-	}		
+		}		
 	return tree;
 }
 
