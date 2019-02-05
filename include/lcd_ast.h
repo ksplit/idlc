@@ -11,6 +11,7 @@
 #include "marshal_op.h"
 #include "symbol_table.h"
 #include "ccst.h"
+#include "lcd_ast.h"
 
 /*
 ah note - the classes LexicalScope, Type, Variable,
@@ -54,7 +55,24 @@ class Rpc;
 class ProjectionType;
 class Project;
 class Require;
+class Node;
 class Module;
+class Include;
+class ASTVisitor;
+class ASTPrintVisitor;
+
+
+class Node {
+  public:
+	virtual void accept(ASTVisitor *visitor) = 0;
+
+};
+
+class ASTVisitor {
+  public: 
+	virtual void visit (Module * node) = 0;
+	virtual void visit (Include * node) = 0;
+};
 
 // ah note - an enum class to distinguish between integer
 // datatypes, instead of using separate classes.
@@ -76,7 +94,7 @@ typedef enum {
   FLOAT_TYPE,
 } types_t;
 
-class ASTVisitor;//ah note - this is not used
+
 class Channel;
 
 class LexicalScope 
@@ -769,7 +787,7 @@ class Require
    void save_ast(Module *module);
 };
 
-class Module 
+class Module : public Node 
 {
   // const std::string& verbatim_;
   std::string module_name_;
@@ -801,12 +819,13 @@ class Module
   void initialize_types();
   void set_copy_container_accessors();
   const std::string identifier();
+  void accept(ASTVisitor *visitor); 
   iterator begin() { return rpc_definitions_.begin(); }
   iterator end() { return rpc_definitions_.end(); }
 };
 
 
-class Include 
+class Include: public Node 
 {
   bool relative_; // true if "" false for <>
   std::string path_;
@@ -818,6 +837,7 @@ class Include
   bool is_relative() {
 	  return this->relative_;
   }
+  void accept(ASTVisitor *visitor); 
 };
 
 class Project

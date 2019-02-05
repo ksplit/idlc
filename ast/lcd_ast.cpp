@@ -1,7 +1,6 @@
 #include "lcd_ast.h"
 #include "utils.h"
 #include <stdio.h>
-#define FILENAME "[lcd_ast.cpp]"
 Rpc::Rpc(ReturnVariable *return_value, const std::string& name,
   std::vector<Parameter*> parameters, LexicalScope *current_scope) :
   tag_(0),
@@ -410,10 +409,10 @@ Module::Module(const std::string& id, std::vector<Rpc*> rpc_definitions,
   rpc_definitions_(rpc_definitions),
   requires_(requires)
 {
-  std::cout<<FILENAME<<" Creating new module"<<std::endl;
-  std::cout<<FILENAME<<" -module name: "<<id<<std::endl;
-  std::cout<<FILENAME<<" -rpcs size: "<<rpc_definitions.size()<<std::endl;
-  std::cout<<FILENAME<<" -requires size: "<<requires.size()<<std::endl;
+  std::cout<<__FILE__<<" Creating new module"<<std::endl;
+  std::cout<<__FILE__ <<" -module name: "<<id<<std::endl;
+  std::cout<<__FILE__ <<" -rpcs size: "<<rpc_definitions.size()<<std::endl;
+  std::cout<<__FILE__ <<" -requires size: "<<requires.size()<<std::endl;
 
   this->module_scope_->setactiveChannel(ls->activeChannel);
   if (ls->activeChannel) {
@@ -549,6 +548,8 @@ const std::string Module::identifier()
   return this->module_name_;
 }
 
+void Module::accept(ASTVisitor *visitor) {visitor->visit(this);}
+
 Project::Project(LexicalScope *scope, std::vector<Module*> modules,
   std::vector<Include*> includes) :
   project_scope_(scope),
@@ -598,7 +599,7 @@ void Project::modify_specs()
 void Project::function_pointer_to_rpc()
 {
   // right now project doesnt have free rpcs.
-    std::cout<<FILENAME<<" invoking Project::function_pointer_to_rpc"<<std::endl;//for debug
+    std::cout<<__FILE__<<" invoking Project::function_pointer_to_rpc"<<std::endl;//for debug
   for (auto module: *this) {
     module->function_pointer_to_rpc();
   }
@@ -665,3 +666,5 @@ Include::Include(bool relative, const std::string& path) :
   path_(path)
 {
 }
+
+void Include::accept(ASTVisitor *visitor) {visitor->visit(this);}

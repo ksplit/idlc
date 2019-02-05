@@ -1,0 +1,12 @@
+#include "lcd_ast.h"
+#include <stdio.h>
+#include <astprint.h>
+
+ASTPrintVisitor::ASTPrintVisitor(){
+}
+void ASTPrintVisitor::visit(Module *m) {
+  std::cout<<__FILE__<<" Visited Module node"<<std::endl;
+}
+void ASTPrintVisitor::visit(Include *e){
+  std::cout<<__FILE__<<" Visited Include node"<<std::endl;
+}	
