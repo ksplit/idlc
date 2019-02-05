@@ -69,7 +69,8 @@ class Node {
 };
 
 class ASTVisitor {
-  public: 
+  public:
+	virtual void visit (Project * node) = 0;
 	virtual void visit (Module * node) = 0;
 	virtual void visit (Include * node) = 0;
 };
@@ -840,7 +841,7 @@ class Include: public Node
   void accept(ASTVisitor *visitor); 
 };
 
-class Project
+class Project: public Node
 {
   LexicalScope *project_scope_;
   std::vector<Module*> project_modules_;
@@ -866,6 +867,7 @@ class Project
   std::vector<Include*> includes();
   iterator begin() { return project_modules_.begin(); }
   iterator end() { return project_modules_.end(); }
+  void accept(ASTVisitor *visitor); 
 };
 
 class TypeNameVisitor // generates CCSTTypeName for each type.

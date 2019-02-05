@@ -655,6 +655,7 @@ void Project::set_copy_container_accessors()
     module->set_copy_container_accessors();
   }
 }
+void Project::accept(ASTVisitor *visitor) {visitor->visit(this);}
 
 Require::Require(const std::string& required_module_name) :
   required_module_name_(required_module_name)

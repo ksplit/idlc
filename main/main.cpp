@@ -9,7 +9,8 @@
 #include "ccst.h"
 #include "code_gen.h"
 #include "require.h"
-
+#include "lcd_ast.h"
+#include "astprint.h"
 #include <fstream>
 
 void print_usage()
@@ -33,10 +34,45 @@ int main(int argc, char ** argv) {
 	    exit(0);
     	  }
 
+	ASTPrintVisitor *astprint= new ASTPrintVisitor();
+
+	// ASTPrintVisitor Test 1
+	/*
+	for (auto m: *tree) {
+	  std::cout<<__FILE__<<" printing tree"<<std::endl;		 
+	  m->accept(astprint);
+	}
+	*/
+
         // The following does code generation. TODO: have this extracted out as a
         // separate pass on the ast.	
 	std::vector<Include*> project_includes = tree->includes();
-	for (auto m:* tree) {
+
+	// ASTPrintVisitor Test 2
+	/*
+	for (auto incl: project_includes) {
+	  incl->accept(astprint);	
+	}
+	*/
+
+	
+	// ASTPrintVisitor Test 3
+	/*
+	std::vector<Node*> nodes;
+	nodes.push_back(tree);
+	for (auto m: *tree) {
+	  nodes.push_back(m);
+	}
+	for (auto incl: project_includes) {
+	  nodes.push_back(incl);
+	}
+	for (auto node: nodes){
+	  //std::cout<<__LINE__<<std::endl;	
+	  node->accept(astprint);
+	}
+	*/
+
+	for (auto m:*tree) {
 	std::vector<Include*> caller_includes = project_includes;
 	std::vector<Include*> callee_includes = project_includes;
 	std::string callee_h = new_name(m->identifier(), std::string("_callee.h"));
