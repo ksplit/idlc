@@ -59,8 +59,6 @@ class Node;
 class Module;
 class Include;
 class ASTVisitor;
-class ASTPrintVisitor;
-
 
 class Node {
   public:
@@ -73,6 +71,15 @@ class ASTVisitor {
 	virtual void visit (Project * node) = 0;
 	virtual void visit (Module * node) = 0;
 	virtual void visit (Include * node) = 0;
+};
+
+
+class ASTPrintVisitor : public ASTVisitor {
+  public:
+	ASTPrintVisitor();
+	void visit(Project *p);
+	void visit(Module *m);
+	void visit(Include *e);	
 };
 
 // ah note - an enum class to distinguish between integer

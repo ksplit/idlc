@@ -10,7 +10,6 @@
 #include "code_gen.h"
 #include "require.h"
 #include "lcd_ast.h"
-#include "astprint.h"
 #include <fstream>
 
 void print_usage()
@@ -36,28 +35,27 @@ int main(int argc, char ** argv) {
 
 	ASTPrintVisitor *astprint= new ASTPrintVisitor();
 
-	// ASTPrintVisitor Test 1
-	/*
+	// ASTPrintVisitor Test 1 - visit Module 
+	
 	for (auto m: *tree) {
 	  std::cout<<__FILE__<<" printing tree"<<std::endl;		 
 	  m->accept(astprint);
 	}
-	*/
+	
 
         // The following does code generation. TODO: have this extracted out as a
         // separate pass on the ast.	
 	std::vector<Include*> project_includes = tree->includes();
 
-	// ASTPrintVisitor Test 2
-	/*
+	// ASTPrintVisitor Test 2 - visit Include
+	
 	for (auto incl: project_includes) {
 	  incl->accept(astprint);	
 	}
-	*/
-
 	
-	// ASTPrintVisitor Test 3
-	/*
+
+	// ASTPrintVisitor Test 3 - vist Node
+	
 	std::vector<Node*> nodes;
 	nodes.push_back(tree);
 	for (auto m: *tree) {
@@ -70,7 +68,7 @@ int main(int argc, char ** argv) {
 	  //std::cout<<__LINE__<<std::endl;	
 	  node->accept(astprint);
 	}
-	*/
+	
 
 	for (auto m:*tree) {
 	std::vector<Include*> caller_includes = project_includes;
