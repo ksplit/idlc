@@ -10,7 +10,7 @@
 #include <string.h>
 #include "ccst.h"
 #include "code_gen.h"
-#include "require.h"
+#include "Passes/require.h"
 #include <fstream>
 #include <map>
 
@@ -34,16 +34,16 @@ std::map<std::string, Module*> moduleMap;
  Pass Approach:
 
  1. Parse all the included idl files in an IDL recursively storing their asts
-in a map. - TODO: handle cyclic dependency case, else we may be looping between
-two idl files that include each other, or multiple idl files that form a cycle.  
+ in a map. - TODO: handle cyclic dependency case, else we may be looping between
+ two idl files that include each other, or multiple idl files that form a cycle.  
 
  2. Go through the map, and generate a new map containing module names and asts
-of those modules only. - CAVEAT: this technique assumes module names are unique
-across all the idl files.  TODO: need to handle the case where the module names
-may not be unique across idl files.  
+ of those modules only. - CAVEAT: this technique assumes module names are unique
+ across all the idl files.  TODO: need to handle the case where the module names
+ may not be unique across idl files.  
 
  3. Save refs to these modules in all the require nodes recursively - i.e.
-expanding the require nodes of each module before saving them.
+ expanding the require nodes of each module before saving them.
 */  
 Project * RequirePass::do_pass(std::string input){
 	std::cout<<__FILE__<<"- Performing RequirePass"<<std::endl;
@@ -55,14 +55,14 @@ Project * RequirePass::do_pass(std::string input){
 	return tree;
 }
 
-Project * resolve_requires(Project * tree){
+Project * RequirePass::resolve_requires(Project * tree){
 	for (auto m : *tree) {
 	  expand_module_requires(m);
 	}
 	return tree;
 }
 
-Module * expand_module_requires(Module * m){
+Module * RequirePass::expand_module_requires(Module * m){
 	std::vector<Require*> module_requires = m->requires();
 	std::string required_module;
 	for (auto require : module_requires) {
@@ -72,7 +72,7 @@ Module * expand_module_requires(Module * m){
 	return m;
 }
 
-void print_maps(){
+void RequirePass::print_maps(){
 	std::map<std::string,Project*>::iterator itr1;
 	for (itr1 = idlMap.begin(); itr1 != idlMap.end(); itr1++) {
 	  std::cout<<__FILE__<<" idlMap: "<<itr1->first<<std::endl;
@@ -83,7 +83,7 @@ void print_maps(){
 	}
 }
 
-void create_module_map(){
+void RequirePass::create_module_map(){
 	Project * tree;	
 	std::map<std::string,Project*>::iterator itr;
 	for (itr = idlMap.begin(); itr != idlMap.end(); itr++) {
@@ -94,7 +94,7 @@ void create_module_map(){
 	}
 }
 
-Project * process_includes(std::string input){
+Project * RequirePass::process_includes(std::string input){
 	std::cout<<__FILE__<<"- Performing RequirePass"<<std::endl;
 	Project * tree = (Project *) Parser::parse(input);
 	std::cout<<"Parsed input:  "<<input<<std::endl;
