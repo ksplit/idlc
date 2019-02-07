@@ -1,18 +1,15 @@
 // This pass expands requires in a given file.
 
-#include "lcd_idl.h"
+#include <lcd_idl.h>
 #include "error.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <iostream>
-#include <fstream>
-#include <regex>
 #include <string.h>
-#include "ccst.h"
-#include "code_gen.h"
 #include "Passes/require.h"
-#include <fstream>
 #include <map>
+
+//namespace Parser {};
+//using namespace Parser;
 
 void RequirePass::test_func(){
   std::cout<<"test this function"<<std::endl;

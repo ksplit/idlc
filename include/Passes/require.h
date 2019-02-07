@@ -1,5 +1,6 @@
 #include "lcd_ast.h"
 #include <stdlib.h>
+#include "lcd_idl.h"
 
 class RequirePass {
   public:

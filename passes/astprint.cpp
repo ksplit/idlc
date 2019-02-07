@@ -1,6 +1,5 @@
-#include "lcd_ast.h"
 #include <stdio.h>
-#include <Passes/print.h>
+#include <Passes/astprint.h>
 
 ASTPrintVisitor::ASTPrintVisitor(){
 }
