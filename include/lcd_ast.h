@@ -748,6 +748,7 @@ class Rpc
   void initialize_types();
   void set_copy_container_accessors();
   LexicalScope *current_scope();
+  void accept(ASTVisitor *visitor); 
   iterator begin() { return parameters_.begin(); }
   iterator end() { return parameters_.end(); }
 
@@ -769,6 +770,7 @@ class Require
    return this->required_module_name_;
    }
    void save_ast(Module *module);
+   void accept(ASTVisitor *visitor); 
 };
 
 class Module : public VisitNode 

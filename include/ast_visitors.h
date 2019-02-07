@@ -1,6 +1,8 @@
 class Project;
 class Module;
 class Include;
+class Require;
+class Rpc;
 class VisitNode;
 class ASTVisitor;
 
@@ -14,6 +16,8 @@ class ASTVisitor {
 	virtual void visit (Project * node) = 0;
 	virtual void visit (Module * node) = 0;
 	virtual void visit (Include * node) = 0;
+	virtual void visit (Require * node) = 0;
+	virtual void visit (Rpc * node) = 0;
 };
 
 class ASTPrintVisitor : public ASTVisitor {
@@ -21,5 +25,7 @@ class ASTPrintVisitor : public ASTVisitor {
 	ASTPrintVisitor();
 	void visit(Project *p);
 	void visit(Module *m);
-	void visit(Include *e);	
+	void visit(Include *i);	
+	void visit(Require *rq);	
+	void visit(Rpc *rp);	
 };

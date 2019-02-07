@@ -102,6 +102,8 @@ bool Rpc::function_pointer_defined()
   return this->function_pointer_defined_;
 }
 
+void Rpc::accept(ASTVisitor *visitor) {visitor->visit(this);}
+
 ReturnVariable* Rpc::return_variable()
 {
   return this->explicit_return_;
@@ -661,6 +663,8 @@ Require::Require(const std::string& required_module_name) :
   required_module_name_(required_module_name)
 {
 }
+
+void Require::accept(ASTVisitor *visitor) {visitor->visit(this);}
 
 Include::Include(bool relative, const std::string& path) :
   relative_(relative),

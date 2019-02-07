@@ -7,19 +7,35 @@ void ASTPrintVisitor::visit(Project *p){
   std::cout<<__FILE__<<" Visited Project node"<<std::endl;
 }	
 void ASTPrintVisitor::visit(Module *m) {
-  std::cout<<__FILE__<<" Visited Module node"<<std::endl;
+  std::cout<<__FILE__<<" Visited Module node: "<<m->identifier()<<std::endl;
 }
-void ASTPrintVisitor::visit(Include *e){
-  std::cout<<__FILE__<<" Visited Include node"<<std::endl;
+void ASTPrintVisitor::visit(Include *i){
+  std::cout<<__FILE__<<" Visited Include node with path: "<<i->get_path()<<std::endl;
+}
+void ASTPrintVisitor::visit(Require *rq){
+  std::cout<<__FILE__<<" Visited Require node that requires module: "<<rq->get_required_module_name()<<std::endl;
+}
+void ASTPrintVisitor::visit(Rpc *rp){
+  std::cout<<__FILE__<<" Visited Rpc node: "<<rp->name()<<std::endl;
 }
 
 void ASTPrintPass::do_pass(Project * tree){
   ASTPrintVisitor *astprint= new ASTPrintVisitor();
 
-  // ASTPrintVisitor Test 1 - visit Module 
+  // ASTPrintVisitor Test 1 - visit Module and Requires
+  std::vector<Require*> module_requires; 
+  std::vector<Rpc*> module_rpcs; 
   for (auto m: *tree) {
     std::cout<<__FILE__<<" printing tree"<<std::endl;		 
     m->accept(astprint);
+    module_requires=m->requires();
+    for (auto rq: module_requires) {
+      rq->accept(astprint);
+    }
+    module_rpcs=m->rpc_definitions();
+    for (auto rp: module_rpcs) {
+      rp->accept(astprint);
+    }
   }
 
   // ASTPrintVisitor Test 2 - visit Include
