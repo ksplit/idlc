@@ -1,4 +1,32 @@
-// This pass expands requires in a given file.
+// ========================================================================= //
+// IDL Compiler Infrastructure for LCDs			     		     //
+// ========================================================================= //
+
+// require.cpp:
+// ===========
+// This file implements the RequirePass class. 
+
+
+// Structure of IDL Files:
+// ======================
+// IDL |--> Modules --> Requires --> Modules
+//     |
+//     |	     |--> IDL1		
+//     |--> Includes |--> IDL2 
+//		     |--> IDL3
+
+// Pass Approach:
+// =============
+// 1. Parse all the included idl files in an IDL recursively storing their asts
+// in a map. - TODO: handle cyclic dependency case, else we may be looping
+// between two idl files that include each other, or multiple idl files that
+// form a cycle.  
+// 2. Go through the map, and generate a new map containing module names and
+// asts of those modules only. - CAVEAT: this technique assumes module names
+// are unique across all the idl files.  TODO: need to handle the case where
+// the module names may not be unique across idl files.  
+// 3. Save refs to these modules in all the require nodes recursively - i.e.
+// expanding the require nodes of each module before saving them.
 
 #include <lcd_idl.h>
 #include "error.h"
@@ -8,9 +36,6 @@
 #include "Passes/require.h"
 #include <map>
 
-//namespace Parser {};
-//using namespace Parser;
-
 void RequirePass::test_func(){
   std::cout<<"test this function"<<std::endl;
 }
@@ -19,29 +44,6 @@ std::map<std::string,Project*> idlMap;
 std::map<std::string, Module*> moduleMap;
 
 
-/*
- Structure of IDL Files:
- 
- IDL |--> Modules --> Requires --> Modules
-     |
-     |	     	   |--> IDL1		
-     |--> Includes |--> IDL2 
-		   |--> IDL3
-
- Pass Approach:
-
- 1. Parse all the included idl files in an IDL recursively storing their asts
- in a map. - TODO: handle cyclic dependency case, else we may be looping between
- two idl files that include each other, or multiple idl files that form a cycle.  
-
- 2. Go through the map, and generate a new map containing module names and asts
- of those modules only. - CAVEAT: this technique assumes module names are unique
- across all the idl files.  TODO: need to handle the case where the module names
- may not be unique across idl files.  
-
- 3. Save refs to these modules in all the require nodes recursively - i.e.
- expanding the require nodes of each module before saving them.
-*/  
 Project * RequirePass::do_pass(std::string input){
 	std::cout<<__FILE__<<"- Performing RequirePass"<<std::endl;
 	Project * tree = process_includes(input);
@@ -103,6 +105,7 @@ Project * RequirePass::process_includes(std::string input){
 	}
 	std::vector<Include*> project_includes = tree->includes();
 	std::string included_idl;
+
 	// Parsing all IDL files recursively
 	for (auto inc : project_includes){
 	  included_idl = inc->get_path();
