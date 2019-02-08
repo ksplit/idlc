@@ -1,6 +1,15 @@
+// ========================================================================= //
+// IDL Compiler Infrastructure for LCDs					     //
+// ========================================================================= //
+
+// lcd_ast.cpp:
+// ===========
+// This file implements the all the node classes of the IDL AST. 
+
 #include "lcd_ast.h"
 #include "utils.h"
 #include <stdio.h>
+
 Rpc::Rpc(ReturnVariable *return_value, const std::string& name,
   std::vector<Parameter*> parameters, LexicalScope *current_scope) :
   tag_(0),
@@ -673,3 +682,9 @@ Include::Include(bool relative, const std::string& path) :
 }
 
 void Include::accept(ASTVisitor *visitor) {visitor->visit(this);}
+
+//const std::string ReturnVariable::name() const
+//{
+//  return name_;
+//}
+void ReturnVariable::accept(ASTVisitor *visitor) {visitor->visit(this);}

@@ -1,3 +1,12 @@
+// ========================================================================= //
+// IDL Compiler Infrastructure for LCDs					     //
+// ========================================================================= //
+
+// main.cpp:
+// ========
+// This is the main file of the IDL compiler, which calls the passes on the
+// given input IDL file to generate secure glue code. 
+
 #include "lcd_idl.h"
 #include "error.h"
 #include <stdio.h>
@@ -19,14 +28,17 @@ void print_usage()
   exit(0);
 }
 
-
 int main(int argc, char ** argv) {
   try {
 	char* file = argv[1];
+
+	// This pass recursively parses the included idls and saves them to a
+	// map. This pass also does the first pass of the input idl.
 	RequirePass *rp = new RequirePass();
+
+	// This pass prints nodes of the AST.
 	ASTPrintPass *printpass = new ASTPrintPass();	
 
-	// This pass recursively parses the included idls and saves them to a map
 	Project *tree = rp->do_pass(std::string(file));
 	ErrorReport* er = ErrorReport::instance();
 	if (er->errors()) {
@@ -35,9 +47,8 @@ int main(int argc, char ** argv) {
 	  exit(0);
     	}
 
-	// This pass prints nodes of the AST.
 	printpass->do_pass(tree);
-
+	exit(0);//TODO: this line is temporary, remove it after sorting out the stuff below!
         // The following does code generation. TODO: have this extracted out as a
         // separate pass on the ast.	
 	std::vector<Include*> project_includes = tree->includes();

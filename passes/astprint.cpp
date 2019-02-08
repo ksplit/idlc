@@ -1,3 +1,11 @@
+// ========================================================================= //
+// IDL Compiler Infrastructure for LCDs					     //
+// ========================================================================= //
+
+// astprint.cpp:
+// ============
+// This file implements the ASTPrintVisitor class. 
+
 #include <stdio.h>
 #include <Passes/astprint.h>
 
@@ -18,13 +26,19 @@ void ASTPrintVisitor::visit(Require *rq){
 void ASTPrintVisitor::visit(Rpc *rp){
   std::cout<<__FILE__<<" Visited Rpc node: "<<rp->name()<<std::endl;
 }
+void ASTPrintVisitor::visit(ReturnVariable *rv){
+  std::cout<<__FILE__<<" Visited ReturnVariable node : "<<std::endl;
+  std::cout<<__FILE__<<" Visited ReturnVariable node type is : "<<rv->type_->name()<<std::endl;
+}
 
 void ASTPrintPass::do_pass(Project * tree){
+
   ASTPrintVisitor *astprint= new ASTPrintVisitor();
 
-  // ASTPrintVisitor Test 1 - visit Module and Requires
+  // ASTPrintVisitor Test 1 - visit Module, Requires, Rpcs
   std::vector<Require*> module_requires; 
   std::vector<Rpc*> module_rpcs; 
+  ReturnVariable *rv;
   for (auto m: *tree) {
     std::cout<<__FILE__<<" printing tree"<<std::endl;		 
     m->accept(astprint);
@@ -35,6 +49,8 @@ void ASTPrintPass::do_pass(Project * tree){
     module_rpcs=m->rpc_definitions();
     for (auto rp: module_rpcs) {
       rp->accept(astprint);
+      rv=rp->return_variable();
+      rv->accept(astprint);
     }
   }
 
@@ -45,6 +61,7 @@ void ASTPrintPass::do_pass(Project * tree){
   }
 
   // ASTPrintVisitor Test 3 - vist Node
+  /*
   std::vector<VisitNode*> nodes;
   nodes.push_back(tree);
   for (auto m: *tree) {
@@ -57,4 +74,6 @@ void ASTPrintPass::do_pass(Project * tree){
     //std::cout<<__LINE__<<std::endl;	
     node->accept(astprint);
   }
+  */
+
 }	
