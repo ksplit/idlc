@@ -28,17 +28,20 @@ void ASTPrintVisitor::visit(Rpc *rp){
 }
 void ASTPrintVisitor::visit(ReturnVariable *rv){
   std::cout<<__FILE__<<" Visited ReturnVariable node : "<<std::endl;
-  std::cout<<__FILE__<<" Visited ReturnVariable node type is : "<<rv->type_->name()<<std::endl;
+}
+void ASTPrintVisitor::visit(Type *type){
+  std::cout<<__FILE__<<" Visited Type node : "<<type->name()<<std::endl;
 }
 
 void ASTPrintPass::do_pass(Project * tree){
 
   ASTPrintVisitor *astprint= new ASTPrintVisitor();
 
-  // ASTPrintVisitor Test 1 - visit Module, Requires, Rpcs
+  // ASTPrintVisitor Test 1 - visit Module, Requires, Rpcs, ReturnVariable, Type
   std::vector<Require*> module_requires; 
   std::vector<Rpc*> module_rpcs; 
   ReturnVariable *rv;
+  Type *type;
   for (auto m: *tree) {
     std::cout<<__FILE__<<" printing tree"<<std::endl;		 
     m->accept(astprint);
@@ -51,6 +54,8 @@ void ASTPrintPass::do_pass(Project * tree){
       rp->accept(astprint);
       rv=rp->return_variable();
       rv->accept(astprint);
+      type=rv->type();
+      type->accept(astprint);
     }
   }
 

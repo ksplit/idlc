@@ -683,8 +683,17 @@ Include::Include(bool relative, const std::string& path) :
 
 void Include::accept(ASTVisitor *visitor) {visitor->visit(this);}
 
-//const std::string ReturnVariable::name() const
-//{
-//  return name_;
-//}
 void ReturnVariable::accept(ASTVisitor *visitor) {visitor->visit(this);}
+
+void IntegerType::accept(ASTVisitor *visitor) {visitor->visit(this);}
+void ProjectionType::accept(ASTVisitor *visitor) {visitor->visit(this);}
+void BoolType::accept(ASTVisitor *visitor) {visitor->visit(this);}
+void Function::accept(ASTVisitor *visitor) {visitor->visit(this);}
+void Channel::accept(ASTVisitor *visitor) {visitor->visit(this);}
+void VoidType::accept(ASTVisitor *visitor) {visitor->visit(this);}
+void FloatType::accept(ASTVisitor *visitor) {visitor->visit(this);}
+void DoubleType::accept(ASTVisitor *visitor) {visitor->visit(this);}
+void Typedef::accept(ASTVisitor *visitor) {visitor->visit(this);}
+void UnresolvedType::accept(ASTVisitor *visitor) {visitor->visit(this);}
+void ProjectionConstructorType::accept(ASTVisitor *visitor) {visitor->visit(this);}
+void InitializeType::accept(ASTVisitor *visitor) {visitor->visit(this);}

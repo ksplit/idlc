@@ -140,6 +140,7 @@ class Type
   virtual const std::string& name() const = 0;
   virtual void resolve_types(LexicalScope *ls) = 0;
   virtual void create_trampoline_structs(LexicalScope *ls) = 0;
+  virtual void accept(ASTVisitor *visitor) = 0; 
   virtual ~Type() {}
 };
 
@@ -156,6 +157,7 @@ class FloatType : public Type
   virtual const std::string& name() const;
   virtual void resolve_types(LexicalScope *ls);
   virtual void create_trampoline_structs(LexicalScope *ls);
+  void accept(ASTVisitor *visitor); 
 };
 
 class DoubleType : public Type
@@ -171,6 +173,7 @@ class DoubleType : public Type
   virtual const std::string& name() const;
   virtual void resolve_types(LexicalScope *ls);
   virtual void create_trampoline_structs(LexicalScope *ls);
+  void accept(ASTVisitor *visitor); 
 };
 
 class BoolType : public Type
@@ -186,6 +189,7 @@ class BoolType : public Type
   virtual const std::string& name() const;
   virtual void resolve_types(LexicalScope *ls);
   virtual void create_trampoline_structs(LexicalScope *ls);
+  void accept(ASTVisitor *visitor); 
 };
 
 class InitializeType : public Type
@@ -206,6 +210,7 @@ class InitializeType : public Type
   virtual void create_trampoline_structs(LexicalScope *ls);
 
   void initialize();
+  void accept(ASTVisitor *visitor); 
 };
 
 class UnresolvedType : public Type
@@ -222,6 +227,7 @@ class UnresolvedType : public Type
   virtual const std::string& name() const;
   virtual void resolve_types(LexicalScope *ls);
   virtual void create_trampoline_structs(LexicalScope *ls);
+  void accept(ASTVisitor *visitor); 
 };
 
 class Variable 
@@ -493,6 +499,7 @@ class Function : public Type
   iterator end() { return parameters_.end(); }
   const_iterator begin() const { return parameters_.begin(); }
   const_iterator end() const { return parameters_.end(); }
+  void accept(ASTVisitor *visitor); 
 };
  
 class Typedef : public Type
@@ -517,6 +524,7 @@ class Typedef : public Type
   virtual void resolve_types(LexicalScope *ls);
   // virtual void marshal();
   virtual void create_trampoline_structs(LexicalScope *ls);
+  void accept(ASTVisitor *visitor); 
 };
 
 class Channel : public Type 
@@ -561,6 +569,7 @@ class Channel : public Type
   {
     this->hostChannel = hostChannel;
   }
+  void accept(ASTVisitor *visitor); 
 };
 
 class VoidType : public Type
@@ -577,6 +586,7 @@ class VoidType : public Type
   virtual int num();
   virtual void resolve_types(LexicalScope *ls);
   virtual void create_trampoline_structs(LexicalScope *ls);
+  void accept(ASTVisitor *visitor); 
 };
 
 class IntegerType : public Type
@@ -599,6 +609,7 @@ class IntegerType : public Type
   virtual void resolve_types(LexicalScope *ls);
   ~IntegerType(){ std::cout << "inttype destructor\n"; }
   virtual void create_trampoline_structs(LexicalScope *ls);
+  void accept(ASTVisitor *visitor); 
 };
 
 class ProjectionField : public Variable //?
@@ -689,6 +700,7 @@ class ProjectionType : public Type // complex type
   iterator end() { return fields_.end(); }
   const_iterator begin() const { return fields_.begin(); }
   const_iterator end() const { return fields_.end(); }
+  void accept(ASTVisitor *visitor); 
 };
 
 class ProjectionConstructorType : public ProjectionType 
@@ -701,6 +713,7 @@ class ProjectionConstructorType : public ProjectionType
   virtual Type* clone() const { return new ProjectionConstructorType(*this); }
   virtual void resolve_types(LexicalScope *ls);
   void initialize(std::vector<Variable*> chans);
+  void accept(ASTVisitor *visitor); 
 };
 
 class Rpc : public VisitNode 

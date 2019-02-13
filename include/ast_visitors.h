@@ -14,6 +14,19 @@ class Include;
 class Require;
 class Rpc;
 class ReturnVariable;
+class Type;
+class IntegerType;
+class FloatType;
+class DoubleType;
+class BoolType;
+class UnresolvedType;
+class Typedef;
+class VoidType;
+class Channel;
+class Function;
+class ProjectionConstructorType;
+class ProjectionType;
+class InitializeType;
 class VisitNode;
 class ASTVisitor;
 
@@ -29,12 +42,26 @@ class VisitNode {
 // in "passes" folder, e.g., passes/astprint.cpp.
 class ASTVisitor {
   public:
-	virtual void visit (Project * node) = 0;
-	virtual void visit (Module * node) = 0;
-	virtual void visit (Include * node) = 0;
-	virtual void visit (Require * node) = 0;
-	virtual void visit (Rpc * node) = 0;
-	virtual void visit (ReturnVariable * node) = 0;
+	virtual void visit(Project * node) = 0;
+	virtual void visit(Module * node) = 0;
+	virtual void visit(Include * node) = 0;
+	virtual void visit(Require * node) = 0;
+	virtual void visit(Rpc * node) = 0;
+	virtual void visit(ReturnVariable * node) = 0;
+	virtual void visit(Type *type)=0;
+  	/*
+	virtual void visit(UnresolvedType *ut) = 0;
+  	virtual void visit(Typedef *td) = 0;
+  	virtual void visit(VoidType *vt) = 0;
+  	virtual void visit(ProjectionType *pt)= 0;
+  	virtual void visit(Function *fp) = 0;
+  	virtual void visit(Channel *c) = 0;
+  	virtual void visit(ProjectionConstructorType *pct) = 0;
+  	virtual void visit(InitializeType *it) = 0;
+  	virtual void visit(BoolType *bt) = 0;
+  	virtual void visit(DoubleType *dt) = 0;
+  	virtual void visit(FloatType *ft) = 0;
+	*/
 };
 
 // ASTPrintVisitor - a visitor class that prints info of every node it visits.
@@ -48,4 +75,19 @@ class ASTPrintVisitor : public ASTVisitor {
 	void visit(Require *rq);	
 	void visit(Rpc *rp);	
 	void visit(ReturnVariable *rv);	
+	void visit(Type *type);
+	/*
+	void visit(UnresolvedType *ut);
+	void visit(Typedef *td);
+	void visit(VoidType *vt);
+	void visit(IntegerType *it);
+	void visit(ProjectionType *pt);
+	void visit(Function *fp);
+	void visit(Channel *c);
+	void visit(ProjectionConstructorType *pct);
+	void visit(InitializeType *it);
+	void visit(BoolType *bt);
+	void visit(DoubleType *dt);
+	void visit(FloatType *ft);
+	*/
 };

@@ -142,7 +142,6 @@ int main(int argc, char ** argv) {
 		ofs_glue_helper_h <<  "#pragma once"<< std::endl;
 		ccst_glue_h->write(ofs_glue_helper_h, 0);
 
-
 		/// FIXME: Should be generated like this. But how to generate SECTIONS {}
 		/// statements.push_back(new CCSTPreprocessor("liblcd/trampoline.h", false));
 		//ofs_callee_lds << "#include <liblcd/trampoline_link.h>\n\n";
