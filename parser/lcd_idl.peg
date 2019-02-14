@@ -36,6 +36,7 @@ LexicalScope *current_unnamed_scope;
 int check_val;
 
 
+
 void set_specs(Variable &v, const Value &s)
 {
     // Since function arguments need to be marshalled across domains,
@@ -525,6 +526,7 @@ Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN Spacing CLOSE 
 		      else
 			set_current_scope(get_current_module_scope());
 			const std::string *name = static_cast<const std::string*>(id.getValue());
+			
 			value = new Module(*name, rpcs, channels2, module_scope, requires); 
 }} 
 
@@ -563,6 +565,7 @@ Verbatim	=	 "verbatim" Spacing "[" contents:VerbatimContent "]" {{ std::ostrings
 			const Value &v = *it;
 			char letter = (char) (intptr_t) v.getValue();
 			total << letter;     
+
 			}
 			std::string str = total.str();
 			value = &str[0]; }}
@@ -637,8 +640,11 @@ FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* 
 			    std::vector<Parameter*> *params = (std::vector<Parameter*>*) p.getValue();
 			    const std::string *_id = static_cast<const std::string*>(id.getValue());
 
-			    Function *fp = new Function(*_id, new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
-			    	     	       		, *params, get_current_scope());
+			    // assuming return values are "out" by default.
+                            ReturnVariable *ret = new ReturnVariable((Type *) rt.getValue(), count_pointers(pointers), returnVarName());
+			    ret->set_out(true);
+
+			    Function *fp = new Function(*_id, ret, *params, get_current_scope());
 
 			    Parameter *_p = new Parameter(fp, *_id, 1);
 			    set_specs(*_p, s);
@@ -766,8 +772,11 @@ FP_FirstParam	=	t:Type_form s:Specification? pointers:star* Spacing COMMA Spacin
 			    std::vector<Parameter*> *params = (std::vector<Parameter*>*) p.getValue();
 			    const std::string *_id = static_cast<const std::string*>(id.getValue());
 
-			    Function *fp = new Function(*_id, new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
-			                                , *params, (LexicalScope*)rpc_scope.getValue());
+			    // assuming return values are "out" by default.
+                            ReturnVariable *ret = new ReturnVariable((Type *) rt.getValue(), count_pointers(pointers), returnVarName());
+			    ret->set_out(true);
+
+			    Function *fp = new Function(*_id, ret, *params, (LexicalScope*)rpc_scope.getValue());
 
 			    set_current_scope(get_current_scope()->outer_scope());
 			    value = new FPParameter(fp, 1);
@@ -860,9 +869,11 @@ FP_LastParam	=	t:Type_form s:Specification? pointers:star* Spacing {{
 			    // todo change return type to return variable and add pointer
 			    std::vector<Parameter*> *params = (std::vector<Parameter*>*) p.getValue();
 				const std::string *_id = static_cast<const std::string*>(id.getValue());
+			    // assuming return values are "out" by default.
+                            ReturnVariable *ret = new ReturnVariable((Type *) rt.getValue(), count_pointers(pointers), returnVarName());
+			    ret->set_out(true);
 
-			    Function *fp = new Function(*_id, new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName())
-			                                , *params, get_current_scope());
+			    Function *fp = new Function(*_id, ret, *params, get_current_scope());
 
 			    set_current_scope(get_current_scope()->outer_scope());
 			    value = new FPParameter(fp, 1);
@@ -928,7 +939,7 @@ rpc_special     =      "rpc" {{
 		    	   std::cout<<"[peg] Passed rpc_special rule."<<std::endl;
 		           LexicalScope *tmp = get_current_unnamed_scope();
 			   LexicalScope *new_scope = new LexicalScope(tmp);
-			   // dont need to add to inner scope because rpc do not have type definitinos
+			   // dont need to add to inner scope because rpc do not have type definitions
 			   set_current_scope(new_scope);
 			   std::cout << "# New RPC scope(Not in any inner scope) " << new_scope << " from :" << tmp << "\n";
 			   value = new_scope;
@@ -940,7 +951,11 @@ Rpc		=	rpc_scope:rpc_special Space+ t:Type_form s:Specification? pointers:star* 
 			    std::vector<Parameter*>* params = (std::vector<Parameter*>*) p.getValue();
 			    std::vector<Parameter*> params_ = *params;
 			    const std::string *_id = static_cast<const std::string*>(id1.getValue());
+
+			    // assuming return values are "out" by default.
                             ReturnVariable *ret = new ReturnVariable((Type *) t.getValue(), count_pointers(pointers), returnVarName());
+			    ret->set_out(true);
+
 			    Rpc* r = new Rpc(ret, *_id, params_, (LexicalScope*) rpc_scope.getValue());
 			    
 			    set_specs(*ret, s);
@@ -1228,7 +1243,11 @@ ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 			| rpc_special Spacing s:Specification? rt:Type_form s_rt:Specification? pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing {{
 				const std::string *name = static_cast<const std::string*>(id.getValue());
 			    std::vector<Parameter*> *params = (std::vector<Parameter*>*) p.getValue();
-                ReturnVariable *ret = new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName());
+
+			    // assuming return values are "out" by default.
+                	    ReturnVariable *ret = new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName());
+			    ret->set_out(true);
+
 			    Function *fp = new Function(*name, ret, *params, get_current_scope());
 			    ProjectionField *pf = new ProjectionField(fp, *name, 1);
 			    set_specs(*pf, s);
@@ -1336,52 +1355,52 @@ Comment_end	=	"*/"
 
 
 Line_comm_rest	=	Line_comm_end{{
-               std::cout<<"Passed Line_comm_rest = . Line_comm_end rule in peg\n";
+              // std::cout<<"Passed Line_comm_rest = . Line_comm_end rule in peg\n";
 }}
 			| . Line_comm_rest{{
-               std::cout<<"Passed Line_comm_rest = . Line_comm_rest rule in peg\n";
+              // std::cout<<"Passed Line_comm_rest = . Line_comm_rest rule in peg\n";
 }}
 
 Line_comm_start	=	"//"{{
-               std::cout<<"Passed Line_comm_start rule in peg\n";
+              // std::cout<<"Passed Line_comm_start rule in peg\n";
 }}
 
 Line_comment	=	Line_comm_start Line_comm_rest{{
-               std::cout<<"Passed Line_comment rule in peg\n";
+              // std::cout<<"Passed Line_comment rule in peg\n";
 }}
 
 Line_comm_end	=	"\n"{{
-               std::cout<<"Passed Line_comm_end rule in peg\n";
+              // std::cout<<"Passed Line_comm_end rule in peg\n";
 }}
 
 OPEN		=	"("{{
-               std::cout<<"Passed OPEN rule in peg\n";
+              // std::cout<<"Passed OPEN rule in peg\n";
 }}
 CLOSE		=	")"{{
-               std::cout<<"Passed CLOSE rule in peg\n";
+              // std::cout<<"Passed CLOSE rule in peg\n";
 }}
 
 SEMI		=	";"	{{
-               std::cout<<"Passed SEMI rule in peg\n";
+              // std::cout<<"Passed SEMI rule in peg\n";
 }}
 OPENC		=	"{"{{
-               std::cout<<"Passed OPENC rule in peg\n";
+              // std::cout<<"Passed OPENC rule in peg\n";
 }}
 CLOSEC		=	"}"{{
-               std::cout<<"Passed CLOSEC rule in peg\n";
+              // std::cout<<"Passed CLOSEC rule in peg\n";
 }}
 OPENA		=	"<"{{
-               std::cout<<"Passed OPENA rule in peg\n";
+              // std::cout<<"Passed OPENA rule in peg\n";
 }}
 CLOSEA		=	">"{{
-               std::cout<<"Passed CLOSEA rule in peg\n";
+              // std::cout<<"Passed CLOSEA rule in peg\n";
 }}
 OPENS		=	"["{{
-               std::cout<<"Passed OPENS rule in peg\n";
+              // std::cout<<"Passed OPENS rule in peg\n";
 }}
 CLOSES		=	"]"{{
-               std::cout<<"Passed CLOSES rule in peg\n";
+              // std::cout<<"Passed CLOSES rule in peg\n";
 }}
 COMMA		=	","{{
-               std::cout<<"Passed COMMA rule in peg\n";
+              // std::cout<<"Passed COMMA rule in peg\n";
 }}
