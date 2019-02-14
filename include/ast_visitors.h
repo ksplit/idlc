@@ -27,6 +27,7 @@ class Function;
 class ProjectionConstructorType;
 class ProjectionType;
 class InitializeType;
+class LexicalScope;
 class VisitNode;
 class ASTVisitor;
 
@@ -49,6 +50,7 @@ class ASTVisitor {
 	virtual void visit(Rpc * node) = 0;
 	virtual void visit(ReturnVariable * node) = 0;
 	virtual void visit(Type *type)=0;
+	virtual void visit(LexicalScope *lexicalscope)=0;
   	/*
 	virtual void visit(UnresolvedType *ut) = 0;
   	virtual void visit(Typedef *td) = 0;
@@ -76,6 +78,7 @@ class ASTPrintVisitor : public ASTVisitor {
 	void visit(Rpc *rp);	
 	void visit(ReturnVariable *rv);	
 	void visit(Type *type);
+	void visit(LexicalScope *lexicalscope);
 	/*
 	void visit(UnresolvedType *ut);
 	void visit(Typedef *td);

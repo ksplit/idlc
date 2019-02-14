@@ -697,3 +697,4 @@ void Typedef::accept(ASTVisitor *visitor) {visitor->visit(this);}
 void UnresolvedType::accept(ASTVisitor *visitor) {visitor->visit(this);}
 void ProjectionConstructorType::accept(ASTVisitor *visitor) {visitor->visit(this);}
 void InitializeType::accept(ASTVisitor *visitor) {visitor->visit(this);}
+void LexicalScope::accept(ASTVisitor *visitor) {visitor->visit(this);}

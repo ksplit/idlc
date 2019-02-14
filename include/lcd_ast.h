@@ -74,7 +74,7 @@ class Channel;
 // input peg file: `Projection_constructor_special`, `rpc_special`,
 // `Interface_special`, `pc_unnamed_scope_special`, and
 // `unnamed_scope_special`.
-class LexicalScope 
+class LexicalScope : public VisitNode 
 {
   static LexicalScope *globalScope;
  public:
@@ -127,9 +127,10 @@ class LexicalScope
   }
 
   static LexicalScope* getGlobalScope();
+  void accept(ASTVisitor *visitor); 
 };
 
-class Type 
+class Type : public VisitNode 
 {
  public:
   virtual Type* clone() const = 0;
@@ -788,7 +789,6 @@ class Module : public VisitNode
 {
   // const std::string& verbatim_;
   std::string module_name_;
-  LexicalScope *module_scope_;
   std::vector<GlobalVariable*> channels_;
   // create these from the channels in the constructor.
   std::vector<Rpc*> rpc_definitions_;
@@ -797,6 +797,7 @@ class Module : public VisitNode
 
  public:
   
+  LexicalScope *module_scope_;
   std::vector<GlobalVariable*> cspaces_;// ah note - globals used for cspaces too
   GlobalVariable *channel_group;
   Module(const std::string& id, std::vector<Rpc*> rpc_definitions, std::vector<GlobalVariable*> globals, LexicalScope *ls, std::vector<Require*> requires);
@@ -816,9 +817,9 @@ class Module : public VisitNode
   void initialize_types();
   void set_copy_container_accessors();
   const std::string identifier();
-  void accept(ASTVisitor *visitor); 
   iterator begin() { return rpc_definitions_.begin(); }
   iterator end() { return rpc_definitions_.end(); }
+  void accept(ASTVisitor *visitor); 
 };
 
 
