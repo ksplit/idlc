@@ -1,0 +1,202 @@
+File		=	Spacing i:Include* GlobalScopeDefinitions t:Interface* <eof> {{
+			}}
+
+GlobalScopeDefinitions =      d:Type_Definitions* {{
+			      }}
+
+Pathname	= 	p1:PathStart+ {}
+
+PathStart      	=	IdentCont | [./~]
+
+Identifier	=	i1:IdentStart i2:IdentCont* {}
+
+IdentStart	=	[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]
+
+IdentCont	=	IdentStart | [0123456789]
+
+unnamed_scope 	= 	s:unnamed_scope_special d:Type_Definitions* r:Rpc* Spacing CLOSEC Spacing {}
+			
+unnamed_scope_special = Spacing OPENC Spacing {}
+
+pc_unnamed_scope_special = Spacing OPENC Spacing {}
+
+pc_unnamed_scope=	s:pc_unnamed_scope_special d:Type_Definitions* p:ProjField* Spacing CLOSEC Spacing {}
+
+Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN Spacing CLOSE Spacing OPENC Spacing req:Require* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {} 
+
+Require =	"require" Spacing id:Identifier Spacing SEMI Spacing {} 
+
+Interface_special =	  "module" {}
+
+Typedef		=	 "typedef" Spacing "<" Spacing rt:RealType "," Spacing mt:Type_form ">" Spacing id:Identifier Spacing {}
+
+Verbatim	=	 "verbatim" Spacing "[" contents:VerbatimContent "]" 
+
+VerbatimContent =	!"]" .
+
+RealType	=	fp:Identifier? Spacing sp:Identifier Spacing {}		
+
+String		=	<ascii 34> l:any_letter+ <ascii 34> {}
+
+any_letter	=	[_.,/?<>'; =:%`!@#$^&*()-+{}|\\ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789]
+
+Type_Definitions =	Typedef | Projection {}
+		 	| Projection_constructor
+
+Include		 =	"include" Space+ "<" Spacing p:Pathname Spacing ">" Spacing{} 
+			| "include" Space+ <ascii 34> Spacing p:Pathname Spacing <ascii 34> Spacing{}
+
+FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE {}
+
+FirstParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:star* Spacing field_id:Identifier Spacing OPEN Spacing args:Arguments Spacing CLOSE Spacing COMMA Spacing {}	
+
+ 		|	  t:Type_form s:Specification? pointers:star* Spacing id:Identifier Spacing COMMA Spacing {}
+			| fp_param:FP_Parameter Spacing COMMA Spacing {}
+
+Arrow_or_Dot	= "->" | "."
+
+Access_Start	= "container" | Identifier
+Access_End	= Arrow_or_Dot id:Identifier {}
+Access		= a1:Access_Start a2:Access_End* {}
+
+FP_FirstParam	=	t:Type_form s:Specification? pointers:star* Spacing COMMA Spacing {}
+			| rpc_scope:rpc_special Space+ rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing COMMA Spacing {}
+			  
+LastParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:star* Spacing field_id:Identifier Spacing OPEN Spacing args:Arguments Spacing CLOSE Spacing {}	
+
+ 		|   t:Type_form s:Specification? pointers:star* Spacing id:Identifier Spacing {}
+			| fp_param:FP_Parameter Spacing {}
+
+FP_LastParam	=	t:Type_form s:Specification? pointers:star* Spacing {}
+			|  rpc_special Space+ rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing {}
+
+Variable	=	Access | Identifier 
+
+FirstArg	=	id:Identifier Spacing COMMA Spacing {}
+LastArg		=	id:Identifier Spacing {}
+
+Arguments	=	first:FirstArg* last:LastArg {}
+
+Parameters	=	f:FirstParam* l:LastParam {}
+
+
+FP_Parameters	=	f:FP_FirstParam* l:FP_LastParam {}
+
+rpc_special     =      "rpc" {}
+
+
+Rpc		=	rpc_scope:rpc_special Space+ t:Type_form s:Specification? pointers:star* Spacing id1:Identifier Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing {}  
+
+Projection_constructor =    s:Projection_constructor_special Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPEN Spacing c:ProjArgs Spacing CLOSE Spacing OPENC Spacing d:Type_Definitions* p:ProjField* Spacing CLOSEC Spacing {}
+
+Projection_constructor_special = "projection" {} 
+
+Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id:Identifier Spacing OPENC Spacing p:ProjField* CLOSEC Spacing {}
+
+Proj_type	=  	"struct" Space+ id:Identifier Spacing {}
+
+Keyword		=     	"out" {}
+			| "in" 
+			| "alloc" Spacing OPEN Spacing "caller" Spacing CLOSE {}
+			| "alloc" Spacing OPEN Spacing "callee" Spacing CLOSE {}
+			| "alloc" {}
+			| "dealloc" Spacing OPEN Spacing "caller" Spacing CLOSE {}
+			| "dealloc" Spacing OPEN Spacing "callee" Spacing CLOSE {}
+			| "dealloc" {}
+			| "bind" Spacing OPEN Spacing "callee" Spacing CLOSE {}
+			| "bind" Spacing OPEN Spacing "caller" Spacing CLOSE {}
+			| "bind" {}
+
+Start		=	k:Keyword Spacing COMMA Spacing {}
+
+Specification	=	OPENS Spacing s:Start* l:Last CLOSES Spacing {}
+
+FirstProjArg    =      "channel" Space+ id:Identifier Spacing COMMA Spacing {}
+
+LastProjArg     =      "channel" Space+ id:Identifier Spacing {}
+
+ProjArgs        =       f:FirstProjArg* l:LastProjArg {}
+
+ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:star* Spacing field_id:Identifier Spacing OPEN Spacing args:Arguments Spacing CLOSE Spacing SEMI Spacing {}
+			| t:Type_form Spacing s:Specification? pointers:star* Spacing id:Identifier Spacing SEMI Spacing {}
+			| rpc_special Spacing s:Specification? rt:Type_form s_rt:Specification? pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing {}
+			| pc_unnamed_scope
+
+Last		=	k:Keyword Spacing {}
+
+Option		=	"projection"{}
+
+star 		= 	[*]
+
+signed_type	=	"int" Spacing {}
+			| "char" Spacing {}   
+			| "capability" Spacing {}
+			| "short" Spacing {}
+			| "long"  Space+ "long" Space* Spacing 
+			| "long" Spacing{}
+			| "float" Spacing {}		
+			| "double" Spacing 
+			| "bool" Spacing {}
+
+unsigned_type	=	"unsigned" Space+ "int" Spacing  
+			| "unsigned" Space+ "char" Spacing  
+			| "unsigned" Space+ "short" Spacing  
+			| "unsigned" Space+ "long" Space+ "long" 
+			| "unsigned" Space+ "long" Spacing 
+
+type 		=	unsigned_type
+			| signed_type
+			| "void" Spacing {}
+
+## just ignore the modules ones, not supporting right now
+
+Type_form	=	"projection" Space+ n:Identifier Spacing 
+			| "channel" Spacing {}
+			| Qualifier? type
+
+
+Qualifier	= Qualifiers+ Space+
+
+Qualifiers	= "volatile" | "const"
+
+Spacing		=	Space*
+
+EndSpacing	=	EndSpace* 
+
+Space		=	" " | "\t" | EndOfLine | Comment | Line_comment
+
+EndSpace	= 	Space | Line_comment
+
+EndOfLine	=	"\n" | "\r"
+
+Comments	= 	Comment | Line_comment
+
+Comment		=	Comment_start Comment_rest
+
+Comment_rest	=	Comment_end
+			| . Comment_rest
+
+Comment_start	=	"/*"
+Comment_end	=	"*/"
+
+
+Line_comm_rest	=	Line_comm_end{}
+			| . Line_comm_rest{}
+
+Line_comm_start	=	"//"{}
+
+Line_comment	=	Line_comm_start Line_comm_rest{}
+
+Line_comm_end	=	"\n"{}
+
+OPEN		=	"("{}
+CLOSE		=	")"{}
+
+SEMI		=	";"	{}
+OPENC		=	"{"{}
+CLOSEC		=	"}"{}
+OPENA		=	"<"{}
+CLOSEA		=	">"{}
+OPENS		=	"["{}
+CLOSES		=	"]"{}
+COMMA		=	","{}

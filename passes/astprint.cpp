@@ -16,7 +16,7 @@ void ASTPrintVisitor::visit(Project *p){
   std::cout<<__FILE__<<" Visited Project node"<<std::endl;
 }	
 
-void ASTPrintVisitor::visit(Module *m) {
+void ASTPrintVisitor::visit(Module *m){
   std::cout<<__FILE__<<" Visited Module node: "<<m->identifier()<<std::endl;
 }
 
@@ -41,11 +41,49 @@ void ASTPrintVisitor::visit(ReturnVariable *rv){
 }
 
 void ASTPrintVisitor::visit(Type *type){
-  std::cout<<__FILE__<<" Visited Type node : "<<type->name()<<std::endl;
+  std::cout<<__FILE__<<" Visited Type node: "<<type->name()<<std::endl;
 }
 
 void ASTPrintVisitor::visit(LexicalScope *lexical_scope){
   std::cout<<__FILE__<<" Visited Lexical Scope node"<<std::endl;
+}
+
+// Visits for each type
+void ASTPrintVisitor::visit(UnresolvedType *ut){
+  std::cout<<__FILE__<<"Visited UnresolvedType node"<<std::endl;
+}
+void ASTPrintVisitor::visit(Typedef *td){
+  std::cout<<__FILE__<<"Visited Typedef node"<<std::endl;
+}
+void ASTPrintVisitor::visit(VoidType *vt){
+  std::cout<<__FILE__<<" Visited VoidType node"<<std::endl;
+}
+void ASTPrintVisitor::visit(IntegerType *it){
+  std::cout<<__FILE__<<" Visited IntegerType node"<<std::endl;
+}
+void ASTPrintVisitor::visit(ProjectionType *pt){
+  std::cout<<__FILE__<<" Visited ProjectionType node"<<std::endl;
+}
+void ASTPrintVisitor::visit(Function *fp){
+  std::cout<<__FILE__<<" Visited Function node"<<std::endl;
+}
+void ASTPrintVisitor::visit(Channel *c){
+  std::cout<<__FILE__<<" Visited Channel node"<<std::endl;
+}
+void ASTPrintVisitor::visit(ProjectionConstructorType *pct){
+  std::cout<<__FILE__<<" Visited ProjectionConstructorType node"<<std::endl;
+}
+void ASTPrintVisitor::visit(InitializeType *it){
+  std::cout<<__FILE__<<" Visited InitializeType node"<<std::endl;
+}
+void ASTPrintVisitor::visit(BoolType *bt){
+  std::cout<<__FILE__<<" Visited BoolType node"<<std::endl;
+}
+void ASTPrintVisitor::visit(DoubleType *dt){
+  std::cout<<__FILE__<<" Visited DoubleType node"<<std::endl;
+}
+void ASTPrintVisitor::visit(FloatType *ft){
+  std::cout<<__FILE__<<" Visited FloatType node"<<std::endl;
 }
 
 void ASTPrintPass::do_pass(Project * tree){
@@ -64,15 +102,24 @@ void ASTPrintPass::do_pass(Project * tree){
     // Visiting the outer/base lexical scope of the module
     LexicalScope* module_scope = module->module_scope_;
     LexicalScope* module_outer_scope = module_scope->outer_scope_;
+    LexicalScope* module_global_scope = module_scope->globalScope;
+    std::vector<LexicalScope*> module_inner_scopes = module_scope->inner_scopes_;
     module_outer_scope->accept(astprint);
 
     // Visiting the types in the lexical scope
     std::cout<<__FILE__<<" Visiting the types in the module (outer/base) scope."<<std::endl;		 
     std::map<std::string, Type*> module_types = module_outer_scope->type_definitions_; 
+   // std::map<std::string, Type*> module_types = module_global_scope->type_definitions_; 
+   // std::map<std::string, Type*> module_types = module_scope->type_definitions_; 
+  int count=1;
+//  for (auto module_inner_scope : module_inner_scopes){
+    std::cout<<"Inner scope # "<<count++<<std::endl;   
+//    std::map<std::string, Type*> module_types = module_inner_scope->type_definitions_; 
     for (auto type: module_types) {
-      std::cout<<__FILE__<<" Visiting type node."<<type.first<<std::endl;		 
+      std::cout<<__FILE__<<" Visiting type node: "<<type.first<<std::endl;		 
       type.second->accept(astprint);
     }
+ // }
 
     // Visiting require nodes of module
     std::vector<Require*> module_requires; 

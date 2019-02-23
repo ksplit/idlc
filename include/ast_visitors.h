@@ -51,7 +51,6 @@ class ASTVisitor {
 	virtual void visit(ReturnVariable * node) = 0;
 	virtual void visit(Type *type)=0;
 	virtual void visit(LexicalScope *lexicalscope)=0;
-  	/*
 	virtual void visit(UnresolvedType *ut) = 0;
   	virtual void visit(Typedef *td) = 0;
   	virtual void visit(VoidType *vt) = 0;
@@ -63,7 +62,6 @@ class ASTVisitor {
   	virtual void visit(BoolType *bt) = 0;
   	virtual void visit(DoubleType *dt) = 0;
   	virtual void visit(FloatType *ft) = 0;
-	*/
 };
 
 // ASTPrintVisitor - a visitor class that prints info of every node it visits.
@@ -79,7 +77,7 @@ class ASTPrintVisitor : public ASTVisitor {
 	void visit(ReturnVariable *rv);	
 	void visit(Type *type);
 	void visit(LexicalScope *lexicalscope);
-	/*
+	
 	void visit(UnresolvedType *ut);
 	void visit(Typedef *td);
 	void visit(VoidType *vt);
@@ -92,5 +90,4 @@ class ASTPrintVisitor : public ASTVisitor {
 	void visit(BoolType *bt);
 	void visit(DoubleType *dt);
 	void visit(FloatType *ft);
-	*/
 };
