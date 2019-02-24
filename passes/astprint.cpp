@@ -63,6 +63,7 @@ void ASTPrintVisitor::visit(IntegerType *it){
 }
 void ASTPrintVisitor::visit(ProjectionType *pt){
   std::cout<<__FILE__<<" Visited ProjectionType node"<<std::endl;
+  std::cout<<pt->real_type_<<std::endl;
 }
 void ASTPrintVisitor::visit(Function *fp){
   std::cout<<__FILE__<<" Visited Function node"<<std::endl;
@@ -86,88 +87,100 @@ void ASTPrintVisitor::visit(FloatType *ft){
   std::cout<<__FILE__<<" Visited FloatType node"<<std::endl;
 }
 
-void ASTPrintPass::do_pass(Project * tree){
-
-  ASTPrintVisitor *astprint= new ASTPrintVisitor();
-  std::cout<<__FILE__<<" printing tree"<<std::endl;		 
-
-  // ASTPrintVisitor Test 1 - visit Module, Requires, Rpcs, ReturnVariable, Type //
-  // --------------------------------------------------------------------------- //
-
-  for (auto module: *tree) {
-
-    // Visiting the module
-    module->accept(astprint);
-
-    // Visiting the outer/base lexical scope of the module
-    LexicalScope* module_scope = module->module_scope_;
-    LexicalScope* module_outer_scope = module_scope->outer_scope_;
-    LexicalScope* module_global_scope = module_scope->globalScope;
-    std::vector<LexicalScope*> module_inner_scopes = module_scope->inner_scopes_;
-    module_outer_scope->accept(astprint);
-
-    // Visiting the types in the lexical scope
-    std::cout<<__FILE__<<" Visiting the types in the module (outer/base) scope."<<std::endl;		 
-    std::map<std::string, Type*> module_types = module_outer_scope->type_definitions_; 
-   // std::map<std::string, Type*> module_types = module_global_scope->type_definitions_; 
-   // std::map<std::string, Type*> module_types = module_scope->type_definitions_; 
-  int count=1;
-//  for (auto module_inner_scope : module_inner_scopes){
-    std::cout<<"Inner scope # "<<count++<<std::endl;   
-//    std::map<std::string, Type*> module_types = module_inner_scope->type_definitions_; 
-    for (auto type: module_types) {
-      std::cout<<__FILE__<<" Visiting type node: "<<type.first<<std::endl;		 
-      type.second->accept(astprint);
-    }
- // }
-
-    // Visiting require nodes of module
+void ASTPrintPass::visit_module_requires(Module* module, ASTPrintVisitor *astprint) {
     std::vector<Require*> module_requires; 
     module_requires = module->requires();
     for (auto rq: module_requires) {
       rq->accept(astprint);
     }
+}	
 
-    // Visiting rpcs of module	
+void ASTPrintPass::visit_module_rpcs(Module * module, ASTPrintVisitor * astprint){
     std::vector<Rpc*> module_rpcs; 
     module_rpcs=module->rpc_definitions();
+
+    // Visiting each rpc's type node (which is the return variable)
     for (auto rp: module_rpcs) {
-
-      // Visiting each rpc's type node (which is the return variable)
-      Type *type;
-      ReturnVariable *rv;
-      rp->accept(astprint);
-      rv=rp->return_variable();
-      rv->accept(astprint);
-      type=rv->type();
-      type->accept(astprint);
+	Type *type;
+	ReturnVariable *rv;
+	rp->accept(astprint);
+	rv=rp->return_variable();
+	rv->accept(astprint);
+	type=rv->type();
+	type->accept(astprint);
     }
-  }
+}
 
-  // ASTPrintVisitor Test 2 - visit Include //
-  // -------------------------------------- //
-
+void ASTPrintPass::visit_project_includes(Project * tree, ASTPrintVisitor * astprint){
   std::vector<Include*> project_includes = tree->includes();
   for (auto incl: project_includes) {
     incl->accept(astprint);	
   }
+}
 
-  // ASTPrintVisitor Test 3 - vist Node //
-  // ---------------------------------- //
-  /*
-  std::vector<VisitNode*> nodes;
-  nodes.push_back(tree);
-  for (auto m: *tree) {
-    nodes.push_back(m);
-  }
-  for (auto incl: project_includes) {
-    nodes.push_back(incl);
-  }
-  for (auto node: nodes){
-    //std::cout<<__LINE__<<std::endl;	
-    node->accept(astprint);
-  }
-  */
+void ASTPrintPass::visit_types(LexicalScope * scope, ASTPrintVisitor * astprint){
+	std::map<std::string, Type*> module_types = scope->type_definitions_; 
+	for (auto type: module_types) {
+		std::cout<<__FILE__<<" Visiting type node: "<<type.first<<std::endl; 
+		type.second->accept(astprint);
+	}
+}
 
+void ASTPrintPass::visit_module_scope_types(Module * module, ASTPrintVisitor * astprint){
+	std::cout<<"Visiting scope of module: "<<module->module_name_<<std::endl;
+	visit_types(module->module_scope_, astprint);
+}
+
+void ASTPrintPass::visit_module_outerscope_types(Module * module, ASTPrintVisitor * astprint){
+	std::cout<<"Visiting outer scope of module: "<<module->module_name_<<std::endl;
+	visit_types(module->module_scope_->outer_scope_, astprint);
+}
+
+void ASTPrintPass::visit_module_globalscope_types(Module * module, ASTPrintVisitor * astprint){
+	std::cout<<"Visiting global scope of module: "<<module->module_name_<<std::endl;
+	visit_types(module->module_scope_->globalScope, astprint);
+}
+
+void ASTPrintPass::visit_module_innerscopes_types(Module * module, ASTPrintVisitor * astprint){
+	std::cout<<"Visiting inner scopes of module: "<<module->module_name_<<std::endl;
+	std::vector<LexicalScope*> inner_scopes = module->module_scope_->inner_scopes_;
+	for (auto scope : inner_scopes){
+		int count=1;
+		std::cout<<"Inner scope # "<<count++<<std::endl;   
+		visit_types(scope, astprint);
+	}
+}
+
+void ASTPrintPass::do_pass(Project * tree){
+
+	ASTPrintVisitor *astprint= new ASTPrintVisitor();
+	std::cout<<__FILE__<<" printing tree"<<std::endl;		 
+
+	visit_project_includes(tree, astprint);
+
+	for (auto module: *tree) {
+		// Visiting the module
+		module->accept(astprint);
+		visit_module_scope_types(module, astprint);
+		visit_module_outerscope_types(module, astprint);
+		visit_module_globalscope_types(module, astprint);
+		visit_module_innerscopes_types(module, astprint);
+		visit_module_requires(module, astprint);
+		visit_module_rpcs(module, astprint);
+	}
+
+	// ASTPrintVisitor Test 3 - vist Node //
+	// ---------------------------------- //
+	/*
+	std::vector<VisitNode*> nodes;
+	nodes.push_back(tree);
+	for (auto m: *tree) {
+		nodes.push_back(m);
+	for (auto incl: project_includes) 
+		nodes.push_back(incl);
+	for (auto node: nodes){
+		//std::cout<<__LINE__<<std::endl;	
+		node->accept(astprint);
+	}
+	*/
 }	
-
