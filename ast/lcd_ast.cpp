@@ -420,10 +420,10 @@ Module::Module(const std::string& id, std::vector<Rpc*> rpc_definitions,
   rpc_definitions_(rpc_definitions),
   requires_(requires)
 {
-  std::cout<<__FILE__<<" Creating new module"<<std::endl;
-  std::cout<<__FILE__ <<" -module name: "<<id<<std::endl;
-  std::cout<<__FILE__ <<" -rpcs size: "<<rpc_definitions.size()<<std::endl;
-  std::cout<<__FILE__ <<" -requires size: "<<requires.size()<<std::endl;
+  // std::cout<<__FILE__<<" Creating new module"<<std::endl;
+  // std::cout<<__FILE__ <<" -module name: "<<id<<std::endl;
+  // std::cout<<__FILE__ <<" -rpcs size: "<<rpc_definitions.size()<<std::endl;
+  // std::cout<<__FILE__ <<" -requires size: "<<requires.size()<<std::endl;
 
   this->module_scope_->setactiveChannel(ls->activeChannel);
   if (ls->activeChannel) {
@@ -668,8 +668,9 @@ void Project::set_copy_container_accessors()
 }
 void Project::accept(ASTVisitor *visitor) {visitor->visit(this);}
 
-Require::Require(const std::string& required_module_name) :
-  required_module_name_(required_module_name)
+Require::Require(const std::string& required_module_name, Channel * channel) :
+  required_module_name_(required_module_name),
+  channel_(channel)
 {
 }
 

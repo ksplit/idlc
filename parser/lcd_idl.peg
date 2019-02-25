@@ -336,7 +336,7 @@ IdentStart	=	[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]
 
 IdentCont	=	IdentStart | [0123456789]
 
-unnamed_scope 	= 	s:unnamed_scope_special d:Type_Definitions* r:Rpc* Spacing CLOSEC Spacing {{
+unnamed_scope 	= 	s:unnamed_scope_special req:Require* d:Type_Definitions* r:Rpc* Spacing CLOSEC Spacing {{
 			    // removed ChanInits from unnamed_scope rule completely. We integrated
 			    // ChanInits functionality in Interface rule. Since we are already performing ChanInits (channel initializations
 			    // in Interface, ignoring it here. --TODO: need to check whether we really need the double initialization.
@@ -350,6 +350,14 @@ unnamed_scope 	= 	s:unnamed_scope_special d:Type_Definitions* r:Rpc* Spacing CLO
 				rpcs->push_back(r);
 			    }
 				LexicalScope *sc = (LexicalScope *)s.getValue();
+
+
+		      		std::vector<Require*> requires;				
+		      		for(Value::iterator it = req.getValues().begin(); it != req.getValues().end(); it ++) {
+		      		const Value & v2 = *it;
+		      		Require *req2 = (Require*) v2.getValue();
+		      		requires.push_back(req2);
+		      		}
 
 
 		// It appears that the following code block is not being used (based on nullnet-require.idl test on the original 
@@ -533,13 +541,25 @@ Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN Spacing CLOSE 
 }} 
 
 
-Require =	"require" Spacing id:Identifier Spacing SEMI Spacing {{
-			std::cout<<"Passed Require rule: Identifier : " <<id.getValue()<<" " <<*(static_cast<const std::string*>(id.getValue()))<< std::endl;
+
+Require		= "require" Spacing id:Identifier Spacing ch:ChanSelect Spacing SEMI Spacing {{
+			std::cout<<"Passed Require rule. Identifier : "<<*(static_cast<const std::string*>(id.getValue()))<< std::endl;
 			const std::string *req_id = static_cast<const std::string*>(id.getValue());
 			std::cout<<*req_id<<std::endl;
-  			value = new Require(*req_id);
+  			value = new Require(*req_id, (Channel*)ch.getValue());
 			}} 
 
+
+ChanSelect	=	 "on" Space+ id:Identifier Spacing {{
+			  Channel::ChannelType ct = static_cast<Channel::ChannelType>(*(new int(Channel::AsyncChannel)));
+			  Channel * channel = new Channel(*(static_cast<const std::string*>(id.getValue())),ct,NULL);
+			  value = channel;
+			}} | "" {{
+			  std::cout<<"Passed Blank ChanSelect rule"<<std::endl;
+			  Channel::ChannelType ct = static_cast<Channel::ChannelType>(*(new int(Channel::AsyncChannel)));
+			  Channel * channel = new Channel("default", ct, NULL);
+			  value = channel;
+}}
 Interface_special =	  "module" {{
 		    	      std::cout<<"[peg] Passed Interface_special rule."<<std::endl;
 		  	      LexicalScope *new_scope = new LexicalScope(LexicalScope::getGlobalScope());
