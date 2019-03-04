@@ -689,7 +689,8 @@ FP_Parameter	=	rpc_special Spacing s:Specification? rt:Type_form pointers:star* 
 				// unwind properly. Blindly setting it to current_scope's outer_scope will hit global scope
 				// sooner or later and cause SEGFAULT as global scope doesn't have any outer_scope
 				std::cout << "Setting to current unnamed scope " << std::endl;
-				set_current_scope(get_current_unnamed_scope());
+				if (get_current_unnamed_scope()!=NULL)
+				  set_current_scope(get_current_unnamed_scope());
 
 			    value = _p;
 			}}
@@ -958,8 +959,17 @@ FP_Parameters	=	f:FP_FirstParam* l:FP_LastParam {{
 
 rpc_special     =      "rpc" {{
 		    	   std::cout<<"[peg] Passed rpc_special rule."<<std::endl;
-		           LexicalScope *tmp = get_current_unnamed_scope();
-			   LexicalScope *new_scope = new LexicalScope(tmp);
+			   LexicalScope *tmp, *new_scope;
+			   if (get_current_unnamed_scope()!=NULL){
+		             tmp = get_current_unnamed_scope();
+			     new_scope = new LexicalScope(tmp);
+			   }
+			   else {
+		             tmp = get_current_scope();
+			     new_scope = new LexicalScope(tmp);
+
+			   }
+			   std::cout<<"my test current scope what?: "<<get_current_scope()<<std::endl;
 			   // dont need to add to inner scope because rpc do not have type definitions
 			   set_current_scope(new_scope);
 			   std::cout << "# New RPC scope(Not in any inner scope) " << new_scope << " from :" << tmp << "\n";
@@ -988,6 +998,7 @@ Rpc		=	rpc_scope:rpc_special Space+ t:Type_form s:Specification? pointers:star* 
 		            }
 			    */
 
+			if (get_current_unnamed_scope()!=NULL)
 			    set_current_scope(get_current_unnamed_scope()); // leaving current scope
 			    value = r; 
 			}}  
