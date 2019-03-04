@@ -76,8 +76,8 @@ class Channel;
 // `unnamed_scope_special`.
 class LexicalScope : public VisitNode 
 {
-  static LexicalScope *globalScope;
  public:
+  static LexicalScope *globalScope;
   LexicalScope *outer_scope_;
   std::map<std::string, Type*> type_definitions_;
   std::map<std::string, Variable*> variables_;
@@ -773,7 +773,8 @@ class Require : public VisitNode
 
   public:
 
-   Require(const std::string& required_module_name);
+   Channel *channel_; // the channel on which you are requiring the module
+   Require(const std::string& required_module_name, Channel * channel);
    std::string get_required_module_name() {
    return this->required_module_name_;
    }
@@ -788,7 +789,6 @@ class Require : public VisitNode
 class Module : public VisitNode 
 {
   // const std::string& verbatim_;
-  std::string module_name_;
   std::vector<GlobalVariable*> channels_;
   // create these from the channels in the constructor.
   std::vector<Rpc*> rpc_definitions_;
@@ -797,6 +797,7 @@ class Module : public VisitNode
 
  public:
   
+  std::string module_name_;
   LexicalScope *module_scope_;
   std::vector<GlobalVariable*> cspaces_;// ah note - globals used for cspaces too
   GlobalVariable *channel_group;
