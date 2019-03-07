@@ -744,9 +744,9 @@ public:
 
 class Require : public VisitNode {
   std::string required_module_name_;
-  Module *module_;
 
 public:
+  Module *module_;
   Channel *channel_; // the channel on which you are requiring the module
   Require(const std::string &required_module_name, Channel *channel);
   std::string get_required_module_name() { return this->required_module_name_; }
@@ -767,6 +767,7 @@ class Module : public VisitNode {
   typedef std::vector<Rpc *>::iterator iterator;
 
 public:
+  Project *parent_pjt_;
   std::string module_name_;
   LexicalScope *module_scope_;
   std::vector<GlobalVariable *>

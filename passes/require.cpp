@@ -35,10 +35,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-void RequirePass::test_func() {
-  std::cout << "test this function" << std::endl;
-}
-
 std::map<std::string, Project *> idlMap;
 std::map<std::string, Module *> moduleMap;
 
@@ -103,6 +99,12 @@ Project *RequirePass::process_includes(std::string input) {
     idlMap.insert(std::pair<std::string, Project *>(
         std::string(included_idl), process_includes(included_idl)));
   }
+
+  // Add reference to tree in each module that the tree directly contains.
+  for (auto m : *tree) {
+    m->parent_pjt_ = tree;
+  }
+
   return tree;
 }
 
