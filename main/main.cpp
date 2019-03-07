@@ -48,7 +48,7 @@ int main(int argc, char ** argv) {
     	}
 
 	printpass->do_pass(tree);
-	exit(0);//TODO: this line is temporary, remove it after sorting out the stuff below!
+//	exit(0);//TODO: this line is temporary, remove it after sorting out the stuff below!
         // The following does code generation. TODO: have this extracted out as a
         // separate pass on the ast.	
 	std::vector<Include*> project_includes = tree->includes();

@@ -43,17 +43,6 @@ void RequirePass::test_func(){
 std::map<std::string,Project*> idlMap; 
 std::map<std::string, Module*> moduleMap;
 
-
-Project * RequirePass::do_pass(std::string input){
-	std::cout<<__FILE__<<"- Performing RequirePass"<<std::endl;
-	Project * tree = process_includes(input);
-	std::cout<<"Parsed input:  "<<input<<std::endl;
-	create_module_map();
-	print_maps();
-	tree = resolve_requires(tree);
-	return tree;
-}
-
 Project * RequirePass::resolve_requires(Project * tree){
 	for (auto m : *tree) {
 	  expand_module_requires(m);
@@ -115,3 +104,12 @@ Project * RequirePass::process_includes(std::string input){
 	return tree;
 }
 
+Project * RequirePass::do_pass(std::string input){
+	std::cout<<__FILE__<<"- Performing RequirePass"<<std::endl;
+	Project * tree = process_includes(input);
+	std::cout<<"Parsed input:  "<<input<<std::endl;
+	create_module_map();
+	print_maps();
+	tree = resolve_requires(tree);
+	return tree;
+}

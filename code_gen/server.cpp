@@ -600,7 +600,7 @@ CCSTDeclaration* callee_declaration(Rpc* r)
 
 
 /*
- * generates the source file for the provided module/interface
+ * generates the callee source file for the provided module/interface
  * ah note - this is the top level function that accepts the input module and returns a concrete ast for the file.
  */
 CCSTFile* generate_server_source(Module *m, std::vector<Include*> includes)

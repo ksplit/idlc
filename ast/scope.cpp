@@ -8,6 +8,8 @@ std::string filename = "[ast/scope.cpp]";
 
 LexicalScope* LexicalScope::getGlobalScope()
 {
+  // The following types are added for the global scope 
+  // on any idl file by default. 
   std::cout<<filename<<" In getGlobalScope()"<<std::endl;
   if(!LexicalScope::globalScope){
   std::cout<<filename<<" No global scope, creating one now."<<std::endl;
@@ -132,6 +134,7 @@ bool LexicalScope::insert_identifier(const std::string& id)
   if(this->contains_identifier(id)) {
     return false;
   }
+  std::cout<<"[scope.cpp] Inserted identifier - "<<id<<std::endl;
   this->identifiers_.push_back(temp);
   return true;
 }

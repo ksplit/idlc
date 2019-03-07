@@ -263,9 +263,8 @@ Marshal_type* MarshalPrepareVisitor::visit(IntegerType *it)
 
 Marshal_type* MarshalPrepareVisitor::visit(ProjectionType *pt)
 {
-//ah to resolve - The visit for projection is apparently doing nothing. Should it?
-  // this doesn't work.
-  /*
+  // this doesn't work.TODO:need to verify with more examples.
+  
   std::vector<ProjectionField*> fields = pt->fields();
   
   for(std::vector<ProjectionField*>::iterator it = fields.begin(); it != fields.end(); it ++) {
@@ -276,7 +275,7 @@ Marshal_type* MarshalPrepareVisitor::visit(ProjectionType *pt)
     
     pf->set_marshal_info( pf->type()->accept(this) );
   }
-  */
+  
   return new Marshal_projection();
 }
 

@@ -923,7 +923,8 @@ void ReturnVariable::set_in(bool b)
 
 void ReturnVariable::set_out(bool b)
 {
-  std::cout << "ReturnVariable::set_out: error this operation not allowed\n";
+  this->out_=b;
+  //std::cout << "ReturnVariable::set_out: error this operation not allowed\n";
 }
 
 void ReturnVariable::set_alloc_caller(bool b)
