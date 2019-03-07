@@ -27,6 +27,10 @@ void print_usage() {
 }
 
 int main(int argc, char **argv) {
+  if (argc != 2) {
+    print_usage();
+  }
+
   try {
     char *file = argv[1];
 
@@ -182,8 +186,5 @@ int main(int argc, char **argv) {
     std::cerr << "\n\nALERT!!! - Caught parser exception" << std::endl;
     std::cerr << e.getReason() << std::endl;
     exit(0);
-  }
-  if (argc != 2) {
-    print_usage();
   }
 }
