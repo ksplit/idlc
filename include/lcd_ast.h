@@ -25,7 +25,6 @@
 #include <sstream>
 #include <stdio.h>
 #include <string>
-#include <vector>
 
 class MarshalPrepareVisitor;
 class CCSTStatement;

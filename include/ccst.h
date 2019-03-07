@@ -4,6 +4,7 @@
 #include "assert.h"
 #include "lcd_ast.h"
 #include <fstream>
+#include <vector>
 
 // ah note - this file contains the definitions of all the constructs that
 // should be present in the output program
