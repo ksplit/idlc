@@ -111,7 +111,9 @@ void generate_module_code(Module *m) {
   std::string macro_callee_h("__" + m->identifier() + "_callee_h__");
   std_string_toupper(macro_callee_h);
 
-  ofs_callee_h << "#pragma once" << std::endl;
+  ofs_callee_h << "#ifndef " << macro_callee_h << "\n";
+  ofs_callee_h << "#define " << macro_callee_h << "\n\n";
+
   ccst_callee_h->write(ofs_callee_h, 0);
 
   ccst_callee_c->write(ofs_callee_c, 0);
@@ -122,7 +124,9 @@ void generate_module_code(Module *m) {
   std::string macro_glhlpr_h("__" + m->identifier() + "_glue_helper_h__");
   std_string_toupper(macro_glhlpr_h);
 
-  ofs_glue_helper_h << "#pragma once" << std::endl;
+  ofs_glue_helper_h << "#ifndef " << macro_glhlpr_h << "\n";
+  ofs_glue_helper_h << "#define " << macro_glhlpr_h << "\n\n";
+
   ccst_glue_h->write(ofs_glue_helper_h, 0);
 
   /// FIXME: Should be generated like this. But how to generate SECTIONS {}
@@ -136,7 +140,8 @@ void generate_module_code(Module *m) {
   std::string macro_caller_h("__" + m->identifier() + "_caller_h__");
   std_string_toupper(macro_caller_h);
 
-  ofs_caller_h << "#pragma once" << std::endl;
+  ofs_caller_h << "#ifndef " << macro_caller_h << "\n";
+  ofs_caller_h << "#define " << macro_caller_h << "\n\n";
 
   if (ccst_caller_h != NULL)
     ccst_caller_h->write(ofs_caller_h, 0);
@@ -176,7 +181,7 @@ int main(int argc, char **argv) {
 
     printpass->do_pass(tree);
     //	exit(0);//TODO: this line is temporary, remove it after sorting out the
-    //stuff below!
+    // stuff below!
     // The following does code generation. TODO: have this extracted out as a
     // separate pass on the ast.
 
