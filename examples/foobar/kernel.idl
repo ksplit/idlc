@@ -1,0 +1,97 @@
+module kernel() {
+
+  projection<struct foobar_device> foobar_device_init {
+    // ...
+  }
+
+  projection<struct foobar_device> foobar_device_uninit {
+    // ...
+  }
+
+  projection<struct foobar_device_ops> foobar_device_ops_register_foobar {
+    //
+    // Here we have the projections for foobar_device_ops's fields.
+    //
+
+    // Since these fields are function pointers, which the dummy
+    // device registers with the kernel subsystem we have the rpc
+    // keyword accompanying the projection definitions of these
+    // function pointers.
+
+    // The directions of the return values are "in" since we are
+    // registering functions from the callee side to the caller
+    // side.
+
+    // Caller is non-isolated kernel
+    rpc[in] int (*init)(projection foobar_device_init * dev);
+
+    // Caller is non-isolated kernel
+    rpc[in] void (*uninit)(projection foobar_device_uninit * dev);
+  }
+
+  projection<struct foobar_device> foobar_device_register_foobar {
+
+    // "features" is both read and written inside register_foobar()
+    unsigned long[in, out] features;
+    unsigned long[in, out] hw_features;
+    unsigned long[out] wanted_features;
+
+    // Here the [in] direction is derrived from the global [in]
+    // direction of the foobar_device_register_foobar projection, i.e.,
+    // it's used as [in] with the register_foobar() function
+    unsigned int flags;
+
+    // Attribute & keyword info for foobar_device_ops field:
+
+    // projection - Since "foobar_device_ops" is a structure, it
+    // also needs to be accompanied with the projection keyword.
+    //
+
+    // alloc(callee) - Also, it would need to be allocated in the
+    // callee side, because it already exists on the caller side
+    // and will be used on the callee side
+    projection foobar_device_ops_register_foobar[alloc(callee)] *
+        foobar_device_ops;
+  }
+
+  projection<struct foobar_device>
+      foobar_device_unregister_foobar { // do we need this?
+  }
+
+  projection<struct foobar_device> foobar_device_alloc_foobardev {
+    int id;
+    char name[32];
+  }
+
+  // should exist kernel's idl and these should be pulled in via require.
+  projection<struct foobar_device> foobar_device_free_foobardev {}
+
+  // By default
+  //
+  // - all scalar types are [in], e.g., id below
+  //
+  // - simple char * (we assume that these are strings if no other
+  //   qualifiers are passed, e.g., for a buffer we need char [out,
+  //   len(...)]*buf
+  //
+  // - Return values are "out", i.e., we assume an implicit [out] below, e.g.,
+  //   [out, alloc(caller)], but we don't have to write it since it's a return
+  //   value and we can derive the "out"
+  //
+  // - [alloc(caller)] we cannot derive since it can be "bind"
+  //
+  //
+  // Also, the caller side for these rpcs is isolated foobar subsystem
+  //
+  rpc int register_foobar(projection foobar_device_register_foobar * dev);
+  rpc void unregister_foobar(projection foobar_device_unregister_foobar * dev);
+  rpc projection foobar_device_alloc_foobardev[alloc(caller)] *
+      alloc_foobardev(int idsd, char *name);
+  rpc void free_foobardev(
+      projection foobar_device_free_foobardev[dealloc(caller)] * dev);
+
+  {
+    projection<struct foobar_device> foobar_device {}
+    rpc void free_foobardev(projection foobar_device[dealloc(caller)] * dev);
+  }
+}

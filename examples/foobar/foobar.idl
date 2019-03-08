@@ -1,0 +1,5 @@
+include <kernel.idl>
+
+module foobar() {
+  require kernel on mychannel;
+}
