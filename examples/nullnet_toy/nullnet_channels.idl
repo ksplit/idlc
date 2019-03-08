@@ -1,0 +1,16 @@
+// The following uses old channel syntax.
+
+module nullnet(channel c) {
+
+  channel net_async = new async(c);
+  use net_async;
+  {
+    projection<struct net_device> net_device_stats {}
+
+    projection<struct net_device_ops> net_device_ops {
+      // rpc [alloc(callee)] int (*ndo_init)(projection net_device_stats [bind]
+      // *dev);
+      rpc int (*ndo_init)(projection net_device_stats * dev);
+    }
+  }
+}

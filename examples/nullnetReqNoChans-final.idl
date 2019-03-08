@@ -1,6 +1,0 @@
-include <kernelNoChans-final.idl>
-
-module nullnet() {
-    require kernel;
-}
-
