@@ -368,7 +368,7 @@ CCSTStructUnionSpecifier *struct_declaration(ProjectionType *pt) {
     }
   }
 
-  return new CCSTStructUnionSpecifier(struct_t, pt->name(), field_decs);
+  return new CCSTStructUnionSpecifier(struct_t, pt->real_type(), field_decs);
 }
 
 /*

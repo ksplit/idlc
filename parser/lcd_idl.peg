@@ -209,7 +209,16 @@ void create_container(const Value &id, std::vector<ProjectionField*> &container_
 {
 	const std::string *_id = static_cast<const std::string*>(id.getValue());
 
-	container_fields.push_back(new ProjectionField(getType(*_id), *_id, 0));
+	ProjectionType *pt = dynamic_cast<ProjectionType*>(getType(*_id));
+	
+	if (pt!=NULL){
+	  container_fields.push_back(new ProjectionField(getType(*_id), pt->real_type(), 0));
+	  std::cout<<__FILE__<< "!pt "<< pt->real_type()<<std::endl;
+	}
+	else{
+	  container_fields.push_back(new ProjectionField(getType(*_id), *_id, 0));
+	  std::cout<<__FILE__<< "pt "<< *_id <<std::endl;
+	}
 
 	ProjectionField *other_ref = new ProjectionField(getType("cptr"), "other_ref", 0);
 	other_ref->set_out(true);
@@ -1029,17 +1038,18 @@ Projection_constructor =    s:Projection_constructor_special Spacing "<" Spacing
 				ProjectionConstructorType *val = new ProjectionConstructorType(*_id, *_type, fields, chan_fields, channels);	
 
 				// creating container
-                std::vector<ProjectionField*> container_fields;
-                create_container(id, container_fields);
+				std::vector<ProjectionField*> container_fields;
+				create_container(id, container_fields);
 
 				container_fields.insert(container_fields.end(), channels.begin(), channels.end());
 				container_fields.insert(container_fields.end(), chan_fields.begin(), chan_fields.end());
 			
-                const std::string container_name_str = container_name(*_id);
-                ProjectionType * container = new ProjectionType(container_name_str, container_name_str, container_fields);
+				const std::string container_name_str = container_name(*_id);
+				const std::string real_type_container = container_name(*_type);
+                		ProjectionType * container = new ProjectionType(container_name_str, real_type_container, container_fields);
 				std::cout << "inserting container with name " <<  container_name_str << std::endl;
 			    	
-                // finished creating constructor
+                		// finished creating constructor
  				set_current_scope(get_current_scope()->outer_scope()); // leaving current scope
 				insertType(*_id, val); // insert projection constructor
 				insertType(container_name_str, container); // insert container
@@ -1098,7 +1108,7 @@ Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id
 			    const std::string container_name_str = container_name(*_id);
 			    const std::string real_type_container = container_name(*_type);
 			    ProjectionType * container = new ProjectionType(container_name_str, real_type_container, container_fields);
-			    std::cout << "inserting projection type with name " <<  container_name_str << std::endl;
+			    std::cout << "inserting projection type with real type " <<  real_type_container << std::endl;
 			    insertType(container_name_str, container);
 			    // finished creating constructor
  
