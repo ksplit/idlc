@@ -116,6 +116,8 @@ void generate_module_code(Module *m) {
 
   ccst_callee_h->write(ofs_callee_h, 0);
 
+  ofs_callee_h << "\n#endif\t/* " << macro_callee_h << " */";
+
   ccst_callee_c->write(ofs_callee_c, 0);
   ccst_callee_disp->write(ofs_callee_disp, 0);
   ccst_glue_c->write(ofs_glue_helper_c, 0);
@@ -128,6 +130,8 @@ void generate_module_code(Module *m) {
   ofs_glue_helper_h << "#define " << macro_glhlpr_h << "\n\n";
 
   ccst_glue_h->write(ofs_glue_helper_h, 0);
+
+  ofs_glue_helper_h << "\n#endif\t/* " << macro_glhlpr_h << " */";
 
   /// FIXME: Should be generated like this. But how to generate SECTIONS {}
   /// statements.push_back(new CCSTPreprocessor("liblcd/trampoline.h", false));
@@ -150,6 +154,7 @@ void generate_module_code(Module *m) {
     // std::cout<<"ccst_caller_h is NULL! Terminating program."<<std::endl;
     // std::exit(0);
   }
+  ofs_caller_h << "\n#endif\t/* " << macro_caller_h << " */";
   ccst_caller_c->write(ofs_caller_c, 0);
   ccst_caller_disp->write(ofs_caller_disp, 0);
 
