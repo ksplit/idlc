@@ -1,6 +1,5 @@
 #include "ccst.h"
 #include "code_gen.h"
-// for std::map
 #include <algorithm>
 
 CCSTDeclaration *dispatch_sync_function_declaration() {

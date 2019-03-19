@@ -127,8 +127,8 @@ CCSTFile *generate_glue_source(Module *m) {
 
   for (auto proj_type : uniq_projs) {
     std::cout << "-----<<"
-              << proj_type->name().substr(0,
-                                          proj_type->name().find("_container"))
+              << proj_type->real_type().substr(0,
+                                          proj_type->real_type().find("_container"))
               << " RT: " << proj_type->real_type() << "\n";
     statements.push_back(function_definition(fn_decl_insert(proj_type, m),
                                              fn_def_insert(proj_type)));
@@ -142,7 +142,7 @@ CCSTDeclaration *fn_decl_insert(ProjectionType *pt, Module *m) {
   std::vector<CCSTInitDeclarator *> func;
 
   std::string fn_name = "glue_cap_insert_" +
-                        pt->name().substr(0, pt->name().find("_container")) +
+                        pt->real_type().substr(0, pt->real_type().find("_container")) +
                         "_type";
 
   CCSTDirectDecId *name = new CCSTDirectDecId(fn_name);
@@ -175,9 +175,11 @@ CCSTDeclaration *fn_decl_insert(ProjectionType *pt, Module *m) {
 CCSTDeclaration *fn_decl_lookup(ProjectionType *pt, Module *m) {
   std::vector<CCSTInitDeclarator *> func;
 
+
   std::string fn_name = "glue_cap_lookup_" +
-                        pt->name().substr(0, pt->name().find("_container")) +
+                        pt->real_type().substr(0, pt->real_type().find("_container")) +
                         "_type";
+
 
   CCSTDirectDecId *name = new CCSTDirectDecId(fn_name);
 
