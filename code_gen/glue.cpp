@@ -101,7 +101,7 @@ std::vector<CCSTExDeclaration *> generate_enum_list(Module *m) {
   auto uniq_projs = get_unique_projections(m);
 
   for (auto type : uniq_projs) {
-    std::string enum_name = type->name();
+    std::string enum_name = type->real_type();
     std_string_toupper(enum_name);
     list->push_back(new CCSTEnumerator("GLUE_TYPE_" + enum_name));
   }
@@ -156,7 +156,7 @@ CCSTDeclaration *fn_decl_insert(ProjectionType *pt, Module *m) {
 
   p_decs.push_back(new CCSTParamDeclaration(
       type2(pt),
-      new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId(pt->name()))));
+      new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId(pt->real_type()))));
 
   p_decs.push_back(new CCSTParamDeclaration(
       type2(m->module_scope()->lookup("cptr", &err)),
@@ -196,7 +196,7 @@ CCSTDeclaration *fn_decl_lookup(ProjectionType *pt, Module *m) {
 
   p_decs.push_back(new CCSTParamDeclaration(
       type2(pt), new CCSTDeclarator(new CCSTPointer(new CCSTPointer()),
-                                    new CCSTDirectDecId(pt->name()))));
+                                    new CCSTDirectDecId(pt->real_type()))));
 
   CCSTParamList *param_list = new CCSTParamList(p_decs);
 
@@ -212,11 +212,12 @@ CCSTCompoundStatement *fn_def_insert(ProjectionType *pt) {
   std::vector<CCSTDeclaration *> declarations;
   std::vector<CCSTStatement *> statements;
   std::vector<CCSTAssignExpr *> cspace_ins_args;
-  std::string enum_name = pt->name();
+  std::string enum_name = pt->real_type();
   std_string_toupper(enum_name);
 
   cspace_ins_args.push_back(new CCSTPrimaryExprId("cspace"));
-  cspace_ins_args.push_back(new CCSTPrimaryExprId(pt->name()));
+//  cspace_ins_args.push_back(new CCSTPrimaryExprId(pt->name()));
+  cspace_ins_args.push_back(new CCSTPrimaryExprId(pt->real_type()));
   cspace_ins_args.push_back(new CCSTPostFixExprAccess(
       new CCSTPostFixExprExpr(new CCSTPrimaryExprId("glue_libcap_type_ops"),
                               new CCSTPrimaryExprId("GLUE_TYPE_" + enum_name)),
@@ -231,7 +232,7 @@ CCSTCompoundStatement *fn_def_lookup(ProjectionType *pt) {
   std::vector<CCSTDeclaration *> declarations;
   std::vector<CCSTStatement *> statements;
   std::vector<CCSTAssignExpr *> cspace_lookup_args;
-  std::string enum_name = pt->name();
+  std::string enum_name = pt->real_type();
   std_string_toupper(enum_name);
   std::vector<CCSTSpecifierQual *> spec_quals;
 
@@ -247,7 +248,7 @@ CCSTCompoundStatement *fn_def_lookup(ProjectionType *pt) {
 
   cspace_lookup_args.push_back(new CCSTCastExpr(
       new CCSTTypeName(spec_quals, new CCSTPointer(new CCSTPointer())),
-      new CCSTPrimaryExprId(pt->name())));
+      new CCSTPrimaryExprId(pt->real_type())));
 
   statements.push_back(
       new CCSTReturn(function_call("glue_cspace_lookup", cspace_lookup_args)));
