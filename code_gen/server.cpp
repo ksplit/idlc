@@ -605,6 +605,7 @@ CCSTFile *generate_server_source(Module *m, std::vector<Include *> includes) {
     definitions.push_back(
         new CCSTPreprocessor(inc->get_path(), inc->is_relative()));
   }
+  definitions.push_back(new CCSTPreprocessor("liblcd/trampoline.h", false));
 
   // globals.
   std::vector<GlobalVariable *> globals = m->channels();
