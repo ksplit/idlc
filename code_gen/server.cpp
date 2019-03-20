@@ -512,6 +512,10 @@ CCSTCompoundStatement *callee_body(Rpc *r, Module *m) {
         new CCSTExprStatement(function_call("thc_ipc_reply", ipc_reply_args)));
   }
 
+  std::string *goto_alloc =
+      new std::string("fail_alloc");
+  statements.push_back(
+        new CCSTPlainLabelStatement(*goto_alloc, NULL));
   statements.push_back(new CCSTReturn(new CCSTPrimaryExprId("ret")));
   return new CCSTCompoundStatement(declarations, statements);
 }
