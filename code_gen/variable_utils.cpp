@@ -28,8 +28,8 @@ CCSTDeclaration *declare_variable(Variable *v) {
 }
 
 // recursively declare variables for callee glue code.
-// declare container if the var has a container.
-// otherwise declare the variable and recurse.
+// declare container and the var, if the var has a container.
+// otherwise declare the variable only and recurse.
 std::vector<CCSTDeclaration *> declare_variables_callee(Variable *v) {
   std::vector<CCSTDeclaration *> declarations;
 
@@ -37,6 +37,8 @@ std::vector<CCSTDeclaration *> declare_variables_callee(Variable *v) {
     std::cout << "declaring container " << v->container()->identifier()
               << std::endl;
     declarations.push_back(declare_variable(v->container()));
+    std::cout << "declaring variable " << v->identifier() << std::endl;
+    declarations.push_back(declare_variable(v));
   } else {
     std::cout << "declaring variable " << v->identifier() << std::endl;
     declarations.push_back(declare_variable(v));
