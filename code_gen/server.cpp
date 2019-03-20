@@ -231,8 +231,8 @@ CCSTCompoundStatement *callee_body(Rpc *r, Module *m) {
 
   std::vector<CCSTInitDeclarator *> decs_ret;
 
-  decs_ret.push_back(
-      new CCSTDeclarator(pointer(0), new CCSTDirectDecId("ret")));
+  decs_ret.push_back(new CCSTInitDeclarator(new CCSTDeclarator(pointer(0), new
+      CCSTDirectDecId("ret")), new CCSTInitializer(new CCSTPrimaryExprId("0"))));
   declarations.push_back(new CCSTDeclaration(int_type(), decs_ret));
 
   if (r->function_pointer_defined()) {
