@@ -1317,6 +1317,9 @@ CCSTInitializer::CCSTInitializer(CCSTAssignExpr *assn_expr)
 CCSTInitializer::CCSTInitializer(CCSTInitializerList *init_list)
     : assn_expr_(), init_list_(init_list) {}
 
+CCSTInitializer::CCSTInitializer(CCSTPrimaryExprId *init_val)
+    : init_val_(init_val) {}
+
 void CCSTInitializer::write(std::ofstream &of, int indent) {
   /*
 
@@ -1326,18 +1329,23 @@ void CCSTInitializer::write(std::ofstream &of, int indent) {
    */
 
   // TODO
-  if (this->assn_expr_ == NULL) {
-    if (this->init_list_ == NULL) {
-      std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__
-                << " error\n";
-      exit(-1);
+  if (this->init_val_ == NULL){
+    if (this->assn_expr_ == NULL) {
+      if (this->init_list_ == NULL) {
+        std::cout << typeid(*this).name() << "::" << __PRETTY_FUNCTION__
+                  << " error\n";
+        exit(-1);
+      }
+      of << indentation(indent) << "{ ";
+      this->init_list_->write(of, 0);
+      of << " }";
+    } else if (this->assn_expr_ != NULL) {
+      this->assn_expr_->write(of, indent);
     }
-    of << indentation(indent) << "{ ";
-    this->init_list_->write(of, 0);
-    of << " }";
   } else {
-    this->assn_expr_->write(of, indent);
+    this->init_val_->write(of, indent);
   }
+
 }
 
 CCSTInitializerList::CCSTInitializerList() {

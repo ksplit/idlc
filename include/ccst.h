@@ -1222,10 +1222,13 @@ class CCSTInitializer : public CCSTInitializerList {
    */
   CCSTAssignExpr *assn_expr_;
   CCSTInitializerList *init_list_;
+  CCSTPrimaryExprId *init_val_;
 
 public:
   CCSTInitializer(CCSTAssignExpr *assn_expr);
   CCSTInitializer(CCSTInitializerList *init_list);
+  CCSTInitializer(CCSTPrimaryExprId *init_val);
+
   virtual void write(std::ofstream &of, int indent);
 };
 
