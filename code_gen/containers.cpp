@@ -6,6 +6,8 @@
  * code related to container structures.
  */
 
+std::string generated_src;
+
 std::vector<CCSTAssignExpr *> container_of_args(CCSTPostFixExpr *struct_pointer,
                                                 const std::string &type_name,
                                                 const std::string &field_name) {
@@ -320,8 +322,11 @@ CCSTStatement *allocate_non_container_variables(Variable *v) {
   return new CCSTCompoundStatement(declarations, statements);
 }
 
+// Called by server.cpp
 CCSTCompoundStatement *insert_variable_container(Variable *v,
                                                  const std::string &cspace) {
+  std::string callee_src("callee");
+  generated_src = callee_src;
   return alloc_insert_variable_container(v, cspace, false);
 }
 
@@ -389,7 +394,18 @@ alloc_insert_variable_container(Variable *v, const std::string &cspace,
         function_call(insert_name(f->name()) + "_type", insert_args))));
   } else {
     auto *pt = dynamic_cast<ProjectionType *>(v->type());
-    Assert(pt != NULL, "Error: dynamic cast to projection type failed.\n");
+    Assert(pt != NULL, "Error: c cast to projection type failed.\n");
+
+    if (generated_src.compare("caller") == 0) {
+      auto *pt_container =
+          dynamic_cast<ProjectionType *>(v->container()->type());
+      ProjectionField *content = pt_container->get_field(pt->real_type());
+      Assert(content != 0x0,
+             "Error: could not find structure field in container\n");
+      statements.push_back(new CCSTExprStatement(new CCSTAssignExpr(
+          new CCSTPrimaryExprId(v->identifier()), equals(),
+          new CCSTUnaryExprCastExpr(reference(), access(content)))));
+    }
 
     statements.push_back(new CCSTExprStatement(new CCSTAssignExpr(
         new CCSTPrimaryExprId("ret"), equals(),
@@ -421,8 +437,11 @@ ProjectionField *find_field(ProjectionType *pt, const std::string &field_name) {
   return field;
 }
 
+// Called by client.cpp
 CCSTCompoundStatement *
 alloc_link_container_caller_top(Variable *v, const std::string &cspace) {
+  std::string caller_src("caller");
+  generated_src = caller_src;
   std::vector<CCSTDeclaration *> declarations;
   std::vector<CCSTStatement *> statements;
   // simple case. v is not a projection
@@ -475,7 +494,7 @@ CCSTCompoundStatement *alloc_link_container_caller(Variable *v,
       ProjectionType *tmp = dynamic_cast<ProjectionType *>(
           find_field(v_container_type, v->type()->name())->type());
       //								      ,
-      //ptype->real_type())->type());
+      // ptype->real_type())->type());
       ProjectionField *tmp_field = find_field(tmp, pf->identifier());
       if (pf->container() != 0x0) {
         statements.push_back(alloc_link_container_caller(pf, cspace));
