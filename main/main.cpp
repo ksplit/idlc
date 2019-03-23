@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <bits/stdc++.h> 
 
 void print_usage() {
   std::cerr << "Usage:\n  ./compiler <idl file>" << std::endl;
@@ -121,6 +122,10 @@ void generate_module_code(Module *m) {
   ccst_callee_c->write(ofs_callee_c, 0);
   ccst_callee_disp->write(ofs_callee_disp, 0);
   ccst_glue_c->write(ofs_glue_helper_c, 0);
+
+  /// Add common glue cap functions 
+  std::ifstream cap_file_c("glue_helper/cap.c", std::ios::in);  
+  ofs_glue_helper_c << cap_file_c.rdbuf();
 
   /// Common header guard macro
   std::string macro_glhlpr_h("__" + m->identifier() + "_glue_helper_h__");
