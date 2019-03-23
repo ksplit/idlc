@@ -1,33 +1,5 @@
 static struct cap_type_system *glue_libcap_type_system;
 
-struct type_ops_id {
-	struct cap_type_ops ops;
-	cap_type_t libcap_type;
-};
-
-static int dummy_func(struct cspace *cspace, struct cnode *cnode,
-		void *object)
-{
-	return 0;
-}
-
-static struct type_ops_id glue_libcap_type_ops[GLUE_NR_TYPES] = {
-	{
-		{
-			.name = "struct foobar_device",
-			.delete = dummy_func,
-			.revoke = dummy_func,
-		}
-	},
-	{
-		{
-			.name = "struct foobar_device_ops",
-			.delete = dummy_func,
-			.revoke = dummy_func,
-		}
-	},
-};
-
 int glue_cap_init(void)
 {
 	int ret;
