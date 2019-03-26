@@ -1,6 +1,8 @@
 #include "ccst.h"
 #include "code_gen.h"
 
+const std::string init_value("0");
+const std::string init_ptr_value("NULL");
 /*
  * CAST code to declare a static variable
  */
@@ -19,73 +21,33 @@ CCSTDeclaration *declare_static_variable(Variable *gv) {
   return new CCSTDeclaration(specifier, declarators);
 }
 
-std::string *get_init_value(Variable *v) {
-
-  std::string *init_value;
+const std::string get_init_value(Variable *v) {
   int num = v->type()->num();
+
   switch (num) {
-  case TYPEDEF_TYPE: {
-    break;
-  }
   case INTEGER_TYPE: // int type case
-  {
-    init_value = new std::string("0");
+  case DOUBLE_TYPE:
+  case BOOL_TYPE:
+  case FLOAT_TYPE:
     return init_value;
-  }
-  case PROJECTION_TYPE: // struct
-  {
-    init_value = new std::string("NULL");
-    return init_value;
-  }
-  case VOID_TYPE: {
-    init_value = new std::string("NULL");
-    return init_value;
-  }
-  case CHANNEL_TYPE: {
-    init_value = new std::string("NULL");
-    return init_value;
-  }
-  case FUNCTION_TYPE: {
-    init_value = new std::string("NULL");
-    break;
-  }
-  case UNRESOLVED_TYPE: {
-    init_value = new std::string("NULL");
-    Assert(1 == 0, "Error: unresolved type\n");
-    break;
-  }
+  case PROJECTION_TYPE:             // struct
   case PROJECTION_CONSTRUCTOR_TYPE: // struct
-  {
-    init_value = new std::string("NULL");
-    return init_value;
+  case VOID_TYPE:
+    return init_ptr_value;
+  default:
+    Assert(1 == 0, "Error: Cannot determine init value for %d\n", num);
   }
-  case INITIALIZE_TYPE: {
-    Assert(1 == 0, "Error: initialize type\n");
-  }
-  case BOOL_TYPE: {
-    init_value = new std::string("0");
-    return init_value;
-  }
-  case DOUBLE_TYPE: {
-    init_value = new std::string("0");
-    return init_value;
-  }
-  case FLOAT_TYPE: {
-    init_value = new std::string("0");
-    return init_value;
-  }
-  default: { Assert(1 == 0, "Error: Not a struct or integer type. \n"); }
-  }
-  return init_value;
+  return init_ptr_value;
 }
 
 CCSTDeclaration *declare_variable(Variable *v) {
   std::vector<CCSTInitDeclarator *> decs;
-  const std::string *init_value = get_init_value(v);
+  const std::string init_value = get_init_value(v);
+
   decs.push_back(new CCSTInitDeclarator(
       new CCSTDeclarator(pointer(v->pointer_count()),
                          new CCSTDirectDecId(v->identifier())),
-      new CCSTInitializer(new CCSTPrimaryExprId(*init_value))));
+      new CCSTInitializer(new CCSTPrimaryExprId(init_value))));
 
   return new CCSTDeclaration(type2(v->type()), decs);
 }
