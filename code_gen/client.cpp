@@ -323,7 +323,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c,
   std::vector<CCSTAssignExpr *> lcd_async_start_args;
   std::vector<CCSTAssignExpr *> dummy_args;
   std::vector<CCSTAssignExpr *> async_fntype_args;
-  std::vector<CCSTAssignExpr *> fipc_set_0;
+  std::vector<CCSTAssignExpr *> fipc_set_0;//unused
   std::vector<CCSTDecSpecifier *> spec_fipcm;
 
   std::vector<CCSTInitDeclarator *> decs_req;

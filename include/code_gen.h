@@ -7,6 +7,9 @@
 
 #define CONTAINER_OF "container_of"
 
+// combined source
+CCSTFile *generate_combined_source(Module *m);
+
 // server.cpp
 CCSTFile *
 generate_server_source(Module *m,
@@ -39,7 +42,7 @@ CCSTDeclaration *dispatch_async_function_declaration(Module *mod);
 
 CCSTFile *
 generate_client_header(Module *m); //, std::vector<Include*> includes); // todo
-                                   //empty, maybe unnecessary?
+                                   // empty, maybe unnecessary?
 CCSTFile *
 generate_client_source(Module *m,
                        std::vector<Include *> includes); // todo complete
@@ -106,6 +109,8 @@ CCSTPrimaryExprId *function_name(const std::string &func_name); // complete
 CCSTPostFixExprAssnExpr *
 function_call(const std::string &func_name,
               std::vector<CCSTAssignExpr *> args); // complete
+CCSTPostFixExprAssnExpr *
+function_pointer_call(CCSTPostFixExpr *fp, std::vector<CCSTAssignExpr *> args);
 CCSTUnaryOp *Not();
 CCSTIfStatement *if_cond_fail(CCSTExpression *cond,
                               const std::string &err_msg); // complete

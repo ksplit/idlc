@@ -120,6 +120,11 @@ CCSTPostFixExprAssnExpr *function_call(const std::string &func_name,
   return new CCSTPostFixExprAssnExpr(new CCSTPrimaryExprId(func_name), args);
 }
 
+CCSTPostFixExprAssnExpr *
+function_pointer_call(CCSTPostFixExpr *fp, std::vector<CCSTAssignExpr *> args) {
+  return new CCSTPostFixExprAssnExpr(fp, args);
+}
+
 /* creates a pointer, or pointer to pointer, etc*/
 /* may need to be changed if want to do something like
  *    int * const name
