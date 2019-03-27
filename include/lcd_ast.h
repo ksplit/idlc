@@ -705,6 +705,7 @@ class Rpc : public VisitNode {
   std::vector<Parameter *> parameters_;
 
   bool function_pointer_defined_;
+  ProjectionType * parent_projection_;
   std::vector<Variable *>
   marshal_projection_parameters(ProjectionType *pt,
                                 const std::string &direction);
@@ -719,6 +720,7 @@ public:
   unsigned int tag();
   void set_tag(unsigned int t);
   void set_function_pointer_defined(bool b);
+  void set_parent_projection(ProjectionType * pt);
   void set_hidden_args(std::vector<Parameter *> hidden_args);
   bool function_pointer_defined();
   const std::string name() const;
@@ -740,6 +742,7 @@ public:
   iterator end() { return parameters_.end(); }
 
   const LexicalScope *getcurrentscope() const { return current_scope_; }
+  ProjectionType * get_parent_projection() { return parent_projection_;}
 };
 
 class Require : public VisitNode {

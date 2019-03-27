@@ -2,6 +2,7 @@
 *.d
 *.pyc
 *.o
+*.swp
 
 #parser generated files
 peg_peg.py

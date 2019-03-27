@@ -88,6 +88,10 @@ void Rpc::set_function_pointer_defined(bool b) {
   this->function_pointer_defined_ = b;
 }
 
+void Rpc::set_parent_projection(ProjectionType * pt) {
+  this->parent_projection_ = pt;
+}
+
 void Rpc::set_hidden_args(std::vector<Parameter *> hidden_args) {
   this->hidden_args_ = hidden_args;
 }

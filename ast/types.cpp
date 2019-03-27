@@ -173,6 +173,7 @@ Rpc *Function::to_rpc(ProjectionType *pt) {
   Rpc *tmp = new Rpc(this->return_var_, this->identifier_, this->parameters_,
                      this->current_scope_);
   tmp->set_function_pointer_defined(true);
+  tmp->set_parent_projection(pt);
   tmp->set_hidden_args(new_parameters);
   return tmp;
 }
