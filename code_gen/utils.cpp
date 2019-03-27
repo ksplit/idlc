@@ -125,6 +125,20 @@ function_pointer_call(CCSTPostFixExpr *fp, std::vector<CCSTAssignExpr *> args) {
   return new CCSTPostFixExprAssnExpr(fp, args);
 }
 
+ProjectionField *find_rpc_field(Rpc *r) {
+  ProjectionField *rpc_field;
+  ProjectionType *parent_proj = r->get_parent_projection();
+  for (auto pf : *parent_proj) {
+    if (pf->type_->num() == FUNCTION_TYPE) {
+      if (pf->field_name_ == r->name()) {
+        rpc_field = pf;
+        break;
+      }
+    }
+  }
+  return rpc_field;
+}
+
 /* creates a pointer, or pointer to pointer, etc*/
 /* may need to be changed if want to do something like
  *    int * const name

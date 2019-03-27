@@ -111,6 +111,7 @@ function_call(const std::string &func_name,
               std::vector<CCSTAssignExpr *> args); // complete
 CCSTPostFixExprAssnExpr *
 function_pointer_call(CCSTPostFixExpr *fp, std::vector<CCSTAssignExpr *> args);
+ProjectionField * find_rpc_field(Rpc * r);
 CCSTUnaryOp *Not();
 CCSTIfStatement *if_cond_fail(CCSTExpression *cond,
                               const std::string &err_msg); // complete
