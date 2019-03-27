@@ -231,8 +231,9 @@ CCSTCompoundStatement *callee_body(Rpc *r, Module *m) {
 
   std::vector<CCSTInitDeclarator *> decs_ret;
 
-  decs_ret.push_back(new CCSTInitDeclarator(new CCSTDeclarator(pointer(0), new
-      CCSTDirectDecId("ret")), new CCSTInitializer(new CCSTPrimaryExprId("0"))));
+  decs_ret.push_back(new CCSTInitDeclarator(
+      new CCSTDeclarator(pointer(0), new CCSTDirectDecId("ret")),
+      new CCSTInitializer(new CCSTPrimaryExprId("0"))));
   declarations.push_back(new CCSTDeclaration(int_type(), decs_ret));
 
   if (r->function_pointer_defined()) {
@@ -420,18 +421,33 @@ CCSTCompoundStatement *callee_body(Rpc *r, Module *m) {
   /// pointer, we have to allocate memory for that, but only once.
   /// For instance, get_stats on a network driver.
   //  statements.push_back(allocate_and_link_containers_callee(r->return_variable()
-  //							   , m->cspaces_.at(0)->identifier(),
-  //type));
+  //							   ,
+  // m->cspaces_.at(0)->identifier(),  type));
   //  statements.push_back(allocate_non_container_variables(r->return_variable()));
 
-  // real call
+  // real call --
+  // Rpcs defined as fps are invoked by accessing them as a member of their
+  // corresponding parent structures. "access" can give us the nested chain of
+  // access of a fp, but it accepts Variables as arguments, so we get the
+  // corresponding field of the rpc (a Variable subtype) using "find_rpc_field"
   if (r->return_variable()->type()->num() == VOID_TYPE) {
-    statements.push_back(
-        new CCSTExprStatement(function_call(r->name(), real_call_params)));
+    if (r->function_pointer_defined()) {
+      statements.push_back(new CCSTExprStatement(
+          function_pointer_call(access(find_rpc_field(r)), real_call_params)));
+    } else {
+      statements.push_back(
+          new CCSTExprStatement(function_call(r->name(), real_call_params)));
+    }
   } else {
-    statements.push_back(new CCSTExprStatement(
-        new CCSTAssignExpr(access(r->return_variable()), equals(),
-                           function_call(r->name(), real_call_params))));
+    if (r->function_pointer_defined()) {
+      statements.push_back(new CCSTExprStatement(new CCSTAssignExpr(
+          access(r->return_variable()), equals(),
+          function_pointer_call(access(find_rpc_field(r)), real_call_params))));
+    } else {
+      statements.push_back(new CCSTExprStatement(
+          new CCSTAssignExpr(access(r->return_variable()), equals(),
+                             function_call(r->name(), real_call_params))));
+    }
   }
 
   if (r->return_variable()->container()) {
@@ -512,10 +528,8 @@ CCSTCompoundStatement *callee_body(Rpc *r, Module *m) {
         new CCSTExprStatement(function_call("thc_ipc_reply", ipc_reply_args)));
   }
 
-  std::string *goto_alloc =
-      new std::string("fail_alloc");
-  statements.push_back(
-        new CCSTPlainLabelStatement(*goto_alloc, NULL));
+  std::string *goto_alloc = new std::string("fail_alloc");
+  statements.push_back(new CCSTPlainLabelStatement(*goto_alloc, NULL));
   statements.push_back(new CCSTReturn(new CCSTPrimaryExprId("ret")));
   return new CCSTCompoundStatement(declarations, statements);
 }

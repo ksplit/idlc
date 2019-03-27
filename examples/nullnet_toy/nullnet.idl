@@ -1,5 +1,5 @@
-include<kernel.idl>
+include <kernel.idl>
 
-    module nullnet() {
+module nullnet() {
   require kernel;
 }
