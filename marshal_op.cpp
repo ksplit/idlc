@@ -201,7 +201,11 @@ Marshal_type *MarshalPrepareVisitor::visit(ProjectionType *pt) {
           "Error: null pointer in MarshalPrepareVisit visit ProjectionType\n");
     }
 
-    pf->set_marshal_info(pf->type()->accept(this));
+    if (pf->type()->num() != FUNCTION_TYPE) {
+      std::cout << "Preparing field: " << pf->identifier() << " "
+                << pf->type()->num() << " " << FUNCTION_TYPE << std::endl;
+      pf->set_marshal_info(pf->type()->accept(this));
+    }
   }
 
   return new Marshal_projection();

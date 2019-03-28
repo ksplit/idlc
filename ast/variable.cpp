@@ -923,11 +923,13 @@ void ProjectionField::create_container_variable(LexicalScope *ls) {
 Variable *ProjectionField::container() { return this->container_; }
 
 void ProjectionField::prepare_marshal(MarshalPrepareVisitor *worker) {
-  if (this->container_ != 0x0) {
-    this->container_->prepare_marshal(worker);
-  }
+  if (this->type()->num() != FUNCTION_TYPE) {
+    if ((this->container_ != 0x0)) {
+      this->container_->prepare_marshal(worker);
+    }
 
-  this->marshal_info_ = this->type_->accept(worker);
+    this->marshal_info_ = this->type_->accept(worker);
+  }
 }
 
 Type *ProjectionField::type() { return this->type_; }
