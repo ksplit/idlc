@@ -264,7 +264,8 @@ void Rpc::prepare_marshal() {
   auto *in_marshal_worker = new MarshalPrepareVisitor(in_reg);
 
   for (auto v : in_params) {
-    v->prepare_marshal(in_marshal_worker);
+    if (v->type()->num()!=FUNCTION_TYPE)
+      v->prepare_marshal(in_marshal_worker);
   }
 
   // marshal prepare the out parameters
@@ -274,7 +275,8 @@ void Rpc::prepare_marshal() {
   auto *out_marshal_worker = new MarshalPrepareVisitor(out_reg);
 
   for (auto v : out_params) {
-    v->prepare_marshal(out_marshal_worker);
+    if (v->type()->num()!=FUNCTION_TYPE)
+      v->prepare_marshal(out_marshal_worker);
   }
 
   // marshal prepare for the in/out params.  meaning they need only 1 register
@@ -286,7 +288,8 @@ void Rpc::prepare_marshal() {
   auto *in_out_marshal_worker = new MarshalPrepareVisitor(in_out_regs);
 
   for (auto v : in_out_params) {
-    v->prepare_marshal(in_out_marshal_worker);
+    if (v->type()->num()!=FUNCTION_TYPE)
+      v->prepare_marshal(in_out_marshal_worker);
   }
 }
 

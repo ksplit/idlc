@@ -397,10 +397,10 @@ void Parameter::prepare_marshal(MarshalPrepareVisitor *worker) {
   if (this->container_ != 0x0) {
     this->container_->prepare_marshal(worker);
   }
-
-  this->marshal_info_ = this->type_->accept(worker);
+  if ((this->type()->num() != UNRESOLVED_TYPE)) {
+    this->marshal_info_ = this->type_->accept(worker);
+  }
 }
-
 const std::string &Parameter::identifier() const { return this->name_; }
 
 void Parameter::set_identifier(const std::string &id) { this->name_ = id; }
@@ -646,7 +646,9 @@ void ReturnVariable::prepare_marshal(MarshalPrepareVisitor *worker) {
     this->container_->prepare_marshal(worker);
   }
 
+  if (this->type()->num() != UNRESOLVED_TYPE) {
   this->marshal_info_ = this->type_->accept(worker);
+ }
 }
 
 void ReturnVariable::set_marshal_info(Marshal_type *mt) {
@@ -923,13 +925,10 @@ void ProjectionField::create_container_variable(LexicalScope *ls) {
 Variable *ProjectionField::container() { return this->container_; }
 
 void ProjectionField::prepare_marshal(MarshalPrepareVisitor *worker) {
-  if (this->type()->num() != FUNCTION_TYPE) {
-    if ((this->container_ != 0x0)) {
-      this->container_->prepare_marshal(worker);
-    }
-
-    this->marshal_info_ = this->type_->accept(worker);
+  if ((this->container_ != 0x0)) {
+    this->container_->prepare_marshal(worker);
   }
+    this->marshal_info_ = this->type_->accept(worker);
 }
 
 Type *ProjectionField::type() { return this->type_; }
