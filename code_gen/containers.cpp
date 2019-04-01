@@ -308,7 +308,7 @@ CCSTStatement *allocate_non_container_variables(Variable *v) {
                "Error: dynamic cast to projection type failed\n");
 
         ProjectionField *tmp_real_field =
-            find_field(v_container_type, v->type()->name());
+            find_field(v_container_type, pt->real_type());
 
         ProjectionField *container_pf =
             find_field(dynamic_cast<ProjectionType *>(tmp_real_field->type()),

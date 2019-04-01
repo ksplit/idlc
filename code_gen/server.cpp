@@ -376,8 +376,17 @@ CCSTCompoundStatement *callee_body(Rpc *r, Module *m) {
           dynamic_cast<ProjectionType *>(p->container()->type());
       Assert(p_container_type != 0x0,
              "Error: dynamic cast to projection type failed\n");
-      ProjectionField *p_container_real_field =
-          p_container_type->get_field(p->type()->name());
+      ProjectionField *p_container_real_field = NULL;
+
+      if (p->type()->num() == PROJECTION_TYPE ||
+          p->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
+        ProjectionType *pt = dynamic_cast<ProjectionType *>(p->type());
+        p_container_real_field = p_container_type->get_field(pt->real_type());
+      } else {
+        p_container_real_field = p_container_type->get_field(p->type()->name());
+      }
+
+
       Assert(p_container_real_field != 0x0,
              "Error: could not find field in structure\n");
       /// XXX: Is this enough to handle all the cases?
