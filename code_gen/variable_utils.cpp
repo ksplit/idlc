@@ -32,6 +32,7 @@ const std::string get_init_value(Variable *v) {
     return init_value;
   case PROJECTION_TYPE:             // struct
   case PROJECTION_CONSTRUCTOR_TYPE: // struct
+  case FUNCTION_TYPE:
   case VOID_TYPE:
     return init_ptr_value;
   default:
