@@ -34,6 +34,7 @@ const std::string get_init_value(Variable *v) {
   case PROJECTION_CONSTRUCTOR_TYPE: // struct
   case FUNCTION_TYPE:
   case VOID_TYPE:
+  case UNRESOLVED_TYPE:
     return init_ptr_value;
   default:
     Assert(1 == 0, "Error: Cannot determine init value for %d\n", num);

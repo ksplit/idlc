@@ -313,6 +313,10 @@ std::vector<CCSTDecSpecifier *> type2(Type *t) {
     specifier.push_back(
         new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::FloatTypeSpec));
     return specifier;
+  case UNRESOLVED_TYPE:
+    specifier.push_back(
+        new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::OtherTypeSpec));
+    return specifier;
   default:
     std::cout << "Received " << type_number_to_name(num)
               << " instead of struct or integer" << std::endl;
