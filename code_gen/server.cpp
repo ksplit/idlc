@@ -291,7 +291,7 @@ CCSTCompoundStatement *callee_body(Rpc *r, Module *m) {
   }
   // TODO: unmarshal channel refs;
 
-  // allocate/initiliaze and link these
+  // allocate/initialize and link these
   for (auto p : *r) {
     std::cout << "Parameter is " << p->identifier() << std::endl;
     statements.push_back(allocate_and_link_containers_callee(

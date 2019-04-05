@@ -29,6 +29,9 @@ unsigned int Rpc::tag() { return this->tag_; }
 
 void Rpc::set_tag(unsigned int t) { this->tag_ = t; }
 
+// Returns all the parameters to marshal based on: 1) the fields of a
+// ProjectionType, 2) the corresponding container variables of these fields, if
+// they exist.
 std::vector<Variable *>
 Rpc::marshal_projection_parameters(ProjectionType *pt,
                                    const std::string &direction) {
@@ -88,7 +91,7 @@ void Rpc::set_function_pointer_defined(bool b) {
   this->function_pointer_defined_ = b;
 }
 
-void Rpc::set_parent_projection(ProjectionType * pt) {
+void Rpc::set_parent_projection(ProjectionType *pt) {
   this->parent_projection_ = pt;
 }
 
@@ -122,6 +125,7 @@ const std::string &Rpc::enum_name() const { return this->enum_str; }
 std::vector<Parameter *> Rpc::parameters() { return parameters_; }
 
 void Rpc::prepare_marshal() {
+  std::cout << "in prepare_marshal for rpc: " << this->name() << std::endl;
   // TODO: account for hidden args
   std::vector<Variable *> in_params;
   std::vector<Variable *> out_params;
@@ -231,7 +235,11 @@ void Rpc::prepare_marshal() {
 
   // assign register(s) to return value
   if (this->explicit_return_->type()->num() != VOID_TYPE) {
+    std::cout << "add the return variable of this rpc to out_params"
+              << std::endl;
     out_params.push_back(this->explicit_return_);
+    std::cout << "the type # of this return variable is: "
+              << this->explicit_return_->type()->num() << std::endl;
   }
   if (this->explicit_return_->type()->num() == PROJECTION_TYPE ||
       this->explicit_return_->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
@@ -251,6 +259,22 @@ void Rpc::prepare_marshal() {
     }
   }
 
+  std::cout << "the params to marshal after including return variable"
+            << std::endl;
+
+  std::cout << "in_params:" << std::endl;
+  for (auto my_param : in_params)
+    std::cout << my_param->identifier() << " type#:" << my_param->type()->num()
+              << std::endl;
+  std::cout << "out_params:" << std::endl;
+  for (auto my_param : out_params)
+    std::cout << my_param->identifier() << " type#:" << my_param->type()->num()
+              << std::endl;
+  std::cout << "in/out_params:" << std::endl;
+  for (auto my_param : in_out_params)
+    std::cout << my_param->identifier() << " type#:" << my_param->type()->num()
+              << std::endl;
+
   // marshal prepare the in parameters
   auto *in_reg = new Registers();
   int arr[1];
@@ -264,8 +288,12 @@ void Rpc::prepare_marshal() {
   auto *in_marshal_worker = new MarshalPrepareVisitor(in_reg);
 
   for (auto v : in_params) {
-    if (v->type()->num()!=FUNCTION_TYPE)
-      v->prepare_marshal(in_marshal_worker);
+    if (v->type()->num() != FUNCTION_TYPE) {
+      std::cout << "Preparing marshaling for inparam: " << v->identifier()
+                << std::endl;
+      if (v->marshal_info() == 0x0)
+        v->prepare_marshal(in_marshal_worker);
+    }
   }
 
   // marshal prepare the out parameters
@@ -275,8 +303,12 @@ void Rpc::prepare_marshal() {
   auto *out_marshal_worker = new MarshalPrepareVisitor(out_reg);
 
   for (auto v : out_params) {
-    if (v->type()->num()!=FUNCTION_TYPE)
-      v->prepare_marshal(out_marshal_worker);
+    if (v->type()->num() != FUNCTION_TYPE) {
+      std::cout << "Preparing marshaling for outparam: " << v->identifier()
+                << std::endl;
+      if (v->marshal_info() == 0x0)
+        v->prepare_marshal(out_marshal_worker);
+    }
   }
 
   // marshal prepare for the in/out params.  meaning they need only 1 register
@@ -288,8 +320,12 @@ void Rpc::prepare_marshal() {
   auto *in_out_marshal_worker = new MarshalPrepareVisitor(in_out_regs);
 
   for (auto v : in_out_params) {
-    if (v->type()->num()!=FUNCTION_TYPE)
-      v->prepare_marshal(in_out_marshal_worker);
+    if (v->type()->num() != FUNCTION_TYPE) {
+      std::cout << "Preparing marshaling for inparam: " << v->identifier()
+                << std::endl;
+      if (v->marshal_info() == 0x0)
+        v->prepare_marshal(in_out_marshal_worker);
+    }
   }
 }
 
