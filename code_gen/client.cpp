@@ -207,19 +207,20 @@ CCSTCompoundStatement *caller_body(Rpc *r, Module *m, bool user) {
                           __tmp_declarations.end());
       statements.insert(statements.end(), __tmp_statements.begin(),
                         __tmp_statements.end());
-    }
-    if (p->type()->num() == FUNCTION_TYPE) {
-      auto *p_container_type =
-          dynamic_cast<ProjectionType *>(p->container()->type());
-      Assert(p_container_type != 0x0,
-             "Error: dynamic cast to projection type failed\n");
-      auto *p_container_real_field =
-          p_container_type->get_field(p->type()->name());
-      Assert(p_container_real_field != 0x0,
-             "Error: could not find field in structure\n");
-      statements.push_back(new CCSTExprStatement(
-          new CCSTAssignExpr(access(p_container_real_field), equals(),
-                             new CCSTPrimaryExprId(p->type()->name()))));
+
+      if (p->type()->num() == FUNCTION_TYPE) {
+        auto *p_container_type =
+            dynamic_cast<ProjectionType *>(p->container()->type());
+        Assert(p_container_type != 0x0,
+               "Error: dynamic cast to projection type failed\n");
+        auto *p_container_real_field =
+            p_container_type->get_field(p->type()->name());
+        Assert(p_container_real_field != 0x0,
+               "Error: could not find field in structure\n");
+        statements.push_back(new CCSTExprStatement(
+            new CCSTAssignExpr(access(p_container_real_field), equals(),
+                               new CCSTPrimaryExprId(p->type()->name()))));
+      }
     }
   }
 
@@ -323,7 +324,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c,
   std::vector<CCSTAssignExpr *> lcd_async_start_args;
   std::vector<CCSTAssignExpr *> dummy_args;
   std::vector<CCSTAssignExpr *> async_fntype_args;
-  std::vector<CCSTAssignExpr *> fipc_set_0;//unused
+  std::vector<CCSTAssignExpr *> fipc_set_0; // unused
   std::vector<CCSTDecSpecifier *> spec_fipcm;
 
   std::vector<CCSTInitDeclarator *> decs_req;
