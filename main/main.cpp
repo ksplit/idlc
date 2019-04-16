@@ -21,6 +21,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <bits/stdc++.h> 
+#include <boost/program_options.hpp>
+
+namespace po = boost::program_options;
+bool vmfunc_boundary;
 
 void print_usage() {
   std::cerr << "Usage:\n  ./compiler <idl file>" << std::endl;
@@ -168,11 +172,44 @@ void generate_module_code(Module *m) {
     generate_module_code(require->module_);
 }
 int main(int argc, char **argv) {
-  if (argc != 2) {
-    print_usage();
-  }
+  std::string file;
   try {
-    char *file = argv[1];
+    po::options_description desc("Options");
+    desc.add_options()
+      ("help", "produce help message")
+      ("vmfunc", "enable vmfunc boundary")
+      ("idl", po::value<std::string>(), "idl file")
+      ;
+
+    po::variables_map vm;
+
+    try {
+      po::store(po::parse_command_line(argc, argv, desc), vm);
+      po::notify(vm);
+
+      if (vm.count("help")) {
+        std::cout << desc << "\n";
+        return EXIT_SUCCESS;
+      }
+
+      if (vm.count("idl")) {
+        file = vm["idl"].as<std::string>();
+        std::cout << "Using IDL file" << file << ".\n";
+      }
+      if (vm.count("vmfunc")) {
+        vmfunc_boundary = true;
+        std::cout << "Using vmfunc boundary.\n";
+      }
+    } catch (po::error &e) {
+      std::cerr << "ERROR: " << e.what() << std::endl << std::endl;
+      std::cerr << desc << std::endl;
+      return EXIT_FAILURE;
+    }
+
+    if (file.empty()) {
+      std::cout << desc << std::endl;
+      return EXIT_SUCCESS;
+    }
 
     // This pass recursively parses the included idls and saves them to a
     // map. This pass also does the first pass of the input idl.

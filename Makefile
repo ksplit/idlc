@@ -9,7 +9,7 @@ idl = $(idl_cpp) $(idl_h)
 CXXFLAGS = -g -fno-omit-frame-pointer -I include/ #-fsanitize=address
 CXXFLAGS += -MMD -std=c++1z -Wall
 CXX = g++
-LDFLAGS = #-lasan
+LDFLAGS = -lboost_program_options #-lasan
 
 CPP_a = $(shell find . -type f ! -path "./parser/vembyr-1.1/*" -name "*.cpp") $(idl_cpp)
 CPP = $(filter-out ./test/%,$(CPP_a))
@@ -20,7 +20,7 @@ DEP = $(patsubst %.cpp,%.d,$(CPP))
 default: $(bin)
 
 $(bin): $(OBJ)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CXX) $(CXXFLAGS)  -o $@ $^ $(LDFLAGS)
 
 main/main.cpp: $(idl_h)
 

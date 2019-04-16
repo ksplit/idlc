@@ -1,7 +1,7 @@
 #ifndef CAST_H
 #define CAST_H
 
-#include "assert.h"
+#include "idl_assert.h"
 #include "lcd_ast.h"
 #include <fstream>
 #include <vector>

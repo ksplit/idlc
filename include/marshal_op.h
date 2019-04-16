@@ -11,7 +11,6 @@
 #define IPC_GET_REG(x) "fipc_get_reg" #x
 #define IPC_SET_REG(x) "fipc_set_reg" #x
 
-#include "assert.h"
 #include "ccst.h"
 #include "lcd_ast.h"
 #include <stdlib.h>
