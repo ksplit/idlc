@@ -7,6 +7,8 @@
 
 #define CONTAINER_OF "container_of"
 
+extern bool vmfunc_boundary;
+
 // combined source
 CCSTFile *generate_combined_source(Module *m);
 
@@ -33,7 +35,7 @@ CCSTDeclaration *callee_declaration(Rpc *r); // todo complete
 
 template <bool client>
 CCSTCompoundStatement *dispatch_sync_loop_body(Module *mod);
-CCSTDeclaration *dispatch_sync_function_declaration();
+CCSTDeclaration *dispatch_sync_function_declaration(Module *mod);
 template <bool client>
 CCSTCompoundStatement *dispatch_async_loop_body(Module *mod);
 CCSTDeclaration *dispatch_async_function_declaration(Module *mod);
@@ -52,6 +54,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c,
                                   std::string &cspace_to_use, bool);
 CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use,
                                  Channel *c);
+CCSTCompoundStatement *vmfunc_call(Rpc *r, std::string &cspace_to_use, int ept);
 
 std::vector<CCSTStatement *>
 marshal_in_parameters(std::vector<Parameter *> params); // complete

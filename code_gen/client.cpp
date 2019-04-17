@@ -9,6 +9,7 @@
 
 CCSTFile *generate_client_header(Module *mod) {
   std::vector<CCSTExDeclaration *> definitions;
+
   if (mod->rpc_definitions().empty()) {
     std::cout << "No rpc definitions, returning null" << std::endl;
     return NULL;
@@ -19,7 +20,7 @@ CCSTFile *generate_client_header(Module *mod) {
     std::cout << "rpc name: " << rpc->name() << std::endl;
 
   /// generate function declaration for sync, async loop
-  definitions.push_back(dispatch_sync_function_declaration());
+  definitions.push_back(dispatch_sync_function_declaration(mod));
   definitions.push_back(dispatch_async_function_declaration(mod));
 
   /// generate function declaration for init, exit
@@ -280,7 +281,9 @@ CCSTCompoundStatement *caller_body(Rpc *r, Module *m, bool user) {
   }
 
   CCSTCompoundStatement *updates;
-  if (c && c->getChannelType() == Channel::ChannelType::AsyncChannel) {
+  if (vmfunc_boundary) {
+    updates = vmfunc_call(r, cspace_to_use, 1);
+  } else if (c && c->getChannelType() == Channel::ChannelType::AsyncChannel) {
     updates = async_call(r, c, cspace_to_use, user);
   } else {
     updates = sync_call(r, m, cspace_to_use, c);
@@ -298,7 +301,7 @@ CCSTCompoundStatement *caller_body(Rpc *r, Module *m, bool user) {
                     __tmp_statements.end());
   lbl_statements.insert(lbl_statements.end(), __tmp_lbl_statements.begin(),
                         __tmp_lbl_statements.end());
-  if (user) {
+  if (user && !vmfunc_boundary) {
     std::vector<CCSTAssignExpr *> lcd_exit_args;
     lcd_exit_args.push_back(new CCSTInteger(0));
     statements.push_back(
@@ -697,6 +700,101 @@ CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use,
         unmarshal_variable_no_check(r->return_variable(), c->chType);
     statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
   }
+
+  return new CCSTCompoundStatement(declarations, statements);
+}
+
+// This funcion has a lot of duplicate code copied from async_call.
+// TODO: refactor and merge later
+CCSTCompoundStatement *vmfunc_call(Rpc *r, std::string &cspace_to_use, int ept) {
+  std::vector<CCSTDeclaration *> declarations;
+  std::vector<CCSTStatement *> statements;
+  std::vector<CCSTStatement *> lbl_statements;
+  std::vector<CCSTAssignExpr *> lcd_async_start_args;
+  std::vector<CCSTAssignExpr *> dummy_args;
+  std::vector<CCSTAssignExpr *> async_fntype_args;
+  std::vector<CCSTDecSpecifier *> spec_fipcm;
+  CCSTAssignExpr *fipc_req;
+
+  std::vector<CCSTInitDeclarator *> decs_req;
+  std::vector<CCSTInitDeclarator *> decs_r;
+
+  spec_fipcm.push_back(new CCSTStructUnionSpecifier(struct_t, "fipc_message"));
+
+  decs_r.push_back(new CCSTInitDeclarator(
+      new CCSTDeclarator(pointer(0), new CCSTDirectDecId("r"))));
+
+  fipc_req = new CCSTUnaryExprCastExpr(reference(), new CCSTPrimaryExprId("r"));
+
+  decs_req.push_back(new CCSTInitDeclarator(
+      new CCSTDeclarator(pointer(1), new CCSTDirectDecId("_request")),
+      new CCSTInitializer(fipc_req)));
+
+  declarations.push_back(new CCSTDeclaration(spec_fipcm, decs_r));
+  declarations.push_back(new CCSTDeclaration(spec_fipcm, decs_req));
+
+  async_fntype_args.push_back(new CCSTPrimaryExprId("_request"));
+  async_fntype_args.push_back(new CCSTPrimaryExprId(r->enum_name()));
+
+  statements.push_back(new CCSTExprStatement(new CCSTPostFixExprAssnExpr(
+          new CCSTPrimaryExprId("async_msg_set_fn_type"), async_fntype_args)));
+
+  /* marshal parameters */
+  for (auto p : *r) {
+    if (p->in()) {
+      std::cout << " ASYNC marshal variable " << p->identifier()
+                << " for function " << r->name() << std::endl;
+      // TODO: Unify instances like this . Refer one more below
+      CCSTCompoundStatement *updates = dynamic_cast<CCSTCompoundStatement *>(
+          marshal_variable(p, "in", Channel::ChannelType::Unknown));
+
+      std::vector<CCSTDeclaration *> __tmp_declarations =
+          updates->getdeclarations();
+      std::vector<CCSTStatement *> __tmp_statements = updates->getstatements();
+
+      declarations.insert(declarations.end(), __tmp_declarations.begin(),
+                          __tmp_declarations.end());
+      statements.insert(statements.end(), __tmp_statements.begin(),
+                        __tmp_statements.end());
+    }
+    // TODO:
+    if (p->type()->num() == VOID_TYPE) {
+
+    }
+  }
+
+  std::string ipc_call;
+  std::vector<CCSTAssignExpr *> vmfunc_call_args;
+  ipc_call.append("vmfunc_wrapper");
+
+  vmfunc_call_args.push_back(new CCSTPrimaryExprId("_request"));
+
+  statements.push_back(new CCSTExprStatement(
+        new CCSTAssignExpr(new CCSTPrimaryExprId("ret"), equals(),
+          function_call(ipc_call, vmfunc_call_args))));
+
+  /* unmarshal appropriate parameters and return value */
+  for (auto &p : *r) {
+    if (p->type()->num() != VOID_TYPE) {
+      if (p->out()) {
+        std::vector<CCSTStatement *> tmp_stmts =
+            unmarshal_variable_caller(p, Channel::ChannelType::Unknown);
+        statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
+
+        // unmarshal container things associated with this param
+        tmp_stmts = unmarshal_container_refs_caller(p, Channel::ChannelType::Unknown);
+        statements.insert(statements.end(), tmp_stmts.begin(), tmp_stmts.end());
+      }
+    }
+  }
+  // if anything is marked dealloc. dealloc
+  for (auto p : *r) {
+    std::vector<CCSTStatement *> tmp_statements =
+        dealloc_containers_caller(p, cspace_to_use, r->current_scope());
+    statements.insert(statements.end(), tmp_statements.begin(),
+                      tmp_statements.end());
+  }
+
 
   return new CCSTCompoundStatement(declarations, statements);
 }

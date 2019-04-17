@@ -488,6 +488,8 @@ Interface	= m:Interface_special Space+ id:Identifier Spacing OPEN Spacing CLOSE 
 
 				Type *t = getType(*_id);
 				Channel *c = dynamic_cast<Channel*>(t);
+				// XXX: Default to vmfuncChannel for now
+				c->setChannelType(Channel::ChannelType::VmfuncChannel);
 				std::cout << " channel_scope dyncast " << std::hex << c << std::dec << std::endl;
 				Assert(c != NULL, "Dynamic cast from Type to Channel failed");
 				get_current_scope()->setactiveChannel(c);

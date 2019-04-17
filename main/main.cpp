@@ -198,7 +198,7 @@ int main(int argc, char **argv) {
       }
       if (vm.count("vmfunc")) {
         vmfunc_boundary = true;
-        std::cout << "Using vmfunc boundary.\n";
+        std::cout << "Using vmfunc boundary " << vmfunc_boundary << ".\n";
       }
     } catch (po::error &e) {
       std::cerr << "ERROR: " << e.what() << std::endl << std::endl;

@@ -2,19 +2,38 @@
 #include "code_gen.h"
 #include <algorithm>
 
-CCSTDeclaration *dispatch_sync_function_declaration() {
+CCSTDeclaration *dispatch_sync_function_declaration(Module *mod) {
   std::vector<CCSTDecSpecifier *> specifier;
-  specifier.push_back(
-      new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
+  std::vector<CCSTParamDeclaration *> p_decs;
+  int err;
+  CCSTDirectDecId *id = new CCSTDirectDecId("dispatch_sync_loop");
 
-  std::vector<CCSTInitDeclarator *> decs;
+  if (vmfunc_boundary) {
+    p_decs.push_back(new CCSTParamDeclaration(
+        type2(mod->module_scope()->lookup("fipc_message", &err)),
+        new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("message"))));
 
-  std::vector<CCSTParamDeclaration *> empty;
-  decs.push_back(new CCSTDeclarator(
-      0x0,
-      new CCSTDirectDecParamTypeList(new CCSTDirectDecId("dispatch_sync_loop"),
-                                     new CCSTParamList(empty))));
-  return new CCSTDeclaration(specifier, decs);
+    CCSTParamList *param_list = new CCSTParamList(p_decs);
+
+    CCSTDirectDecParamTypeList *params =
+        new CCSTDirectDecParamTypeList(id, param_list);
+
+    CCSTDeclarator *declarator = new CCSTDeclarator(NULL, params);
+    std::vector<CCSTInitDeclarator *> init_declarator;
+    init_declarator.push_back(declarator);
+    return new CCSTDeclaration(specifier, init_declarator);
+  } else {
+    specifier.push_back(
+        new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec));
+
+    std::vector<CCSTInitDeclarator *> decs;
+
+    std::vector<CCSTParamDeclaration *> empty;
+    decs.push_back(new CCSTDeclarator(
+        0x0,
+        new CCSTDirectDecParamTypeList(id, new CCSTParamList(empty))));
+    return new CCSTDeclaration(specifier, decs);
+  }
 }
 
 CCSTDeclaration *dispatch_async_function_declaration(Module *mod) {
@@ -30,18 +49,20 @@ CCSTDeclaration *dispatch_async_function_declaration(Module *mod) {
   CCSTDirectDecId *id = new CCSTDirectDecId("dispatch_async_loop");
 
   p_decs.push_back(new CCSTParamDeclaration(
-      type2(mod->module_scope()->lookup("thc_channel", &err)),
-      new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("_channel"))));
-  p_decs.push_back(new CCSTParamDeclaration(
       type2(mod->module_scope()->lookup("fipc_message", &err)),
       new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("message"))));
-  p_decs.push_back(new CCSTParamDeclaration(
-      type2(mod->module_scope()->lookup("glue_cspace", &err)),
-      new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("cspace"))));
-  p_decs.push_back(new CCSTParamDeclaration(
-      type2(mod->module_scope()->lookup("cptr", &err)),
-      new CCSTDeclarator(NULL, new CCSTDirectDecId("sync_ep"))));
 
+  if (!vmfunc_boundary) {
+    p_decs.push_back(new CCSTParamDeclaration(
+        type2(mod->module_scope()->lookup("thc_channel", &err)),
+        new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("_channel"))));
+    p_decs.push_back(new CCSTParamDeclaration(
+        type2(mod->module_scope()->lookup("glue_cspace", &err)),
+        new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("cspace"))));
+    p_decs.push_back(new CCSTParamDeclaration(
+        type2(mod->module_scope()->lookup("cptr", &err)),
+        new CCSTDeclarator(NULL, new CCSTDirectDecId("sync_ep"))));
+  }
   CCSTParamList *param_list = new CCSTParamList(p_decs);
 
   CCSTDirectDecParamTypeList *params =
@@ -163,9 +184,11 @@ CCSTCompoundStatement *dispatch_async_loop_body(Module *mod) {
     /// make call to callee/caller
     std::vector<CCSTAssignExpr *> callee_args;
     callee_args.push_back(new CCSTPrimaryExprId("message"));
-    callee_args.push_back(new CCSTPrimaryExprId("_channel"));
-    callee_args.push_back(new CCSTPrimaryExprId("cspace"));
-    callee_args.push_back(new CCSTPrimaryExprId("sync_ep"));
+    if (!vmfunc_boundary) {
+      callee_args.push_back(new CCSTPrimaryExprId("_channel"));
+      callee_args.push_back(new CCSTPrimaryExprId("cspace"));
+      callee_args.push_back(new CCSTPrimaryExprId("sync_ep"));
+    }
     case_body_stmts.push_back(new CCSTReturn(new CCSTPostFixExprAssnExpr(
         new CCSTPrimaryExprId(rpc->callee_name()), callee_args)));
 
@@ -288,6 +311,8 @@ CCSTCompoundStatement *callee_body(Rpc *r, Module *m) {
     statements.push_back(new CCSTExprStatement(new CCSTAssignExpr(
         new CCSTPrimaryExprId("request_cookie"), equals(),
         function_call("thc_get_request_cookie", lcd_req_cook_args))));
+  } else if (ch_type == Channel::VmfuncChannel) {
+
   }
   // TODO: unmarshal channel refs;
 
@@ -528,7 +553,7 @@ CCSTCompoundStatement *callee_body(Rpc *r, Module *m) {
         function_call("lcd_sync_reply", lcd_sync_reply_args_empty))));
     statements.push_back(
         if_cond_fail(new CCSTPrimaryExprId("ret"), "lcd_sync_reply"));
-  } else {
+  } else if (ch_type == Channel::AsyncChannel) {
     std::vector<CCSTAssignExpr *> ipc_reply_args;
     ipc_reply_args.push_back(new CCSTPrimaryExprId("_channel"));
     ipc_reply_args.push_back(new CCSTPrimaryExprId("request_cookie"));
@@ -563,7 +588,7 @@ CCSTFile *generate_server_header(Module *module) {
     }
   }
   /// generate function declaration for sync, async loop
-  definitions.push_back(dispatch_sync_function_declaration());
+  definitions.push_back(dispatch_sync_function_declaration(module));
   definitions.push_back(dispatch_async_function_declaration(module));
 
   /// generate function declaration for init, exit
@@ -589,16 +614,17 @@ CCSTDeclaration *callee_declaration(Rpc *r) {
   p_decs.push_back(new CCSTParamDeclaration(
       type2(r->current_scope()->lookup("fipc_message", &err)),
       new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("_request"))));
-  p_decs.push_back(new CCSTParamDeclaration(
-      type2(r->current_scope()->lookup("thc_channel", &err)),
-      new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("_channel"))));
-  p_decs.push_back(new CCSTParamDeclaration(
-      type2(r->current_scope()->lookup("glue_cspace", &err)),
-      new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("cspace"))));
-  p_decs.push_back(new CCSTParamDeclaration(
-      type2(r->current_scope()->lookup("cptr", &err)),
-      new CCSTDeclarator(NULL, new CCSTDirectDecId("sync_ep"))));
-
+  if (!vmfunc_boundary) {
+    p_decs.push_back(new CCSTParamDeclaration(
+        type2(r->current_scope()->lookup("thc_channel", &err)),
+        new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("_channel"))));
+    p_decs.push_back(new CCSTParamDeclaration(
+        type2(r->current_scope()->lookup("glue_cspace", &err)),
+        new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("cspace"))));
+    p_decs.push_back(new CCSTParamDeclaration(
+        type2(r->current_scope()->lookup("cptr", &err)),
+        new CCSTDeclarator(NULL, new CCSTDirectDecId("sync_ep"))));
+  }
   CCSTParamList *param_list = new CCSTParamList(p_decs);
 
   CCSTDirectDecParamTypeList *params =
@@ -656,18 +682,24 @@ CCSTFile *generate_server_source(Module *m, std::vector<Include *> includes) {
     if (rpc->function_pointer_defined()) {
       std::cout << "doing function pointer def\n";
 
-      definitions.push_back(function_definition(
-          function_pointer_function_declaration(rpc, "_user"),
-          caller_body(rpc, m, true)));
+      if (!vmfunc_boundary) {
+        definitions.push_back(function_definition(
+            function_pointer_function_declaration(rpc, "_user"),
+            caller_body(rpc, m, true)));
 
-      definitions.push_back(
-          function_definition(function_pointer_function_declaration(rpc, ""),
-                              caller_body(rpc, m, false)));
+        definitions.push_back(
+            function_definition(function_pointer_function_declaration(rpc, ""),
+                                caller_body(rpc, m, false)));
 
-      definitions.push_back(trampoline_data_macro(rpc));
+        definitions.push_back(trampoline_data_macro(rpc));
 
-      definitions.push_back(function_definition(
-          trampoline_function_declaration(rpc), trampoline_function_body(rpc)));
+        definitions.push_back(function_definition(
+            trampoline_function_declaration(rpc), trampoline_function_body(rpc)));
+      } else {
+        definitions.push_back(
+            function_definition(function_pointer_function_declaration(rpc, ""),
+                                caller_body(rpc, m, true)));
+      }
     } else {
       std::cout << "doing callee_declaration\n";
       definitions.push_back(
@@ -736,7 +768,7 @@ template <bool client> CCSTFile *generate_dispatch(Module *m) {
   /// dispatch loop
   if (0) {
     statements.push_back(
-        function_definition(dispatch_sync_function_declaration(),
+        function_definition(dispatch_sync_function_declaration(m),
                             dispatch_sync_loop_body<client>(m)));
   }
 

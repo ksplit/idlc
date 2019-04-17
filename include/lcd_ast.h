@@ -519,7 +519,7 @@ public:
 
 class Channel : public Type {
 public:
-  enum ChannelType { AsyncChannel = 0, SyncChannel, Unknown };
+  enum ChannelType { AsyncChannel = 0, SyncChannel, VmfuncChannel, Unknown };
 
   Channel *hostChannel;
   ChannelType chType;

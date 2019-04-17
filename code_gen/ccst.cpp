@@ -1312,10 +1312,10 @@ void CCSTInitDeclarator::write(std::ofstream &of, int indent) {
 }
 
 CCSTInitializer::CCSTInitializer(CCSTAssignExpr *assn_expr)
-    : assn_expr_(assn_expr), init_list_() {}
+    : assn_expr_(assn_expr), init_list_(), init_val_() {}
 
 CCSTInitializer::CCSTInitializer(CCSTInitializerList *init_list)
-    : assn_expr_(), init_list_(init_list) {}
+    : assn_expr_(), init_list_(init_list), init_val_() {}
 
 CCSTInitializer::CCSTInitializer(CCSTPrimaryExprId *init_val)
     : init_val_(init_val) {}
