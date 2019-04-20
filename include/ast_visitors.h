@@ -13,6 +13,8 @@ class Module;
 class Include;
 class Require;
 class Rpc;
+class Parameter;
+class ProjectionField;
 class ReturnVariable;
 class Type;
 class IntegerType;
@@ -48,6 +50,8 @@ public:
   virtual void visit(Include *node) = 0;
   virtual void visit(Require *node) = 0;
   virtual void visit(Rpc *node) = 0;
+  virtual void visit(Parameter *node) = 0;
+  virtual void visit(ProjectionField *node) = 0;
   virtual void visit(ReturnVariable *node) = 0;
   virtual void visit(Type *type) = 0;
   virtual void visit(LexicalScope *lexicalscope) = 0;
@@ -64,16 +68,18 @@ public:
   virtual void visit(FloatType *ft) = 0;
 };
 
-// ASTPrintVisitor - a visitor class that prints info of every node it visits.
+// ASTDeriveSpecsVisitor - a visitor class that prints info of every node it visits.
 // It is implemented in passes/astprint.cpp.
-class ASTPrintVisitor : public ASTVisitor {
+class ASTDeriveSpecsVisitor : public ASTVisitor {
 public:
-  ASTPrintVisitor();
+  ASTDeriveSpecsVisitor();
   void visit(Project *p);
   void visit(Module *m);
   void visit(Include *i);
   void visit(Require *rq);
   void visit(Rpc *rp);
+  void visit(Parameter *p);
+  void visit(ProjectionField *node);
   void visit(ReturnVariable *rv);
   void visit(Type *type);
   void visit(LexicalScope *lexicalscope);
@@ -90,4 +96,6 @@ public:
   void visit(BoolType *bt);
   void visit(DoubleType *dt);
   void visit(FloatType *ft);
+ 
+  bool updated_projtype_maps; 
 };

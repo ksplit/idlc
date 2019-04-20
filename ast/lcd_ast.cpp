@@ -80,7 +80,8 @@ Rpc::marshal_projection_parameters(ProjectionType *pt,
 
 void Rpc::create_container_variables() {
   // for each parameter that is a pointer, need to create a container variable
-  std::cout << "in create container variables for " << this->name_ << std::endl;
+  std::cout << "in create container variables for rpc: " << this->name_
+            << std::endl;
   for (auto p : *this) {
     p->create_container_variable(this->current_scope());
   }
@@ -94,6 +95,8 @@ void Rpc::set_function_pointer_defined(bool b) {
 void Rpc::set_parent_projection(ProjectionType *pt) {
   this->parent_projection_ = pt;
 }
+
+
 
 void Rpc::set_hidden_args(std::vector<Parameter *> hidden_args) {
   this->hidden_args_ = hidden_args;
@@ -515,8 +518,6 @@ void Module::function_pointer_to_rpc() {
 
 void Module::create_trampoline_structs() {
   this->module_scope_->create_trampoline_structs();
-  // loop through rpc definitions
-  // todo
 
   for (auto rpc : *this) {
     rpc->create_trampoline_structs();
@@ -643,6 +644,8 @@ void Include::accept(ASTVisitor *visitor) { visitor->visit(this); }
 
 void ReturnVariable::accept(ASTVisitor *visitor) { visitor->visit(this); }
 
+void Parameter::accept(ASTVisitor *visitor) { visitor->visit(this); }
+void ProjectionField::accept(ASTVisitor *visitor) { visitor->visit(this); }
 void IntegerType::accept(ASTVisitor *visitor) { visitor->visit(this); }
 void ProjectionType::accept(ASTVisitor *visitor) { visitor->visit(this); }
 void BoolType::accept(ASTVisitor *visitor) { visitor->visit(this); }

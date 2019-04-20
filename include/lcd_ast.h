@@ -85,7 +85,7 @@ public:
   std::map<std::string, Type *> type_definitions_;
   std::map<std::string, Variable *> variables_;
   std::map<std::pair<std::string, std::vector<Parameter *>>, Rpc *>
-      rpc_definitions_; // rpc or function pointer. why do we keep this?
+      rpc_definitions_; // contains both normal rpcs and fp rpcs
 
   std::vector<std::string> identifiers_; // new
   std::vector<LexicalScope *> inner_scopes_;
@@ -215,9 +215,9 @@ public:
   UnresolvedType(const UnresolvedType &other);
   virtual Type *clone() const { return new UnresolvedType(*this); }
   virtual Marshal_type *accept(MarshalPrepareVisitor *worker);
-  virtual CCSTTypeName *
-  accept(TypeNameVisitor
-             *worker); // need to add unresolved type to these visitors.
+  virtual CCSTTypeName *accept(TypeNameVisitor *worker); // need to add
+                                                         // unresolved type to
+                                                         // these visitors.
   virtual CCSTStatement *accept(TypeVisitor *worker, Variable *v);
   virtual int num();
   virtual const std::string &name() const;
@@ -260,6 +260,8 @@ public:
   virtual bool dealloc_callee() = 0;
   virtual bool bind_caller() = 0;
   virtual bool bind_callee() = 0;
+  virtual bool reg_allocated() = 0;
+  virtual bool fp_access() = 0;
 
   virtual Variable *container() = 0;
   virtual ~Variable() {}
@@ -267,6 +269,8 @@ public:
 
 class GlobalVariable : public Variable {
 public:
+  bool reg_allocated_;
+  bool fp_access_;
   Type *type_;
   std::string id_;
   int pointer_count_;
@@ -308,10 +312,14 @@ public:
   virtual bool dealloc_callee();
   virtual bool bind_caller();
   virtual bool bind_callee();
+  virtual bool reg_allocated();
+  virtual bool fp_access();
 };
 
 class Parameter : public Variable {
 public:
+  bool reg_allocated_;
+  bool fp_access_;
   bool in_;
   bool out_;
   bool alloc_callee_;
@@ -364,12 +372,17 @@ public:
   virtual bool dealloc_callee();
   virtual bool bind_caller();
   virtual bool bind_callee();
+  virtual bool reg_allocated();
+  virtual bool fp_access();
+  void accept(ASTVisitor *visitor);
 };
 
 // a parameter without a name
 // add to variables.cpp
 class FPParameter : public Parameter {
 public:
+  bool reg_allocated_;
+  bool fp_access_;
   Type *type_;
   int pointer_count_;
   Marshal_type *marshal_info_;
@@ -408,10 +421,14 @@ public:
   virtual bool dealloc_callee();
   virtual bool bind_caller();
   virtual bool bind_callee();
+  virtual bool reg_allocated();
+  virtual bool fp_access();
 };
 
 class ReturnVariable : public Variable, public VisitNode {
 public:
+  bool reg_allocated_;
+  bool fp_access_;
   std::string name_; // to be decided by a name space or something
   Type *type_;
   Marshal_type *marshal_info_;
@@ -460,7 +477,8 @@ public:
   virtual bool dealloc_callee();
   virtual bool bind_caller();
   virtual bool bind_callee();
-
+  virtual bool reg_allocated();
+  virtual bool fp_access();
   void accept(ASTVisitor *visitor);
 };
 
@@ -588,6 +606,8 @@ public:
 class ProjectionField : public Variable //?
 {
 public:
+  bool reg_allocated_;
+  bool fp_access_;
   bool in_;
   bool out_;
   bool alloc_callee_;
@@ -603,6 +623,8 @@ public:
   int pointer_count_;
   Marshal_type *marshal_info_;
   Variable *container_;
+  Variable *parent_proj_var_;
+
   ProjectionField(Type *field_type, const std::string &field_name,
                   int pointer_count);
   virtual ~ProjectionField() {}
@@ -640,11 +662,16 @@ public:
   virtual bool dealloc_callee();
   virtual bool bind_caller();
   virtual bool bind_callee();
+  virtual bool reg_allocated();
+  virtual bool fp_access();
+
+  void accept(ASTVisitor *visitor);
 };
 
 class ProjectionType : public Type // complex type
 {
 public:
+  Variable *var_version;
   std::vector<ProjectionField *> channels_;
   std::string id_;
   std::string real_type_;
@@ -705,7 +732,7 @@ class Rpc : public VisitNode {
   std::vector<Parameter *> parameters_;
 
   bool function_pointer_defined_;
-  ProjectionType * parent_projection_;
+  ProjectionType *parent_projection_;
   std::vector<Variable *>
   marshal_projection_parameters(ProjectionType *pt,
                                 const std::string &direction);
@@ -742,7 +769,7 @@ public:
   iterator end() { return parameters_.end(); }
 
   const LexicalScope *getcurrentscope() const { return current_scope_; }
-  ProjectionType * get_parent_projection() { return parent_projection_;}
+  ProjectionType *get_parent_projection() { return parent_projection_; }
 };
 
 class Require : public VisitNode {

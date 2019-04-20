@@ -72,7 +72,10 @@ void GlobalVariable::set_marshal_info(Marshal_type *mt) {
   this->marshal_info_ = mt;
 }
 
-Marshal_type *GlobalVariable::marshal_info() { return this->marshal_info_; }
+Marshal_type *GlobalVariable::marshal_info() {
+  std::cout << "returning marshal info of a global var" << std::endl;
+  return this->marshal_info_;
+}
 
 int GlobalVariable::pointer_count() { return this->pointer_count_; }
 
@@ -146,6 +149,8 @@ void GlobalVariable::initialize_type() {
 }
 
 void GlobalVariable::create_container_variable(LexicalScope *ls) {
+  std::cout << "in create container variable for global var "
+            << this->identifier() << std::endl;
   if (this->pointer_count() <= 0 ||
       (this->type_->num() != PROJECTION_TYPE &&
        this->type_->num() != PROJECTION_CONSTRUCTOR_TYPE &&
@@ -186,6 +191,8 @@ void GlobalVariable::create_container_variable(LexicalScope *ls) {
   container_var->set_out(this->out());
 
   // save.
+  std::cout << "saving container var for var " << this->identifier()
+            << std::endl;
   this->container_ = container_var;
 
   ProjectionType *pt = dynamic_cast<ProjectionType *>(tmp);
@@ -269,6 +276,9 @@ bool GlobalVariable::bind_callee() {
   return false;
 }
 
+bool GlobalVariable::reg_allocated() { return this->reg_allocated_; }
+
+bool GlobalVariable::fp_access() { return this->fp_access_; }
 // probably more functions needed
 
 /* end */
@@ -302,6 +312,12 @@ Parameter::Parameter(const Parameter &other)
   this->bind_callee_ = other.bind_callee_;
   this->bind_caller_ = other.bind_caller_;
 
+  std::cout << "Param / set bind_caller() to other.bind_caller_| Param is "
+            << this->name_ << " other.bind_caller_ is" << other.bind_caller_
+            << std::endl;
+  std::cout << "Param / set bind_callee() to other.bind_callee_| Param is "
+            << this->name_ << " other.bind_callee_ is" << other.bind_callee_
+            << std::endl;
   if (other.container_ != 0x0) {
     this->container_ = other.container_->clone();
   } else {
@@ -310,7 +326,14 @@ Parameter::Parameter(const Parameter &other)
 }
 
 void Parameter::create_container_variable(LexicalScope *ls) {
+  std::cout << "in create container variable for parameter "
+            << this->identifier() << std::endl;
   // FIXME: some conditions in this monstrous if are meaningless. clean it up
+  std::cout << "it's type is " << this->type()->num() << std::endl;
+  std::cout << "it's specifiers (dealloc/alloc cle/alloc clr):" << std::endl;
+  std::cout << this->dealloc_callee() << std::endl;
+  std::cout << this->alloc_callee() << std::endl;
+  std::cout << this->alloc_caller() << std::endl;
   if (this->pointer_count() <= 0 ||
       (this->type_->num() != PROJECTION_TYPE &&
        this->type_->num() != PROJECTION_CONSTRUCTOR_TYPE &&
@@ -318,6 +341,8 @@ void Parameter::create_container_variable(LexicalScope *ls) {
        this->type_->num() != FUNCTION_TYPE) ||
       (!this->bind_caller() && !this->bind_callee() && !this->alloc_caller() &&
        !this->alloc_callee() && !this->dealloc_callee())) {
+    std::cout << "not creating containter for this param" << std::endl;
+
     return;
   }
   Type *tmp = this->type_;
@@ -363,6 +388,8 @@ void Parameter::create_container_variable(LexicalScope *ls) {
     container_var->set_dealloc_caller(this->dealloc_caller());
 
     // save.
+    std::cout << "saving container var for var " << this->identifier()
+              << std::endl;
     this->container_ = container_var;
 
     // recurse
@@ -386,6 +413,8 @@ void Parameter::create_container_variable(LexicalScope *ls) {
     container_var->set_out(this->out());
 
     // save.
+    std::cout << "saving container var for var " << this->identifier()
+              << std::endl;
     this->container_ = container_var;
   }
 }
@@ -397,6 +426,8 @@ void Parameter::prepare_marshal(MarshalPrepareVisitor *worker) {
   if (this->container_ != 0x0) {
     this->container_->prepare_marshal(worker);
   }
+  std::cout << "The type # of the param we are marshalling ="
+            << this->type()->num() << std::endl;
   if ((this->type()->num() != UNRESOLVED_TYPE)) {
     this->marshal_info_ = this->type_->accept(worker);
   }
@@ -434,6 +465,8 @@ void Parameter::modify_specs() {
     /// If the spec is bind or dealloc
     if ((this->bind_caller() && this->bind_callee()) ||
         this->dealloc_callee()) {
+      std::cout << "modifying specs of parameter " << this->identifier()
+                << std::endl;
       auto *container =
           dynamic_cast<ProjectionType *>(this->container()->type());
       auto *other_ref = container->get_field("other_ref");
@@ -448,7 +481,10 @@ Variable *Parameter::accessor() { return this->accessor_; }
 
 void Parameter::set_marshal_info(Marshal_type *mt) { this->marshal_info_ = mt; }
 
-Marshal_type *Parameter::marshal_info() { return this->marshal_info_; }
+Marshal_type *Parameter::marshal_info() {
+  std::cout << "returning marshal info of a parameter" << std::endl;
+  return this->marshal_info_;
+}
 
 void Parameter::resolve_types(LexicalScope *ls) {
   // need to rewrite to account for initializetype
@@ -538,14 +574,33 @@ bool Parameter::dealloc_caller() { return this->dealloc_caller_; }
 
 bool Parameter::dealloc_callee() { return this->dealloc_callee_; }
 
-void Parameter::set_bind_caller(bool b) { this->bind_caller_ = b; }
+void Parameter::set_bind_caller(bool b) {
+  std::cout << "Param set_bind_caller() " << this->identifier() << " " << b
+            << std::endl;
+  this->bind_caller_ = b;
+}
 
-void Parameter::set_bind_callee(bool b) { this->bind_callee_ = b; }
+void Parameter::set_bind_callee(bool b) {
+  std::cout << "Param set_bind_callee() " << this->identifier() << " " << b
+            << std::endl;
+  this->bind_callee_ = b;
+}
 
-bool Parameter::bind_caller() { return this->bind_caller_; }
+bool Parameter::bind_caller() {
+  std::cout << "Param bind_caller() " << this->identifier() << " "
+            << this->bind_caller_ << std::endl;
+  return this->bind_caller_;
+}
 
-bool Parameter::bind_callee() { return this->bind_callee_; }
+bool Parameter::bind_callee() {
+  std::cout << "Param bind_callee() " << this->identifier() << " "
+            << this->bind_callee_ << std::endl;
+  return this->bind_callee_;
+}
 
+bool Parameter::reg_allocated() { return this->reg_allocated_; }
+
+bool Parameter::fp_access() { return this->fp_access_; }
 /* end */
 
 /* Return Variable */
@@ -586,6 +641,8 @@ ReturnVariable::ReturnVariable(const ReturnVariable &other) {
 }
 
 void ReturnVariable::create_container_variable(LexicalScope *ls) {
+  std::cout << "in create container variable for return variable "
+            << this->identifier() << std::endl;
   if (this->pointer_count() <= 0 ||
       (this->type_->num() != PROJECTION_TYPE &&
        this->type_->num() != PROJECTION_CONSTRUCTOR_TYPE &&
@@ -642,20 +699,26 @@ void ReturnVariable::create_container_variable(LexicalScope *ls) {
 Variable *ReturnVariable::container() { return this->container_; }
 
 void ReturnVariable::prepare_marshal(MarshalPrepareVisitor *worker) {
+  std::cout
+      << "In prepare_marshal fn for Return var. The type # of this var is: <<"
+      << this->type()->num() << std::endl;
   if (this->container_ != 0x0) {
     this->container_->prepare_marshal(worker);
   }
 
   if (this->type()->num() != UNRESOLVED_TYPE) {
-  this->marshal_info_ = this->type_->accept(worker);
- }
+    this->marshal_info_ = this->type_->accept(worker);
+  }
 }
 
 void ReturnVariable::set_marshal_info(Marshal_type *mt) {
   this->marshal_info_ = mt;
 }
 
-Marshal_type *ReturnVariable::marshal_info() { return this->marshal_info_; }
+Marshal_type *ReturnVariable::marshal_info() {
+  std::cout << "returning marshal info of a return var" << std::endl;
+  return this->marshal_info_;
+}
 
 const std::string &ReturnVariable::identifier() const { return this->name_; }
 
@@ -815,6 +878,9 @@ bool ReturnVariable::bind_callee() {
   return false;
 }
 
+bool ReturnVariable::reg_allocated() { return this->reg_allocated_; }
+
+bool ReturnVariable::fp_access() { return this->fp_access_; }
 /* end */
 
 /* projection field */
@@ -838,6 +904,14 @@ ProjectionField::ProjectionField(const ProjectionField &other) {
   this->bind_callee_ = other.bind_callee_;
   this->bind_caller_ = other.bind_caller_;
 
+  std::cout
+      << "ProjField / set bind_caller() to other.bind_caller_| ProjField is "
+      << this->identifier() << " other.bind_caller_ is" << other.bind_caller_
+      << std::endl;
+  std::cout
+      << "ProjField / set bind_callee() to other.bind_callee_| ProjField is "
+      << this->identifier() << " other.bind_callee_ is" << other.bind_callee_
+      << std::endl;
   // copy Type
   this->type_ = other.type_->clone();
   // copy field name
@@ -863,6 +937,8 @@ ProjectionField::ProjectionField(const ProjectionField &other) {
 }
 
 void ProjectionField::create_container_variable(LexicalScope *ls) {
+  std::cout << "in create container variable for projection field "
+            << this->identifier() << std::endl;
   if (this->pointer_count() <= 0 ||
       (this->type_->num() != PROJECTION_TYPE &&
        this->type_->num() != PROJECTION_CONSTRUCTOR_TYPE &&
@@ -928,7 +1004,7 @@ void ProjectionField::prepare_marshal(MarshalPrepareVisitor *worker) {
   if ((this->container_ != 0x0)) {
     this->container_->prepare_marshal(worker);
   }
-    this->marshal_info_ = this->type_->accept(worker);
+  this->marshal_info_ = this->type_->accept(worker);
 }
 
 Type *ProjectionField::type() { return this->type_; }
@@ -971,7 +1047,11 @@ void ProjectionField::set_marshal_info(Marshal_type *mt) {
   this->marshal_info_ = mt;
 }
 
-Marshal_type *ProjectionField::marshal_info() { return this->marshal_info_; }
+Marshal_type *ProjectionField::marshal_info() {
+
+  std::cout << "returning marshal info of a projection field" << std::endl;
+  return this->marshal_info_;
+}
 
 void ProjectionField::resolve_types(LexicalScope *ls) {
   // need to rewrite to account for initializetype
@@ -1045,7 +1125,11 @@ void ProjectionField::set_out(bool b) { this->out_ = b; }
 
 void ProjectionField::set_alloc_callee(bool b) { this->alloc_callee_ = b; }
 
-void ProjectionField::set_alloc_caller(bool b) { this->alloc_caller_ = b; }
+void ProjectionField::set_alloc_caller(bool b) {
+  std::cout << "oops! changed alloc_caller value of " << this->identifier()
+            << " to " << b << std::endl;
+  this->alloc_caller_ = b;
+}
 
 void ProjectionField::set_dealloc_caller(bool b) { this->dealloc_caller_ = b; }
 
@@ -1063,13 +1147,33 @@ bool ProjectionField::dealloc_caller() { return this->dealloc_caller_; }
 
 bool ProjectionField::dealloc_callee() { return this->dealloc_callee_; }
 
-void ProjectionField::set_bind_caller(bool b) { this->bind_caller_ = b; }
+void ProjectionField::set_bind_caller(bool b) {
+  std::cout << "ProjField set_bind_caller() " << this->identifier() << " " << b
+            << std::endl;
+  this->bind_caller_ = b;
+}
 
-void ProjectionField::set_bind_callee(bool b) { this->bind_callee_ = b; }
+void ProjectionField::set_bind_callee(bool b) {
+  std::cout << "ProjField set_bind_callee() " << this->identifier() << " " << b
+            << std::endl;
+  this->bind_callee_ = b;
+}
 
-bool ProjectionField::bind_caller() { return this->bind_caller_; }
+bool ProjectionField::bind_caller() {
+  std::cout << "ProjField bind_caller() " << this->identifier() << " "
+            << this->bind_caller_ << std::endl;
+  return this->bind_caller_;
+}
 
-bool ProjectionField::bind_callee() { return this->bind_callee_; }
+bool ProjectionField::bind_callee() {
+  std::cout << "ProjField bind_callee() " << this->identifier() << " "
+            << this->bind_callee_ << std::endl;
+  return this->bind_callee_;
+}
+
+bool ProjectionField::reg_allocated() { return this->reg_allocated_; }
+
+bool ProjectionField::fp_access() { return this->fp_access_; }
 
 FPParameter::FPParameter(Type *type, int pointer_count)
     : type_(type), pointer_count_(pointer_count), marshal_info_(NULL),
@@ -1093,6 +1197,8 @@ FPParameter::FPParameter(const FPParameter &other) {
 }
 
 void FPParameter::create_container_variable(LexicalScope *ls) {
+  std::cout << "in create container variable for fpparameter "
+            << this->identifier() << std::endl;
   if (this->pointer_count() <= 0 ||
       (this->type_->num() != PROJECTION_TYPE &&
        this->type_->num() != PROJECTION_CONSTRUCTOR_TYPE &&
@@ -1175,7 +1281,11 @@ void FPParameter::set_marshal_info(Marshal_type *mt) {
   this->marshal_info_ = mt;
 }
 
-Marshal_type *FPParameter::marshal_info() { return this->marshal_info_; }
+Marshal_type *FPParameter::marshal_info() {
+
+  std::cout << "returning marshal info of a fp param" << std::endl;
+  return this->marshal_info_;
+}
 
 void FPParameter::resolve_types(LexicalScope *ls) {
   // need to rewrite to account for initializetype
@@ -1313,4 +1423,7 @@ bool FPParameter::bind_callee() {
   return false;
 }
 
+bool FPParameter::reg_allocated() { return this->reg_allocated_; }
+
+bool FPParameter::fp_access() { return this->fp_access_; }
 /* end */

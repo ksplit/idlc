@@ -72,14 +72,22 @@ void generate_module_code(Module *m) {
   tree->create_trampoline_structs();
   std::cout << "[main.cpp] invoking function_pointer_to_rpc"
             << std::endl; // for debug
+
+  // assigns specifiers to function pointer based on their qualifiers
+  // in the projection definitions.
   tree->function_pointer_to_rpc();
+
+  ASTDeriveSpecsPass *derive_specs = new ASTDeriveSpecsPass();
+  derive_specs->do_pass(tree);
+
   tree->generate_function_tags();
+  tree->modify_specs();
   tree->create_container_variables();
   tree->set_copy_container_accessors();
   tree->copy_types();
   tree->initialize_types();
   tree->set_accessors();
-  tree->modify_specs();
+  //tree->modify_specs();//original position of modify_specs
   tree->prepare_marshal();
 
   CCSTFile *ccst_callee_h = generate_server_header(m);
@@ -177,11 +185,9 @@ int main(int argc, char **argv) {
     // This pass recursively parses the included idls and saves them to a
     // map. This pass also does the first pass of the input idl.
     RequirePass *rp = new RequirePass();
-
-    // This pass prints nodes of the AST.
-    ASTPrintPass *printpass = new ASTPrintPass();
-
     Project *tree = rp->do_pass(std::string(file));
+
+
     ErrorReport *er = ErrorReport::instance();
     if (er->errors()) {
       std::cerr << "There were errors during parsing\n";
@@ -189,7 +195,9 @@ int main(int argc, char **argv) {
       exit(0);
     }
 
-    printpass->do_pass(tree);
+    // This pass prints nodes of the AST.
+    // ASTDeriveSpecsPass *derive_specs = new ASTDeriveSpecsPass();
+    // derive_specs->do_pass(tree);
     //	exit(0);//TODO: this line is temporary, remove it after sorting out the
     // stuff below!
     // The following does code generation. TODO: have this extracted out as a

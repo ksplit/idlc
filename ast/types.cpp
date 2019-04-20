@@ -154,6 +154,24 @@ Rpc *Function::to_rpc(ProjectionType *pt) {
   /// IDL. When IDL is parsed, it creates an unresolved type if it couldn't find
   /// a valid type for a projection. Resolve those now.
   for (auto param : *this) {
+  std::cout << __FILE__ << " Visited Parameter: " << param->identifier()
+            << std::endl;
+  std::cout << __FILE__ << " ----------------------in: " << param->in()
+            << std::endl;
+  std::cout << __FILE__ << " ----------------------out: " << param->out()
+            << std::endl;
+  std::cout << __FILE__
+            << " ----------------------alloc_caller: " << param->alloc_caller()
+            << std::endl;
+  std::cout << __FILE__
+            << " ----------------------alloc_callee: " << param->alloc_callee()
+            << std::endl;
+  std::cout << __FILE__
+            << " ----------------------dealloc_caller: " << param->dealloc_caller()
+            << std::endl;
+  std::cout << __FILE__
+            << " ----------------------dealloc_callee: " << param->dealloc_callee()
+            << std::endl;
     auto type = param->type();
     int err;
     if (type->num() == UNRESOLVED_TYPE) {
@@ -172,10 +190,15 @@ Rpc *Function::to_rpc(ProjectionType *pt) {
 
   Rpc *tmp = new Rpc(this->return_var_, this->identifier_, this->parameters_,
                      this->current_scope_);
+std::cout<<"Creating Rpc "<<tmp->name()<<std::endl;
+std::cout<<"The type # of its return value is "<<this->return_var_->type()->num()<<std::endl;
   tmp->set_function_pointer_defined(true);
   tmp->set_parent_projection(pt);
   tmp->set_hidden_args(new_parameters);
+  for (auto p : this->parameters_){
+}
   return tmp;
+
 }
 
 /* end */
