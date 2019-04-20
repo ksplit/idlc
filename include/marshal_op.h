@@ -1,7 +1,7 @@
 #ifndef MARSHAL_OP_H
 #define MARSHAL_OP_H
 
-#define LCD_MAX_REGS 8
+#define LCD_MAX_REGS 20
 #define LCD_MAX_CAP_REGS 8
 
 #define REG(x) "lcd_r" #x

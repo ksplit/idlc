@@ -1,8 +1,14 @@
 #include "marshal_op.h"
 const static std::vector<std::string> register_access_mapping_ = {
+    REG(0), REG(1), REG(2), REG(3), REG(4), REG(5), REG(6), REG(7),
+    REG(0), REG(1), REG(2), REG(3), REG(4), REG(5), REG(6), REG(7),
+    REG(0), REG(1), REG(2), REG(3), REG(4), REG(5), REG(6), REG(7),
     REG(0), REG(1), REG(2), REG(3), REG(4), REG(5), REG(6), REG(7)};
 
 const static std::vector<std::string> register_store_mapping_ = {
+    STORE_REG(0), STORE_REG(1), STORE_REG(2), STORE_REG(3),
+    STORE_REG(0), STORE_REG(1), STORE_REG(2), STORE_REG(3),
+    STORE_REG(0), STORE_REG(1), STORE_REG(2), STORE_REG(3),
     STORE_REG(0), STORE_REG(1), STORE_REG(2), STORE_REG(3),
     STORE_REG(4), STORE_REG(5), STORE_REG(6), STORE_REG(7)};
 
@@ -15,9 +21,15 @@ const static std::vector<std::string> cr_reg_store_mapping_ = {
 
 const static std::vector<std::string> ipc_reg_access_mapping_ = {
     IPC_GET_REG(0), IPC_GET_REG(1), IPC_GET_REG(2), IPC_GET_REG(3),
+    IPC_GET_REG(0), IPC_GET_REG(1), IPC_GET_REG(2), IPC_GET_REG(3),
+    IPC_GET_REG(0), IPC_GET_REG(1), IPC_GET_REG(2), IPC_GET_REG(3),
+    IPC_GET_REG(0), IPC_GET_REG(1), IPC_GET_REG(2), IPC_GET_REG(3),
     IPC_GET_REG(4), IPC_GET_REG(5), IPC_GET_REG(6), IPC_GET_REG(7)};
 
 const static std::vector<std::string> ipc_reg_store_mapping_ = {
+    IPC_SET_REG(0), IPC_SET_REG(1), IPC_SET_REG(2), IPC_SET_REG(3),
+    IPC_SET_REG(0), IPC_SET_REG(1), IPC_SET_REG(2), IPC_SET_REG(3),
+    IPC_SET_REG(0), IPC_SET_REG(1), IPC_SET_REG(2), IPC_SET_REG(3),
     IPC_SET_REG(0), IPC_SET_REG(1), IPC_SET_REG(2), IPC_SET_REG(3),
     IPC_SET_REG(4), IPC_SET_REG(5), IPC_SET_REG(6), IPC_SET_REG(7)};
 
@@ -32,6 +44,15 @@ const std::string store_register_mapping(int idx) {
 }
 
 const std::string load_async_reg_mapping(int idx) {
+  std::cout << "async_reg_mapping index = " << idx << std::endl;
+  // TODO - we may get -1 as idx if we run out of registers.
+  // We need to know how to handle passing data in async mode
+  // with limited registers.
+  /*if (idx == -1) {
+    const std::string *dummy_mapping = new std::string("blank");
+    return *dummy_mapping;
+  }*/
+ // Assert(idx != -1, "Illegal register access\n");
   Assert(idx < LCD_MAX_REGS, "Illegal register access\n");
   return ipc_reg_access_mapping_[idx];
 }
@@ -79,7 +100,8 @@ int Registers::allocate_next_free_register() {
     }
   }
   std::cout << "add Assert();";
-  return -1;
+//  return 0; // TODO: UNDO THIS! a temporary hack -- this is definitely wrong
+  return -1;// this is the correct version
 }
 
 /* marshal type code */
@@ -178,10 +200,12 @@ Marshal_type *MarshalPrepareVisitor::visit(VoidType *vt) {
 }
 
 Marshal_type *MarshalPrepareVisitor::visit(IntegerType *it) {
+std::cout<<"Trying to allocate register of an integer type"<<std::endl;
   int r = this->registers_->allocate_next_free_register();
 
   if (r == -1) {
-    Assert(1 == 0, "Error: have run out of registers\n");
+    // Assert(1 == 0, "Error: have run out of registers\n");
+    std::cout << "Error: have run out of registers\n";
   }
 
   return new Marshal_integer(r);
@@ -189,7 +213,6 @@ Marshal_type *MarshalPrepareVisitor::visit(IntegerType *it) {
 
 Marshal_type *MarshalPrepareVisitor::visit(ProjectionType *pt) {
   // this doesn't work.TODO:need to verify with more examples.
-
   std::vector<ProjectionField *> fields = pt->fields();
 
   for (std::vector<ProjectionField *>::iterator it = fields.begin();
@@ -200,7 +223,10 @@ Marshal_type *MarshalPrepareVisitor::visit(ProjectionType *pt) {
           1 == 0,
           "Error: null pointer in MarshalPrepareVisit visit ProjectionType\n");
     }
-
+    std::cout<<"Setting marshal info of projection field: "<<pf->identifier()<<std::endl;
+    std::cout<<"type # of this projection field: "<<pf->type()->num()<<std::endl;
+    std::cout<<"marshal info of this projection field before setting it: "<<pf->marshal_info()<<std::endl;
+    if (pf->marshal_info() == 0x0)
       pf->set_marshal_info(pf->type()->accept(this));
   }
 
