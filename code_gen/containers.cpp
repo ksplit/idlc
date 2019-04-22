@@ -21,14 +21,20 @@ std::vector<CCSTAssignExpr *> container_of_args(CCSTPostFixExpr *struct_pointer,
 // which a container has already been assigned.
 std::vector<CCSTStatement *> container_of(Variable *v,
                                           const std::string &cspace) {
+  std::string container_of_type;
   std::vector<CCSTStatement *> statements;
-
+  if (v->type()->num() == PROJECTION_TYPE |
+      v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
+    ProjectionType *pt = dynamic_cast<ProjectionType *>(v->type());
+    container_of_type = pt->real_type();
+    container_of_type.append("_container");
+  } else
+    container_of_type = v->container()->identifier();
   statements.push_back(new CCSTExprStatement(new CCSTAssignExpr(
       new CCSTPrimaryExprId(v->container()->identifier()), equals(),
       function_call("container_of",
-                    container_of_args(
-                        access(v), struct_name(v->container()->type()->name()),
-                        v->type()->name())))));
+                    container_of_args(access(v), struct_name(container_of_type),
+                                      v->type()->name())))));
 
   if (v->type()->num() == PROJECTION_TYPE ||
       v->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
@@ -141,6 +147,9 @@ allocate_and_link_containers_callee(Variable *v, const std::string &cspace,
   std::vector<CCSTStatement *> statements;
 
   // when do we want to allocate and when do we want to lookup
+  std::cout << "variable name and alloc_callee status " << v->identifier()
+            << " " << v->alloc_callee() << std::endl;
+  std::cout << "the above var's container? " << v->container() << std::endl;
   if (v->container()) {
     if (v->alloc_callee()) {
       statements.push_back(alloc_insert_variable_container(v, cspace, true));
@@ -178,6 +187,8 @@ allocate_and_link_containers_callee(Variable *v, const std::string &cspace,
           Assert(v_container_type != 0x0,
                  "Error: dynamic cast to projection type failed\n");
 
+          std::cout << "What we actually want to look for" << pf->identifier()
+                    << std::endl;
           auto *tmp_real_field =
               find_field(v_container_type, v->type()->name());
           auto *tmp_this_pf =
@@ -250,6 +261,8 @@ CCSTStatement *lookup_variable_container(Variable *v,
 }
 
 CCSTStatement *alloc_variable(Variable *v) {
+  std::cout << __FILE__ << " " << __func__ << " allocating " << v->identifier()
+            << std::endl;
   AllocateTypeVisitor *worker = new AllocateTypeVisitor();
   return v->type()->accept(worker, v);
 }
@@ -259,6 +272,9 @@ CCSTStatement *allocate_non_container_variables(Variable *v) {
   std::vector<CCSTStatement *> statements;
   if (v->container() == 0x0) {
     if (v->pointer_count() > 0) {
+      std::cout << "allocating " << v->identifier()
+                << "| is it bind?(bind_callee/bind_caller) - "
+                << v->bind_callee() << "/" << v->bind_caller() << std::endl;
       return alloc_variable(v);
     }
 
@@ -432,6 +448,10 @@ ProjectionField *get_cptr_field(Variable *v) {
 }
 
 ProjectionField *find_field(ProjectionType *pt, const std::string &field_name) {
+  std::cout << "Looking for " << field_name << "  in projection " << pt->id_
+            << std::endl;
+  for (auto pf : *pt)
+    std::cout << "fields available " << pf->identifier() << std::endl;
   ProjectionField *field = pt->get_field(field_name);
   Assert(field != 0x0, "Error: could not find field %s\n", field_name.c_str());
   return field;
@@ -446,6 +466,7 @@ alloc_link_container_caller_top(Variable *v, const std::string &cspace) {
   std::vector<CCSTStatement *> statements;
   // simple case. v is not a projection
   if (v->type()->num() != PROJECTION_TYPE &&
+      v->type()->num() != PROJECTION_CONSTRUCTOR_TYPE &&
       v->type()->num() != FUNCTION_TYPE) {
     if (v->alloc_caller()) {
       return alloc_insert_variable_container(v, cspace, true);
@@ -475,7 +496,11 @@ CCSTCompoundStatement *alloc_link_container_caller(Variable *v,
     }
   }
 
-  if (v->alloc_caller()) {
+  // TODO: we assume function pointers are always called from the kernel side,
+  // this may not be true.
+  if (v->alloc_caller() && !v->fp_access()) {
+    // if (v->alloc_caller()) { // assumes the caller is always from the
+    // isolated domain - this is an even bigger assumption than the one above
     // else it is the projection case.
     statements.push_back(alloc_insert_variable_container(v, cspace, true));
 
@@ -515,6 +540,8 @@ CCSTCompoundStatement *alloc_link_container_caller(Variable *v,
             pf->type(), append_strings("_", construct_list_vars(pf)),
             pf->pointer_count());
         declarations.push_back(declare_variable(tmp_v));
+        std::cout << __FILE__ << " Allocating tmp var" << tmp_v->field_name_
+                  << std::endl;
         statements.push_back(alloc_variable(tmp_v));
         statements.push_back(new CCSTExprStatement(
             new CCSTAssignExpr(access(tmp_field), equals(),
