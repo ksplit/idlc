@@ -189,8 +189,9 @@ allocate_and_link_containers_callee(Variable *v, const std::string &cspace,
 
           std::cout << "What we actually want to look for" << pf->identifier()
                     << std::endl;
-          auto *tmp_real_field =
-              find_field(v_container_type, v->type()->name());
+          auto *tmp_real_field = find_field(
+              v_container_type,
+              dynamic_cast<ProjectionType *>(v->type())->real_type());
           auto *tmp_this_pf =
               find_field(dynamic_cast<ProjectionType *>(tmp_real_field->type()),
                          pf->identifier());
@@ -199,10 +200,12 @@ allocate_and_link_containers_callee(Variable *v, const std::string &cspace,
               dynamic_cast<ProjectionType *>(pf->container()->type());
           Assert(container_pf != 0x0,
                  "Error: dynamic cast to projection type failed\n");
-
+          auto *pf_pt = dynamic_cast<ProjectionType *>(pf->type());
+          Assert(pf_pt != 0x0,
+                 "Error: dynamic cast to projection type failed\n");
           statements.push_back(new CCSTExprStatement(new CCSTAssignExpr(
               access(tmp_this_pf), equals(),
-              access(find_field(container_pf, pf->type()->name())))));
+              access(find_field(container_pf, pf_pt->real_type())))));
         }
       }
     }
@@ -499,7 +502,7 @@ CCSTCompoundStatement *alloc_link_container_caller(Variable *v,
   // TODO: we assume function pointers are always called from the kernel side,
   // this may not be true.
   if (v->alloc_caller() && !v->fp_access()) {
-    // if (v->alloc_caller()) { // assumes the caller is always from the
+    // if (v->alloc_caller()) // assumes the caller is always from the
     // isolated domain - this is an even bigger assumption than the one above
     // else it is the projection case.
     statements.push_back(alloc_insert_variable_container(v, cspace, true));
@@ -518,7 +521,7 @@ CCSTCompoundStatement *alloc_link_container_caller(Variable *v,
 
       ProjectionType *tmp = dynamic_cast<ProjectionType *>(
           find_field(v_container_type, v->type()->name())->type());
-      //								      ,
+      //
       // ptype->real_type())->type());
       ProjectionField *tmp_field = find_field(tmp, pf->identifier());
       if (pf->container() != 0x0) {
