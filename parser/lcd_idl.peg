@@ -36,6 +36,20 @@ LexicalScope *current_unnamed_scope;
 int check_val;
 
 
+void print_specs(Variable * v)
+{
+				std::cout<<"specifiers of "<<v->identifier()<<" (parsing phase)"<<std::endl;
+  				std::cout<<"in "<<v->in()<<std::endl;
+				std::cout<<"out "<<v->out()<<std::endl;
+				std::cout<<"alloc_caller "<<v->alloc_caller()<<std::endl;
+				std::cout<<"alloc_callee "<<v->alloc_callee()<<std::endl;
+				std::cout<<"dealloc_caller "<<v->dealloc_caller()<<std::endl;
+				std::cout<<"dealloc_callee "<<v->dealloc_callee()<<std::endl;
+				std::cout<<"bind_caller "<<v->bind_caller()<<std::endl;
+				std::cout<<"bind_callee "<<v->bind_callee()<<std::endl;
+}
+
+
 
 void set_specs(Variable &v, const Value &s)
 {
@@ -50,27 +64,35 @@ void set_specs(Variable &v, const Value &s)
     int spec = *((int*) s.getValue());
 
     if (spec & IN) {
+std::cout<<"specsetting - in"<<std::endl;
         v.set_in(true);
     }
     if (spec & OUT) {
+std::cout<<"specsetting - out"<<std::endl;
         v.set_out(true);
     }
     if (spec & ALLOC_CALLER) {
+std::cout<<"specsetting - alloccaller"<<std::endl;
         v.set_alloc_caller(true);
     }
     if (spec & ALLOC_CALLEE) {
+std::cout<<"specsetting - alloccallee"<<std::endl;
         v.set_alloc_callee(true);
     }
     if (spec & DEALLOC_CALLER) {
+std::cout<<"specsetting - dealloccaller"<<std::endl;
         v.set_dealloc_caller(true);
     }
     if (spec & DEALLOC_CALLEE) {
+std::cout<<"specsetting - dealloccallee"<<std::endl;
         v.set_dealloc_callee(true);
     }
     if (spec & BIND_CALLER) {
+std::cout<<"specsetting - bindcaller"<<std::endl;
         v.set_bind_caller(true);
     }
     if (spec & BIND_CALLEE) {
+std::cout<<"specsetting - bindcaller"<<std::endl;
         v.set_bind_callee(true);
     }
 }
@@ -321,7 +343,7 @@ Pathname	= 	p1:PathStart+ {{
 
 PathStart      	=	IdentCont | [./~]
 
-ArrayDecl	=	Spacing OPENS Spacing AnyNumber* Spacing CLOSES Spacing
+ArrayDecl	=	Spacing OPENS Spacing IdentStart* AnyNumber* Spacing CLOSES Spacing
 
 AnyNumber	=	[0123456789]
 
@@ -734,7 +756,7 @@ FirstParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers
 				} if (p->bind_caller()) {
 				   p->set_in(true);
 				}
-			    
+			    print_specs(p); 
 			    value = p;    
 			}}	
 
@@ -759,7 +781,7 @@ FirstParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers
 				} if (p->bind_caller()) {
 				   p->set_in(true);
 				}
-			    
+			    print_specs(p); 
 			    value = p;
 			}}
 			| fp_param:FP_Parameter Spacing COMMA Spacing {{
@@ -795,7 +817,7 @@ FP_FirstParam	=	t:Type_form s:Specification? pointers:star* Spacing COMMA Spacin
 				} if (fp->bind_caller()) {
 				   fp->set_in(true);
 				}
-			    
+			    print_specs(fp); 
 			    value = fp;  
 			}}
 			| rpc_scope:rpc_special Space+ rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing COMMA Spacing {{
@@ -840,7 +862,7 @@ LastParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 				} if (p->bind_caller()) {
 				   p->set_in(true);
 				}
-			    
+			    print_specs(p);
 			    value = p;    
 			}}	
 
@@ -866,7 +888,7 @@ LastParam	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 				} if (p->bind_caller()) {
 				   p->set_in(true);
 				}
-			
+			    print_specs(p);
 			    value = p;
 			}}
 			| fp_param:FP_Parameter Spacing {{
@@ -892,7 +914,7 @@ FP_LastParam	=	t:Type_form s:Specification? pointers:star* Spacing {{
 				} if (fp->bind_caller()) {
 				   fp->set_in(true);
 				}
-
+			    print_specs(fp);
 			    value = fp;
 			}}
 			|  rpc_special Space+ rt:Type_form pointers:star* Spacing OPEN Spacing "*" Spacing id:Identifier Spacing CLOSE Spacing OPEN Spacing p:Parameters CLOSE SEMI Spacing {{
@@ -996,10 +1018,10 @@ Rpc		=	rpc_scope:rpc_special Space+ t:Type_form s:Specification? pointers:star* 
                             ReturnVariable *ret = new ReturnVariable((Type *) t.getValue(), count_pointers(pointers), returnVarName());
 			    ret->set_out(true);
 
+			    std::cout << "creating rpc "<<*_id<<std::endl;
 			    Rpc* r = new Rpc(ret, *_id, params_, (LexicalScope*) rpc_scope.getValue());
 			    
 			    set_specs(*ret, s);
-			    std::cout << "creating an rpc\n";
 			    /*
 			    int err = get_current_scope()->insert(r);
 			    if(!err) {
@@ -1256,7 +1278,7 @@ ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 				} if (pf->bind_caller()) {
 				   pf->set_in(true);
 				}
-
+			    print_specs(pf);
 			    std::vector<ProjectionField*> *fields = new std::vector<ProjectionField*>();
 			    fields->push_back(pf);
 			    value = fields; 
@@ -1284,7 +1306,7 @@ ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 				} if (pf->bind_caller()) {
 				   pf->set_in(true);
 				}
-			    
+			    print_specs(pf);
 			    std::vector<ProjectionField*> *fields = new std::vector<ProjectionField*>();
 			    fields->push_back(pf);
 			    value = fields; 
