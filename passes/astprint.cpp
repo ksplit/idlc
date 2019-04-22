@@ -318,6 +318,7 @@ void ASTDeriveSpecsVisitor::visit(ProjectionField *field) {
     std::cout << __FILE__ << " This field is a Projection Type, expanding it"
               << std::endl;
     ProjectionType *pt = dynamic_cast<ProjectionType *>(field->type());
+    pt->var_version = field;
     pt->accept(this);
   }
   if (field->type()->num() == FUNCTION_TYPE) {
