@@ -215,6 +215,7 @@ CCSTCompoundStatement *callee_body(Rpc *r, Module *m) {
   std::vector<CCSTDeclaration *> declarations;
   std::vector<CCSTStatement *> statements;
   std::vector<CCSTStatement *> lbl_statements;
+  std::cout << "declaring body of " << r->name() << std::endl;
 
   // allocate necessary container things
 
@@ -296,6 +297,17 @@ CCSTCompoundStatement *callee_body(Rpc *r, Module *m) {
     std::cout << "Parameter is " << p->identifier() << std::endl;
     statements.push_back(allocate_and_link_containers_callee(
         p, m->cspaces_.at(0)->identifier(), ch_type));
+    if (p->type()->num() == PROJECTION_TYPE ||
+        p->type()->num() == PROJECTION_CONSTRUCTOR_TYPE) {
+      ProjectionType *pt = dynamic_cast<ProjectionType *>(p->type());
+      std::cout << "The parameter is a projection type " << std::endl;
+      for (auto field : pt->fields()) {
+        std::cout << "allocating and linking its field " << field->identifier()
+                  << std::endl;
+        statements.push_back(allocate_and_link_containers_callee(
+            field, m->cspaces_.at(0)->identifier(), ch_type));
+      }
+    }
   }
 
   if (ch_type == Channel::AsyncChannel) {
@@ -385,7 +397,6 @@ CCSTCompoundStatement *callee_body(Rpc *r, Module *m) {
       } else {
         p_container_real_field = p_container_type->get_field(p->type()->name());
       }
-
 
       Assert(p_container_real_field != 0x0,
              "Error: could not find field in structure\n");
@@ -653,7 +664,13 @@ CCSTFile *generate_server_source(Module *m, std::vector<Include *> includes) {
                           caller_interface_exit_function_body(m)));
 
   for (auto rpc : *m) {
+    std::cout << "generating code for rpc " << rpc->name() << std::endl;
     if (rpc->function_pointer_defined()) {
+      // TODO: this would need to change
+      // if a function pointer (such as a utility function) may be
+      // passed to the driver, for the driver to call, in which case
+      // we cannot just decide where to generate the definitions only based on
+      // whether the rpc is a function pointer.
       std::cout << "doing function pointer def\n";
 
       definitions.push_back(function_definition(
