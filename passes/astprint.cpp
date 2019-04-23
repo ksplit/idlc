@@ -168,54 +168,67 @@ void process_projection_variable(Variable *proj_var,
                projtypes_in_fp_rpcs.find(pt->real_type()) ==
                    projtypes_in_fp_rpcs.end()) {
       // This projection's type was not found in the maps, nor was
-      // it allocated explitly in the IDL.
-      std::cout
-          << __FILE__
-          << " No allocation info found in maps for this projection variable"
-          << std::endl;
+      // it allocated explicitly in the IDL.
+      if (derive_specs->final_pass == false) {
+        std::cout
+            << __FILE__
+            << " No allocation info found in maps for this projection variable"
+            << std::endl;
 
-      // Let's check now if it has any parent projections, which has info to
-      // pass to it.
-      ProjectionField *field_var = dynamic_cast<ProjectionField *>(proj_var);
-      if (field_var != 0x0) {
-        std::cout << __FILE__ << " " << __func__
-                  << " We have a child projection" << std::endl;
-        proj_var->set_in(field_var->parent_proj_var_->in());
-        proj_var->set_out(field_var->parent_proj_var_->out());
-        proj_var->set_alloc_callee(field_var->parent_proj_var_->alloc_callee());
-        proj_var->set_alloc_caller(field_var->parent_proj_var_->alloc_caller());
-        proj_var->set_dealloc_callee(
-            field_var->parent_proj_var_->dealloc_callee());
-        proj_var->set_dealloc_caller(
-            field_var->parent_proj_var_->dealloc_caller());
-        proj_var->set_bind_callee(field_var->parent_proj_var_->bind_callee());
-        proj_var->set_bind_caller(field_var->parent_proj_var_->bind_caller());
-        std::pair<std::string, Variable *> elem =
-            std::make_pair(pt->real_type(), proj_var);
-        if (proj_var->fp_access()) {
-          if (projtypes_in_fp_rpcs.find(pt->real_type()) ==
-              projtypes_in_fp_rpcs
-                  .end()) { // this check is important because we'll
-                            // be doing this pass multiple times. We
-                            // don't want to do a double insert.
-            projtypes_in_fp_rpcs.insert(elem);
-            std::cout << __FILE__ << " inserted projection info in fp_rpcs map"
-                      << std::endl;
-            derive_specs->updated_projtype_maps = true;
+        // Let's check now if it has any parent projections, which has info to
+        // pass to it.
+        ProjectionField *field_var = dynamic_cast<ProjectionField *>(proj_var);
+        if (field_var != 0x0) {
+          std::cout << __FILE__ << " " << __func__
+                    << " We have a child projection" << std::endl;
+          proj_var->set_in(field_var->parent_proj_var_->in());
+          proj_var->set_out(field_var->parent_proj_var_->out());
+          proj_var->set_alloc_callee(
+              field_var->parent_proj_var_->alloc_callee());
+          proj_var->set_alloc_caller(
+              field_var->parent_proj_var_->alloc_caller());
+          proj_var->set_dealloc_callee(
+              field_var->parent_proj_var_->dealloc_callee());
+          proj_var->set_dealloc_caller(
+              field_var->parent_proj_var_->dealloc_caller());
+          proj_var->set_bind_callee(field_var->parent_proj_var_->bind_callee());
+          proj_var->set_bind_caller(field_var->parent_proj_var_->bind_caller());
+          std::pair<std::string, Variable *> elem =
+              std::make_pair(pt->real_type(), proj_var);
+          if (proj_var->fp_access()) {
+            if (projtypes_in_fp_rpcs.find(pt->real_type()) ==
+                projtypes_in_fp_rpcs
+                    .end()) { // this check is important because we'll
+                              // be doing this pass multiple times. We
+                              // don't want to do a double insert.
+              projtypes_in_fp_rpcs.insert(elem);
+              std::cout << __FILE__
+                        << " inserted projection info in fp_rpcs map"
+                        << std::endl;
+              derive_specs->updated_projtype_maps = true;
+            }
+          }
+          if (proj_var->fp_access() == false) {
+            if (projtypes_in_normal_rpcs.find(pt->real_type()) ==
+                projtypes_in_normal_rpcs
+                    .end()) { // this check is important because we'll
+                              // be doing this pass multiple times.
+              projtypes_in_normal_rpcs.insert(elem);
+              std::cout << __FILE__
+                        << " inserted projection info in normal_rpcs map"
+                        << std::endl;
+              derive_specs->updated_projtype_maps = true;
+            }
           }
         }
-        if (proj_var->fp_access() == false) {
-          if (projtypes_in_normal_rpcs.find(pt->real_type()) ==
-              projtypes_in_normal_rpcs
-                  .end()) { // this check is important because we'll
-                            // be doing this pass multiple times.
-            projtypes_in_normal_rpcs.insert(elem);
-            std::cout << __FILE__
-                      << " inserted projection info in normal_rpcs map"
-                      << std::endl;
-            derive_specs->updated_projtype_maps = true;
-          }
-        }
+      } else if (derive_specs->final_pass == true) {
+        // the allocation info for the projection variable was not found, and
+        // all the passes have been done, then we need to make this final pass
+        // to bind them.
+        // TODO: For now we shall always bind them to the callee side,
+        // regardless of how they are used (i.e. as return variable, or function
+        // argument).
+        proj_var->set_bind_callee(true);
       }
     }
   }
@@ -351,31 +364,6 @@ void ASTDeriveSpecsVisitor::visit(ProjectionType *pt) {
     }
     field->accept(this);
   }
-
-  /*
-     std::map<std::string, std::map<ProjectionType *, bool>>::iterator it;
-     it = projection_allocation_info.find(pt->real_type());
-     if (it == projection_allocation_info.end()) {
-       // So we haven't put this projection's type (the real type) into the map
-       // yet. First let's check if this real type is being allocated via this
-       // projection pt.
-       if (current_projection_node->alloc_callee() ||
-           current_projection_node->alloc_caller()) {
-         // Great, the projection's real type is being allocated via this
-         // projection. Let's store this in the map now, along with the entire
-         // projection. In future, if we come across any projection that has the
-         // same type as this, we can know where the projection was allocated,
-     and
-         // bind to it.
-         std::map<ProjectionType *, bool> projection_data;
-         // projection_data.insert(std::make_pair(pt, current_fn_is_fp));
-         projection_allocation_info.insert(
-             std::make_pair(pt->real_type(), projection_data));
-         this->updated_projtype_maps = true;
-         print_proj_alloc_info();
-       }
-     } else {
-     }*/
 }
 
 void ASTDeriveSpecsVisitor::visit(Function *fp) {
@@ -534,5 +522,20 @@ void ASTDeriveSpecsPass::do_pass(Project *tree) {
                 << std::endl;
       this->visit_module_rpcs(module, derive_specs);
     }
+    // At this stage we have performed all passes where we have added
+    // allocation info for all projections. There are also no further
+    // allocation info from the idl for any projection type to add to the maps.
+    // However, there may be some projections that have structures that are not
+    // even defined in the IDL, and thus we would not find their allocation
+    // info from the maps. We shall assume these projections to have static
+    // structures. We shall assume they are allocated on the callee side of the
+    // function from which they are returned, and on the caller side of the
+    // function to which they are sent as an argument. We therefore bind these
+    // projections to the appropriate side accordingly.
+    std::cout << "Performing final pass, to bind projection variables that "
+                 "have been unresolved."
+              << std::endl;
+    derive_specs->final_pass = true;
+    this->visit_module_rpcs(module, derive_specs);
   }
 }

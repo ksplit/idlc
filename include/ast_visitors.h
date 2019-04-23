@@ -98,4 +98,5 @@ public:
   void visit(FloatType *ft);
  
   bool updated_projtype_maps; 
+  bool final_pass;
 };
