@@ -216,6 +216,7 @@ allocate_and_link_containers_callee(Variable *v, const std::string &cspace,
 /* has already been declared at v->container()->identifier() */
 CCSTStatement *lookup_variable_container(Variable *v,
                                          Channel::ChannelType type) {
+  std::cout<<"looking up variable "<<v->identifier()<<"'s container "<<v->container()->identifier()<<std::endl;
   std::vector<CCSTDeclaration *> declarations;
   std::vector<CCSTStatement *> statements;
 
@@ -232,7 +233,7 @@ CCSTStatement *lookup_variable_container(Variable *v,
 
   /// Depending on the specification, pick the reference field
   if ((v->bind_caller() && v->bind_callee()) || v->dealloc_callee()) {
-    ref_field = container->get_field("other_ref");
+    ref_field = container->get_field("my_ref");//TODO: this was other ref. need to check which is correct.
   } else {
     ref_field = container->get_field("my_ref");
   }
@@ -453,8 +454,10 @@ ProjectionField *get_cptr_field(Variable *v) {
 ProjectionField *find_field(ProjectionType *pt, const std::string &field_name) {
   std::cout << "Looking for " << field_name << "  in projection " << pt->id_
             << std::endl;
-  for (auto pf : *pt)
+  for (auto pf : *pt){
     std::cout << "fields available " << pf->identifier() << std::endl;
+    std::cout << "marshaling info " << pf->marshal_info() << std::endl;
+}
   ProjectionField *field = pt->get_field(field_name);
   Assert(field != 0x0, "Error: could not find field %s\n", field_name.c_str());
   return field;
