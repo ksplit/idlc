@@ -278,7 +278,7 @@ IdentStart	=	[abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]
 
 IdentCont	=	IdentStart | [0123456789]
 
-unnamed_scope 	= 	s:unnamed_scope_special new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* Spacing CLOSEC Spacing {{
+unnamed_scope 	= 	s:unnamed_scope_special d:Type_Definitions* r:Rpc* Spacing CLOSEC Spacing {{
 		            
 			    std::vector<Rpc*> *rpcs = new std::vector<Rpc*>();
 			    for(Value::iterator it = r.getValues().begin(); it != r.getValues().end(); it ++) {
@@ -286,21 +286,7 @@ unnamed_scope 	= 	s:unnamed_scope_special new_chans:ChanInits* ch:Channel_scope*
 				Rpc *r = (Rpc*) v.getValue();
 				rpcs->push_back(r);
 			    }
-			    std::cout << " channel ID " << ch.getValue() << "\n";
 				LexicalScope *sc = (LexicalScope *)s.getValue();
-
-                for(Value::iterator it = ch.getValues().begin(); it != ch.getValues().end(); it ++) {
-                  const Value & v2 = *it;
-                  std::string *_ch = (std::string*) v2.getValue();
-                  std::cout << "### scope channel " << *_ch << "\n";
-                  if (_ch) {
-                      Type *t = getType(*_ch);
-                      Channel *c = dynamic_cast<Channel*>(t);
-                      sc->setactiveChannel(c);
-                  } else {
-                      sc->setactiveChannel(NULL);
-                  }
-                }
 
 			    set_current_scope(get_current_scope()->outer_scope()); // leaving current scope
 			    value = rpcs;
@@ -337,51 +323,10 @@ pc_unnamed_scope=	s:pc_unnamed_scope_special d:Type_Definitions* p:ProjField* Sp
 			    value = fields;
 			}}
 
-ChanType	= "async" {{
-					value = new int(Channel::AsyncChannel);
-				}}
-				| "sync" {{
-					value = new int(Channel::SyncChannel);
-				}}
-
-ChanInits	= "channel" Space+ id:Identifier Spacing <ascii 61> Spacing "new" Space+ type:ChanType Spacing OPEN host_ch:Identifier CLOSE SEMI Spacing {{
-				Channel::ChannelType ct = static_cast<Channel::ChannelType>(*((int*)type.getValue()));
-				std::cout << "New channel type: " << ct << " Initialized" << std::endl;
-				const std::string *_id = static_cast<const std::string*>(id.getValue());
-
-				Channel *newCh = new Channel(*_id, ct, NULL);
-				// insert channel into type list
-				std::cout << " new channel " << std::hex << newCh << std::dec << std::endl;
-				insertType(*_id, newCh);
-				value = newCh;
-			}}
-
-Channel_scope	= Spacing "use" Space+ ch:Identifier Spacing SEMI Spacing {{
-					// all functions that is in the current scope and its inner scopes use this
-					// channel for communication unless an unnamed scope overrides it.
-					// Every unnamed scope can override use keyword by specifying which channel its
-					// functions would like to use
-					// TODO:
-					// Should unnamed scope channels be monitored in dispatch loop? Probably yes
-					// *) Add this to global channel list
-					// *) Dispatch loop should monitor all
-					const std::string *_id = static_cast<const std::string*>(ch.getValue());
-
-					std::cout << "Using channel " << *_id << std::endl;
-
-					Type *t = getType(*_id);
-					Channel *c = dynamic_cast<Channel*>(t);
-					std::cout << " channel_scope dyncast " << std::hex << c << std::dec << std::endl;
-					Assert(c != NULL, "Dynamic cast from Type to Channel failed");
-					get_current_scope()->setactiveChannel(c);
-					value = new std::string(*_id);
-				}}
-
-Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channels Spacing CLOSE Spacing OPENC Spacing new_chans:ChanInits* ch:Channel_scope* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
+Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN Spacing CLOSE Spacing OPENC Spacing reqs:Require* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
 			      LexicalScope *module_scope = (LexicalScope*) m.getValue();
 			      std::vector<Rpc*> rpcs;				
-			      std::vector<GlobalVariable*> *channels = (std::vector<GlobalVariable*>*) chans.getValue();  
-			      std::vector<GlobalVariable*> channels2 = *channels;
+			      std::vector<GlobalVariable*> channels2;
 
 			      for(Value::iterator it = r.getValues().begin(); it != r.getValues().end(); it ++) {
                     const Value & v2 = *it;
@@ -395,21 +340,6 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
                     rpcs.insert(rpcs.end(), r_tmp->begin(), r_tmp->end());
 			      }
 
-                    for(Value::iterator it = ch.getValues().begin(); it != ch.getValues().end(); it ++) {
-                        const Value & v2 = *it;
-                        std::string *_ch = (std::string*) v2.getValue();
-                        std::cout << "### module channel " << *_ch << "\n";
-                        if (_ch) {
-                            Type *t = getType(*_ch);
-                            std::cout << "channel " << *_ch << " Type information " << t << std::endl;
-                            Channel *c = dynamic_cast<Channel*>(t);
-                            if (!c)
-                                std::cout << "dynamic_cast of channel failed\n";
-                            module_scope->setactiveChannel(c);
-                        } else {
-                            module_scope->setactiveChannel(NULL);
-                        }
-                    }
                   if (get_current_scope())
     			      set_current_scope(get_current_scope()->outer_scope()); // leaving current scope
                   else
@@ -417,6 +347,9 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN chans:Channe
 				  const std::string *name = static_cast<const std::string*>(id.getValue());
 			      value = new Module(*name, rpcs, channels2, module_scope); 
 			  }}
+
+Require = "require" Spacing rmod:Identifier Spacing "on" Spacing ch_name:Identifier SEMI {{
+}}
 
 Interface_special =	  "module" {{
 		  	      LexicalScope *new_scope = new LexicalScope(LexicalScope::getGlobalScope());
