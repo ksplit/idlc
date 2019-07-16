@@ -3,13 +3,13 @@
 
 #include <vector>
 
-class ErrorReport
-{
-  static ErrorReport* instance_;
+class ErrorReport {
+  static ErrorReport *instance_;
   ErrorReport();
   bool errors_;
- public:
-  static ErrorReport* instance();
+
+public:
+  static ErrorReport *instance();
   bool errors();
   void set_error();
 };
