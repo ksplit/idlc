@@ -1,6 +1,7 @@
 #object files
 *.d
 *.pyc
+*.o
 
 #parser generated files
 peg_peg.py

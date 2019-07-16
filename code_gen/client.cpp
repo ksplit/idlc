@@ -9,9 +9,6 @@
 
 CCSTFile *generate_client_header(Module *mod) {
   std::vector<CCSTExDeclaration *> definitions;
-  if (mod->rpc_definitions().empty()) {
-    return NULL;
-  }
 
   /// generate function declaration for sync, async loop
   definitions.push_back(dispatch_sync_function_declaration());
