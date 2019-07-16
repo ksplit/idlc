@@ -349,6 +349,10 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN Spacing CLOS
 			  }}
 
 Require = "require" Spacing rmod:Identifier Spacing "on" Spacing ch_name:Identifier SEMI {{
+    const std::string *_module = static_cast<const std::string*>(rmod.getValue());
+    const std::string *_ch_name = static_cast<const std::string *>(ch_name.getValue());
+    Channel *c = new Channel(*_ch_name, Channel::ChannelType::AsyncChannel, NULL);
+    value = new Require(*_module, c);
 }}
 
 Interface_special =	  "module" {{

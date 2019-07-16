@@ -24,6 +24,7 @@ class Variable;
 class Type;
 class Parameter;
 class Rpc;
+class Require;
 class ProjectionType;
 class Project;
 
@@ -712,6 +713,7 @@ class Module {
   std::vector<GlobalVariable *> channels_;
   // create these from the channels in the constructor.
   std::vector<Rpc *> rpc_definitions_;
+  std::vector<Require *> requires_;
   typedef std::vector<Rpc *>::iterator iterator;
 
 public:
@@ -736,6 +738,18 @@ public:
   const std::string identifier();
   iterator begin() { return rpc_definitions_.begin(); }
   iterator end() { return rpc_definitions_.end(); }
+};
+
+class Require {
+  Module *_module;
+  std::string _mod_name;
+  Channel *_chnl;
+
+public:
+  Require(const std::string &m_name, Channel *ch):_mod_name(m_name),
+      _chnl(ch) {
+  }
+  std::string get_mod_name() { return _mod_name; }
 };
 
 class Include {

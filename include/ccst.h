@@ -4,6 +4,7 @@
 #include "assert.h"
 #include "lcd_ast.h"
 #include <fstream>
+#include <vector>
 
 class CCSTFile;
 class CCSTAssignExpr;
