@@ -361,6 +361,12 @@ ProjectionType::ProjectionType(const std::string &id,
   this->channels_ = channels;
 }
 
+ProjectionType::ProjectionType(const std::string &real_type,
+                               ProjectionSubType pst) {
+  this->real_type_ = real_type;
+  this->subType = pst;
+}
+
 ProjectionType::ProjectionType(const ProjectionType &other) {
   // copy id
   this->id_ = other.id_;

@@ -612,10 +612,15 @@ public:
 class ProjectionType : public Type // complex type
 {
 public:
+  enum ProjectionSubType {
+    Struct = 1,
+    Union,
+  };
   std::vector<ProjectionField *> channels_;
   std::string id_;
   std::string real_type_;
   std::vector<ProjectionField *> fields_;
+  ProjectionSubType subType;
   typedef std::vector<ProjectionField *>::iterator iterator;
   typedef std::vector<ProjectionField *>::const_iterator const_iterator;
 
@@ -625,7 +630,17 @@ public:
                  std::vector<ProjectionField *> channels);
   ProjectionType(const std::string &id, const std::string &real_type,
                  std::vector<ProjectionField *> fields);
+  ProjectionType(const std::string &real_type, ProjectionSubType pst);
   ProjectionType(const ProjectionType &other);
+
+  void setFields(std::vector<ProjectionField *> fields) {
+    this->fields_ = fields;
+  }
+
+  void setIdentifier(const std::string &id) {
+    this->id_ = id;
+  }
+
   virtual Type *clone() const { return new ProjectionType(*this); }
   virtual Marshal_type *accept(MarshalPrepareVisitor *worker);
   virtual CCSTTypeName *accept(TypeNameVisitor *worker);

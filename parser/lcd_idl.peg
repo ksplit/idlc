@@ -849,9 +849,15 @@ Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id
 			    }
 
 				const std::string *_id = static_cast<const std::string*>(id.getValue());
-				const std::string *_type = static_cast<const std::string*>(t.getValue());
+				//const std::string *_type = static_cast<const std::string*>(t.getValue());
+			    const ProjectionType *_val = static_cast<const ProjectionType*>(t.getValue());
+			    ProjectionType *val = new ProjectionType(*_val);
+			    const std::string _type = val->real_type_;
+			    val->setIdentifier(*_id);
+			    val->setFields(fields);
+			    //ProjectionType * val = new ProjectionType(*_id, *_type, fields, channels);
+			    std::cout<<"id val is: "<<*_id<<std::endl;
 
-			    ProjectionType * val = new ProjectionType(*_id, *_type, fields, channels);
 			    insertType(*_id, val);
 
 			    // creating constructor
@@ -861,7 +867,7 @@ Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id
 			    container_fields.insert(container_fields.end(), channels.begin(), channels.end());	    
 
 			    const std::string container_name_str = container_name(*_id);
-			    const std::string real_type_container = container_name(*_type);
+			    const std::string real_type_container = container_name(_type);
 			    ProjectionType * container = new ProjectionType(container_name_str, real_type_container, container_fields);
 			    std::cout << "inserting projection type with name " <<  container_name_str << std::endl;
 			    insertType(container_name_str, container);
@@ -871,8 +877,26 @@ Projection	=	"projection" Spacing "<" Spacing t:Proj_type Spacing ">" Spacing id
 			 }}
 		## what is the point of having a projection without at least one line
 
-Proj_type	=  	"struct" Space+ id:Identifier Spacing {{
-			value = id;}}
+Proj_type	=  	pst:Proj_subtype Space+ id:Identifier Spacing {{
+				const std::string *_type = static_cast<const std::string*>(id.getValue());
+				const std::string *_pst = static_cast<const std::string*>(pst.getValue());
+				ProjectionType::ProjectionSubType __pst;
+				if (*_pst == "struct")
+					__pst = ProjectionType::Struct;
+				else if (*_pst == "union")
+					__pst = ProjectionType::Union;	
+
+			    	ProjectionType *val = new ProjectionType(*_type, __pst);
+				std::cout << "Passed Proj_type rule" << std::endl;
+				value = val;
+			}}
+
+Proj_subtype	=	"struct" {{
+				value = new std::string("struct");
+			}}
+			| "union" {{
+				value = new std::string("union");
+			}}
 
 Keyword		=     	"out" {{ 
 			    int * x = new int(OUT);
