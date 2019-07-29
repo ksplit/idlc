@@ -324,29 +324,48 @@ pc_unnamed_scope=	s:pc_unnamed_scope_special d:Type_Definitions* p:ProjField* Sp
 			}}
 
 Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN Spacing CLOSE Spacing OPENC Spacing reqs:Require* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
-			      LexicalScope *module_scope = (LexicalScope*) m.getValue();
-			      std::vector<Rpc*> rpcs;				
-			      std::vector<GlobalVariable*> channels2;
+			LexicalScope *module_scope = (LexicalScope*) m.getValue();
+			std::vector<Rpc*> rpcs;
+			std::vector<GlobalVariable*> channels2;
 
-			      for(Value::iterator it = r.getValues().begin(); it != r.getValues().end(); it ++) {
-                    const Value & v2 = *it;
-                    Rpc *r2 = (Rpc*) v2.getValue();
-                    rpcs.push_back(r2);
-			      }
+			Channel::ChannelType ct = static_cast<Channel::ChannelType>(*((int*)new int(Channel::AsyncChannel)));
 
-			      for(Value::iterator it = r2.getValues().begin(); it != r2.getValues().end(); it ++) {
-                    const Value & v2 = *it;
-                    std::vector<Rpc*> *r_tmp = (std::vector<Rpc*>*) v2.getValue();
-                    rpcs.insert(rpcs.end(), r_tmp->begin(), r_tmp->end());
-			      }
+			std::cout << "New channel type: " << ct << " Initialized" << std::endl;
+			const std::string _id("def_chnl");
 
-                  if (get_current_scope())
-    			      set_current_scope(get_current_scope()->outer_scope()); // leaving current scope
-                  else
-                      set_current_scope(get_current_module_scope());
-				  const std::string *name = static_cast<const std::string*>(id.getValue());
-			      value = new Module(*name, rpcs, channels2, module_scope); 
-			  }}
+			Channel *newCh = new Channel(_id, ct, NULL);
+			// insert channel into type list
+			std::cout << " new channel " << std::hex << newCh << std::dec << std::endl;
+			insertType(_id, newCh);
+
+			for(Value::iterator it = r.getValues().begin(); it != r.getValues().end(); it ++) {
+				const Value & v2 = *it;
+				Rpc *r2 = (Rpc*) v2.getValue();
+				rpcs.push_back(r2);
+			}
+
+			for(Value::iterator it = r2.getValues().begin(); it != r2.getValues().end(); it ++) {
+				const Value & v2 = *it;
+				std::vector<Rpc*> *r_tmp = (std::vector<Rpc*>*) v2.getValue();
+				rpcs.insert(rpcs.end(), r_tmp->begin(), r_tmp->end());
+			}
+
+			GlobalVariable *gv = new GlobalVariable(getType("cptr"), "def_chnl1", 0);
+			insertVariable(gv);
+			channels2.push_back(gv);
+
+			Type *t = getType("def_chnl1");
+			std::cout << "channel " << "def_chnl" << " Type information " << t << std::endl;
+
+			module_scope->setactiveChannel(newCh);
+
+			if (get_current_scope())
+				set_current_scope(get_current_scope()->outer_scope()); // leaving current scope
+			else
+				set_current_scope(get_current_module_scope());
+			const std::string *name = static_cast<const std::string*>(id.getValue());
+			value = new Module(*name, rpcs, channels2, module_scope);
+		}}
 
 Require = "require" Spacing rmod:Identifier Spacing "on" Spacing ch_name:Identifier SEMI {{
     const std::string *_module = static_cast<const std::string*>(rmod.getValue());
@@ -751,12 +770,13 @@ FP_Parameters	=	f:FP_FirstParam* l:FP_LastParam {{
 			}}
 
 rpc_special     =      "rpc" {{
-		           LexicalScope *tmp = get_current_unnamed_scope();
-			   LexicalScope *new_scope = new LexicalScope(tmp);
+		           //LexicalScope *tmp = get_current_unnamed_scope();
+			   //LexicalScope *new_scope = new LexicalScope(tmp);
 			   // dont need to add to inner scope because rpc do not have type definitinos
-			   set_current_scope(new_scope);
-			   std::cout << "# New RPC scope(Not in any inner scope) " << new_scope << " from :" << tmp << "\n";
-			   value = new_scope;
+			   //set_current_scope(new_scope);
+			   //std::cout << "# New RPC scope(Not in any inner scope) " << new_scope << " from :" << tmp << "\n";
+			   //value = new_scope;
+			   value = get_current_module_scope();
 		       }}
 
 
@@ -776,7 +796,7 @@ Rpc		=	rpc_scope:rpc_special Space+ t:Type_form s:Specification? pointers:star* 
 		            }
 			    */
 
-			    set_current_scope(get_current_unnamed_scope()); // leaving current scope
+			    //set_current_scope(get_current_unnamed_scope()); // leaving current scope
 			    value = r; 
 			}}  
 
