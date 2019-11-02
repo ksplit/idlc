@@ -8,5 +8,8 @@ peg_peg.py
 parser/lcd_idl.cpp
 include/lcd_idl.h
 
+#editor configs
+.vscode
+
 #main binary
 compiler

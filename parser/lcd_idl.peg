@@ -216,7 +216,7 @@ void create_container(const Value &id, std::vector<ProjectionField*> &container_
 rules:
 
 
-File		=	Spacing i:Include* GlobalScopeDefinitions t:Interface* <eof> {{
+File		=	Spacing i:Include* t:Interface* <eof> {{
 			    std::vector<Module*> modules;
 			    std::vector<Include*> includes;
 			
@@ -232,18 +232,6 @@ File		=	Spacing i:Include* GlobalScopeDefinitions t:Interface* <eof> {{
 
 			    value = new Project(LexicalScope::getGlobalScope(), modules, includes); 
 			}}
-
-GlobalScopeDefinitions =      d:Type_Definitions* {{
-		       	          for(Value::iterator it = d.getValues().begin(); it != d.getValues().end(); it ++) { 
-			    	      const Value & v2 = *it;
-			    	      Type *type = (Type*) v2.getValue();
-			    	      bool err = LexicalScope::getGlobalScope()->insert(type->name().c_str(), type);
-				      if(!err) {
-				          std::cout << "Error: definition already exists for a type of name "
-				            <<  type->name() << " in global scope" << std::endl;
-				      }
-				  } 
-			      }}
 
 Pathname	= 	p1:PathStart+ {{
 			    std::ostringstream total;
@@ -323,7 +311,7 @@ pc_unnamed_scope=	s:pc_unnamed_scope_special d:Type_Definitions* p:ProjField* Sp
 			    value = fields;
 			}}
 
-Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPEN Spacing CLOSE Spacing OPENC Spacing reqs:Require* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
+Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPENC Spacing reqs:Require* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
 			LexicalScope *module_scope = (LexicalScope*) m.getValue();
 			std::vector<Rpc*> rpcs;
 			std::vector<GlobalVariable*> channels2;
@@ -728,33 +716,7 @@ Parameters	=	f:FirstParam* l:LastParam {{
 			    }
 			    params->push_back((Parameter* ) l.getValue());
 			    value = params; 
-			}}
-
-FirstChannel    = "channel" Space+ id:Identifier Spacing COMMA Spacing {{
-				const std::string *_id = static_cast<const std::string*>(id.getValue());
-		    GlobalVariable *gv = new GlobalVariable(getType("cptr"), *_id, 0);
-		    insertVariable(gv);
-		    value = gv;
-		}}
-
-LastChannel     = "channel" Space+ id:Identifier Spacing {{
-				const std::string *_id = static_cast<const std::string*>(id.getValue());
-		    GlobalVariable *gv = new GlobalVariable(getType("cptr"), *_id, 0);
-		    insertVariable(gv);
-		    value = gv;
-		}}
-
-Channels        = f:FirstChannel* l:LastChannel {{
-		    std::vector<GlobalVariable*> *channels = new std::vector<GlobalVariable*>();
-
-		    for(Value::iterator it = f.getValues().begin(); it != f.getValues().end(); it ++) {
-			        const Value & v = *it;
-				GlobalVariable *gv = (GlobalVariable*) v.getValue();
-				channels->push_back(gv);
-			    }
-			    channels->push_back((GlobalVariable*) l.getValue());
-			    value = channels;
-		}}		  
+			}} | <void> {{ value = new std::vector<Parameter*>(); }}		  
 
 FP_Parameters	=	f:FP_FirstParam* l:FP_LastParam {{
 		            std::cout << "matched fp parameters\n";
@@ -1094,7 +1056,7 @@ ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 				const std::string *name = static_cast<const std::string*>(id.getValue());
 			    std::vector<Parameter*> *params = (std::vector<Parameter*>*) p.getValue();
                 ReturnVariable *ret = new ReturnVariable((Type*) rt.getValue(), count_pointers(pointers), returnVarName());
-			    Function *fp = new Function(*name, ret, *params, get_current_scope());
+				Function *fp = new Function(*name, ret, *params, get_current_scope());
 			    ProjectionField *pf = new ProjectionField(fp, *name, 1);
 			    set_specs(*pf, s);
 			    set_specs(*ret, s_rt);
