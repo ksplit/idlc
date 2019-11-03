@@ -1068,7 +1068,6 @@ ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 			    std::vector<ProjectionField*> *fields = new std::vector<ProjectionField*>();
 			    fields->push_back(pf);
 
-			    set_current_scope(get_current_scope()->outer_scope());
 			    value = fields;
 			}}
 			| pc_unnamed_scope
