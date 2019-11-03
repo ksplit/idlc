@@ -735,7 +735,7 @@ public:
   std::vector<GlobalVariable *> cspaces_;
   GlobalVariable *channel_group;
   Module(const std::string &id, std::vector<Rpc *> rpc_definitions,
-         std::vector<GlobalVariable *> globals, LexicalScope *ls);
+         std::vector<GlobalVariable *> globals, std::vector<Require *> requires, LexicalScope *ls);
   std::vector<Rpc *> rpc_definitions();
   std::vector<GlobalVariable *> channels();
   LexicalScope *module_scope();

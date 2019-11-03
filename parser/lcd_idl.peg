@@ -315,6 +315,7 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPENC Spacing req
 			LexicalScope *module_scope = (LexicalScope*) m.getValue();
 			std::vector<Rpc*> rpcs;
 			std::vector<GlobalVariable*> channels2;
+			std::vector<Require*> requires; // TODO: put this in the AST
 
 			Channel::ChannelType ct = static_cast<Channel::ChannelType>(*((int*)new int(Channel::AsyncChannel)));
 
@@ -345,6 +346,12 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPENC Spacing req
 			Type *t = getType("def_chnl1");
 			std::cout << "channel " << "def_chnl" << " Type information " << t << std::endl;
 
+			for (const auto require : reqs.getValues()) {
+				const auto name = static_cast<const std::string*>(require.getValue());
+				std::cout << "[REQUIRING] " << *name << "\n";
+				requires.push_back(new Require(*static_cast<const std::string*>(require.getValue()), newCh));
+			}
+
 			module_scope->setactiveChannel(newCh);
 
 			if (get_current_scope())
@@ -352,14 +359,11 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPENC Spacing req
 			else
 				set_current_scope(get_current_module_scope());
 			const std::string *name = static_cast<const std::string*>(id.getValue());
-			value = new Module(*name, rpcs, channels2, module_scope);
+			value = new Module(*name, rpcs, channels2, requires, module_scope);
 		}}
 
-Require = "require" Spacing rmod:Identifier Spacing "on" Spacing ch_name:Identifier SEMI {{
-    const std::string *_module = static_cast<const std::string*>(rmod.getValue());
-    const std::string *_ch_name = static_cast<const std::string *>(ch_name.getValue());
-    Channel *c = new Channel(*_ch_name, Channel::ChannelType::AsyncChannel, NULL);
-    value = new Require(*_module, c);
+Require = "require" Spacing rmod:Identifier Spacing SEMI Spacing {{
+    value = rmod.getValue();
 }}
 
 Interface_special =	  "module" {{

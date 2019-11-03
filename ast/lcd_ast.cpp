@@ -366,8 +366,8 @@ void Rpc::create_trampoline_structs() {
 }
 
 Module::Module(const std::string &id, std::vector<Rpc *> rpc_definitions,
-               std::vector<GlobalVariable *> channels, LexicalScope *ls)
-    : module_name_(id), module_scope_(ls), channels_(channels),
+               std::vector<GlobalVariable *> channels, std::vector<Require *> requires, LexicalScope *ls)
+    : module_name_(id), module_scope_(ls), requires_(requires), channels_(channels),
       rpc_definitions_(rpc_definitions) {
   this->module_scope_->setactiveChannel(ls->activeChannel);
   if (ls->activeChannel) {
