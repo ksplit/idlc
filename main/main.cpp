@@ -38,6 +38,18 @@ int main(int argc, char **argv) {
     std::vector<Include *> caller_includes = project_includes;
     std::vector<Include *> callee_includes = project_includes;
 
+    tree->resolve_types();
+    tree->create_trampoline_structs();
+    tree->function_pointer_to_rpc();
+    tree->generate_function_tags();
+    tree->create_container_variables();
+    tree->set_copy_container_accessors();
+    tree->copy_types();
+    tree->initialize_types();
+    tree->set_accessors();
+    tree->modify_specs();
+    tree->prepare_marshal();
+
     for (auto m : *tree) {
       std::string callee_h =
           new_name(m->identifier(), std::string("_callee.h"));
@@ -76,18 +88,6 @@ int main(int argc, char **argv) {
           new Include(true, "../" + m->identifier() + "_callee.h"));
       caller_includes.push_back(
           new Include(true, "../" + m->identifier() + "_caller.h"));
-
-      tree->resolve_types();
-      tree->create_trampoline_structs();
-      tree->function_pointer_to_rpc();
-      tree->generate_function_tags();
-      tree->create_container_variables();
-      tree->set_copy_container_accessors();
-      tree->copy_types();
-      tree->initialize_types();
-      tree->set_accessors();
-      tree->modify_specs();
-      tree->prepare_marshal();
 
       CCSTFile *ccst_callee_h = generate_server_header(m);
       CCSTFile *ccst_callee_lds = generate_callee_lds(m);
