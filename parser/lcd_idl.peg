@@ -339,11 +339,11 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPENC Spacing req
 				rpcs.insert(rpcs.end(), r_tmp->begin(), r_tmp->end());
 			}
 
-			GlobalVariable *gv = new GlobalVariable(getType("cptr"), "def_chnl", 0);
+			GlobalVariable *gv = new GlobalVariable(getType("cptr"), "def_chnl1", 0);
 			insertVariable(gv);
 			channels2.push_back(gv);
 
-			Type *t = getType("def_chnl");
+			Type *t = getType("def_chnl1");
 			std::cout << "channel " << "def_chnl" << " Type information " << t << std::endl;
 
 			for (const auto require : reqs.getValues()) {
@@ -1067,8 +1067,6 @@ ProjField	=	"projection" Space+ id:Identifier Spacing s:Specification? pointers:
 
 			    std::vector<ProjectionField*> *fields = new std::vector<ProjectionField*>();
 			    fields->push_back(pf);
-
-				std::cout << "[WARNING] Function pointers not yet implemented.\n";
 
 			    value = fields;
 			}}

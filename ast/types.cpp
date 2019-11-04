@@ -127,7 +127,6 @@ Rpc *Function::to_rpc(ProjectionType *pt) {
   // adding extra parameters here. but maybe depending on needs this could be
   // done at parse time and these extra parameters can be added to the Function.
   std::vector<Parameter *> new_parameters;
-  /// TODO: why do these lines cause the later codegen segfault?
   // new_parameters.insert(new_parameters.end(), this->parameters_.begin(),
   // this->parameters_.end());
   int err;
@@ -162,8 +161,7 @@ Rpc *Function::to_rpc(ProjectionType *pt) {
     }
   }
 
-  const auto mangled_id = pt->id_ + '_' + this->identifier_;
-  Rpc *tmp = new Rpc(this->return_var_, mangled_id, this->parameters_,
+  Rpc *tmp = new Rpc(this->return_var_, this->identifier_, this->parameters_,
                      this->current_scope_);
   tmp->set_function_pointer_defined(true);
   tmp->set_hidden_args(new_parameters);
