@@ -29,9 +29,8 @@ include "../../glue_helper.h"
 
 include <lcd_config/post_hook.h>
 
-module nullnet(channel c) {
-    channel net_async = new async(c);
-    use net_async;
+module nullnet {
+    //require net_async;
     {
         projection <struct rtnl_link_stats64> rtnl_link_stats64 {
             //unsigned int tx_bytes;

@@ -108,7 +108,7 @@ const std::string &Rpc::enum_name() const { return this->enum_str; }
 std::vector<Parameter *> Rpc::parameters() { return parameters_; }
 
 void Rpc::prepare_marshal() {
-  // TODO: account for hidden args
+  /// TODO: account for hidden args
   std::vector<Variable *> in_params;
   std::vector<Variable *> out_params;
   std::vector<Variable *> in_out_params;
