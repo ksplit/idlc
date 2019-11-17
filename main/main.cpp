@@ -11,11 +11,49 @@
 #include <fstream>
 
 void print_usage() {
-  std::cerr << "Usage:\n  ./compiler <idl file>" << std::endl;
+  std::cerr << "Usage:\n  ./compiler [-test] <idl file>" << std::endl;
   exit(0);
 }
 
-void do_code_generation(Project* tree)
+namespace v2 {
+  CCSTFile* generate_common_header(Project* p)
+  {
+    std::vector<CCSTExDeclaration*> decls {};
+
+    const auto idl_h = new Include(false, "ipc.h");
+    decls.push_back(new CCSTPreprocessor(idl_h->get_path(), idl_h->is_relative()));
+
+    decls.push_back(new CCSTDeclaration(
+      {new CCSTStructUnionSpecifier(struct_t, "channel")},
+      {new CCSTInitDeclarator(
+        new CCSTDeclarator(
+          nullptr,
+          new CCSTDirectDecId(p->main_module()->id() + "_ch")
+        )
+      )}
+    ));
+
+    std::vector<CCSTEnumerator*> rpcs;
+    for (const auto m : *p)
+      for (const auto rpc : *m)
+        rpcs.push_back(new CCSTEnumerator("KLCD_" + rpc->enum_name()));
+    decls.push_back(
+      new CCSTDeclaration(
+        {new CCSTEnumSpecifier("dispatch_t", new CCSTEnumeratorList(new decltype(rpcs)(rpcs)))},
+        {}
+      )
+    );
+
+    return new CCSTFile(decls);
+  }
+  
+  CCSTFile* generate_common_impl()
+  {
+
+  }
+}
+
+void do_code_generation(Project* tree, bool test_mode)
 {
   const auto module = tree->main_module();
   const auto& id = module->id();
@@ -41,8 +79,7 @@ void do_code_generation(Project* tree)
   std::vector<CCSTExDeclaration*> decls;
   CCSTFile* file;
 
-  decls.push_back(new CCSTPreprocessor(idl_inc->get_path(), idl_inc->is_relative()));
-  file = new CCSTFile {decls};
+  file = v2::generate_common_header(tree);
   file->write(common_h, false);
   decls.clear();
 
@@ -73,13 +110,22 @@ void do_code_generation(Project* tree)
 }
 
 int main(int argc, char **argv) {
-  if (argc != 2) {
+  if (argc != 2 && argc != 3) {
     print_usage();
   }
 
-  try {
-    char *file = argv[1];
+  char *file;
+  bool test_mode;
+  if (argc == 3) {
+    file = argv[2];
+    test_mode = true;
+  }
+  else {
+    file = argv[1];
+    test_mode = false;
+  }
 
+  try {
     // TODO: add support for multiple files, add option to specify
     // which module to compile, put each module in a different file
     Project *tree = (Project *)Parser::parse(std::string(file));
@@ -207,7 +253,7 @@ int main(int argc, char **argv) {
     //   ccst_caller_disp->write(ofs_caller_disp, 0);
     // }
 
-    do_code_generation(tree);
+    do_code_generation(tree, test_mode);
 
     return 0;
   } catch (const Parser::ParseException &e) {

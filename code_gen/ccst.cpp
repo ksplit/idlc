@@ -1232,6 +1232,7 @@ CCSTEnumeratorList::CCSTEnumeratorList() {
   // todo
 }
 
+/// TODO: why are we taking a pointer here?
 CCSTEnumeratorList::CCSTEnumeratorList(std::vector<CCSTEnumerator *> *list)
     : list_(list) {}
 
