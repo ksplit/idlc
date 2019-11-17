@@ -14,7 +14,7 @@
  * Params are cptr_t for each channel, with specified name,
  * There is an extra param not mentioned in idl "lcd_sync_channel_group".
  */
-CCSTDeclaration *interface_init_function_declaration(Module *m) {
+CCSTDeclaration *interface_init_function_declaration(Interface *m) {
   std::vector<CCSTDecSpecifier *> specifier;
   specifier.push_back(
       new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
@@ -34,7 +34,7 @@ CCSTDeclaration *interface_init_function_declaration(Module *m) {
 /*
  *
  */
-CCSTCompoundStatement *callee_interface_init_function_body(Module *m) {
+CCSTCompoundStatement *callee_interface_init_function_body(Interface *m) {
   std::vector<CCSTDeclaration *> body_declarations;
   std::vector<CCSTStatement *> body_statements;
 
@@ -73,7 +73,7 @@ CCSTCompoundStatement *callee_interface_init_function_body(Module *m) {
  * function.
  * 1. What about the generalization of this?
  */
-CCSTCompoundStatement *caller_interface_init_function_body(Module *m) {
+CCSTCompoundStatement *caller_interface_init_function_body(Interface *m) {
   // set each global variable to a parameter.
   std::vector<CCSTDeclaration *> body_declarations;
   std::vector<CCSTStatement *> body_statements;
@@ -126,7 +126,7 @@ CCSTCompoundStatement *caller_interface_init_function_body(Module *m) {
 /*
  *
  */
-CCSTDeclaration *interface_exit_function_declaration(Module *m) {
+CCSTDeclaration *interface_exit_function_declaration(Interface *m) {
   /* returns void */
   std::vector<CCSTDecSpecifier *> specifier;
   specifier.push_back(
@@ -149,7 +149,7 @@ CCSTDeclaration *interface_exit_function_declaration(Module *m) {
  *
  * 1. Need to know what to tear-down.
  */
-CCSTCompoundStatement *caller_interface_exit_function_body(Module *m) {
+CCSTCompoundStatement *caller_interface_exit_function_body(Interface *m) {
   std::vector<CCSTDeclaration *> body_declarations;
   std::vector<CCSTStatement *> body_statements;
 
@@ -169,7 +169,7 @@ CCSTCompoundStatement *caller_interface_exit_function_body(Module *m) {
   return new CCSTCompoundStatement(body_declarations, body_statements);
 }
 
-CCSTCompoundStatement *callee_interface_exit_function_body(Module *m) {
+CCSTCompoundStatement *callee_interface_exit_function_body(Interface *m) {
   std::vector<CCSTDeclaration *> body_declarations;
   std::vector<CCSTStatement *> body_statements;
 

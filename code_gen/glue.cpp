@@ -4,7 +4,7 @@
 #include <list>
 #include <string>
 
-std::list<ProjectionType *> get_unique_projections(Module *m) {
+std::list<ProjectionType *> get_unique_projections(Interface *m) {
   auto all_types = m->module_scope()->all_type_definitions();
   std::list<ProjectionType *> uniq_projs;
 
@@ -48,7 +48,7 @@ std::list<ProjectionType *> get_unique_projections(Module *m) {
   return uniq_projs;
 }
 
-CCSTFile *generate_common_header(Module *m) {
+CCSTFile *generate_common_header(Interface *m) {
   std::vector<CCSTExDeclaration *> definitions;
   auto proj_list = get_unique_projections(m);
 
@@ -93,7 +93,7 @@ CCSTFile *generate_common_header(Module *m) {
   return new CCSTFile(definitions);
 }
 
-std::vector<CCSTExDeclaration *> generate_enum_list(Module *m) {
+std::vector<CCSTExDeclaration *> generate_enum_list(Interface *m) {
   std::vector<CCSTExDeclaration *> statements;
   std::vector<CCSTEnumerator *> *list = new std::vector<CCSTEnumerator *>();
 
@@ -115,7 +115,7 @@ std::vector<CCSTExDeclaration *> generate_enum_list(Module *m) {
   return statements;
 }
 
-CCSTFile *generate_glue_source(Module *m) {
+CCSTFile *generate_glue_source(Interface *m) {
   std::vector<CCSTExDeclaration *> statements;
   auto gluetype_enum = generate_enum_list(m);
   auto uniq_projs = get_unique_projections(m);
@@ -137,7 +137,7 @@ CCSTFile *generate_glue_source(Module *m) {
   return new CCSTFile(statements);
 }
 
-CCSTDeclaration *fn_decl_insert(ProjectionType *pt, Module *m) {
+CCSTDeclaration *fn_decl_insert(ProjectionType *pt, Interface *m) {
   std::vector<CCSTInitDeclarator *> func;
 
   std::string fn_name = "glue_cap_insert_" +
@@ -171,7 +171,7 @@ CCSTDeclaration *fn_decl_insert(ProjectionType *pt, Module *m) {
   return new CCSTDeclaration(int_type(), func);
 }
 
-CCSTDeclaration *fn_decl_lookup(ProjectionType *pt, Module *m) {
+CCSTDeclaration *fn_decl_lookup(ProjectionType *pt, Interface *m) {
   std::vector<CCSTInitDeclarator *> func;
 
   std::string fn_name = "glue_cap_lookup_" +

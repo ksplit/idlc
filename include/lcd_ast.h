@@ -721,21 +721,20 @@ public:
   const LexicalScope *getcurrentscope() const { return current_scope_; }
 };
 
-class Module {
+class Interface {
   // const std::string& verbatim_;
   std::string module_name_;
   LexicalScope *module_scope_;
   std::vector<GlobalVariable *> channels_;
   // create these from the channels in the constructor.
   std::vector<Rpc *> rpc_definitions_;
-  std::vector<Require *> requires_;
   typedef std::vector<Rpc *>::iterator iterator;
 
 public:
   std::vector<GlobalVariable *> cspaces_;
   GlobalVariable *channel_group;
-  Module(const std::string &id, std::vector<Rpc *> rpc_definitions,
-         std::vector<GlobalVariable *> globals, std::vector<Require *> requires, LexicalScope *ls);
+  Interface(const std::string &id, std::vector<Rpc *> rpc_definitions,
+         std::vector<GlobalVariable *> globals, LexicalScope *ls);
   std::vector<Rpc *> rpc_definitions();
   std::vector<GlobalVariable *> channels();
   LexicalScope *module_scope();
@@ -756,7 +755,7 @@ public:
 };
 
 class Require {
-  Module *_module;
+  Interface *_module;
   std::string _mod_name;
   Channel *_chnl;
 
@@ -777,15 +776,27 @@ public:
   bool is_relative() { return this->relative_; }
 };
 
-class Project {
-  LexicalScope *project_scope_;
-  std::vector<Module *> project_modules_;
-  std::vector<Include *> project_includes_;
-  unsigned int last_tag_;
-  typedef std::vector<Module *>::iterator iterator;
+/// NOTE: name is tentative, most references to modules are really to interfaces atm.
+class Module {
+  std::string id_;
+  std::vector<Require *> requires_;
 
 public:
-  Project(LexicalScope *scope, std::vector<Module *> modules,
+  Module(std::string id, std::vector<Require *> requires);
+  std::vector<Require *>& requires();
+  std::string& id();
+};
+
+class Project {
+  LexicalScope *project_scope_;
+  std::vector<Interface *> project_interfaces_;
+  Module* project_module_;
+  std::vector<Include *> project_includes_;
+  unsigned int last_tag_;
+  typedef std::vector<Interface *>::iterator iterator;
+
+public:
+  Project(LexicalScope *scope, std::vector<Interface *> interfaces, Module* module,
           std::vector<Include *> includes);
   void prepare_marshal();
   void resolve_types();
@@ -798,11 +809,12 @@ public:
   void modify_specs();
   void initialize_types();
   void set_copy_container_accessors();
-  std::vector<Module *> modules();
+  Module* main_module();
+  std::vector<Interface *> modules();
   unsigned int get_next_tag();
   std::vector<Include *> includes();
-  iterator begin() { return project_modules_.begin(); }
-  iterator end() { return project_modules_.end(); }
+  iterator begin() { return project_interfaces_.begin(); }
+  iterator end() { return project_interfaces_.end(); }
 };
 
 class TypeNameVisitor // generates CCSTTypeName for each type.

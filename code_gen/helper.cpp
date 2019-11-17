@@ -1,7 +1,7 @@
 #include "ccst.h"
 #include "code_gen.h"
 
-CCSTExDeclaration *construct_enum(Module *m) {
+CCSTExDeclaration *construct_enum(Interface *m) {
   std::string enum_name("dispatch_t");
   std::vector<Rpc *> rpcs = m->rpc_definitions();
   CCSTEnumeratorList *el = construct_enumlist(rpcs);

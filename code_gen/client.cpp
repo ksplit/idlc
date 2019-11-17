@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-CCSTFile *generate_client_header(Module *mod) {
+CCSTFile *generate_client_header(Interface *mod) {
   std::vector<CCSTExDeclaration *> definitions;
 
   /// generate function declaration for sync, async loop
@@ -28,7 +28,7 @@ CCSTFile *generate_client_header(Module *mod) {
   return new CCSTFile(definitions);
 }
 
-CCSTFile *generate_client_source(Module *m, std::vector<Include *> includes) {
+CCSTFile *generate_client_source(Interface *m, std::vector<Include *> includes) {
   std::vector<CCSTExDeclaration *> definitions;
 
   // Includes
@@ -108,7 +108,7 @@ std::vector<CCSTDeclaration *> declare_containers(Variable *v) {
 /// use module to get things like channels and cspaces.
 /// or add channel and cspace as a field to an rpc....
 /// that way each rpc can have its own channel or something....
-CCSTCompoundStatement *caller_body(Rpc *r, Module *m, bool user) {
+CCSTCompoundStatement *caller_body(Rpc *r, Interface *m, bool user) {
   std::vector<CCSTDeclaration *> declarations;
   std::vector<CCSTStatement *> statements;
   std::vector<CCSTStatement *> lbl_statements;
@@ -597,7 +597,7 @@ CCSTCompoundStatement *async_call(Rpc *r, Channel *c,
   return new CCSTCompoundStatement(declarations, statements, lbl_statements);
 }
 
-CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use,
+CCSTCompoundStatement *sync_call(Rpc *r, Interface *m, std::string &cspace_to_use,
                                  Channel *c) {
   std::vector<CCSTDeclaration *> declarations;
   std::vector<CCSTStatement *> statements;

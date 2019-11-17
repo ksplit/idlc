@@ -9,45 +9,45 @@
 
 // server.cpp
 CCSTFile *
-generate_server_source(Module *m,
+generate_server_source(Interface *m,
                        std::vector<Include *> includes); // todo complete
 CCSTFile *generate_server_header(
-    Module *m); // std::vector<Include*> includes); // todo complete?
-CCSTFile *generate_callee_lds(Module *mod);
-CCSTFile *generate_glue_source(Module *m);
-template <bool client> CCSTFile *generate_dispatch(Module *m);
-CCSTFile *generate_common_header(Module *m);
-std::vector<CCSTExDeclaration *> generate_enum_list(Module *m);
-CCSTDeclaration *fn_decl_insert(ProjectionType *pt, Module *m);
-CCSTDeclaration *fn_decl_lookup(ProjectionType *pt, Module *m);
+    Interface *m); // std::vector<Include*> includes); // todo complete?
+CCSTFile *generate_callee_lds(Interface *mod);
+CCSTFile *generate_glue_source(Interface *m);
+template <bool client> CCSTFile *generate_dispatch(Interface *m);
+CCSTFile *generate_common_header(Interface *m);
+std::vector<CCSTExDeclaration *> generate_enum_list(Interface *m);
+CCSTDeclaration *fn_decl_insert(ProjectionType *pt, Interface *m);
+CCSTDeclaration *fn_decl_lookup(ProjectionType *pt, Interface *m);
 CCSTCompoundStatement *fn_def_insert(ProjectionType *pt);
 CCSTCompoundStatement *fn_def_lookup(ProjectionType *pt);
 
 CCSTCompoundStatement *
-callee_body(Rpc *r, Module *m); // todo complete  2 functions in the file.....
+callee_body(Rpc *r, Interface *m); // todo complete  2 functions in the file.....
 
 CCSTDeclaration *callee_declaration(Rpc *r); // todo complete
 
 template <bool client>
-CCSTCompoundStatement *dispatch_sync_loop_body(Module *mod);
+CCSTCompoundStatement *dispatch_sync_loop_body(Interface *mod);
 CCSTDeclaration *dispatch_sync_function_declaration();
 template <bool client>
-CCSTCompoundStatement *dispatch_async_loop_body(Module *mod);
-CCSTDeclaration *dispatch_async_function_declaration(Module *mod);
+CCSTCompoundStatement *dispatch_async_loop_body(Interface *mod);
+CCSTDeclaration *dispatch_async_function_declaration(Interface *mod);
 
 // client.cpp
 
 CCSTFile *
-generate_client_header(Module *m); //, std::vector<Include*> includes); // todo
+generate_client_header(Interface *m); //, std::vector<Include*> includes); // todo
                                    //empty, maybe unnecessary?
 CCSTFile *
-generate_client_source(Module *m,
+generate_client_source(Interface *m,
                        std::vector<Include *> includes); // todo complete
 
-CCSTCompoundStatement *caller_body(Rpc *r, Module *m, bool); // todo complete
+CCSTCompoundStatement *caller_body(Rpc *r, Interface *m, bool); // todo complete
 CCSTCompoundStatement *async_call(Rpc *r, Channel *c,
                                   std::string &cspace_to_use, bool);
-CCSTCompoundStatement *sync_call(Rpc *r, Module *m, std::string &cspace_to_use,
+CCSTCompoundStatement *sync_call(Rpc *r, Interface *m, std::string &cspace_to_use,
                                  Channel *c);
 
 std::vector<CCSTStatement *>
@@ -96,7 +96,7 @@ CCSTDeclaration *typedef_declaration(Typedef *t);      // todo. totally not done
 CCSTAssignOp *equals();                                // complete
 CCSTDeclaration *declare_static_variable(Variable *v); // complete
 
-CCSTExDeclaration *construct_enum(Module *m);                    // todo?
+CCSTExDeclaration *construct_enum(Interface *m);                    // todo?
 CCSTEnumeratorList *construct_enumlist(std::vector<Rpc *> rpcs); // ???????
 
 CCSTUnaryOp *indirection();                                 // complete
@@ -126,15 +126,15 @@ integer_type_cast(IntegerType *it); /// ????????
 
 // is this in the correct file?
 CCSTCompoundStatement *
-caller_interface_init_function_body(Module *m); // complete
+caller_interface_init_function_body(Interface *m); // complete
 CCSTCompoundStatement *
-callee_interface_init_function_body(Module *m);                  // complete
-CCSTDeclaration *interface_init_function_declaration(Module *m); // complete
+callee_interface_init_function_body(Interface *m);                  // complete
+CCSTDeclaration *interface_init_function_declaration(Interface *m); // complete
 CCSTCompoundStatement *
-caller_interface_exit_function_body(Module *m); // complete
+caller_interface_exit_function_body(Interface *m); // complete
 CCSTCompoundStatement *
-callee_interface_exit_function_body(Module *m);                  // complete
-CCSTDeclaration *interface_exit_function_declaration(Module *m); // complete
+callee_interface_exit_function_body(Interface *m);                  // complete
+CCSTDeclaration *interface_exit_function_declaration(Interface *m); // complete
 
 CCSTFuncDef *function_definition(CCSTDeclaration *function_declaration,
                                  CCSTCompoundStatement *body); // complete

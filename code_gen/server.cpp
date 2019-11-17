@@ -18,7 +18,7 @@ CCSTDeclaration *dispatch_sync_function_declaration() {
   return new CCSTDeclaration(specifier, decs);
 }
 
-CCSTDeclaration *dispatch_async_function_declaration(Module *mod) {
+CCSTDeclaration *dispatch_async_function_declaration(Interface *mod) {
   std::vector<CCSTDecSpecifier *> specifier;
   specifier.push_back(
       new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec));
@@ -57,7 +57,7 @@ CCSTDeclaration *dispatch_async_function_declaration(Module *mod) {
   return func_declaration;
 }
 template <bool client>
-CCSTCompoundStatement *dispatch_sync_loop_body(Module *mod) {
+CCSTCompoundStatement *dispatch_sync_loop_body(Interface *mod) {
   std::vector<CCSTDeclaration *> decs_in_body;
   std::vector<CCSTDecSpecifier *> spec;
   std::vector<CCSTInitDeclarator *> dec;
@@ -123,7 +123,7 @@ CCSTCompoundStatement *dispatch_sync_loop_body(Module *mod) {
   return new CCSTCompoundStatement(decs_in_body, body_statements);
 }
 template <bool client>
-CCSTCompoundStatement *dispatch_async_loop_body(Module *mod) {
+CCSTCompoundStatement *dispatch_async_loop_body(Interface *mod) {
   std::vector<CCSTDeclaration *> decs_in_body;
   std::vector<CCSTDecSpecifier *> spec;
   std::vector<CCSTInitDeclarator *> dec;
@@ -212,7 +212,7 @@ CCSTCompoundStatement *dispatch_async_loop_body(Module *mod) {
 /* body for a callee function
  * does unmarshaling, real function call, etc
  */
-CCSTCompoundStatement *callee_body(Rpc *r, Module *m) {
+CCSTCompoundStatement *callee_body(Rpc *r, Interface *m) {
   std::vector<CCSTDeclaration *> declarations;
   std::vector<CCSTStatement *> statements;
   std::vector<CCSTStatement *> lbl_statements;
@@ -517,7 +517,7 @@ CCSTCompoundStatement *callee_body(Rpc *r, Module *m) {
   return new CCSTCompoundStatement(declarations, statements);
 }
 
-CCSTFile *generate_server_header(Module *module) {
+CCSTFile *generate_server_header(Interface *module) {
   std::vector<CCSTExDeclaration *> definitions;
 
   definitions.push_back(new CCSTPreprocessor("../glue_helper.h", true));
@@ -593,7 +593,7 @@ CCSTDeclaration *callee_declaration(Rpc *r) {
 /*
  * generates the source file for the provided module/interface
  */
-CCSTFile *generate_server_source(Module *m, std::vector<Include *> includes) {
+CCSTFile *generate_server_source(Interface *m, std::vector<Include *> includes) {
   std::vector<CCSTExDeclaration *> definitions;
 
   for (auto inc : includes) {
@@ -651,7 +651,7 @@ CCSTFile *generate_server_source(Module *m, std::vector<Include *> includes) {
   return c_file;
 }
 
-CCSTFile *generate_callee_lds(Module *mod) {
+CCSTFile *generate_callee_lds(Interface *mod) {
   std::vector<Rpc *> rpcs = mod->rpc_definitions();
   std::vector<CCSTExDeclaration *> statements;
   statements.push_back(new CCSTPreprocessor("liblcd/trampoline.h", false));
@@ -686,7 +686,7 @@ inline CCSTExDeclaration *calleeh_include(const std::string &id) {
 inline CCSTExDeclaration *callerh_include(const std::string &id) {
   return new CCSTPreprocessor("../" + id + "_caller.h", true);
 }
-template <bool client> CCSTFile *generate_dispatch(Module *m) {
+template <bool client> CCSTFile *generate_dispatch(Interface *m) {
   std::vector<CCSTExDeclaration *> statements;
 
   statements.push_back(prehook_include());
@@ -717,5 +717,5 @@ template <bool client> CCSTFile *generate_dispatch(Module *m) {
 
   return new CCSTFile(statements);
 }
-template CCSTFile *generate_dispatch<true>(Module *);
-template CCSTFile *generate_dispatch<false>(Module *);
+template CCSTFile *generate_dispatch<true>(Interface *);
+template CCSTFile *generate_dispatch<false>(Interface *);

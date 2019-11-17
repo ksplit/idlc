@@ -216,8 +216,8 @@ void create_container(const Value &id, std::vector<ProjectionField*> &container_
 rules:
 
 
-File		=	Spacing i:Include* t:Interface* <eof> {{
-			    std::vector<Module*> modules;
+File		=	Spacing i:Include* t:Interface* m:Module <eof> {{
+			    std::vector<Interface*> interfaces;
 			    std::vector<Include*> includes;
 			
 			    for(Value::iterator it = i.getValues().begin(); it != i.getValues().end(); it ++) {
@@ -227,11 +227,26 @@ File		=	Spacing i:Include* t:Interface* <eof> {{
 			
 			    for(Value::iterator it = t.getValues().begin(); it != t.getValues().end(); it ++) {
 			        const Value & v2 = *it;
-			        modules.push_back((Module*) v2.getValue());
+			        interfaces.push_back((Interface*) v2.getValue());
 			    }
 
-			    value = new Project(LexicalScope::getGlobalScope(), modules, includes); 
+			    value = new Project(
+					LexicalScope::getGlobalScope(),
+					interfaces,
+					(Module*)(m.getValue()),
+					includes); 
 			}}
+
+Module		= Module_special Space+ id:Identifier Spacing OPENC Spacing r:Require+ CLOSEC Spacing {{
+				std::vector<Require *> requires;
+				for (const auto req : r.getValues()) {
+					requires.push_back((Require*)(req.getValue()));
+				}
+
+				value = new Module(*static_cast<const std::string*>(id.getValue()), requires);
+			}}
+
+Module_special	= "module"
 
 Pathname	= 	p1:PathStart+ {{
 			    std::ostringstream total;
@@ -311,11 +326,10 @@ pc_unnamed_scope=	s:pc_unnamed_scope_special d:Type_Definitions* p:ProjField* Sp
 			    value = fields;
 			}}
 
-Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPENC Spacing reqs:Require* d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
+Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPENC Spacing d:Type_Definitions* r:Rpc* r2:unnamed_scope* Spacing CLOSEC Spacing {{
 			LexicalScope *module_scope = (LexicalScope*) m.getValue();
 			std::vector<Rpc*> rpcs;
 			std::vector<GlobalVariable*> channels2;
-			std::vector<Require*> requires; // TODO: put this in the AST
 
 			Channel::ChannelType ct = static_cast<Channel::ChannelType>(*((int*)new int(Channel::AsyncChannel)));
 
@@ -346,12 +360,6 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPENC Spacing req
 			Type *t = getType("def_chnl1");
 			std::cout << "channel " << "def_chnl" << " Type information " << t << std::endl;
 
-			for (const auto require : reqs.getValues()) {
-				const auto name = static_cast<const std::string*>(require.getValue());
-				std::cout << "[REQUIRING] " << *name << "\n";
-				requires.push_back(new Require(*static_cast<const std::string*>(require.getValue()), newCh));
-			}
-
 			module_scope->setactiveChannel(newCh);
 
 			if (get_current_scope())
@@ -359,19 +367,19 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPENC Spacing req
 			else
 				set_current_scope(get_current_module_scope());
 			const std::string *name = static_cast<const std::string*>(id.getValue());
-			value = new Module(*name, rpcs, channels2, requires, module_scope);
+			value = new Interface(*name, rpcs, channels2, module_scope);
 		}}
 
 Require = "require" Spacing rmod:Identifier Spacing SEMI Spacing {{
     value = rmod.getValue();
 }}
 
-Interface_special =	  "module" {{
+Interface_special =	  "interface" {{
 		  	      LexicalScope *new_scope = new LexicalScope(LexicalScope::getGlobalScope());
 			      LexicalScope::getGlobalScope()->add_inner_scope(new_scope);
 			      set_current_module_scope(new_scope);
 			      set_current_scope(new_scope);
-			      std::cout << "# Module scope " << new_scope << "\n";
+			      std::cout << "# Interface scope " << new_scope << "\n";
 			      value = new_scope;  
 			  }}
 

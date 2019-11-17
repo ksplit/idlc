@@ -365,9 +365,9 @@ void Rpc::create_trampoline_structs() {
   }
 }
 
-Module::Module(const std::string &id, std::vector<Rpc *> rpc_definitions,
-               std::vector<GlobalVariable *> channels, std::vector<Require *> requires, LexicalScope *ls)
-    : module_name_(id), module_scope_(ls), requires_(requires), channels_(channels),
+Interface::Interface(const std::string &id, std::vector<Rpc *> rpc_definitions,
+               std::vector<GlobalVariable *> channels, LexicalScope *ls)
+    : module_name_(id), module_scope_(ls), channels_(channels),
       rpc_definitions_(rpc_definitions) {
   this->module_scope_->setactiveChannel(ls->activeChannel);
   if (ls->activeChannel) {
@@ -395,19 +395,19 @@ Module::Module(const std::string &id, std::vector<Rpc *> rpc_definitions,
       new GlobalVariable(group, group_name(this->identifier()), 1);
 }
 
-std::vector<Rpc *> Module::rpc_definitions() { return this->rpc_definitions_; }
+std::vector<Rpc *> Interface::rpc_definitions() { return this->rpc_definitions_; }
 
-std::vector<GlobalVariable *> Module::channels() { return this->channels_; }
+std::vector<GlobalVariable *> Interface::channels() { return this->channels_; }
 
-LexicalScope *Module::module_scope() { return this->module_scope_; }
+LexicalScope *Interface::module_scope() { return this->module_scope_; }
 
-void Module::prepare_marshal() {
+void Interface::prepare_marshal() {
   for (auto rpc : *this) {
     rpc->prepare_marshal();
   }
 }
 
-void Module::resolve_types() {
+void Interface::resolve_types() {
   // need to resolve types in projections.
   this->module_scope_->resolve_types();
 
@@ -416,37 +416,37 @@ void Module::resolve_types() {
   }
 }
 
-void Module::copy_types() {
+void Interface::copy_types() {
   for (auto rpc : *this) {
     rpc->copy_types();
   }
 }
 
-void Module::set_accessors() {
+void Interface::set_accessors() {
   for (auto rpc : *this) {
     rpc->set_accessors();
   }
 }
 
-void Module::modify_specs() {
+void Interface::modify_specs() {
   for (auto rpc : *this) {
     rpc->modify_specs();
   }
 }
 
-void Module::initialize_types() {
+void Interface::initialize_types() {
   for (auto rpc : *this) {
     rpc->initialize_types();
   }
 }
 
-void Module::function_pointer_to_rpc() {
+void Interface::function_pointer_to_rpc() {
   std::vector<Rpc *> rpcs = this->module_scope()->function_pointer_to_rpc();
   this->rpc_definitions_.insert(this->rpc_definitions_.end(), rpcs.begin(),
                                 rpcs.end());
 }
 
-void Module::create_trampoline_structs() {
+void Interface::create_trampoline_structs() {
   this->module_scope_->create_trampoline_structs();
   // loop through rpc definitions
   // todo
@@ -456,29 +456,43 @@ void Module::create_trampoline_structs() {
   }
 }
 
-void Module::generate_function_tags(Project *p) {
+void Interface::generate_function_tags(Project *p) {
   for (auto rpc : *this) {
     rpc->set_tag(p->get_next_tag());
   }
 }
 
-void Module::create_container_variables() {
+void Interface::create_container_variables() {
   for (auto rpc : *this) {
     rpc->create_container_variables();
   }
 }
 
-void Module::set_copy_container_accessors() {
+void Interface::set_copy_container_accessors() {
   for (auto rpc : *this) {
     rpc->set_copy_container_accessors();
   }
 }
 
-const std::string Module::identifier() { return this->module_name_; }
+const std::string Interface::identifier() { return this->module_name_; }
 
-Project::Project(LexicalScope *scope, std::vector<Module *> modules,
+Module::Module(std::string id, std::vector<Require *> requires) : id_{id}, requires_{requires_}
+{
+}
+
+std::vector<Require *>& Module::requires()
+{
+  return requires_;
+}
+
+std::string& Module::id()
+{
+  return id_;
+}
+
+Project::Project(LexicalScope *scope, std::vector<Interface *> interfaces, Module* module,
                  std::vector<Include *> includes)
-    : project_scope_(scope), project_modules_(modules),
+    : project_scope_(scope), project_interfaces_(interfaces), project_module_(module),
       project_includes_(includes), last_tag_(0) {}
 
 void Project::prepare_marshal() {
@@ -538,7 +552,11 @@ void Project::create_container_variables() {
   }
 }
 
-std::vector<Module *> Project::modules() { return this->project_modules_; }
+Module* Project::main_module() {
+  return project_module_;
+}
+
+std::vector<Interface *> Project::modules() { return this->project_interfaces_; }
 
 std::vector<Include *> Project::includes() { return this->project_includes_; }
 
