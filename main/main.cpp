@@ -47,9 +47,26 @@ namespace v2 {
     return new CCSTFile(decls);
   }
   
-  CCSTFile* generate_common_impl()
+  CCSTFile* generate_klcd_header(Project* p)
   {
+    std::vector<CCSTExDeclaration*> decls;
+    decls.push_back(new CCSTPreprocessor(p->main_module()->id() + "_common.h", true));
 
+    const auto msg_struct_type = new CCSTStructUnionSpecifier(struct_t, "fipc_message");
+    const auto msg_p = new CCSTParamDeclaration(
+      {msg_struct_type},
+      new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("msg"))
+    );
+    const auto dispatch_f = new CCSTDirectDecParamTypeList(
+      new CCSTDirectDecId("dispatch_klcd"),
+      new CCSTParamList({msg_p})
+    );
+    decls.push_back(new CCSTDeclaration(
+      {new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec)},
+      {new CCSTInitDeclarator(new CCSTDeclarator(nullptr, dispatch_f))}
+    ));
+
+    return new CCSTFile(decls);
   }
 }
 
@@ -62,13 +79,11 @@ void do_code_generation(Project* tree, bool test_mode)
   const std::string lcd_h_id {id + "_lcd.h"};
   const std::string lcd_c_id {id + "_lcd.c"};
   const std::string common_h_id {id + "_common.h"};
-  const std::string common_c_id {id + "_common.c"};
   std::ofstream klcd_h {klcd_h_id};
   std::ofstream klcd_c {klcd_c_id};
   std::ofstream lcd_h {lcd_h_id};
   std::ofstream lcd_c {lcd_c_id};
   std::ofstream common_h {common_h_id};
-  std::ofstream common_c {common_c_id};
 
   /// TODO: temporary name
   const auto idl_inc = new Include(false, "idl.h");
@@ -83,13 +98,7 @@ void do_code_generation(Project* tree, bool test_mode)
   file->write(common_h, false);
   decls.clear();
 
-  decls.push_back(new CCSTPreprocessor(comm_inc->get_path(), comm_inc->is_relative()));
-  file = new CCSTFile {decls};
-  file->write(common_c, false);
-  decls.clear();
-
-  decls.push_back(new CCSTPreprocessor(comm_inc->get_path(), comm_inc->is_relative()));
-  file = new CCSTFile {decls};
+  file = v2::generate_klcd_header(tree);
   file->write(klcd_h, false);
   decls.clear();
 
