@@ -68,54 +68,95 @@ namespace v2 {
 
     return new CCSTFile(decls);
   }
+
+  CCSTFile* generate_klcd_impl(Project* p)
+  {
+    std::vector<CCSTExDeclaration*> decls;
+
+    decls.push_back(new CCSTPreprocessor(p->main_module()->id() + "_klcd.h", true));
+    decls.push_back(new CCSTPreprocessor("stdio.h", false));
+    decls.push_back(new CCSTPreprocessor("stdint.h", false));
+
+    for (const auto m : *p) {
+      for (const auto rpc : *m) {
+        const auto proto_name = rpc->name();
+        // HACK, TEMPORARY (also wrong for <<long long>>)
+        const auto get_type_spec = [](Type* t) {
+          switch (t->num()) {
+          case INTEGER_TYPE:
+            switch (dynamic_cast<IntegerType*>(t)->int_type()) {
+            case pt_int_t:
+              return CCSTSimpleTypeSpecifier::IntegerTypeSpec;
+
+            case pt_long_t:
+              return CCSTSimpleTypeSpecifier::LongTypeSpec;
+
+            case pt_short_t:
+              return CCSTSimpleTypeSpecifier::ShortTypeSpec;
+
+            case pt_char_t:
+              return CCSTSimpleTypeSpecifier::CharTypeSpec;
+            }
+
+          case VOID_TYPE:
+            return CCSTSimpleTypeSpecifier::VoidTypeSpec;
+
+          default:
+            return CCSTSimpleTypeSpecifier::OtherTypeSpec;
+          }
+        };
+
+        const auto type_spec = get_type_spec(rpc->return_variable()->type());
+
+        std::vector<CCSTParamDeclaration*> params;
+        for (const auto prm : *rpc) {
+          const auto pts = get_type_spec(prm->type());
+          params.push_back(
+            new CCSTParamDeclaration(
+              {new CCSTSimpleTypeSpecifier(pts)},
+              new CCSTDeclarator(
+               nullptr,
+                new CCSTDirectDecId(prm->identifier())
+              )
+            )
+          );
+        }
+
+        const auto f_proto = new CCSTDirectDecParamTypeList(
+          new CCSTDirectDecId(proto_name),
+          new CCSTParamList(params)
+        );
+        decls.push_back(new CCSTDeclaration(
+          {new CCSTSimpleTypeSpecifier(type_spec)},
+          {new CCSTInitDeclarator(new CCSTDeclarator(nullptr, f_proto))}
+        ));
+      }
+    }
+
+    return new CCSTFile(decls);
+  }
 }
 
 void do_code_generation(Project* tree, bool test_mode)
 {
   const auto module = tree->main_module();
   const auto& id = module->id();
-  const std::string klcd_h_id {id + "_klcd.h"};
-  const std::string klcd_c_id {id + "_klcd.c"};
-  const std::string lcd_h_id {id + "_lcd.h"};
-  const std::string lcd_c_id {id + "_lcd.c"};
-  const std::string common_h_id {id + "_common.h"};
-  std::ofstream klcd_h {klcd_h_id};
-  std::ofstream klcd_c {klcd_c_id};
-  std::ofstream lcd_h {lcd_h_id};
-  std::ofstream lcd_c {lcd_c_id};
-  std::ofstream common_h {common_h_id};
-
-  /// TODO: temporary name
-  const auto idl_inc = new Include(false, "idl.h");
-  const auto comm_inc = new Include(true, common_h_id);
-  const auto klcd_inc = new Include(true, klcd_h_id);
-  const auto lcd_inc = new Include(true, lcd_h_id);
+  std::ofstream klcd_h {id + "_klcd.h"};
+  std::ofstream klcd_c {id + "_klcd.c"};
+  std::ofstream lcd_h {id + "_lcd.h"};
+  std::ofstream lcd_c {id + "_lcd.c"};
+  std::ofstream common_h {id + "_common.h"};
   
-  std::vector<CCSTExDeclaration*> decls;
   CCSTFile* file;
 
   file = v2::generate_common_header(tree);
   file->write(common_h, false);
-  decls.clear();
 
   file = v2::generate_klcd_header(tree);
   file->write(klcd_h, false);
-  decls.clear();
 
-  decls.push_back(new CCSTPreprocessor(comm_inc->get_path(), comm_inc->is_relative()));
-  file = new CCSTFile {decls};
-  file->write(lcd_h, false);
-  decls.clear();
-
-  decls.push_back(new CCSTPreprocessor(klcd_inc->get_path(), klcd_inc->is_relative()));
-  file = new CCSTFile {decls};
+  file = v2::generate_klcd_impl(tree);
   file->write(klcd_c, false);
-  decls.clear();
-
-  decls.push_back(new CCSTPreprocessor(lcd_inc->get_path(), lcd_inc->is_relative()));
-  file = new CCSTFile {decls};
-  file->write(lcd_c, false);
-  decls.clear();
 }
 
 int main(int argc, char **argv) {
