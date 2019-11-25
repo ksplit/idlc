@@ -114,18 +114,38 @@ namespace v2 {
 
   CCSTCompoundStatement* generate_rpc_marshal(Rpc* rpc)
   {
+    const auto regs = new CCSTPostFixExprAccess(new CCSTPrimaryExprId("msg"), pointer_access_t, "reg");
+    
+    std::vector<CCSTDeclaration*> decls;
+    std::vector<CCSTAssignExpr*> params;
+    for (const auto prm : *rpc) {
+      const auto name = prm->identifier();
+      const auto type_spec = new CCSTSimpleTypeSpecifier(get_type_spec(prm->type()));
+      const auto reg = new CCSTPostFixExprExpr(regs, new CCSTInteger(prm->marshal_info()->get_register()));
+      decls.push_back(new CCSTDeclaration(
+        {type_spec},
+        {new CCSTInitDeclarator(
+          new CCSTDeclarator(
+            nullptr,
+            new CCSTDirectDecId(name)
+          ),
+          new CCSTInitializer(reg)
+        )}
+      ));
+      params.push_back(new CCSTPrimaryExprId(name));
+    }
+
     const auto rpc_id = new CCSTPrimaryExprId(rpc->name());
-    const auto rpc_call = new CCSTPostFixExprAssnExpr(rpc_id, {});
+    const auto rpc_call = new CCSTPostFixExprAssnExpr(rpc_id, params);
     auto rpcs = new CCSTExprStatement(rpc_call);
 
     const auto rt = rpc->return_variable()->type();
     if (rt->num() != VOID_TYPE) {
-      const auto regs = new CCSTPostFixExprAccess(new CCSTPrimaryExprId("msg"), pointer_access_t, "reg");
       const auto rreg = new CCSTPostFixExprExpr(regs, new CCSTInteger(0));
       rpcs = new CCSTExprStatement(new CCSTAssignExpr(rreg, new CCSTAssignOp(equal_t), rpc_call));
     }
 
-    return new CCSTCompoundStatement({}, {rpcs});
+    return new CCSTCompoundStatement(decls, {rpcs});
   }
 
   void generate_marshal_funcs(Project* p, std::vector<CCSTExDeclaration*>& decls)
