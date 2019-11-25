@@ -15,6 +15,7 @@ namespace v2 {
   CCSTCompoundStatement* generate_rpc_marshal(Rpc* rpc);
   void generate_marshal_funcs(Project* p, std::vector<CCSTExDeclaration*>& decls);
   CCSTFile* generate_klcd_impl(Project* p);
+  void generate_klcd_dispatch(Project* p, std::vector<CCSTExDeclaration*>& decls);
 }
 
 // server.cpp

@@ -186,7 +186,50 @@ namespace v2 {
     decls.push_back(new CCSTPreprocessor("stdint.h", false));
     generate_callee_protos(p, decls);
     generate_marshal_funcs(p, decls);
+    generate_klcd_dispatch(p, decls);
 
     return new CCSTFile(decls);
+  }
+
+  void generate_klcd_dispatch(Project* p, std::vector<CCSTExDeclaration*>& decls)
+  {
+    const auto def_case = new CCSTDefaultLabelStatement(new CCSTReturn(new CCSTInteger(1)));
+    std::vector<CCSTStatement*> cases {def_case};
+
+    for (const auto m : *p) {
+      for (const auto rpc : *m) {
+        const auto rpc_id = new CCSTPrimaryExprId(rpc->callee_name());
+        const auto rpc_call = new CCSTPostFixExprAssnExpr(rpc_id, {new CCSTPrimaryExprId("msg")});
+        auto rpcs = new CCSTExprStatement(rpc_call);
+        cases.push_back(new CCSTCaseStatement(new CCSTPrimaryExprId("KLCD_" + rpc->enum_name()), {rpcs}));
+      }
+    }
+
+    const auto switch_body = new CCSTCompoundStatement({}, cases);
+    const auto regs = new CCSTPostFixExprAccess(new CCSTPrimaryExprId("msg"), pointer_access_t, "reg");
+    const auto rreg = new CCSTPostFixExprExpr(regs, new CCSTInteger(0));
+    const auto swtch = new CCSTSwitchStatement(rreg, switch_body);
+    const auto final_ret = new CCSTReturn(new CCSTInteger(0));
+    const auto body = new CCSTCompoundStatement({}, {swtch, final_ret});
+
+    const std::vector<CCSTParamDeclaration*> params {
+      new CCSTParamDeclaration(
+        {new CCSTStructUnionSpecifier(struct_t, "fipc_message")},
+        new CCSTDeclarator(
+          new CCSTPointer(),
+          new CCSTDirectDecId("msg")
+        )
+      )
+    };
+    const auto f_proto = new CCSTDirectDecParamTypeList(
+      new CCSTDirectDecId("dispatch_klcd"),
+      new CCSTParamList(params)
+    );
+    decls.push_back(new CCSTFuncDef(
+      {new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec)},
+      new CCSTDeclarator(nullptr, f_proto),
+      {},
+      body
+    ));
   }
 }
