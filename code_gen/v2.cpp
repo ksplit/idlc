@@ -54,6 +54,7 @@ namespace v2 {
     return new CCSTFile(decls);
   }
 
+  // TODO: a hack, use however it was done in old codegen
   auto get_type_spec(Type* t) {
     switch (t->num()) {
     case INTEGER_TYPE:
@@ -79,39 +80,15 @@ namespace v2 {
     }
   }
 
+  // Forward-declare the functions declared for the KLCD side
   void generate_callee_protos(Project* p, std::vector<CCSTExDeclaration*>& decls)
   {
-    for (const auto m : *p) {
-      for (const auto rpc : *m) {
-        const auto proto_name = rpc->name();
-        const auto type_spec = get_type_spec(rpc->return_variable()->type());
-
-        std::vector<CCSTParamDeclaration*> params;
-        for (const auto prm : *rpc) {
-          const auto pts = get_type_spec(prm->type());
-          params.push_back(
-            new CCSTParamDeclaration(
-              {new CCSTSimpleTypeSpecifier(pts)},
-              new CCSTDeclarator(
-                nullptr,
-                new CCSTDirectDecId(prm->identifier())
-              )
-            )
-          );
-        }
-
-        const auto f_proto = new CCSTDirectDecParamTypeList(
-          new CCSTDirectDecId(proto_name),
-          new CCSTParamList(params)
-        );
-        decls.push_back(new CCSTDeclaration(
-          {new CCSTSimpleTypeSpecifier(type_spec)},
-          {new CCSTInitDeclarator(new CCSTDeclarator(nullptr, f_proto))}
-        ));
-      }
-    }
+    for (const auto m : *p)
+      for (const auto rpc : *m)
+        decls.push_back(function_declaration(rpc));
   }
 
+  // Generates all the marshaling/call code for a *_callee function
   CCSTCompoundStatement* generate_rpc_marshal(Rpc* rpc)
   {
     const auto regs = new CCSTPostFixExprAccess(new CCSTPrimaryExprId("msg"), pointer_access_t, "reg");
@@ -138,6 +115,7 @@ namespace v2 {
     const auto rpc_id = new CCSTPrimaryExprId(rpc->name());
     const auto rpc_call = new CCSTPostFixExprAssnExpr(rpc_id, params);
     auto rpcs = new CCSTExprStatement(rpc_call);
+    function_call(rpc->name(), params);
 
     const auto rt = rpc->return_variable()->type();
     if (rt->num() != VOID_TYPE) {
@@ -148,31 +126,34 @@ namespace v2 {
     return new CCSTCompoundStatement(decls, {rpcs});
   }
 
+  // Replaces function_declaration for marshaling wrappers
+  CCSTDeclaration* make_rpc_declaration(Rpc* rpc)
+  {
+    const auto ret_type = type2(rpc->return_variable()->type());
+    const auto stars = pointer(rpc->return_variable()->pointer_count());
+    const auto id = new CCSTDirectDecId(rpc->callee_name());
+    const auto param = new CCSTParamDeclaration(
+      {new CCSTStructUnionSpecifier(struct_t, "fipc_message")},
+      new CCSTDeclarator(
+        new CCSTPointer(),
+        new CCSTDirectDecId("msg")
+      )
+    );
+
+    const auto plist = new CCSTDirectDecParamTypeList(id, new CCSTParamList({param}));
+    const auto decl = new CCSTDeclarator(stars, plist);
+
+    return new CCSTDeclaration(ret_type, {decl});
+  }
+
+  // Do the above code generation for each rpc (in the KLCD), and of course, wrap it in a function definition
   void generate_marshal_funcs(Project* p, std::vector<CCSTExDeclaration*>& decls)
   {
     for (const auto m : *p) {
       for (const auto rpc : *m) {
-        const auto def_name = rpc->callee_name();
-        std::vector<CCSTParamDeclaration*> params {
-          new CCSTParamDeclaration(
-            {new CCSTStructUnionSpecifier(struct_t, "fipc_message")},
-            new CCSTDeclarator(
-              new CCSTPointer(),
-              new CCSTDirectDecId("msg")
-            )
-          )
-        };
-        
-        const auto f_proto = new CCSTDirectDecParamTypeList(
-          new CCSTDirectDecId(def_name),
-          new CCSTParamList(params)
-        );
-        decls.push_back(new CCSTFuncDef(
-          {new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::VoidTypeSpec)},
-          new CCSTDeclarator(nullptr, f_proto),
-          {},
-          generate_rpc_marshal(rpc)
-        ));
+        const auto fn_dec = make_rpc_declaration(rpc);
+        const auto fn_def = function_definition(fn_dec, generate_rpc_marshal(rpc));
+        decls.push_back(fn_def);
       }
     }
   }
