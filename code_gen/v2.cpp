@@ -54,32 +54,6 @@ namespace v2 {
     return new CCSTFile(decls);
   }
 
-  // TODO: a hack, use however it was done in old codegen
-  auto get_type_spec(Type* t) {
-    switch (t->num()) {
-    case INTEGER_TYPE:
-      switch (dynamic_cast<IntegerType*>(t)->int_type()) {
-      case pt_int_t:
-        return CCSTSimpleTypeSpecifier::IntegerTypeSpec;
-
-      case pt_long_t:
-        return CCSTSimpleTypeSpecifier::LongTypeSpec;
-
-      case pt_short_t:
-        return CCSTSimpleTypeSpecifier::ShortTypeSpec;
-
-      case pt_char_t:
-        return CCSTSimpleTypeSpecifier::CharTypeSpec;
-      }
-
-    case VOID_TYPE:
-      return CCSTSimpleTypeSpecifier::VoidTypeSpec;
-
-    default:
-      return CCSTSimpleTypeSpecifier::OtherTypeSpec;
-    }
-  }
-
   // Forward-declare the functions declared for the KLCD side
   void generate_callee_protos(Project* p, std::vector<CCSTExDeclaration*>& decls)
   {
@@ -97,10 +71,10 @@ namespace v2 {
     std::vector<CCSTAssignExpr*> params;
     for (const auto prm : *rpc) {
       const auto name = prm->identifier();
-      const auto type_spec = new CCSTSimpleTypeSpecifier(get_type_spec(prm->type()));
+      const auto type_spec = type2(prm->type());
       const auto reg = new CCSTPostFixExprExpr(regs, new CCSTInteger(prm->marshal_info()->get_register()));
       decls.push_back(new CCSTDeclaration(
-        {type_spec},
+        type_spec,
         {new CCSTInitDeclarator(
           new CCSTDeclarator(
             nullptr,

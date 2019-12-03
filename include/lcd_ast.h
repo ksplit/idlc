@@ -755,14 +755,10 @@ public:
 };
 
 class Require {
-  Interface *_module;
   std::string _mod_name;
-  Channel *_chnl;
 
 public:
-  Require(const std::string &m_name, Channel *ch):_mod_name(m_name),
-      _chnl(ch) {
-  }
+  Require(const std::string &m_name) : _mod_name(m_name) {}
   std::string get_mod_name() { return _mod_name; }
 };
 

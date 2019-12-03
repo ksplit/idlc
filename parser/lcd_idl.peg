@@ -240,7 +240,7 @@ File		=	Spacing i:Include* t:Interface* m:Module <eof> {{
 Module		= Module_special Space+ id:Identifier Spacing OPENC Spacing r:Require+ CLOSEC Spacing {{
 				std::vector<Require *> requires;
 				for (const auto req : r.getValues()) {
-					requires.push_back((Require*)(req.getValue()));
+					requires.push_back(new Require(*(std::string*)(req.getValue())));
 				}
 
 				value = new Module(*static_cast<const std::string*>(id.getValue()), requires);
@@ -371,6 +371,7 @@ Interface	=	  m:Interface_special Space+ id:Identifier Spacing OPENC Spacing d:T
 		}}
 
 Require = "require" Spacing rmod:Identifier Spacing SEMI Spacing {{
+	std::cout << "Requiring!\n" << std::endl;
     value = rmod.getValue();
 }}
 

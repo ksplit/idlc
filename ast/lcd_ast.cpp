@@ -476,7 +476,7 @@ void Interface::set_copy_container_accessors() {
 
 const std::string Interface::identifier() { return this->module_name_; }
 
-Module::Module(std::string id, std::vector<Require *> requires) : id_{id}, requires_{requires_}
+Module::Module(std::string id, std::vector<Require *> requires) : id_{id}, requires_{requires}
 {
 }
 
@@ -490,10 +490,21 @@ std::string& Module::id()
   return id_;
 }
 
+
+/// NOTE: maybe something breaks if I start messing with project_interfaces_ like this
 Project::Project(LexicalScope *scope, std::vector<Interface *> interfaces, Module* module,
                  std::vector<Include *> includes)
-    : project_scope_(scope), project_interfaces_(interfaces), project_module_(module),
-      project_includes_(includes), last_tag_(0) {}
+    : project_scope_(scope), project_interfaces_(), project_module_(module),
+      project_includes_(includes), last_tag_(0)
+{
+  const auto reqs = project_module_->requires();
+  for (const auto r : reqs) {
+    for (const auto i : interfaces) {
+      if (i->identifier() == r->get_mod_name())
+        project_interfaces_.push_back(i);
+    }
+  }
+}
 
 void Project::prepare_marshal() {
   for (auto module : *this) {
