@@ -10,9 +10,10 @@
 namespace v2 {
   CCSTFile* generate_common_header(Project* p);
   CCSTFile* generate_klcd_header(Project* p);
+  CCSTFile* generate_lcd_impl(Project* p);
   auto get_type_spec(Type* t);
   void generate_callee_protos(Project* p, std::vector<CCSTExDeclaration*>& decls);
-  CCSTCompoundStatement* generate_rpc_marshal(Rpc* rpc);
+  CCSTCompoundStatement* generate_rpc_callee(Rpc* rpc);
   void generate_marshal_funcs(Project* p, std::vector<CCSTExDeclaration*>& decls);
   CCSTFile* generate_klcd_impl(Project* p);
   void generate_klcd_dispatch(Project* p, std::vector<CCSTExDeclaration*>& decls);

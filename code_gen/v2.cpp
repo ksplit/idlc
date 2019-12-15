@@ -63,7 +63,7 @@ namespace v2 {
   }
 
   // Generates all the marshaling/call code for a *_callee function
-  CCSTCompoundStatement* generate_rpc_marshal(Rpc* rpc)
+  CCSTCompoundStatement* generate_rpc_callee(Rpc* rpc)
   {
     const auto regs = new CCSTPostFixExprAccess(new CCSTPrimaryExprId("msg"), pointer_access_t, "reg");
     
@@ -126,7 +126,7 @@ namespace v2 {
     for (const auto m : *p) {
       for (const auto rpc : *m) {
         const auto fn_dec = make_rpc_declaration(rpc);
-        const auto fn_def = function_definition(fn_dec, generate_rpc_marshal(rpc));
+        const auto fn_def = function_definition(fn_dec, generate_rpc_callee(rpc));
         decls.push_back(fn_def);
       }
     }
@@ -137,8 +137,6 @@ namespace v2 {
     std::vector<CCSTExDeclaration*> decls;
 
     decls.push_back(new CCSTPreprocessor(p->main_module()->id() + "_klcd.h", true));
-    decls.push_back(new CCSTPreprocessor("stdio.h", false));
-    decls.push_back(new CCSTPreprocessor("stdint.h", false));
     generate_callee_protos(p, decls);
     generate_marshal_funcs(p, decls);
     generate_klcd_dispatch(p, decls);
@@ -186,5 +184,146 @@ namespace v2 {
       {},
       body
     ));
+  }
+
+  void generate_lcd_dispatch(Project* p, std::vector<CCSTExDeclaration*>& decls)
+  {
+    const auto def_case = new CCSTDefaultLabelStatement(new CCSTReturn(new CCSTInteger(1)));
+    std::vector<CCSTStatement*> cases {def_case};
+
+    for (const auto m : *p) {
+      for (const auto rpc : *m) {
+        /// TODO: Likely need a total rewrite of how "side" is handled for marshaling
+        // As opposed to the current system of "is it an fptr."
+        if (rpc->function_pointer_defined()) {
+          const auto rpc_id = new CCSTPrimaryExprId(rpc->callee_name());
+          const auto rpc_call = new CCSTPostFixExprAssnExpr(rpc_id, {new CCSTPrimaryExprId("msg")});
+          auto rpcs = new CCSTExprStatement(rpc_call);
+          cases.push_back(new CCSTCaseStatement(new CCSTPrimaryExprId("KLCD_" + rpc->enum_name()), {rpcs}));
+        }
+      }
+    }
+
+    const auto switch_body = new CCSTCompoundStatement({}, cases);
+    const auto regs = new CCSTPostFixExprAccess(new CCSTPrimaryExprId("msg"), pointer_access_t, "reg");
+    const auto rreg = new CCSTPostFixExprExpr(regs, new CCSTInteger(0));
+    const auto swtch = new CCSTSwitchStatement(rreg, switch_body);
+    const auto final_ret = new CCSTReturn(new CCSTInteger(0));
+    const auto body = new CCSTCompoundStatement({}, {swtch, final_ret});
+
+    const std::vector<CCSTParamDeclaration*> params {
+      new CCSTParamDeclaration(
+        {new CCSTStructUnionSpecifier(struct_t, "fipc_message")},
+        new CCSTDeclarator(
+          new CCSTPointer(),
+          new CCSTDirectDecId("msg")
+        )
+      )
+    };
+    const auto f_proto = new CCSTDirectDecParamTypeList(
+      new CCSTDirectDecId("dispatch_lcd"),
+      new CCSTParamList(params)
+    );
+    decls.push_back(new CCSTFuncDef(
+      {new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec)},
+      new CCSTDeclarator(nullptr, f_proto),
+      {},
+      body
+    ));
+  }
+
+  CCSTDeclaration* rpc_function_declaration(Rpc* r)
+  {
+    std::vector<CCSTDecSpecifier *> specifier =
+      type2(r->return_variable()->type());
+
+    std::vector<CCSTInitDeclarator *> func;
+    CCSTPointer *p = pointer(r->return_variable()->pointer_count());
+
+    CCSTDirectDecId *name = new CCSTDirectDecId(r->name() + "_rpc");
+    CCSTParamTypeList *param_list = parameter_list(r->parameters());
+
+    CCSTDirectDecParamTypeList *name_params =
+        new CCSTDirectDecParamTypeList(name, param_list);
+
+    func.push_back(new CCSTDeclarator(p, name_params));
+
+    return new CCSTDeclaration(specifier, func);
+  }
+
+  CCSTCompoundStatement* generate_rpc_caller(Rpc* rpc, const std::string& ch_name)
+  {
+    const auto regs = new CCSTPostFixExprAccess(new CCSTPrimaryExprId("msg"), pointer_access_t, "reg");
+    
+    std::vector<CCSTDeclaration*> decls;
+    std::vector<CCSTStatement*> s;
+    std::vector<CCSTAssignExpr*> params;
+
+    decls.push_back(new CCSTDeclaration(
+      {new CCSTStructUnionSpecifier(struct_t, "fipc_message")},
+      {new CCSTDeclarator(
+        nullptr,
+        new CCSTDirectDecId("msg")
+      )}
+    ));
+
+    params.reserve(2);
+    params.push_back(new CCSTUnaryExprCastExpr(new CCSTUnaryOp(unary_bit_and_t), new CCSTPrimaryExprId(ch_name)));
+    params.push_back(new CCSTUnaryExprCastExpr(new CCSTUnaryOp(unary_bit_and_t), new CCSTPrimaryExprId("msg")));
+
+    s.push_back(
+      new CCSTExprStatement(
+        new CCSTAssignExpr(
+          new CCSTPostFixExprExpr(regs, new CCSTInteger(0)),
+          new CCSTAssignOp(equal_t),
+          new CCSTPrimaryExprId(rpc->enum_name())
+        )
+      )
+    );
+    for (const auto prm : *rpc) {
+      const auto name = prm->identifier();
+      const auto type_spec = type2(prm->type());
+      const auto reg = new CCSTPostFixExprExpr(regs, new CCSTInteger(prm->marshal_info()->get_register()));
+      s.push_back(
+        new CCSTExprStatement(
+          new CCSTAssignExpr(
+            reg,
+            new CCSTAssignOp(equal_t),
+            new CCSTPrimaryExprId(prm->identifier())
+          )
+        )
+      );
+    }
+
+    const auto rpc_call = function_call("send", params);
+    auto rpcs = new CCSTExprStatement(rpc_call);
+    s.push_back(rpcs);
+
+    const auto rt = rpc->return_variable()->type();
+    if (rt->num() != VOID_TYPE)
+      s.push_back(new CCSTReturn(new CCSTPostFixExprExpr(regs, new CCSTInteger(0))));
+
+    return new CCSTCompoundStatement(decls, s);
+  }
+
+  void generate_lcd_marshal(Project* p, std::vector<CCSTExDeclaration*>& decls)
+  {
+    const auto ch_name = p->main_module()->id() + "_ch";
+    for (const auto m : *p) {
+      for (const auto rpc : *m) {
+        const auto fn_dec = rpc_function_declaration(rpc);
+        const auto fn_def = function_definition(fn_dec, generate_rpc_caller(rpc, ch_name));
+        decls.push_back(fn_def);
+      }
+    }
+  }
+
+  CCSTFile* generate_lcd_impl(Project* p)
+  {
+    std::vector<CCSTExDeclaration*> decls;
+    decls.push_back(new CCSTPreprocessor(p->main_module()->id() + "_lcd.h", true));
+    generate_lcd_dispatch(p, decls);
+    generate_lcd_marshal(p, decls);
+    return new CCSTFile(decls);
   }
 }

@@ -21,7 +21,7 @@ void do_code_generation(Project* tree, bool test_mode)
   const auto& id = module->id();
   std::ofstream klcd_h {id + "_klcd.h"};
   std::ofstream klcd_c {id + "_klcd.c"};
-  std::ofstream lcd_h {id + "_lcd.h"};
+  std::ofstream lcd_h {id + "_lcd.c"};
   std::ofstream lcd_c {id + "_lcd.c"};
   std::ofstream common_h {id + "_common.h"};
   
@@ -35,6 +35,9 @@ void do_code_generation(Project* tree, bool test_mode)
 
   file = v2::generate_klcd_impl(tree);
   file->write(klcd_c, false);
+
+  file = v2::generate_lcd_impl(tree);
+  file->write(lcd_c, false);
 }
 
 int main(int argc, char **argv) {
