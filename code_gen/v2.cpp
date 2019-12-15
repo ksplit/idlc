@@ -54,6 +54,28 @@ namespace v2 {
     return new CCSTFile(decls);
   }
 
+  CCSTFile* generate_lcd_header(Project* p)
+  {
+    std::vector<CCSTExDeclaration*> decls;
+    decls.push_back(new CCSTPreprocessor(p->main_module()->id() + "_common.h", true));
+
+    const auto msg_struct_type = new CCSTStructUnionSpecifier(struct_t, "fipc_message");
+    const auto msg_p = new CCSTParamDeclaration(
+      {msg_struct_type},
+      new CCSTDeclarator(new CCSTPointer(), new CCSTDirectDecId("msg"))
+    );
+    const auto dispatch_f = new CCSTDirectDecParamTypeList(
+      new CCSTDirectDecId("dispatch_lcd"),
+      new CCSTParamList({msg_p})
+    );
+    decls.push_back(new CCSTDeclaration(
+      {new CCSTSimpleTypeSpecifier(CCSTSimpleTypeSpecifier::IntegerTypeSpec)},
+      {new CCSTInitDeclarator(new CCSTDeclarator(nullptr, dispatch_f))}
+    ));
+
+    return new CCSTFile(decls);
+  }
+
   // Forward-declare the functions declared for the KLCD side
   void generate_callee_protos(Project* p, std::vector<CCSTExDeclaration*>& decls)
   {
@@ -132,18 +154,6 @@ namespace v2 {
     }
   }
 
-  CCSTFile* generate_klcd_impl(Project* p)
-  {
-    std::vector<CCSTExDeclaration*> decls;
-
-    decls.push_back(new CCSTPreprocessor(p->main_module()->id() + "_klcd.h", true));
-    generate_callee_protos(p, decls);
-    generate_marshal_funcs(p, decls);
-    generate_klcd_dispatch(p, decls);
-
-    return new CCSTFile(decls);
-  }
-
   void generate_klcd_dispatch(Project* p, std::vector<CCSTExDeclaration*>& decls)
   {
     const auto def_case = new CCSTDefaultLabelStatement(new CCSTReturn(new CCSTInteger(1)));
@@ -184,6 +194,18 @@ namespace v2 {
       {},
       body
     ));
+  }
+
+  CCSTFile* generate_klcd_impl(Project* p)
+  {
+    std::vector<CCSTExDeclaration*> decls;
+
+    decls.push_back(new CCSTPreprocessor(p->main_module()->id() + "_klcd.h", true));
+    generate_callee_protos(p, decls);
+    generate_marshal_funcs(p, decls);
+    generate_klcd_dispatch(p, decls);
+
+    return new CCSTFile(decls);
   }
 
   void generate_lcd_dispatch(Project* p, std::vector<CCSTExDeclaration*>& decls)
@@ -253,7 +275,7 @@ namespace v2 {
 
   CCSTCompoundStatement* generate_rpc_caller(Rpc* rpc, const std::string& ch_name)
   {
-    const auto regs = new CCSTPostFixExprAccess(new CCSTPrimaryExprId("msg"), pointer_access_t, "reg");
+    const auto regs = new CCSTPostFixExprAccess(new CCSTPrimaryExprId("msg"), object_access_t, "reg");
     
     std::vector<CCSTDeclaration*> decls;
     std::vector<CCSTStatement*> s;
@@ -276,7 +298,7 @@ namespace v2 {
         new CCSTAssignExpr(
           new CCSTPostFixExprExpr(regs, new CCSTInteger(0)),
           new CCSTAssignOp(equal_t),
-          new CCSTPrimaryExprId(rpc->enum_name())
+          new CCSTPrimaryExprId("KLCD_" + rpc->enum_name())
         )
       )
     );

@@ -21,13 +21,14 @@ void do_code_generation(Project* tree, bool test_mode)
   const auto& id = module->id();
   std::ofstream klcd_h {id + "_klcd.h"};
   std::ofstream klcd_c {id + "_klcd.c"};
-  std::ofstream lcd_h {id + "_lcd.c"};
+  std::ofstream lcd_h {id + "_lcd.h"};
   std::ofstream lcd_c {id + "_lcd.c"};
   std::ofstream common_h {id + "_common.h"};
   
   CCSTFile* file;
 
   file = v2::generate_common_header(tree);
+  common_h << "#pragma once\n";
   file->write(common_h, false);
 
   file = v2::generate_klcd_header(tree);
@@ -38,6 +39,9 @@ void do_code_generation(Project* tree, bool test_mode)
 
   file = v2::generate_lcd_impl(tree);
   file->write(lcd_c, false);
+
+  file = v2::generate_lcd_header(tree);
+  file->write(lcd_h, false);
 }
 
 int main(int argc, char **argv) {
