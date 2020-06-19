@@ -1,0 +1,2 @@
+rpc void foo(int [in] a);
+rpc void bar(unsigned int a, unsigned long [in, out] b);

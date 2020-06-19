@@ -1,0 +1,7 @@
+#!/bin/bash
+
+cd parser
+vembyr-1.1/peg.py idl.peg --cpp --save=parser.cpp
+vembyr-1.1/peg.py idl.peg --h --save=parser.h
+cd ..
+g++ -O3 main/main.cpp parser/parser.cpp -o idlc

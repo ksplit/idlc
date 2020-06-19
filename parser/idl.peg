@@ -1,0 +1,48 @@
+start-symbol: file
+
+rules:
+
+space = [ \n\t]
+whitespace = space+
+ident_start = [abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]
+ident_cont = ident_start | [0123456789]
+identifier = ident_start ident_cont*
+rpc_kw = "rpc"
+int_kw = "int"
+short_kw = "short"
+long_kw = "long"
+char_kw = "char"
+bool_kw = "bool"
+float_kw = "float"
+double_kw = "double"
+void_kw = "void"
+unsigned_kw = "unsigned"
+in_kw = "in"
+out_kw = "out"
+attrib_id = in_kw | out_kw
+oparen = "("
+cparen = ")"
+obracket = "["
+cbracket = "]"
+semi = ";"
+comma = ","
+star = "*"
+
+signed_type = int_kw | short_kw | char_kw | long_kw whitespace long_kw | long_kw
+unsigned_type = unsigned_kw whitespace signed_type
+fp_type = float_kw | double_kw
+primitive_type = signed_type | unsigned_type | fp_type | bool_kw
+simple_type = primitive_type
+ret_type = simple_type | void_kw
+
+attribute = attrib_id
+attrib_list = attribute space* attrib_list_tail
+attrib_list_tail = comma space* attrib_list | <void>
+attributes = obracket space* attrib_list space* cbracket
+
+rpc = rpc_kw whitespace ret_type whitespace identifier space* oparen space* arg_list space* cparen space* semi
+arg_list = argument space* arg_list_tail
+arg_list_tail = comma space* arg_list | <void>
+argument = simple_type whitespace attributes? space* identifier
+
+file = (rpc space*)+ <eof>
