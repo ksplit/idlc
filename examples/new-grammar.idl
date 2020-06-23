@@ -1,2 +1,9 @@
+proj<struct widget> a_proj {
+    int [in] a;
+    int* [out] b;
+    proj a_proj* c;
+}
+
 rpc void foo(int [in] a);
-rpc void bar(unsigned int a, unsigned long [in, out] b);
+rpc void bar(int** a, unsigned long [in, out, dealloc, alloc(callee)] b);
+rpc bool add_widget(proj a_proj* desc);
