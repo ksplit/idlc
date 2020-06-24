@@ -1,5 +1,9 @@
 start-symbol: file
 
+include: {{
+    #include "ast.h"
+}}
+
 # *must* pin down the semantics of everything Sarah's paper (some ambiguities)
 # What is the meaning of a projection's annotations for a double-indirection pointer?
 # i.e.: proj foo_proj** foo
