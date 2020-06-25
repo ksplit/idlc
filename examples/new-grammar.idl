@@ -1,9 +1,4 @@
-proj<struct widget> a_proj {
-    int [in] a;
-    int* [out] b;
-    proj a_proj* c;
-}
-
-rpc void foo(int [in] a);
-rpc void bar(int** a, unsigned long [in, out, dealloc, alloc(callee)] b);
-rpc bool add_widget(proj a_proj* desc);
+/**/
+rpc int __rtnl_link_register(projection rtnl_link_ops [alloc(callee)] *ops);
+rpc void __rtnl_link_unregister(projection rtnl_link_ops [bind] *ops);
+rpc void rtnl_link_unregister(projection rtnl_link_ops [dealloc(callee)] *ops);

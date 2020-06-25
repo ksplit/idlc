@@ -8,4 +8,5 @@ add_custom_command(
     MAIN_DEPENDENCY parser/idl.peg)
 
 add_executable(idlc parser/parser.cpp main/main.cpp)
+set_property(TARGET idlc PROPERTY CXX_STANDARD 17)
 target_include_directories(idlc PRIVATE gsl/include)

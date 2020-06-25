@@ -5,13 +5,21 @@ include: {{
 }}
 
 # *must* pin down the semantics of everything Sarah's paper (some ambiguities)
-# What is the meaning of a projection's annotations for a double-indirection pointer?
+# What is the meaning of a projection's annotations for a double_indirection pointer?
 # i.e.: proj foo_proj** foo
 # What goes on behind the scenes there?
 
 rules:
 
-space = [ \n\t]
+line_comment = "//" line_comment_tail
+line_comment_tail = line_comment_end | . line_comment_tail
+line_comment_end = "\n"
+
+block_comment = "/*" block_comment_tail
+block_comment_tail = "*/" | . block_comment_tail
+
+comment = line_comment | block_comment
+space = [ \n\t] | comment
 whitespace = space+
 ident_start = [abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]
 ident_cont = ident_start | [0123456789]
@@ -33,7 +41,7 @@ alloc_kw = "alloc"
 dealloc_kw = "dealloc"
 caller_kw = "caller"
 callee_kw = "callee"
-proj_kw = "proj"
+proj_kw = "projection"
 struct_kw = "struct"
 bind_kw = "bind"
 
@@ -49,15 +57,20 @@ semi = ";"
 comma = ","
 star = "*"
 
+# to simplify parsing, whitespace requirements are in the type rules
+# note that tho the grammar allows annotations on all indirections
+# current semantics give only the "topmost" ones meaning
+
 signed_type = int_kw | short_kw | char_kw | long_kw whitespace long_kw | long_kw
 unsigned_type = unsigned_kw whitespace signed_type
 fp_type = float_kw | double_kw
 primitive_type = signed_type | unsigned_type | fp_type | bool_kw
-simple_type = pointer_type | primitive_type | proj_type
-ret_type = simple_type | void_kw
-addressable_type = primitive_type | proj_type | void_kw
-pointer_type = addressable_type star+
-proj_type = proj_kw whitespace identifier
+projection_type = proj_kw whitespace identifier                                     # empty projections are required for 2-level indirection
+value_type = primitive_type | projection_type                                       # void* can be classified as "advanced," we only support pass-by-ref semantics
+pointable_type = void_kw | value_type
+annotated_type = pointable_type indirection+ space* | value_type whitespace
+indirection = space* (attributes space*)? star
+ret_type = void_kw whitespace | annotated_type
 
 container_side = caller_kw | callee_kw
 alloc_attrib = alloc_kw (space* oparen space* container_side space* cparen)?
@@ -68,15 +81,22 @@ attrib_list = attribute space* attrib_list_tail
 attrib_list_tail = comma space* attrib_list | <void>
 attributes = obracket space* attrib_list space* cbracket
 
-rpc_decl = rpc_kw whitespace ret_type whitespace identifier space* oparen space* arg_list space* cparen space* semi
+rpc_ptr_ident = oparen space* star space* identifier space* cparen
+wspace_or_attribs = space* attributes space* | whitespace
+rpc_ptr = rpc_kw wspace_or_attribs ret_type rpc_ptr_ident space* oparen space* arg_list space* cparen
+
+rpc_decl = rpc_kw whitespace ret_type identifier space* oparen space* arg_list space* cparen space* semi
 arg_list = argument space* arg_list_tail
 arg_list_tail = comma space* arg_list | <void>
-argument = simple_type whitespace attributes? space* identifier
+argument = rpc_ptr | annotated_type identifier
 
-proj_field = simple_type whitespace attributes? space* identifier space* semi
+proj_field = rpc_ptr space* semi | annotated_type identifier space* semi
 proj_header = proj_kw space* oangle space* struct_kw whitespace identifier space* cangle space* identifier
 proj_body = obrace space* (proj_field space*)* cbrace
 projection = proj_header space* proj_body
 
-item = rpc_decl | projection
-file = (item space*)+ <eof>
+scope_item = rpc_decl | projection
+scope = obrace space* (scope_item space*)* cbrace       # what is wrong with this rule
+
+item = scope | rpc_decl | projection
+file = space* (item space*)+ <eof>
