@@ -1,7 +1,18 @@
 start-symbol: file
 
 include: {{
-    #include "ast.h"
+	#include "ast.h"
+
+	#include <sstream>
+	#include <vector>
+}}
+
+code: {{
+	using namespace idlc;
+
+	// If you're confused, know this: this allows us to compare strings for equality by
+	// comparing their pointer values (that's why you see the lack of strcmp() or equivalents)
+	string_heap identifiers;
 }}
 
 # *must* pin down the semantics of everything Sarah's paper (some ambiguities)
@@ -23,7 +34,15 @@ space = [ \n\t] | comment
 whitespace = space+
 ident_start = [abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]
 ident_cont = ident_start | [0123456789]
-identifier = ident_start ident_cont*
+identifier = sc:ident_start rcs:ident_cont* {{
+	std::stringstream str;
+	str << (char)(std::uintptr_t)sc.getValue();
+	for (const auto& v : rcs.getValues()) {
+		str << (char)(std::uintptr_t)v.getValue();
+	}
+
+	value = identifiers.intern(str.str().c_str());
+}}
 
 rpc_kw = "rpc"
 int_kw = "int"
@@ -44,6 +63,7 @@ callee_kw = "callee"
 proj_kw = "projection"
 struct_kw = "struct"
 bind_kw = "bind"
+module_kw = "module"
 
 oparen = "("
 cparen = ")"
@@ -61,16 +81,67 @@ star = "*"
 # note that tho the grammar allows annotations on all indirections
 # current semantics give only the "topmost" ones meaning
 
-signed_type = int_kw | short_kw | char_kw | long_kw whitespace long_kw | long_kw
-unsigned_type = unsigned_kw whitespace signed_type
-fp_type = float_kw | double_kw
-primitive_type = signed_type | unsigned_type | fp_type | bool_kw
-projection_type = proj_kw whitespace identifier                                     # empty projections are required for 2-level indirection
-value_type = primitive_type | projection_type                                       # void* can be classified as "advanced," we only support pass-by-ref semantics
-pointable_type = void_kw | value_type
-annotated_type = pointable_type indirection+ space* | value_type whitespace
+signed_type = int_kw {{
+	value = (void*)primitive_type_kind::int_k;
+}} | short_kw {{
+	value = (void*)primitive_type_kind::short_k;
+}} | char_kw {{
+	value = (void*)primitive_type_kind::char_k;
+}} | long_kw whitespace long_kw {{
+	value = (void*)primitive_type_kind::long_long_k;
+}} | long_kw {{
+	value = (void*)primitive_type_kind::long_k;
+}}
+
+unsigned_type = unsigned_kw whitespace ty:signed_type {{ value = (void*)to_unsigned((primitive_type_kind)(std::uintptr_t)ty.getValue()); }}
+fp_type = float_kw {{
+	value = (void*)primitive_type_kind::float_k;
+}} | double_kw {{
+	value = (void*)primitive_type_kind::double_k;
+}}
+
+primitive_type = ty:signed_type {{ 
+	value = new primitive_type((primitive_type_kind)(std::uintptr_t)ty.getValue());
+}} | ty:unsigned_type {{
+	value = new primitive_type((primitive_type_kind)(std::uintptr_t)ty.getValue());
+}} | ty:fp_type {{
+	value = new primitive_type((primitive_type_kind)(std::uintptr_t)ty.getValue());
+}} | ty:bool_kw {{
+	value = new primitive_type(primitive_type_kind::bool_k);
+}}
+
+projection_type = proj_kw whitespace id:identifier {{
+	value = new projection_type((gsl::czstring<>)id.getValue());
+}}                                    # empty projections are required for 2-level indirection
+
+value_type = prim:primitive_type {{
+	value = new value_type(std::unique_ptr<primitive_type>((primitive_type*)prim.getValue()));
+}} | proj:projection_type {{
+	value = new value_type(std::unique_ptr<projection_type>((projection_type*)proj.getValue()));
+}}
+
+pointable_type = void_kw {{
+	value = new pointable_type(std::unique_ptr<void_type>(nullptr));
+}} | ty:value_type {{
+	value = new pointable_type(std::unique_ptr<value_type>((value_type*)ty.getValue()));
+}}
+
+pointer_type = ty:pointable_type stars:indirection+ {{
+	value = new pointer_type(std::unique_ptr<pointable_type>((pointable_type*)ty.getValue()));
+}}
+
+annotated_type = pt:pointer_type space* {{
+	value = new annotated_type(std::unique_ptr<pointer_type>((pointer_type*)pt.getValue()));
+}} | vt:value_type whitespace {{
+	value = new annotated_type(std::unique_ptr<value_type>((value_type*)vt.getValue()));
+}}
+
 indirection = space* (attributes space*)? star
-ret_type = void_kw whitespace | annotated_type
+return_type = void_kw whitespace {{
+	value = new return_type(std::unique_ptr<void_type>(nullptr));
+}} | ty:annotated_type {{
+	value = new return_type(std::unique_ptr<annotated_type>((annotated_type*)ty.getValue()));
+}}
 
 container_side = caller_kw | callee_kw
 alloc_attrib = alloc_kw (space* oparen space* container_side space* cparen)?
@@ -83,20 +154,35 @@ attributes = obracket space* attrib_list space* cbracket
 
 rpc_ptr_ident = oparen space* star space* identifier space* cparen
 wspace_or_attribs = space* attributes space* | whitespace
-rpc_ptr = rpc_kw wspace_or_attribs ret_type rpc_ptr_ident space* oparen space* arg_list space* cparen
+rpc_ptr = rpc_kw wspace_or_attribs return_type rpc_ptr_ident space* oparen space* arg_list space* cparen
 
-rpc_decl = rpc_kw whitespace ret_type identifier space* oparen space* arg_list space* cparen space* semi
+rpc_decl = rpc_kw whitespace return_type id:identifier space* oparen space* arg_list space* cparen space* semi {{ value = new rpc {(gsl::czstring<>)id.getValue()}; }}
 arg_list = argument space* arg_list_tail
 arg_list_tail = comma space* arg_list | <void>
 argument = rpc_ptr | annotated_type identifier
 
 proj_field = rpc_ptr space* semi | annotated_type identifier space* semi
-proj_header = proj_kw space* oangle space* struct_kw whitespace identifier space* cangle space* identifier
 proj_body = obrace space* (proj_field space*)* cbrace
-projection = proj_header space* proj_body
+projection = proj_kw space* oangle space* struct_kw whitespace under:identifier space* cangle space* id:identifier space* proj_body {{
+	value = new projection {(gsl::czstring<>)id.getValue(), (gsl::czstring<>)under.getValue()};
+}}
 
-scope_item = rpc_decl | projection
-scope = obrace space* (scope_item space*)* cbrace       # what is wrong with this rule
+item = v:rpc_decl {{ value = new item(std::unique_ptr<rpc>((rpc*)v.getValue())); }} | v:projection {{ value = new item(std::unique_ptr<projection>((projection*)v.getValue())); }}
 
-item = scope | rpc_decl | projection
-file = space* (item space*)+ <eof>
+module = module_kw whitespace id:identifier space* obrace space* items:(i:item space* {{ value = i.getValue(); }})* cbrace {{
+	std::vector<std::unique_ptr<item>> ptrs;
+	for (const auto& v : items.getValues()) {
+		ptrs.push_back(std::unique_ptr<item> {(item*)v.getValue()});
+	}
+
+	value = new module {(gsl::czstring<>)id.getValue(), std::move(ptrs)};
+}}
+
+file = space* mods:(m:module space* {{ value = m.getValue(); }})* <eof> {{
+	std::vector<std::unique_ptr<module>> ptrs;
+	for (const auto& v : mods.getValues()) {
+		ptrs.push_back(std::unique_ptr<module> {(module*)v.getValue()});
+	}
+
+	value = new file {std::move(ptrs)};
+}}
