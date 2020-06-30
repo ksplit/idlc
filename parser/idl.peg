@@ -30,7 +30,7 @@ block_comment = "/*" block_comment_tail
 block_comment_tail = "*/" | . block_comment_tail
 
 comment = line_comment | block_comment
-space = [ \n\t] | comment
+space = [ \n\r\t] | comment
 whitespace = space+
 ident_start = [abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]
 ident_cont = ident_start | [0123456789]

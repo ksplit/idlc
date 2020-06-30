@@ -12,7 +12,5 @@ parser/parser.h
 include/lcd_idl.h
 
 #editor configs
-.vscode
-
-#main binary
-compiler
+.vscode/
+.vs/
