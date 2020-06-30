@@ -1,16 +1,18 @@
 #include <vector>
 #include <variant>
 #include <gsl/gsl>
+#include <iostream>
 
 namespace idlc {
 	class string_heap {
 	public:
-		~string_heap()
+		string_heap()
 		{
-			for (const auto block_ptr : m_blocks) {
-				delete block_ptr;
-			}
+			m_blocks.emplace_back(std::make_unique<block>());
 		}
+
+		string_heap(string_heap&) = delete;
+		string_heap* operator=(string_heap&) = delete;
 
 		gsl::czstring<> intern(std::string_view string)
 		{
@@ -38,11 +40,11 @@ namespace idlc {
 		}
 
 	private:
-		static constexpr std::size_t block_size {4096}; // TODO: Tune
+		static constexpr std::size_t block_size {1024}; // TODO: Tune
 		using block = std::array<char, block_size>;
 
 		std::vector<gsl::czstring<>> m_strings {};
-		std::vector<block*> m_blocks {new block {}}; // Allocate one free block
+		std::vector<std::unique_ptr<block>> m_blocks; // Allocate one free block
 		std::uint16_t m_free_index {};
 
 		gsl::czstring<> add_string(std::string_view string)
@@ -52,20 +54,15 @@ namespace idlc {
 				// Since the block is zero-initialized, we just copy the string bytes
 				const gsl::zstring<> new_string {&(*m_blocks.back())[m_free_index]};
 				std::memcpy(new_string, string.data(), string.length());
-				m_free_index = end_index;
+				m_free_index = gsl::narrow<decltype(m_free_index)>(end_index);
 				return new_string;
 			}
 			else {
 				m_free_index = 0;
-				m_blocks.push_back(new block {});
+				m_blocks.emplace_back(std::make_unique<block>());
 				return add_string(string); // does the branch get optimized out?
 			}
 		}
-	};
-
-	enum class value_type_kind {
-		primitive,
-		projection
 	};
 
 	enum class primitive_type_kind {
@@ -84,7 +81,7 @@ namespace idlc {
 		unsigned_long_long_k
 	};
 
-	inline primitive_type_kind to_unsigned(primitive_type_kind kind)
+	constexpr primitive_type_kind to_unsigned(primitive_type_kind kind)
 	{
 		switch (kind) {
 		case primitive_type_kind::char_k:
@@ -137,106 +134,85 @@ namespace idlc {
 		gsl::czstring<> m_identifier;
 	};
 
-	class value_type {
-	public:
-		template<typename type>
-		value_type(std::unique_ptr<type>&& obj) : m_variant {move(obj)}
-		{
-		}
-
-		value_type_kind kind() const
-		{
-			return static_cast<value_type_kind>(m_variant.index());
-		}
-
-		template<value_type_kind kind>
-		const auto& get() const
-		{
-			return std::get<static_cast<std::size_t>(kind)>(m_variant);
-		}
-
-	private:
-		std::variant<std::unique_ptr<primitive_type>, std::unique_ptr<projection_type>> m_variant;
-	};
-
 	class void_type {
 	public:
 		void_type() = delete; // Please don't instantiate this. It's a marker object, just use nullptr
 	};
 
-	enum class pointable_type_kind {
+	enum class pointer_type_kind {
 		void_k,
-		value_type
-	};
-
-	class pointable_type {
-	public:
-		template<typename type>
-		pointable_type(std::unique_ptr<type>&& obj) : m_variant {move(obj)}
-		{
-		}
-
-		pointable_type_kind kind() const
-		{
-			return static_cast<pointable_type_kind>(m_variant.index());
-		}
-
-		template<pointable_type_kind kind>
-		const auto& get() const
-		{
-			return std::get<static_cast<std::size_t>(kind)>(m_variant);
-		}
-
-	private:
-		std::variant<std::unique_ptr<void_type>, std::unique_ptr<value_type>> m_variant;
+		primitive,
+		projection
 	};
 
 	class pointer_type {
 	public:
-		pointer_type(std::unique_ptr<pointable_type>&& real_type) : m_real_type {move(real_type)}
+		template<typename type>
+		pointer_type(std::unique_ptr<type>&& real_type) : m_real_type {move(real_type)}
 		{
 		}
 
-		const pointable_type* real_type() const
+		auto kind()
 		{
-			return m_real_type.get();
+			return gsl::narrow_cast<pointer_type_kind>(m_real_type.index());
+		}
+
+		template<pointer_type_kind kind>
+		const auto* real_type() const
+		{
+			return std::get<static_cast<std::size_t>(kind)>(m_real_type).get();
 		}
 
 	private:
-		std::unique_ptr<pointable_type> m_real_type;
+		std::variant<std::unique_ptr<void_type>, std::unique_ptr<primitive_type>, std::unique_ptr<projection_type>> m_real_type;
 	};
 
-	enum class annotated_type_kind {
-		pointer_type,
-		value_type
+	enum class var_type_kind {
+		pointer,
+		primitive,
+		projection
 	};
 
-	class annotated_type {
+	class var_type {
 	public:
 		template<typename type>
-		annotated_type(std::unique_ptr<type>&& obj) : m_variant {move(obj)}
+		var_type(std::unique_ptr<type>&& obj) : m_variant {move(obj)}
 		{
 		}
 
-		annotated_type_kind kind() const
+		auto kind() const
 		{
-			return static_cast<annotated_type_kind>(m_variant.index());
+			return gsl::narrow_cast<var_type_kind>(m_variant.index());
 		}
 
-		template<annotated_type_kind kind>
+		template<var_type_kind kind>
 		const auto& get() const
 		{
 			return std::get<static_cast<std::size_t>(kind)>(m_variant);
 		}
 
 	private:
-		std::variant<std::unique_ptr<pointer_type>, std::unique_ptr<value_type>> m_variant;
+		std::variant<
+			std::unique_ptr<pointer_type>,
+			std::unique_ptr<primitive_type>,
+			std::unique_ptr<projection_type>> m_variant;
 	};
 
 	enum class return_type_kind {
 		void_k,
-		annotated_type
+		primitive,
+		projection,
+		pointer
 	};
+
+	// A pointer type points to one of three: void, primitive, or projection
+	// A return type is either void, primitive, projection, or pointer
+	// And argument/field types ("annotated_types") are either primitive, projection, or pointer
+
+	// Have to stop thinking of pointers as types
+	// A "field" (arg, field, return slot, etc.) has a type, a set of annotations, and one or more stars
+	// An rpc field has a signature, not a type
+	// Eliminate pointer_type
 
 	class return_type {
 	public:
@@ -245,24 +221,28 @@ namespace idlc {
 		{
 		}
 
-		return_type_kind kind() const
+		auto kind() const
 		{
-			return static_cast<return_type_kind>(m_variant.index());
+			return gsl::narrow_cast<return_type_kind>(m_variant.index());
 		}
 
-		template<pointable_type_kind kind>
+		template<return_type_kind kind>
 		const auto& get() const
 		{
 			return std::get<static_cast<std::size_t>(kind)>(m_variant);
 		}
 
 	private:
-		std::variant<std::unique_ptr<void_type>, std::unique_ptr<annotated_type>> m_variant;
+		std::variant<
+			std::unique_ptr<void_type>,
+			std::unique_ptr<primitive_type>,
+			std::unique_ptr<projection_type>,
+			std::unique_ptr<pointer_type>> m_variant;
 	};
 	
-	class projection_field {
+	class var_field {
 	public:
-		projection_field(gsl::czstring<> identifier) : m_identifier {identifier}
+		var_field(gsl::czstring<> identifier) : m_identifier {identifier}
 		{
 		}
 
@@ -273,6 +253,38 @@ namespace idlc {
 
 	private:
 		gsl::czstring<> m_identifier;
+	};
+
+	class rpc_field {
+	};
+
+	enum class field_kind {
+		var,
+		rpc
+	};
+
+	class field {
+	public:
+		template<typename type>
+		field(std::unique_ptr<type>&& obj) : m_variant {move(obj)}
+		{
+		}
+
+		auto kind() const
+		{
+			return gsl::narrow_cast<field_kind>(m_variant.index());
+		}
+
+		template<field_kind kind>
+		const auto& get() const
+		{
+			return std::get<static_cast<std::size_t>(kind)>(m_variant);
+		}
+
+	private:
+		std::variant<
+			std::unique_ptr<var_field>,
+			std::unique_ptr<rpc_field>> m_variant;
 	};
 
 	enum class item_kind {
@@ -297,9 +309,10 @@ namespace idlc {
 
 	class projection {
 	public:
-		projection(gsl::czstring<> identifier, gsl::czstring<> real_type) :
+		projection(gsl::czstring<> identifier, gsl::czstring<> real_type, std::vector<std::unique_ptr<field>>&& fields) :
 			m_identifier {identifier},
-			m_real_type {real_type}
+			m_real_type {real_type},
+			m_fields {move(fields)}
 		{
 		}
 
@@ -313,7 +326,7 @@ namespace idlc {
 			return m_real_type;
 		}
 
-		gsl::span<const std::unique_ptr<projection_field>> fields() const
+		gsl::span<const std::unique_ptr<field>> fields() const
 		{
 			return m_fields;
 		}
@@ -321,7 +334,7 @@ namespace idlc {
 	private:
 		gsl::czstring<> m_identifier;
 		gsl::czstring<> m_real_type;
-		std::vector<std::unique_ptr<projection_field>> m_fields;
+		std::vector<std::unique_ptr<field>> m_fields;
 	};
 
 	class item {
@@ -331,9 +344,9 @@ namespace idlc {
 		{
 		}
 
-		item_kind kind() const
+		auto kind() const
 		{
-			return static_cast<item_kind>(m_variant.index());
+			return gsl::narrow_cast<item_kind>(m_variant.index());
 		}
 
 		template<item_kind kind>

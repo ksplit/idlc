@@ -81,6 +81,12 @@ star = "*"
 # note that tho the grammar allows annotations on all indirections
 # current semantics give only the "topmost" ones meaning
 
+# there's really only 3 basic type categories: primitive, void, and projection
+# pointer_type points to any of these, and has annotations
+# argument types are either pointer types, primitive, or projection
+# return types are any of these (void, projection, primitive, pointer)
+
+unsigned_type = unsigned_kw whitespace ty:signed_type {{ value = (void*)to_unsigned((primitive_type_kind)(std::uintptr_t)ty.getValue()); }}
 signed_type = int_kw {{
 	value = (void*)primitive_type_kind::int_k;
 }} | short_kw {{
@@ -93,7 +99,6 @@ signed_type = int_kw {{
 	value = (void*)primitive_type_kind::long_k;
 }}
 
-unsigned_type = unsigned_kw whitespace ty:signed_type {{ value = (void*)to_unsigned((primitive_type_kind)(std::uintptr_t)ty.getValue()); }}
 fp_type = float_kw {{
 	value = (void*)primitive_type_kind::float_k;
 }} | double_kw {{
@@ -112,35 +117,33 @@ primitive_type = ty:signed_type {{
 
 projection_type = proj_kw whitespace id:identifier {{
 	value = new projection_type((gsl::czstring<>)id.getValue());
-}}                                    # empty projections are required for 2-level indirection
-
-value_type = prim:primitive_type {{
-	value = new value_type(std::unique_ptr<primitive_type>((primitive_type*)prim.getValue()));
-}} | proj:projection_type {{
-	value = new value_type(std::unique_ptr<projection_type>((projection_type*)proj.getValue()));
-}}
-
-pointable_type = void_kw {{
-	value = new pointable_type(std::unique_ptr<void_type>(nullptr));
-}} | ty:value_type {{
-	value = new pointable_type(std::unique_ptr<value_type>((value_type*)ty.getValue()));
-}}
-
-pointer_type = ty:pointable_type stars:indirection+ {{
-	value = new pointer_type(std::unique_ptr<pointable_type>((pointable_type*)ty.getValue()));
-}}
-
-annotated_type = pt:pointer_type space* {{
-	value = new annotated_type(std::unique_ptr<pointer_type>((pointer_type*)pt.getValue()));
-}} | vt:value_type whitespace {{
-	value = new annotated_type(std::unique_ptr<value_type>((value_type*)vt.getValue()));
-}}
+}} # NOTE: empty projections are required for 2-level indirection (??)
 
 indirection = space* (attributes space*)? star
+pointer_type = void_kw stars:indirection+ {{
+	value = new pointer_type(std::unique_ptr<void_type>(nullptr));
+}} | prim:primitive_type stars:indirection+ {{
+	value = new pointer_type(std::unique_ptr<primitive_type>((primitive_type*)prim.getValue()));
+}} | proj:projection_type stars:indirection+ {{
+	value = new pointer_type(std::unique_ptr<projection_type>((projection_type*)proj.getValue()));
+}}
+
+var_type = pt:pointer_type space* {{
+	value = new var_type(std::unique_ptr<pointer_type>((pointer_type*)pt.getValue()));
+}} | prim:primitive_type whitespace {{
+	value = new var_type(std::unique_ptr<primitive_type>((primitive_type*)prim.getValue()));
+}} | proj:projection_type whitespace {{
+	value = new var_type(std::unique_ptr<projection_type>((projection_type*)proj.getValue()));
+}}
+
 return_type = void_kw whitespace {{
 	value = new return_type(std::unique_ptr<void_type>(nullptr));
-}} | ty:annotated_type {{
-	value = new return_type(std::unique_ptr<annotated_type>((annotated_type*)ty.getValue()));
+}} | ptr:pointer_type space* {{
+	value = new return_type(std::unique_ptr<pointer_type>((pointer_type*)ptr.getValue()));
+}} | prim:primitive_type whitespace {{
+	value = new return_type(std::unique_ptr<primitive_type>((primitive_type*)prim.getValue()));
+}} | proj:projection_type whitespace {{
+	value = new return_type(std::unique_ptr<projection_type>((projection_type*)proj.getValue()));
 }}
 
 container_side = caller_kw | callee_kw
@@ -154,17 +157,38 @@ attributes = obracket space* attrib_list space* cbracket
 
 rpc_ptr_ident = oparen space* star space* identifier space* cparen
 wspace_or_attribs = space* attributes space* | whitespace
-rpc_ptr = rpc_kw wspace_or_attribs return_type rpc_ptr_ident space* oparen space* arg_list space* cparen
+rpc_ptr = rpc_kw wspace_or_attribs return_type rpc_ptr_ident space* oparen space* arg_list space* cparen {{
+	value = new rpc_field();
+}}
 
 rpc_decl = rpc_kw whitespace return_type id:identifier space* oparen space* arg_list space* cparen space* semi {{ value = new rpc {(gsl::czstring<>)id.getValue()}; }}
 arg_list = argument space* arg_list_tail
 arg_list_tail = comma space* arg_list | <void>
-argument = rpc_ptr | annotated_type identifier
+argument = rpc_ptr | var_type identifier
 
-proj_field = rpc_ptr space* semi | annotated_type identifier space* semi
-proj_body = obrace space* (proj_field space*)* cbrace
-projection = proj_kw space* oangle space* struct_kw whitespace under:identifier space* cangle space* id:identifier space* proj_body {{
-	value = new projection {(gsl::czstring<>)id.getValue(), (gsl::czstring<>)under.getValue()};
+projection_rpc_field = ptr:rpc_ptr space* semi {{
+	value = ptr.getValue();
+}}
+
+projection_var_field = vt:var_type id:identifier space* semi {{ 
+	value = new var_field((gsl::czstring<>)id.getValue());
+}}
+
+proj_field = rf:projection_rpc_field {{
+	value = new field(std::unique_ptr<rpc_field>((rpc_field*)rf.getValue()));
+}} | vf:projection_var_field {{
+	value = new field(std::unique_ptr<var_field>((var_field*)vf.getValue()));
+}}
+
+projection = proj_kw space* oangle space* struct_kw whitespace under:identifier space* cangle space* id:identifier space* obrace space* pfs:(pf:proj_field space* {{
+	value = pf.getValue();
+}})* cbrace {{
+	std::vector<std::unique_ptr<field>> ptrs;
+	for (const auto& v : pfs.getValues()) {
+		ptrs.push_back(std::unique_ptr<field> {(field*)v.getValue()});
+	}
+
+	value = new projection((gsl::czstring<>)id.getValue(), (gsl::czstring<>)under.getValue(), std::move(ptrs));
 }}
 
 item = v:rpc_decl {{ value = new item(std::unique_ptr<rpc>((rpc*)v.getValue())); }} | v:projection {{ value = new item(std::unique_ptr<projection>((projection*)v.getValue())); }}
