@@ -119,31 +119,24 @@ projection_type = proj_kw whitespace id:identifier {{
 	value = new projection_type((gsl::czstring<>)id.getValue());
 }} # NOTE: empty projections are required for 2-level indirection (??)
 
-indirection = space* (attributes space*)? star
-pointer_type = void_kw stars:indirection+ {{
-	value = new pointer_type(std::unique_ptr<void_type>(nullptr));
-}} | prim:primitive_type stars:indirection+ {{
-	value = new pointer_type(std::unique_ptr<primitive_type>((primitive_type*)prim.getValue()));
-}} | proj:projection_type stars:indirection+ {{
-	value = new pointer_type(std::unique_ptr<projection_type>((projection_type*)proj.getValue()));
+copy_type = void_kw {{
+	value = new copy_type(std::unique_ptr<void_type>(nullptr));
+}} | prim:primitive_type {{
+	value = new copy_type(std::unique_ptr<primitive_type>((primitive_type*)prim.getValue()));
+}} | proj:projection_type {{
+	value = new copy_type(std::unique_ptr<projection_type>((projection_type*)proj.getValue()));
 }}
 
-var_type = pt:pointer_type space* {{
-	value = new var_type(std::unique_ptr<pointer_type>((pointer_type*)pt.getValue()));
-}} | prim:primitive_type whitespace {{
-	value = new var_type(std::unique_ptr<primitive_type>((primitive_type*)prim.getValue()));
-}} | proj:projection_type whitespace {{
-	value = new var_type(std::unique_ptr<projection_type>((projection_type*)proj.getValue()));
+type = ct:copy_type space_or_attribs stars:(star space*)+ {{
+	value = new type(std::unique_ptr<copy_type>((copy_type*)ct.getValue()), nullptr, stars.getValues().size());
+}} | ct:copy_type space_or_attribs {{
+	value = new type(std::unique_ptr<copy_type>((copy_type*)ct.getValue()), nullptr, 0);
 }}
 
-return_type = void_kw whitespace {{
-	value = new return_type(std::unique_ptr<void_type>(nullptr));
-}} | ptr:pointer_type space* {{
-	value = new return_type(std::unique_ptr<pointer_type>((pointer_type*)ptr.getValue()));
-}} | prim:primitive_type whitespace {{
-	value = new return_type(std::unique_ptr<primitive_type>((primitive_type*)prim.getValue()));
-}} | proj:projection_type whitespace {{
-	value = new return_type(std::unique_ptr<projection_type>((projection_type*)proj.getValue()));
+wtype = ct:copy_type space_or_attribs stars:(star space*)+ {{
+	value = new type(std::unique_ptr<copy_type>((copy_type*)ct.getValue()), nullptr, stars.getValues().size());
+}} | ct:copy_type wspace_or_attribs {{
+	value = new type(std::unique_ptr<copy_type>((copy_type*)ct.getValue()), nullptr, 0);
 }}
 
 container_side = caller_kw | callee_kw
@@ -154,24 +147,25 @@ attribute = in_kw | out_kw | alloc_attrib | dealloc_attrib | bind_attrib
 attrib_list = attribute space* attrib_list_tail
 attrib_list_tail = comma space* attrib_list | <void>
 attributes = obracket space* attrib_list space* cbracket
+wspace_or_attribs =  space* attributes space* | whitespace
+space_or_attribs = space* attributes space* | space*
 
 rpc_ptr_ident = oparen space* star space* identifier space* cparen
-wspace_or_attribs = space* attributes space* | whitespace
-rpc_ptr = rpc_kw wspace_or_attribs return_type rpc_ptr_ident space* oparen space* arg_list space* cparen {{
+rpc_ptr = rpc_kw wspace_or_attribs type rpc_ptr_ident space* oparen space* arg_list space* cparen {{
 	value = new rpc_field();
 }}
 
-rpc_decl = rpc_kw whitespace return_type id:identifier space* oparen space* arg_list space* cparen space* semi {{ value = new rpc {(gsl::czstring<>)id.getValue()}; }}
+rpc_decl = rpc_kw whitespace wtype id:identifier space* oparen space* arg_list space* cparen space* semi {{ value = new rpc {(gsl::czstring<>)id.getValue()}; }}
 arg_list = argument space* arg_list_tail
 arg_list_tail = comma space* arg_list | <void>
-argument = rpc_ptr | var_type identifier
+argument = rpc_ptr | wtype identifier
 
 projection_rpc_field = ptr:rpc_ptr space* semi {{
 	value = ptr.getValue();
 }}
 
-projection_var_field = vt:var_type id:identifier space* semi {{ 
-	value = new var_field((gsl::czstring<>)id.getValue());
+projection_var_field = ty:wtype id:identifier space* semi {{
+	value = new var_field((gsl::czstring<>)id.getValue(), std::unique_ptr<type>((type*)ty.getValue()));
 }}
 
 proj_field = rf:projection_rpc_field {{

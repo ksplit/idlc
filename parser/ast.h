@@ -139,70 +139,10 @@ namespace idlc {
 		void_type() = delete; // Please don't instantiate this. It's a marker object, just use nullptr
 	};
 
-	enum class pointer_type_kind {
+	enum class copy_type_kind {
 		void_k,
 		primitive,
 		projection
-	};
-
-	class pointer_type {
-	public:
-		template<typename type>
-		pointer_type(std::unique_ptr<type>&& real_type) : m_real_type {move(real_type)}
-		{
-		}
-
-		auto kind()
-		{
-			return gsl::narrow_cast<pointer_type_kind>(m_real_type.index());
-		}
-
-		template<pointer_type_kind kind>
-		const auto* real_type() const
-		{
-			return std::get<static_cast<std::size_t>(kind)>(m_real_type).get();
-		}
-
-	private:
-		std::variant<std::unique_ptr<void_type>, std::unique_ptr<primitive_type>, std::unique_ptr<projection_type>> m_real_type;
-	};
-
-	enum class var_type_kind {
-		pointer,
-		primitive,
-		projection
-	};
-
-	class var_type {
-	public:
-		template<typename type>
-		var_type(std::unique_ptr<type>&& obj) : m_variant {move(obj)}
-		{
-		}
-
-		auto kind() const
-		{
-			return gsl::narrow_cast<var_type_kind>(m_variant.index());
-		}
-
-		template<var_type_kind kind>
-		const auto& get() const
-		{
-			return std::get<static_cast<std::size_t>(kind)>(m_variant);
-		}
-
-	private:
-		std::variant<
-			std::unique_ptr<pointer_type>,
-			std::unique_ptr<primitive_type>,
-			std::unique_ptr<projection_type>> m_variant;
-	};
-
-	enum class return_type_kind {
-		void_k,
-		primitive,
-		projection,
-		pointer
 	};
 
 	// A pointer type points to one of three: void, primitive, or projection
@@ -214,19 +154,19 @@ namespace idlc {
 	// An rpc field has a signature, not a type
 	// Eliminate pointer_type
 
-	class return_type {
+	class copy_type {
 	public:
 		template<typename type>
-		return_type(std::unique_ptr<type>&& obj) : m_variant {move(obj)}
+		copy_type(std::unique_ptr<type>&& obj) : m_variant {move(obj)}
 		{
 		}
 
 		auto kind() const
 		{
-			return gsl::narrow_cast<return_type_kind>(m_variant.index());
+			return gsl::narrow_cast<copy_type_kind>(m_variant.index());
 		}
 
-		template<return_type_kind kind>
+		template<copy_type_kind kind>
 		const auto& get() const
 		{
 			return std::get<static_cast<std::size_t>(kind)>(m_variant);
@@ -236,23 +176,59 @@ namespace idlc {
 		std::variant<
 			std::unique_ptr<void_type>,
 			std::unique_ptr<primitive_type>,
-			std::unique_ptr<projection_type>,
-			std::unique_ptr<pointer_type>> m_variant;
+			std::unique_ptr<projection_type>> m_variant;
+	};
+
+	class attributes {
+
+	};
+
+	class type {
+	public:
+		type(std::unique_ptr<copy_type>&& copy_type, std::unique_ptr<attributes>&& attributes, unsigned int stars) :
+			m_copy_type {move(copy_type)},
+			m_attributes {move(attributes)},
+			m_stars {stars}
+		{
+		}
+
+		const copy_type* copy_type() const
+		{
+			return m_copy_type.get();
+		}
+
+		unsigned int stars() const
+		{
+			return m_stars;
+		}
+
+	private:
+		std::unique_ptr<class copy_type> m_copy_type; // intuitively: copy_type [attributes] *
+		std::unique_ptr<class attributes> m_attributes;
+		unsigned int m_stars;
 	};
 	
 	class var_field {
 	public:
-		var_field(gsl::czstring<> identifier) : m_identifier {identifier}
+		var_field(gsl::czstring<> identifier, std::unique_ptr<type>&& type) :
+			m_identifier {identifier},
+			m_type {move(type)}
 		{
 		}
 
-		gsl::czstring<> identifier()
+		gsl::czstring<> identifier() const
 		{
 			return m_identifier;
 		}
 
+		const type* type() const
+		{
+			return m_type.get();
+		}
+
 	private:
 		gsl::czstring<> m_identifier;
+		std::unique_ptr<class type> m_type;
 	};
 
 	class rpc_field {
@@ -350,9 +326,9 @@ namespace idlc {
 		}
 
 		template<item_kind kind>
-		const auto& get() const
+		const auto* get() const
 		{
-			return std::get<static_cast<std::size_t>(kind)>(m_variant);
+			return std::get<static_cast<std::size_t>(kind)>(m_variant).get();
 		}
 
 	private:
@@ -388,7 +364,7 @@ namespace idlc {
 		{
 		}
 
-		gsl::span<const std::unique_ptr<module>> modules()
+		gsl::span<const std::unique_ptr<module>> modules() const
 		{
 			return m_modules;
 		}
