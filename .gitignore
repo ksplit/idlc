@@ -4,6 +4,8 @@
 *.o
 
 build/
+CMakeSettings.json
+dump.txt
 
 #parser generated files
 parser/peg_peg.py
