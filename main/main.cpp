@@ -64,7 +64,7 @@ namespace idlc
 
 		tab_over(level, os) << "identifier: " << field->identifier() << "\n";
 		tab_over(level, os) << "type:\n";
-		dump_type(level + 1, field->type(), os);
+		dump_type(level + 1, field->get_type(), os);
 
 		--level;
 		tab_over(level, os) << ")\n";
@@ -184,7 +184,8 @@ int main(int argc, gsl::czstring<>* argv) {
 		}*/
 
 		if (args.size() == 3) {
-			idlc::dump_file(0, top_node.get(), std::ofstream {args[2]});
+			std::ofstream dump {args[2]};
+			idlc::dump_file(0, top_node.get(), dump);
 		}
 
 		return 0;

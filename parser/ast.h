@@ -192,7 +192,7 @@ namespace idlc {
 		{
 		}
 
-		const copy_type* copy_type() const
+		const copy_type* get_copy_type() const
 		{
 			return m_copy_type.get();
 		}
@@ -221,7 +221,7 @@ namespace idlc {
 			return m_identifier;
 		}
 
-		const type* type() const
+		const type* get_type() const
 		{
 			return m_type.get();
 		}
