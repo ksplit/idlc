@@ -466,7 +466,7 @@ namespace idlc {
 
 	class include {
 	public:
-		include(std::filesystem::path& path) : m_path {path}
+		include(const std::filesystem::path& path) : m_path {path}
 		{
 		}
 
