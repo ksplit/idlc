@@ -1,5 +1,10 @@
 # IDLC
 
+## Prereqs
+* Python 2
+* CMake
+* `make`, `gcc`, etc.
+
 ## Building
 `idlc` uses CMake on this branch, so with `cmake`, `make`, and GCC installed, build as follows:
 
