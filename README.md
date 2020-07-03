@@ -5,6 +5,8 @@
 * CMake
 * `make`, `gcc`, etc.
 
+Make sure to run `git submodule update --init --recursive` after initial clone.
+
 ## Building
 `idlc` uses CMake on this branch, so with `cmake`, `make`, and GCC installed, build as follows:
 
