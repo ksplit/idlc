@@ -2,7 +2,15 @@
 #include <variant>
 #include <gsl/gsl>
 #include <iostream>
+
+#if __GNUC__ < 8
+#include <experimental/filesystem>
+namespace std {
+	namespace filesystem = std::experimental::filesystem;
+}
+#else
 #include <filesystem>
+#endif
 
 namespace idlc {
 	class string_heap {
