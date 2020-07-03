@@ -6,6 +6,7 @@
 build/
 CMakeSettings.json
 dump.txt
+notes.txt
 
 #parser generated files
 parser/peg_peg.py

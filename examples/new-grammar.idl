@@ -1,4 +1,0 @@
-/**/
-rpc int __rtnl_link_register(projection rtnl_link_ops [alloc(callee)] *ops);
-rpc void __rtnl_link_unregister(projection rtnl_link_ops [bind] *ops);
-rpc void rtnl_link_unregister(projection rtnl_link_ops [dealloc(callee)] *ops);
