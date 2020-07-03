@@ -1,0 +1,5 @@
+include <kernel.idl>
+
+module test {
+  require kernel_nullnet;
+}
