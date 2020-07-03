@@ -131,15 +131,27 @@ copy_type = void_kw {{
 }}
 
 type = ct:copy_type space_or_attribs stars:(star space*)+ {{
-	value = new type(std::unique_ptr<copy_type>((copy_type*)ct.getValue()), nullptr, stars.getValues().size());
+	value = new type(
+		std::unique_ptr<copy_type>((copy_type*)ct.getValue()),
+		nullptr,
+		gsl::narrow_cast<unsigned int>(stars.getValues().size()));
 }} | ct:copy_type space_or_attribs {{
-	value = new type(std::unique_ptr<copy_type>((copy_type*)ct.getValue()), nullptr, 0);
+	value = new type(
+		std::unique_ptr<copy_type>((copy_type*)ct.getValue()),
+		nullptr,
+		0);
 }}
 
 wtype = ct:copy_type space_or_attribs stars:(star space*)+ {{
-	value = new type(std::unique_ptr<copy_type>((copy_type*)ct.getValue()), nullptr, stars.getValues().size());
+	value = new type(
+		std::unique_ptr<copy_type>((copy_type*)ct.getValue()),
+		nullptr,
+		gsl::narrow_cast<unsigned int>(stars.getValues().size()));
 }} | ct:copy_type wspace_or_attribs {{
-	value = new type(std::unique_ptr<copy_type>((copy_type*)ct.getValue()), nullptr, 0);
+	value = new type(
+		std::unique_ptr<copy_type>((copy_type*)ct.getValue()),
+		nullptr,
+		0);
 }}
 
 container_side = caller_kw | callee_kw

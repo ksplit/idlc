@@ -82,7 +82,7 @@ namespace idlc {
 		unsigned_long_long_k
 	};
 
-	constexpr primitive_type_kind to_unsigned(primitive_type_kind kind)
+	inline primitive_type_kind to_unsigned(primitive_type_kind kind)
 	{
 		switch (kind) {
 		case primitive_type_kind::char_k:
