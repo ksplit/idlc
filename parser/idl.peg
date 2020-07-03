@@ -120,7 +120,7 @@ projection_type = proj_kw whitespace id:identifier {{
 }} # NOTE: empty projections are required for 2-level indirection (??)
 
 copy_type = void_kw {{
-	value = new copy_type(std::unique_ptr<void_type>(nullptr));
+	value = nullptr;
 }} | prim:primitive_type {{
 	value = new copy_type(std::unique_ptr<primitive_type>((primitive_type*)prim.getValue()));
 }} | proj:projection_type {{
@@ -150,15 +150,76 @@ attributes = obracket space* attrib_list space* cbracket
 wspace_or_attribs =  space* attributes space* | whitespace
 space_or_attribs = space* attributes space* | space*
 
-rpc_ptr_ident = oparen space* star space* identifier space* cparen
-rpc_ptr = rpc_kw wspace_or_attribs type rpc_ptr_ident space* oparen space* arg_list space* cparen {{
-	value = new rpc_field();
+rpc_pseudo_field = rpc_kw wspace_or_attribs ret_field:pseudo_field oparen space* star space* cparen space* oparen space* args:arg_list space* cparen space* {{
+	auto& vec = *(std::vector<std::unique_ptr<field>>*)args.getValue();
+	std::reverse(begin(vec), end(vec));
+	auto sig = std::make_unique<signature>(
+		std::unique_ptr<field>((field*)ret_field.getValue()),
+		move(vec));
+	delete &vec;
+	value = new rpc_field(nullptr, move(sig));
 }}
 
-rpc_decl = rpc_kw whitespace wtype id:identifier space* oparen space* arg_list space* cparen space* semi {{ value = new rpc {(gsl::czstring<>)id.getValue()}; }}
-arg_list = argument space* arg_list_tail
-arg_list_tail = comma space* arg_list | <void>
-argument = rpc_ptr | wtype identifier
+var_pseudo_field = ty:type {{
+	value = new var_field(nullptr, std::unique_ptr<type>((type*)ty.getValue()));
+}}
+
+# these are the return fields
+pseudo_field = rf:rpc_pseudo_field {{
+	value = new field(std::unique_ptr<rpc_field>((rpc_field*)rf.getValue()));
+}} | vf:var_pseudo_field {{
+	value = new field(std::unique_ptr<var_field>((var_field*)vf.getValue()));
+}}
+
+wspace_var_pseudo_field = ty:wtype {{
+	value = new var_field(nullptr, std::unique_ptr<type>((type*)ty.getValue()));
+}}
+
+# these are the return fields
+wspace_pseudo_field = rf:rpc_pseudo_field {{
+	value = new field(std::unique_ptr<rpc_field>((rpc_field*)rf.getValue()));
+}} | vf:wspace_var_pseudo_field {{
+	value = new field(std::unique_ptr<var_field>((var_field*)vf.getValue()));
+}}
+
+rpc_ptr_ident = oparen space* star space* id:identifier space* cparen {{ value = id.getValue(); }}
+rpc_ptr = rpc_kw wspace_or_attribs ret_field:pseudo_field id:rpc_ptr_ident space* oparen space* args:arg_list space* cparen {{
+	auto& vec = *(std::vector<std::unique_ptr<field>>*)args.getValue();
+	std::reverse(begin(vec), end(vec));
+	auto sig = std::make_unique<signature>(
+		std::unique_ptr<field>((field*)ret_field.getValue()),
+		move(vec));
+	delete &vec;
+	value = new rpc_field((gsl::czstring<>)id.getValue(), move(sig));
+}}
+
+rpc_decl = rpc_kw whitespace ret_field:wspace_pseudo_field id:identifier space* oparen space* args:arg_list space* cparen space* semi {{
+	auto& vec = *(std::vector<std::unique_ptr<field>>*)args.getValue();
+	std::reverse(begin(vec), end(vec));
+	auto sig = std::make_unique<signature>(
+		std::unique_ptr<field>((field*)ret_field.getValue()),
+		move(vec));
+	delete &vec;
+	value = new rpc((gsl::czstring<>)id.getValue(), move(sig));
+}}
+
+arg_list = arg:argument space* v:arg_list_tail {{
+	auto& vec = *(std::vector<std::unique_ptr<field>>*)v.getValue();
+	vec.emplace_back(std::unique_ptr<field>((field*)arg.getValue()));
+	value = &vec;
+}}
+
+arg_list_tail = comma space* v:arg_list {{
+	value = v.getValue();
+}} | <void> {{
+	value = new std::vector<std::unique_ptr<field>>();
+}}
+
+argument = rf:rpc_ptr {{
+	value = new field(std::unique_ptr<rpc_field>((rpc_field*)rf.getValue()));
+}} | ty:wtype id:identifier {{
+	value = new field(std::make_unique<var_field>((gsl::czstring<>)id.getValue(), std::unique_ptr<type>((type*)ty.getValue())));
+}}
 
 projection_rpc_field = ptr:rpc_ptr space* semi {{
 	value = ptr.getValue();
@@ -182,10 +243,14 @@ projection = proj_kw space* oangle space* struct_kw whitespace under:identifier 
 		ptrs.push_back(std::unique_ptr<field> {(field*)v.getValue()});
 	}
 
-	value = new projection((gsl::czstring<>)id.getValue(), (gsl::czstring<>)under.getValue(), std::move(ptrs));
+	value = new projection((gsl::czstring<>)id.getValue(), (gsl::czstring<>)under.getValue(), move(ptrs));
 }}
 
-item = v:rpc_decl {{ value = new item(std::unique_ptr<rpc>((rpc*)v.getValue())); }} | v:projection {{ value = new item(std::unique_ptr<projection>((projection*)v.getValue())); }}
+item = v:rpc_decl {{
+	value = new item(std::unique_ptr<rpc>((rpc*)v.getValue()));
+}} | v:projection {{
+	value = new item(std::unique_ptr<projection>((projection*)v.getValue()));
+}}
 
 module = module_kw whitespace id:identifier space* obrace space* items:(i:item space* {{ value = i.getValue(); }})* cbrace {{
 	std::vector<std::unique_ptr<item>> ptrs;

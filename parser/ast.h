@@ -104,6 +104,13 @@ namespace idlc {
 		}
 	}
 
+	template<typename type>
+	std::unique_ptr<type>&& move_not_null(std::unique_ptr<type> obj)
+	{
+		Expects(obj != nullptr);
+		return move(obj);
+	}
+
 	class primitive_type {
 	public:
 		primitive_type(primitive_type_kind kind) : m_kind {kind}
@@ -121,7 +128,7 @@ namespace idlc {
 
 	class projection_type {
 	public:
-		projection_type(gsl::czstring<> identifier) : m_identifier {identifier}
+		projection_type(gsl::not_null<gsl::czstring<>> identifier) : m_identifier {identifier}
 		{
 		}
 
@@ -134,13 +141,7 @@ namespace idlc {
 		gsl::czstring<> m_identifier;
 	};
 
-	class void_type {
-	public:
-		void_type() = delete; // Please don't instantiate this. It's a marker object, just use nullptr
-	};
-
 	enum class copy_type_kind {
-		void_k,
 		primitive,
 		projection
 	};
@@ -154,11 +155,14 @@ namespace idlc {
 	// An rpc field has a signature, not a type
 	// Eliminate pointer_type
 
+	// What's the best place to check for non-nullnes? The constructor?
+
 	class copy_type {
 	public:
 		template<typename type>
-		copy_type(std::unique_ptr<type>&& obj) : m_variant {move(obj)}
+		copy_type(std::unique_ptr<type> obj) : m_variant {move(obj)}
 		{
+			Expects(std::get<std::unique_ptr<type>>(m_variant) != nullptr);
 		}
 
 		auto kind() const
@@ -169,12 +173,11 @@ namespace idlc {
 		template<copy_type_kind kind>
 		const auto& get() const
 		{
-			return std::get<static_cast<std::size_t>(kind)>(m_variant);
+			return *std::get<static_cast<std::size_t>(kind)>(m_variant);
 		}
 
 	private:
 		std::variant<
-			std::unique_ptr<void_type>,
 			std::unique_ptr<primitive_type>,
 			std::unique_ptr<projection_type>> m_variant;
 	};
@@ -185,7 +188,7 @@ namespace idlc {
 
 	class type {
 	public:
-		type(std::unique_ptr<copy_type>&& copy_type, std::unique_ptr<attributes>&& attributes, unsigned int stars) :
+		type(std::unique_ptr<copy_type> copy_type, std::unique_ptr<attributes> attributes, unsigned int stars) :
 			m_copy_type {move(copy_type)},
 			m_attributes {move(attributes)},
 			m_stars {stars}
@@ -195,6 +198,11 @@ namespace idlc {
 		const copy_type* get_copy_type() const
 		{
 			return m_copy_type.get();
+		}
+
+		const attributes* get_attributes() const
+		{
+			return m_attributes.get();
 		}
 
 		unsigned int stars() const
@@ -208,12 +216,16 @@ namespace idlc {
 		unsigned int m_stars;
 	};
 	
+	// We can speak of a pseudofield, in the sense that it has no identifier (identifier() returns nullptr)
+	// These are used for return values
+
 	class var_field {
 	public:
-		var_field(gsl::czstring<> identifier, std::unique_ptr<type>&& type) :
+		var_field(gsl::czstring<> identifier, std::unique_ptr<type> type) :
 			m_identifier {identifier},
 			m_type {move(type)}
 		{
+			Expects(m_type);
 		}
 
 		gsl::czstring<> identifier() const
@@ -221,9 +233,9 @@ namespace idlc {
 			return m_identifier;
 		}
 
-		const type* get_type() const
+		const type& get_type() const
 		{
-			return m_type.get();
+			return *m_type;
 		}
 
 	private:
@@ -231,7 +243,30 @@ namespace idlc {
 		std::unique_ptr<class type> m_type;
 	};
 
+	class signature;
+
 	class rpc_field {
+	public:
+		rpc_field(gsl::czstring<> identifier, std::unique_ptr<signature> sig) :
+			m_identifier {identifier},
+			m_signature {move(sig)}
+		{
+			Expects(m_signature != nullptr);
+		}
+
+		gsl::czstring<> identifier() const
+		{
+			return m_identifier;
+		}
+
+		const signature& get_signature() const
+		{
+			return *m_signature;
+		}
+
+	private:
+		gsl::czstring<> m_identifier;
+		std::unique_ptr<signature> m_signature;
 	};
 
 	enum class field_kind {
@@ -242,8 +277,10 @@ namespace idlc {
 	class field {
 	public:
 		template<typename type>
-		field(std::unique_ptr<type>&& obj) : m_variant {move(obj)}
+		field(std::unique_ptr<type> obj) :
+			m_variant {move(obj)}
 		{
+			Expects(std::get<std::unique_ptr<type>>(m_variant) != nullptr);
 		}
 
 		auto kind() const
@@ -254,13 +291,39 @@ namespace idlc {
 		template<field_kind kind>
 		const auto& get() const
 		{
-			return std::get<static_cast<std::size_t>(kind)>(m_variant);
+			return *std::get<static_cast<std::size_t>(kind)>(m_variant);
 		}
 
 	private:
 		std::variant<
 			std::unique_ptr<var_field>,
 			std::unique_ptr<rpc_field>> m_variant;
+	};
+
+	class signature {
+	public:
+		signature(std::unique_ptr<field> return_field, std::vector<std::unique_ptr<field>> arg_fields) :
+			m_return_field {move(return_field)},
+			m_arguments {move(arg_fields)}
+		{
+			Expects(m_return_field != nullptr);
+			for (const auto& arg : m_arguments)
+				Expects(arg != nullptr);
+		}
+
+		const field& return_field() const
+		{
+			return *m_return_field;
+		}
+
+		gsl::span<const std::unique_ptr<field>> arguments() const
+		{
+			return m_arguments;
+		}
+
+	private:
+		std::unique_ptr<field> m_return_field;
+		std::vector<std::unique_ptr<field>> m_arguments;
 	};
 
 	enum class item_kind {
@@ -270,26 +333,37 @@ namespace idlc {
 
 	class rpc {
 	public:
-		rpc(gsl::czstring<> identifier) :
-			m_identifier {identifier}
-		{}
+		rpc(gsl::not_null<gsl::czstring<>> identifier, std::unique_ptr<signature> signature) :
+			m_identifier {identifier},
+			m_signature {move(signature)}
+		{
+			Expects(m_signature != nullptr);
+		}
 
 		gsl::czstring<> identifier() const
 		{
 			return m_identifier;
 		}
 
+		const signature& get_signature() const
+		{
+			return *m_signature;
+		}
+
 	private:
 		gsl::czstring<> m_identifier;
+		std::unique_ptr<signature> m_signature;
 	};
 
 	class projection {
 	public:
-		projection(gsl::czstring<> identifier, gsl::czstring<> real_type, std::vector<std::unique_ptr<field>>&& fields) :
+		projection(gsl::not_null<gsl::czstring<>> identifier, gsl::not_null<gsl::czstring<>> real_type, std::vector<std::unique_ptr<field>> fields) :
 			m_identifier {identifier},
 			m_real_type {real_type},
 			m_fields {move(fields)}
 		{
+			for (const auto& f : m_fields)
+				Expects(f != nullptr);
 		}
 
 		gsl::czstring<> identifier() const
@@ -316,8 +390,9 @@ namespace idlc {
 	class item {
 	public:
 		template<typename type>
-		item(std::unique_ptr<type>&& obj) : m_variant {move(obj)}
+		item(std::unique_ptr<type> obj) : m_variant {move(obj)}
 		{
+			Expects(std::get<std::unique_ptr<type>>(m_variant) != nullptr);
 		}
 
 		auto kind() const
@@ -326,9 +401,9 @@ namespace idlc {
 		}
 
 		template<item_kind kind>
-		const auto* get() const
+		const auto& get() const
 		{
-			return std::get<static_cast<std::size_t>(kind)>(m_variant).get();
+			return *std::get<static_cast<std::size_t>(kind)>(m_variant).get();
 		}
 
 	private:
@@ -337,10 +412,12 @@ namespace idlc {
 
 	class module {
 	public:
-		module(gsl::czstring<> identifier, std::vector<std::unique_ptr<item>>&& items) :
+		module(gsl::not_null<gsl::czstring<>> identifier, std::vector<std::unique_ptr<item>> items) :
 			m_identifier {identifier},
 			m_items {move(items)}
 		{
+			for (const auto& i : m_items)
+				Expects(i != nullptr);
 		}
 
 		gsl::czstring<> identifier() const
@@ -360,8 +437,10 @@ namespace idlc {
 
 	class file {
 	public:
-		file(std::vector<std::unique_ptr<module>>&& modules) : m_modules {move(modules)}
+		file(std::vector<std::unique_ptr<module>> modules) : m_modules {move(modules)}
 		{
+			for (const auto& m : m_modules)
+				Expects(m != nullptr);
 		}
 
 		gsl::span<const std::unique_ptr<module>> modules() const
