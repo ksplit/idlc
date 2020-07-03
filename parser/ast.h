@@ -2,6 +2,7 @@
 #include <variant>
 #include <gsl/gsl>
 #include <iostream>
+#include <filesystem>
 
 namespace idlc {
 	class string_heap {
@@ -326,9 +327,10 @@ namespace idlc {
 		std::vector<std::unique_ptr<field>> m_arguments;
 	};
 
-	enum class item_kind {
+	enum class module_item_kind {
 		rpc,
-		projection
+		projection,
+		require
 	};
 
 	class rpc {
@@ -357,7 +359,11 @@ namespace idlc {
 
 	class projection {
 	public:
-		projection(gsl::not_null<gsl::czstring<>> identifier, gsl::not_null<gsl::czstring<>> real_type, std::vector<std::unique_ptr<field>> fields) :
+		projection(
+			gsl::not_null<gsl::czstring<>> identifier,
+			gsl::not_null<gsl::czstring<>> real_type,
+			std::vector<std::unique_ptr<field>> fields
+		) :
 			m_identifier {identifier},
 			m_real_type {real_type},
 			m_fields {move(fields)}
@@ -387,32 +393,55 @@ namespace idlc {
 		std::vector<std::unique_ptr<field>> m_fields;
 	};
 
-	class item {
+	class require {
+	public:
+		require(gsl::not_null<gsl::czstring<>> identifier) : m_identifier {identifier}
+		{
+		}
+
+		gsl::czstring<> identifier() const
+		{
+			return m_identifier;
+		}
+
+	private:
+		gsl::czstring<> m_identifier;
+	};
+
+	class module_item {
 	public:
 		template<typename type>
-		item(std::unique_ptr<type> obj) : m_variant {move(obj)}
+		module_item(std::unique_ptr<type> obj) : m_variant {move(obj)}
 		{
 			Expects(std::get<std::unique_ptr<type>>(m_variant) != nullptr);
 		}
 
 		auto kind() const
 		{
-			return gsl::narrow_cast<item_kind>(m_variant.index());
+			return gsl::narrow_cast<module_item_kind>(m_variant.index());
 		}
 
-		template<item_kind kind>
+		template<module_item_kind kind>
 		const auto& get() const
 		{
 			return *std::get<static_cast<std::size_t>(kind)>(m_variant).get();
 		}
 
 	private:
-		std::variant<std::unique_ptr<rpc>, std::unique_ptr<projection>> m_variant;
+		std::variant<
+			std::unique_ptr<rpc>,
+			std::unique_ptr<projection>,
+			std::unique_ptr<require>> m_variant;
+	};
+
+	enum class file_item_kind {
+		include,
+		module
 	};
 
 	class module {
 	public:
-		module(gsl::not_null<gsl::czstring<>> identifier, std::vector<std::unique_ptr<item>> items) :
+		module(gsl::not_null<gsl::czstring<>> identifier, std::vector<std::unique_ptr<module_item>> items) :
 			m_identifier {identifier},
 			m_items {move(items)}
 		{
@@ -425,30 +454,70 @@ namespace idlc {
 			return m_identifier;
 		}
 
-		gsl::span<const std::unique_ptr<item>> items() const
+		gsl::span<const std::unique_ptr<module_item>> items() const
 		{
 			return m_items;
 		}
 
 	private:
 		gsl::czstring<> m_identifier;
-		std::vector<std::unique_ptr<item>> m_items;
+		std::vector<std::unique_ptr<module_item>> m_items;
+	};
+
+	class include {
+	public:
+		include(std::filesystem::path& path) : m_path {path}
+		{
+		}
+
+		std::filesystem::path path() const
+		{
+			return m_path;
+		}
+
+	private:
+		std::filesystem::path m_path;
+	};
+
+	class file_item {
+	public:
+		template<typename type>
+		file_item(std::unique_ptr<type> obj) : m_variant {move(obj)}
+		{
+			Expects(std::get<std::unique_ptr<type>>(m_variant) != nullptr);
+		}
+
+		auto kind() const
+		{
+			return gsl::narrow_cast<file_item_kind>(m_variant.index());
+		}
+
+		template<file_item_kind kind>
+		const auto& get() const
+		{
+			return *std::get<static_cast<std::size_t>(kind)>(m_variant).get();
+		}
+
+	private:
+		std::variant<
+			std::unique_ptr<include>,
+			std::unique_ptr<module>> m_variant;
 	};
 
 	class file {
 	public:
-		file(std::vector<std::unique_ptr<module>> modules) : m_modules {move(modules)}
+		file(std::vector<std::unique_ptr<file_item>> modules) : m_items {move(modules)}
 		{
-			for (const auto& m : m_modules)
+			for (const auto& m : m_items)
 				Expects(m != nullptr);
 		}
 
-		gsl::span<const std::unique_ptr<module>> modules() const
+		gsl::span<const std::unique_ptr<file_item>> items() const
 		{
-			return m_modules;
+			return m_items;
 		}
 	
 	private:
-		std::vector<std::unique_ptr<module>> m_modules;
+		std::vector<std::unique_ptr<file_item>> m_items;
 	};
 }

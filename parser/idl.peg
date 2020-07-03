@@ -24,13 +24,14 @@ rules:
 
 line_comment = "//" line_comment_tail
 line_comment_tail = line_comment_end | . line_comment_tail
-line_comment_end = "\n"
+line_comment_end = newline
 
 block_comment = "/*" block_comment_tail
 block_comment_tail = "*/" | . block_comment_tail
 
 comment = line_comment | block_comment
-space = [ \n\r\t] | comment
+newline = "\n" | "\r" "\n"
+space = [ \t] | newline | comment
 whitespace = space+
 ident_start = [abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_]
 ident_cont = ident_start | [0123456789]
@@ -64,6 +65,8 @@ proj_kw = "projection"
 struct_kw = "struct"
 bind_kw = "bind"
 module_kw = "module"
+require_kw = "require"
+include_kw = "include"
 
 oparen = "("
 cparen = ")"
@@ -246,25 +249,49 @@ projection = proj_kw space* oangle space* struct_kw whitespace under:identifier 
 	value = new projection((gsl::czstring<>)id.getValue(), (gsl::czstring<>)under.getValue(), move(ptrs));
 }}
 
+require = require_kw whitespace id:identifier space* semi {{
+	value = new require((gsl::czstring<>)id.getValue());
+}}
+
 item = v:rpc_decl {{
-	value = new item(std::unique_ptr<rpc>((rpc*)v.getValue()));
+	value = new module_item(std::unique_ptr<rpc>((rpc*)v.getValue()));
 }} | v:projection {{
-	value = new item(std::unique_ptr<projection>((projection*)v.getValue()));
+	value = new module_item(std::unique_ptr<projection>((projection*)v.getValue()));
+}} | v:require {{
+	value = new module_item(std::unique_ptr<require>((require*)v.getValue()));
 }}
 
 module = module_kw whitespace id:identifier space* obrace space* items:(i:item space* {{ value = i.getValue(); }})* cbrace {{
-	std::vector<std::unique_ptr<item>> ptrs;
+	std::vector<std::unique_ptr<module_item>> ptrs;
 	for (const auto& v : items.getValues()) {
-		ptrs.push_back(std::unique_ptr<item> {(item*)v.getValue()});
+		ptrs.push_back(std::unique_ptr<module_item> {(module_item*)v.getValue()});
 	}
 
 	value = new module {(gsl::czstring<>)id.getValue(), std::move(ptrs)};
 }}
 
-file = space* mods:(m:module space* {{ value = m.getValue(); }})* <eof> {{
-	std::vector<std::unique_ptr<module>> ptrs;
-	for (const auto& v : mods.getValues()) {
-		ptrs.push_back(std::unique_ptr<module> {(module*)v.getValue()});
+path_char = [0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_-/.]
+
+# temporarily broken: trailing space after an include TODO
+include = include_kw space* oangle chs:path_char* cangle newline {{
+	std::string str;
+	for (const auto& ch : chs.getValues()) {
+		str.push_back((char)(std::uintptr_t)ch.getValue());
+	}
+
+	value = new include(std::filesystem::u8path(str));
+}}
+
+file_item = i:include {{
+	value = new file_item(std::unique_ptr<include>((include*)i.getValue()));
+}} | m:module {{
+	value = new file_item(std::unique_ptr<module>((module*)m.getValue()));
+}}
+
+file = space* items:(i:file_item space* {{ value = i.getValue(); }})* <eof> {{
+	std::vector<std::unique_ptr<file_item>> ptrs;
+	for (const auto& v : items.getValues()) {
+		ptrs.emplace_back(std::unique_ptr<file_item> {(file_item*)v.getValue()});
 	}
 
 	value = new file {std::move(ptrs)};

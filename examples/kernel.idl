@@ -1,3 +1,9 @@
+include <../.gitignore>
+
+module test {
+  require kernel_nullnet;
+}
+
 module kernel_nullnet { 
 
   projection <struct rtnl_link_stats64> rtnl_link_stats64_ndo_get_stats64 {
@@ -146,7 +152,7 @@ module kernel_nullnet {
   rpc projection net_device_alloc_netdev_mqs // implicit bind here
        *alloc_netdev_mqs(
           int sizeof_priv,
-          //const char *name,
+          //const char *name, // this is problematic, atm
           unsigned char name_assign_type,
           rpc void (*setup)(projection net_device_setup [alloc(callee)] *dev),
           unsigned int txqs, unsigned int rxqs);
