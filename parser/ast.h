@@ -1,13 +1,20 @@
+#ifndef _AST_H_
+#define _AST_H_
+
 #include <vector>
 #include <variant>
 #include <gsl/gsl>
 #include <iostream>
 
+#ifdef __GNUC__
 #if __GNUC__ < 8
 #include <experimental/filesystem>
 namespace std {
 	namespace filesystem = std::experimental::filesystem;
 }
+#else
+#include <filesystem>
+#endif
 #else
 #include <filesystem>
 #endif
@@ -135,6 +142,8 @@ namespace idlc {
 		primitive_type_kind m_kind;
 	};
 
+	class projection;
+
 	class projection_type {
 	public:
 		projection_type(gsl::not_null<gsl::czstring<>> identifier) : m_identifier {identifier}
@@ -146,8 +155,21 @@ namespace idlc {
 			return m_identifier;
 		}
 
+		const projection& definition() const
+		{
+			Expects(m_definition != nullptr);
+			return *m_definition;
+		}
+
+		void definition(std::unique_ptr<projection> proj)
+		{
+			Expects(proj != nullptr);
+			m_definition = std::move(proj);
+		}
+
 	private:
 		gsl::czstring<> m_identifier;
+		std::unique_ptr<projection> m_definition;
 	};
 
 	enum class copy_type_kind {
@@ -169,7 +191,7 @@ namespace idlc {
 	class copy_type {
 	public:
 		template<typename type>
-		copy_type(std::unique_ptr<type> obj) : m_variant {move(obj)}
+		copy_type(std::unique_ptr<type>&& obj) : m_variant {move(obj)}
 		{
 			Expects(std::get<std::unique_ptr<type>>(m_variant) != nullptr);
 		}
@@ -197,7 +219,7 @@ namespace idlc {
 
 	class type {
 	public:
-		type(std::unique_ptr<copy_type> copy_type, std::unique_ptr<attributes> attributes, unsigned int stars) :
+		type(std::unique_ptr<copy_type>&& copy_type, std::unique_ptr<attributes>&& attributes, unsigned int stars) :
 			m_copy_type {move(copy_type)},
 			m_attributes {move(attributes)},
 			m_stars {stars}
@@ -230,7 +252,7 @@ namespace idlc {
 
 	class var_field {
 	public:
-		var_field(gsl::czstring<> identifier, std::unique_ptr<type> type) :
+		var_field(gsl::czstring<> identifier, std::unique_ptr<type>&& type) :
 			m_identifier {identifier},
 			m_type {move(type)}
 		{
@@ -256,7 +278,7 @@ namespace idlc {
 
 	class rpc_field {
 	public:
-		rpc_field(gsl::czstring<> identifier, std::unique_ptr<signature> sig) :
+		rpc_field(gsl::czstring<> identifier, std::unique_ptr<signature>&& sig) :
 			m_identifier {identifier},
 			m_signature {move(sig)}
 		{
@@ -286,7 +308,7 @@ namespace idlc {
 	class field {
 	public:
 		template<typename type>
-		field(std::unique_ptr<type> obj) :
+		field(std::unique_ptr<type>&& obj) :
 			m_variant {move(obj)}
 		{
 			Expects(std::get<std::unique_ptr<type>>(m_variant) != nullptr);
@@ -311,7 +333,7 @@ namespace idlc {
 
 	class signature {
 	public:
-		signature(std::unique_ptr<field> return_field, std::vector<std::unique_ptr<field>> arg_fields) :
+		signature(std::unique_ptr<field>&& return_field, std::vector<std::unique_ptr<field>>&& arg_fields) :
 			m_return_field {move(return_field)},
 			m_arguments {move(arg_fields)}
 		{
@@ -343,7 +365,7 @@ namespace idlc {
 
 	class rpc {
 	public:
-		rpc(gsl::not_null<gsl::czstring<>> identifier, std::unique_ptr<signature> signature) :
+		rpc(gsl::not_null<gsl::czstring<>> identifier, std::unique_ptr<signature>&& signature) :
 			m_identifier {identifier},
 			m_signature {move(signature)}
 		{
@@ -370,7 +392,7 @@ namespace idlc {
 		projection(
 			gsl::not_null<gsl::czstring<>> identifier,
 			gsl::not_null<gsl::czstring<>> real_type,
-			std::vector<std::unique_ptr<field>> fields
+			std::vector<std::unique_ptr<field>>&& fields
 		) :
 			m_identifier {identifier},
 			m_real_type {real_type},
@@ -419,7 +441,7 @@ namespace idlc {
 	class module_item {
 	public:
 		template<typename type>
-		module_item(std::unique_ptr<type> obj) : m_variant {move(obj)}
+		module_item(std::unique_ptr<type>&& obj) : m_variant {move(obj)}
 		{
 			Expects(std::get<std::unique_ptr<type>>(m_variant) != nullptr);
 		}
@@ -449,7 +471,7 @@ namespace idlc {
 
 	class module {
 	public:
-		module(gsl::not_null<gsl::czstring<>> identifier, std::vector<std::unique_ptr<module_item>> items) :
+		module(gsl::not_null<gsl::czstring<>> identifier, std::vector<std::unique_ptr<module_item>>&& items) :
 			m_identifier {identifier},
 			m_items {move(items)}
 		{
@@ -490,7 +512,7 @@ namespace idlc {
 	class file_item {
 	public:
 		template<typename type>
-		file_item(std::unique_ptr<type> obj) : m_variant {move(obj)}
+		file_item(std::unique_ptr<type>&& obj) : m_variant {move(obj)}
 		{
 			Expects(std::get<std::unique_ptr<type>>(m_variant) != nullptr);
 		}
@@ -514,7 +536,7 @@ namespace idlc {
 
 	class file {
 	public:
-		file(std::vector<std::unique_ptr<file_item>> modules) : m_items {move(modules)}
+		file(std::vector<std::unique_ptr<file_item>>&& modules) : m_items {move(modules)}
 		{
 			for (const auto& m : m_items)
 				Expects(m != nullptr);
@@ -529,3 +551,5 @@ namespace idlc {
 		std::vector<std::unique_ptr<file_item>> m_items;
 	};
 }
+
+#endif

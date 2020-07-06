@@ -7,6 +7,7 @@
 
 #include <fstream>
 
+#include "dump.h"
 #include "../parser/parser.h"
 #include "../parser/ast.h"
 
@@ -14,363 +15,162 @@ namespace idlc
 {
 	// RPCs and RPC pointers, though different nodes, each have a signature, used to generate their marshaling info
 
-	std::ostream& tab_over(unsigned int level, std::ostream& os)
+	template<typename pass_type>
+	void visit(pass_type& pass, const file& file)
 	{
-		for (unsigned int i {0}; i < level; ++i)
-			os << "  ";
-
-		return os;
+		pass(file);
+		for (const auto& item : file.items()) {
+			visit(pass, *item);
+		}
 	}
 
-	void dump(const primitive_type& pt, std::ostream& os, unsigned int level)
+	template<typename pass_type>
+	void visit(pass_type& pass, const file_item& item)
 	{
-		tab_over(level, os) << "primitive_type (\n";
-		++level;
-
-		switch (pt.kind()) {
-		case primitive_type_kind::bool_k:
-			tab_over(level, os) << "kind: bool\n";
-			break;
-
-		case primitive_type_kind::char_k:
-			tab_over(level, os) << "kind: char\n";
-			break;
-
-		case primitive_type_kind::double_k:
-			tab_over(level, os) << "kind: double\n";
-			break;
-
-		case primitive_type_kind::float_k:
-			tab_over(level, os) << "kind: float\n";
-			break;
-
-		case primitive_type_kind::int_k:
-			tab_over(level, os) << "kind: int\n";
-			break;
-
-		case primitive_type_kind::long_k:
-			tab_over(level, os) << "kind: long\n";
-			break;
-
-		case primitive_type_kind::long_long_k:
-			tab_over(level, os) << "kind: long long\n";
-			break;
-
-		case primitive_type_kind::short_k:
-			tab_over(level, os) << "kind: short\n";
-			break;
-
-		case primitive_type_kind::unsigned_char_k:
-			tab_over(level, os) << "kind: unsigned char\n";
-			break;
-
-		case primitive_type_kind::unsigned_int_k:
-			tab_over(level, os) << "kind: unsigned int\n";
-			break;
-
-		case primitive_type_kind::unsigned_long_k:
-			tab_over(level, os) << "kind: unsigned long\n";
-			break;
-
-		case primitive_type_kind::unsigned_long_long_k:
-			tab_over(level, os) << "kind: usnigned long long\n";
-			break;
-
-		case primitive_type_kind::unsigned_short_k:
-			tab_over(level, os) << "kind: unsigned short\n";
-			break;
-		}
-
-		--level;
-		tab_over(level, os) << ")\n";
-	}
-
-	void dump(const field& field, std::ostream& os, unsigned int level);
-
-	void dump(const signature& sig, std::ostream& os, unsigned int level)
-	{
-		tab_over(level, os) << "signature (\n";
-		++level;
-
-		tab_over(level, os) << "return_field:\n";
-		dump(sig.return_field(), os, level + 1);
-
-		tab_over(level, os) << "arguments: [\n";
-		++level;
-
-		for (const auto& arg : sig.arguments()) {
-			dump(*arg, os, level);
-		}
-
-		--level;
-		tab_over(level, os) << "]\n";
-
-		--level;
-		tab_over(level, os) << ")\n";
-	}
-
-	void dump(const projection_type& pt, std::ostream& os, unsigned int level)
-	{
-		tab_over(level, os) << "projection_type (\n";
-		++level;
-
-		tab_over(level, os) << "identifier: " << pt.identifier() << "\n";
-
-		--level;
-		tab_over(level, os) << ")\n";
-	}
-
-	void dump(const copy_type& ct, std::ostream& os, unsigned int level)
-	{
-		tab_over(level, os) << "copy_type (\n";
-		++level;
-
-		switch (ct.kind()) {
-		case copy_type_kind::primitive:
-			tab_over(level, os) << "kind: primitive\n";
-			tab_over(level, os) << "value:\n";
-			dump(ct.get<copy_type_kind::primitive>(), os, level + 1);
-			break;
-
-		case copy_type_kind::projection:
-			tab_over(level, os) << "kind: projection\n";
-			tab_over(level, os) << "value:\n";
-			dump(ct.get<copy_type_kind::projection>(), os, level + 1);
-			break;
-		}
-
-		--level;
-		tab_over(level, os) << ")\n";
-	}
-
-	void dump(const type& type, std::ostream& os, unsigned int level)
-	{
-		tab_over(level, os) << "type (\n";
-		++level;
-
-		if (type.get_copy_type()) {
-			tab_over(level, os) << "copy_type:\n";
-			dump(*type.get_copy_type(), os, level + 1);
-		}
-		else {
-			tab_over(level, os) << "copy_type: null\n";
-		}
-
-		if (type.get_attributes()) {
-			tab_over(level, os) << "attributes:\n";
-			// TODO
-		}
-		else {
-			tab_over(level, os) << "attributes: null\n";
-		}
-
-		tab_over(level, os) << "stars: " << type.stars() << "\n";
-
-		--level;
-		tab_over(level, os) << ")\n";
-	}
-
-	void dump(const var_field& field, std::ostream& os, unsigned int level)
-	{
-		tab_over(level, os) << "var_field (\n";
-		++level;
-
-		if (field.identifier()) {
-			tab_over(level, os) << "identifier: " << field.identifier() << "\n";
-		}
-		else {
-			tab_over(level, os) << "identifier: null\n";
-		}
-
-		tab_over(level, os) << "type:\n";
-		dump(field.get_type(), os, level + 1);
-
-		--level;
-		tab_over(level, os) << ")\n";
-	}
-
-	void dump(const rpc_field& field, std::ostream& os, unsigned int level)
-	{
-		tab_over(level, os) << "rpc_field (\n";
-		++level;
-
-		if (field.identifier()) {
-			tab_over(level, os) << "identifier: " << field.identifier() << "\n";
-		}
-		else {
-			tab_over(level, os) << "identifier: null\n";
-		}
-
-		tab_over(level, os) << "signature:\n";
-		dump(field.get_signature(), os, level + 1);
-
-		--level;
-		tab_over(level, os) << ")\n";
-	}
-
-	void dump(const field& field, std::ostream& os, unsigned int level)
-	{
-		tab_over(level, os) << "field (\n";
-		++level;
-
-		switch (field.kind()) {
-		case field_kind::rpc:
-			tab_over(level, os) << "kind: rpc\n";
-			tab_over(level, os) << "value:\n";
-			dump(field.get<field_kind::rpc>(), os, level + 1);
-			break;
-
-		case field_kind::var:
-			tab_over(level, os) << "kind: var\n";
-			tab_over(level, os) << "value:\n";
-			dump(field.get<field_kind::var>(), os, level + 1);
-			break;
-		}
-
-		--level;
-		tab_over(level, os) << ")\n";
-	}
-
-	void dump_projection(const projection& proj, std::ostream& os, unsigned int level)
-	{
-		tab_over(level, os) << "projection (\n";
-		++level;
-
-		tab_over(level, os) << "identifier: " << proj.identifier() << "\n";
-		tab_over(level, os) << "real_type: " << proj.real_type() << "\n";
-		tab_over(level, os) << "items: [\n";
-
-		for (const auto& field : proj.fields()) {
-			dump(*field, os, level + 1);
-		}
-
-		tab_over(level, os) << "]\n";
-
-		--level;
-		tab_over(level, os) << ")\n";
-	}
-
-	void dump_rpc(const rpc& rpc, std::ostream& os, unsigned int level)
-	{
-		tab_over(level, os) << "rpc (\n";
-		++level;
-
-		tab_over(level, os) << "identifier: " << rpc.identifier() << "\n";
-		tab_over(level, os) << "signature:\n";
-		dump(rpc.get_signature(), os, level + 1);
-
-		--level;
-		tab_over(level, os) << ")\n";
-	}
-
-	void dump(const require& req, std::ostream& os, unsigned int level)
-	{
-		tab_over(level, os) << "require (\n";
-		++level;
-
-		tab_over(level, os) << "identifier: " << req.identifier() << "\n";
-
-		--level;
-		tab_over(level, os) << ")\n";
-	}
-
-	void dump(const module_item& item, std::ostream& os, unsigned int level)
-	{
-		tab_over(level, os) << "module_item (\n";
-		++level;
-
 		switch (item.kind()) {
-		case module_item_kind::projection:
-			tab_over(level, os) << "kind: projection\n";
-			tab_over(level, os) << "value:\n";
-			dump_projection(item.get<module_item_kind::projection>(), os, level + 1);
-			break;
-
-		case module_item_kind::rpc:
-			tab_over(level, os) << "kind: rpc\n";
-			tab_over(level, os) << "value:\n";
-			dump_rpc(item.get<module_item_kind::rpc>(), os, level + 1);
-			break;
-
-		case module_item_kind::require:
-			tab_over(level, os) << "kind: require\n";
-			tab_over(level, os) << "value:\n";
-			dump(item.get<module_item_kind::require>(), os, level + 1);
-			break;
-		}
-
-		--level;
-		tab_over(level, os) << ")\n";
-	}
-
-	void dump(const module& mod, std::ostream& os, unsigned int level)
-	{
-		tab_over(level, os) << "module (\n";
-		++level;
-
-		tab_over(level, os) << "identifier: " << mod.identifier() << "\n";
-		tab_over(level, os) << "items: [\n";
-
-		for (const auto& item : mod.items()) {
-			dump(*item, os, level + 1);
-		}
-
-		tab_over(level, os) << "]\n";
-
-		--level;
-		tab_over(level, os) << ")\n";
-	}
-
-	void dump(const include& inc, std::ostream& os, unsigned int level)
-	{
-		tab_over(level, os) << "include (\n";
-		++level;
-
-		tab_over(level, os) << "path: " << inc.path() << "\n";
-
-		--level;
-		tab_over(level, os) << ")\n";
-	}
-
-	void dump(const file_item& fi, std::ostream& os, unsigned int level)
-	{
-		tab_over(level, os) << "file_item (\n";
-		++level;
-
-		switch (fi.kind()) {
 		case file_item_kind::include:
-			tab_over(level, os) << "kind: include\n";
-			tab_over(level, os) << "_value:\n";
-			dump(fi.get<file_item_kind::include>(), os, level + 1);
+			visit(pass, item.get<file_item_kind::include>());
 			break;
 
 		case file_item_kind::module:
-			tab_over(level, os) << "kind: module\n";
-			tab_over(level, os) << "_value:\n";
-			dump(fi.get<file_item_kind::module>(), os, level + 1);
+			visit(pass, item.get<file_item_kind::module>());
 			break;
 		}
-
-		--level;
-		tab_over(level, os) << ")\n";
 	}
 
-	void dump(const file& file, std::ostream& os, unsigned int level = 0)
+	template<typename pass_type>
+	void visit(pass_type& pass, const include& include)
 	{
-		tab_over(level, os) << "file (\n";
-		++level;
+		pass(include);
+	}
 
-		tab_over(level, os) << "items: [\n";
+	template<typename pass_type>
+	void visit(pass_type& pass, const module& module)
+	{
+		pass(module);
+		for (const auto& item : module.items()) {
+			visit(pass, *item);
+		}
+	}
+	
+	// Is there really a use case for this one?
+	// What we're really interested in is the content of the variant, after all
 
-		for (const auto& i : file.items()) {
-			dump(*i, os, level + 1);
+	template<typename pass_type>
+	void visit(pass_type& pass, const module_item& item)
+	{
+		switch (item.kind()) {
+		case module_item_kind::projection:
+			visit(pass, item.get<module_item_kind::projection>());
+			break;
+
+		case module_item_kind::rpc:
+			visit(pass, item.get<module_item_kind::rpc>());
+			break;
+
+		case module_item_kind::require:
+			visit(pass, item.get<module_item_kind::require>());
+			break;
+		}
+	}
+
+	template<typename pass_type>
+	void visit(pass_type& pass, const projection& projection)
+	{
+		pass(projection);
+	}
+
+	template<typename pass_type>
+	void visit(pass_type& pass, const rpc& rpc)
+	{
+		pass(rpc);
+	}
+
+	template<typename pass_type>
+	void visit(pass_type& pass, const require& require)
+	{
+		pass(require);
+	}
+
+	class type_map {
+	public:
+		const projection* get(gsl::czstring<> identifier) const
+		{
+			const auto first = begin(m_keys);
+			const auto last = end(m_keys);
+			const auto find_it = std::find(first, last, identifier);
+
+			if (find_it == last) {
+				return nullptr;
+			}
+			else {
+				return m_types.at(std::distance(first, find_it));
+			}
 		}
 
-		tab_over(level, os) << "]\n";
+		// Returns false if we're trying to add an existing type
+		bool insert(const projection& projection)
+		{
+			const auto identifier = projection.identifier();
+			const auto last = end(m_keys);
+			const auto find_it = std::find(begin(m_keys), last, identifier);
 
-		--level;
-		tab_over(level, os) << ")\n";
-	}
+			if (find_it == last) {
+				m_keys.push_back(identifier);
+				m_types.push_back(&projection);
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
+
+		void debug_dump()
+		{
+			for (const auto id : m_keys) {
+				std::cout << id << "\n";
+			}
+		}
+
+	private:
+		std::vector<gsl::czstring<>> m_keys;
+		std::vector<const projection*> m_types;
+	};
+
+	class type_collection_pass {
+	public:
+		type_collection_pass(type_map& types) : m_types {&types}
+		{
+		}
+
+		void operator()(const file& file)
+		{
+		}
+
+		void operator()(const include& include)
+		{
+		}
+
+		void operator()(const module& module)
+		{
+		}
+
+		void operator()(const projection& projection)
+		{
+			m_types->insert(projection);
+		}
+
+		void operator()(const rpc& rpc)
+		{
+		}
+
+		void operator()(const require& require)
+		{
+		}
+
+	private:
+		type_map* m_types;
+	};
 }
 
 
@@ -382,7 +182,8 @@ int main(int argc, gsl::czstring<>* argv) {
 	}
 
 	try {
-		const auto top_node = std::unique_ptr<idlc::file> {(idlc::file*)Parser::parse(std::string(args[1]))};
+		const auto top_node = std::unique_ptr<idlc::file> {(idlc::file*)Parser::parse(std::string {args[1]})};
+		const auto& file = *top_node;
 
 		/*for (const auto& m : top_node->modules()) {
 			std::cout << "module " << m->identifier() << "\n";
@@ -397,11 +198,21 @@ int main(int argc, gsl::czstring<>* argv) {
 			idlc::dump(*top_node, dump);
 		}
 
+		std::cout << "Collecting types\n";
+		idlc::type_map types;
+		idlc::type_collection_pass tc_pass {types};
+		visit(tc_pass, file);
+		types.debug_dump();
+
 		return 0;
 	}
 	catch (const Parser::ParseException& e) {
 		std::cerr << "\n\nALERT!!! - Caught parser exception" << std::endl;
 		std::cerr << e.getReason() << std::endl;
-		exit(0);
+		return 1;
+	}
+	catch (const std::exception& e) {
+		std::cout << "Compilation failed\n";
+		return 1;
 	}
 }
