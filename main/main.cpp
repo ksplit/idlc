@@ -7,16 +7,16 @@
 
 #include <fstream>
 
+#include "type_map.h"
 #include "dump.h"
 #include "../parser/parser.h"
-#include "../parser/ast.h"
 
 namespace idlc
 {
 	// RPCs and RPC pointers, though different nodes, each have a signature, used to generate their marshaling info
 
 	template<typename pass_type>
-	void visit(pass_type& pass, const file& file)
+	void visit(pass_type& pass, file& file)
 	{
 		pass(file);
 		for (const auto& item : file.items()) {
@@ -25,7 +25,7 @@ namespace idlc
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, const file_item& item)
+	void visit(pass_type& pass, file_item& item)
 	{
 		switch (item.kind()) {
 		case file_item_kind::include:
@@ -39,13 +39,13 @@ namespace idlc
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, const include& include)
+	void visit(pass_type& pass, include& include)
 	{
 		pass(include);
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, const module& module)
+	void visit(pass_type& pass, module& module)
 	{
 		pass(module);
 		for (const auto& item : module.items()) {
@@ -57,7 +57,7 @@ namespace idlc
 	// What we're really interested in is the content of the variant, after all
 
 	template<typename pass_type>
-	void visit(pass_type& pass, const module_item& item)
+	void visit(pass_type& pass, module_item& item)
 	{
 		switch (item.kind()) {
 		case module_item_kind::projection:
@@ -75,97 +75,130 @@ namespace idlc
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, const projection& projection)
+	void visit(pass_type& pass, projection& projection)
 	{
 		pass(projection);
+		for (const auto& field : projection.fields()) {
+			visit(pass, *field);
+		}
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, const rpc& rpc)
+	void visit(pass_type& pass, field& field)
+	{
+		switch (field.kind()) {
+		case field_kind::var:
+			visit(pass, field.get<field_kind::var>());
+			break;
+
+		case field_kind::rpc:
+			// TODO
+			break;
+		}
+	}
+
+	template<typename pass_type>
+	void visit(pass_type& pass, var_field& field)
+	{
+		pass(field);
+		visit(pass, field.get_type());
+	}
+
+	template<typename pass_type>
+	void visit(pass_type& pass, type& type)
+	{
+		pass(type);
+		if (type.get_copy_type()) {
+			visit(pass, *type.get_copy_type());
+		}
+	}
+
+	template<typename pass_type>
+	void visit(pass_type& pass, copy_type& type)
+	{
+		switch (type.kind()) {
+		case copy_type_kind::projection:
+			visit(pass, type.get<copy_type_kind::projection>());
+			break;
+
+		case copy_type_kind::primitive:
+			// TODO
+			break;
+		}
+	}
+
+	template<typename pass_type>
+	void visit(pass_type& pass, projection_type& type)
+	{
+		pass(type);
+	}
+
+	template<typename pass_type>
+	void visit(pass_type& pass, rpc& rpc)
 	{
 		pass(rpc);
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, const require& require)
+	void visit(pass_type& pass, require& require)
 	{
 		pass(require);
 	}
 
-	class type_map {
-	public:
-		const projection* get(gsl::czstring<> identifier) const
-		{
-			const auto first = begin(m_keys);
-			const auto last = end(m_keys);
-			const auto find_it = std::find(first, last, identifier);
-
-			if (find_it == last) {
-				return nullptr;
-			}
-			else {
-				return m_types.at(std::distance(first, find_it));
-			}
-		}
-
-		// Returns false if we're trying to add an existing type
-		bool insert(const projection& projection)
-		{
-			const auto identifier = projection.identifier();
-			const auto last = end(m_keys);
-			const auto find_it = std::find(begin(m_keys), last, identifier);
-
-			if (find_it == last) {
-				m_keys.push_back(identifier);
-				m_types.push_back(&projection);
-				return true;
-			}
-			else {
-				return false;
-			}
-		}
-
-		void debug_dump()
-		{
-			for (const auto id : m_keys) {
-				std::cout << id << "\n";
-			}
-		}
-
-	private:
-		std::vector<gsl::czstring<>> m_keys;
-		std::vector<const projection*> m_types;
-	};
-
 	class type_collection_pass {
 	public:
-		type_collection_pass(type_map& types) : m_types {&types}
-		{
-		}
+		void operator()(const file& file) {}
+		void operator()(const include& include) {}
+		void operator()(const rpc& rpc) {}
+		void operator()(const require& require) {}
+		void operator()(const var_field& field) {}
+		void operator()(const projection_type& proj) {}
+		void operator()(const type& ty) {}
 
-		void operator()(const file& file)
+		void operator()(module& module)
 		{
-		}
-
-		void operator()(const include& include)
-		{
-		}
-
-		void operator()(const module& module)
-		{
+			m_types = &module.types;
 		}
 
 		void operator()(const projection& projection)
 		{
-			m_types->insert(projection);
+			if (!m_types->insert(projection)) {
+				std::cout << "Encountered projection redefinition: " << projection.identifier() << "\n";
+				throw std::exception {};
+			}
 		}
 
-		void operator()(const rpc& rpc)
+	private:
+		type_map* m_types;
+	};
+
+	// TODO: would be nice to have an error context
+	// NOTE: I don't think exceptions are terribly appropriate for this
+
+	class type_resolve_pass {
+	public:
+		void operator()(const file& file) {}
+		void operator()(const include& include) {}
+		void operator()(const rpc& rpc) {}
+		void operator()(const require& require) {}
+		void operator()(const projection& projection) {}
+		void operator()(const var_field& field) {}
+		void operator()(const type& ty) {}
+
+		void operator()(module& module)
 		{
+			m_types = &module.types;
 		}
 
-		void operator()(const require& require)
+		void operator()(projection_type& proj)
 		{
+			const projection* def {m_types->get(proj.identifier())};
+			if (def) {
+				proj.definition(def);
+			}
+			else {
+				std::cout << "Could not resolve projection: " << proj.identifier() << "\n";
+			}
 		}
 
 	private:
@@ -182,13 +215,8 @@ int main(int argc, gsl::czstring<>* argv) {
 	}
 
 	try {
-		const auto top_node = std::unique_ptr<idlc::file> {(idlc::file*)Parser::parse(std::string {args[1]})};
-		const auto& file = *top_node;
-
-		/*for (const auto& m : top_node->modules()) {
-			std::cout << "module " << m->identifier() << "\n";
-			idlc::walk_items(m->items());
-		}*/
+		auto top_node = std::unique_ptr<idlc::file> {(idlc::file*)Parser::parse(std::string {args[1]})};
+		auto& file = *top_node;
 
 		std::cout << "IDL file OK\n";
 
@@ -199,10 +227,12 @@ int main(int argc, gsl::czstring<>* argv) {
 		}
 
 		std::cout << "Collecting types\n";
-		idlc::type_map types;
-		idlc::type_collection_pass tc_pass {types};
+		idlc::type_collection_pass tc_pass;
 		visit(tc_pass, file);
-		types.debug_dump();
+
+		std::cout << "Resolving types\n";
+		idlc::type_resolve_pass tr_pass;
+		visit(tr_pass, file);
 
 		return 0;
 	}
@@ -211,7 +241,7 @@ int main(int argc, gsl::czstring<>* argv) {
 		std::cerr << e.getReason() << std::endl;
 		return 1;
 	}
-	catch (const std::exception& e) {
+	catch (const std::exception&) {
 		std::cout << "Compilation failed\n";
 		return 1;
 	}

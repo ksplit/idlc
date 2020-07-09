@@ -19,6 +19,8 @@ namespace std {
 #include <filesystem>
 #endif
 
+#include "../main/type_map.h"
+
 namespace idlc {
 	class string_heap {
 	public:
@@ -161,15 +163,15 @@ namespace idlc {
 			return *m_definition;
 		}
 
-		void definition(std::unique_ptr<projection> proj)
+		void definition(const projection* proj)
 		{
 			Expects(proj != nullptr);
-			m_definition = std::move(proj);
+			m_definition = proj;
 		}
 
 	private:
 		gsl::czstring<> m_identifier;
-		std::unique_ptr<projection> m_definition;
+		const projection* m_definition;
 	};
 
 	enum class copy_type_kind {
@@ -207,6 +209,12 @@ namespace idlc {
 			return *std::get<static_cast<std::size_t>(kind)>(m_variant);
 		}
 
+		template<copy_type_kind kind>
+		auto& get()
+		{
+			return *std::get<static_cast<std::size_t>(kind)>(m_variant);
+		}
+
 	private:
 		std::variant<
 			std::unique_ptr<primitive_type>,
@@ -231,7 +239,17 @@ namespace idlc {
 			return m_copy_type.get();
 		}
 
+		copy_type* get_copy_type()
+		{
+			return m_copy_type.get();
+		}
+
 		const attributes* get_attributes() const
+		{
+			return m_attributes.get();
+		}
+
+		attributes* get_attributes()
 		{
 			return m_attributes.get();
 		}
@@ -269,6 +287,11 @@ namespace idlc {
 			return *m_type;
 		}
 
+		type& get_type()
+		{
+			return *m_type;
+		}
+
 	private:
 		gsl::czstring<> m_identifier;
 		std::unique_ptr<class type> m_type;
@@ -291,6 +314,11 @@ namespace idlc {
 		}
 
 		const signature& get_signature() const
+		{
+			return *m_signature;
+		}
+
+		signature& get_signature()
 		{
 			return *m_signature;
 		}
@@ -325,6 +353,12 @@ namespace idlc {
 			return *std::get<static_cast<std::size_t>(kind)>(m_variant);
 		}
 
+		template<field_kind kind>
+		auto& get()
+		{
+			return *std::get<static_cast<std::size_t>(kind)>(m_variant);
+		}
+
 	private:
 		std::variant<
 			std::unique_ptr<var_field>,
@@ -347,7 +381,17 @@ namespace idlc {
 			return *m_return_field;
 		}
 
+		field& return_field()
+		{
+			return *m_return_field;
+		}
+
 		gsl::span<const std::unique_ptr<field>> arguments() const
+		{
+			return m_arguments;
+		}
+
+		gsl::span<std::unique_ptr<field>> arguments()
 		{
 			return m_arguments;
 		}
@@ -378,6 +422,11 @@ namespace idlc {
 		}
 
 		const signature& get_signature() const
+		{
+			return *m_signature;
+		}
+
+		signature& get_signature()
 		{
 			return *m_signature;
 		}
@@ -413,6 +462,11 @@ namespace idlc {
 		}
 
 		gsl::span<const std::unique_ptr<field>> fields() const
+		{
+			return m_fields;
+		}
+
+		gsl::span<std::unique_ptr<field>> fields()
 		{
 			return m_fields;
 		}
@@ -457,6 +511,12 @@ namespace idlc {
 			return *std::get<static_cast<std::size_t>(kind)>(m_variant).get();
 		}
 
+		template<module_item_kind kind>
+		auto& get()
+		{
+			return *std::get<static_cast<std::size_t>(kind)>(m_variant).get();
+		}
+
 	private:
 		std::variant<
 			std::unique_ptr<rpc>,
@@ -471,6 +531,9 @@ namespace idlc {
 
 	class module {
 	public:
+		// May seem strange to "leave this out", but the contents are entirely up to the compiler passes
+		type_map types;
+
 		module(gsl::not_null<gsl::czstring<>> identifier, std::vector<std::unique_ptr<module_item>>&& items) :
 			m_identifier {identifier},
 			m_items {move(items)}
@@ -485,6 +548,11 @@ namespace idlc {
 		}
 
 		gsl::span<const std::unique_ptr<module_item>> items() const
+		{
+			return m_items;
+		}
+
+		gsl::span<std::unique_ptr<module_item>> items()
 		{
 			return m_items;
 		}
@@ -528,6 +596,12 @@ namespace idlc {
 			return *std::get<static_cast<std::size_t>(kind)>(m_variant).get();
 		}
 
+		template<file_item_kind kind>
+		auto& get()
+		{
+			return *std::get<static_cast<std::size_t>(kind)>(m_variant).get();
+		}
+
 	private:
 		std::variant<
 			std::unique_ptr<include>,
@@ -543,6 +617,11 @@ namespace idlc {
 		}
 
 		gsl::span<const std::unique_ptr<file_item>> items() const
+		{
+			return m_items;
+		}
+
+		gsl::span<std::unique_ptr<file_item>> items()
 		{
 			return m_items;
 		}
