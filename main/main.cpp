@@ -10,6 +10,7 @@
 #include "node_map.h"
 #include "dump.h"
 #include "visit.h"
+#include "generic_pass.h"
 #include "../parser/parser.h"
 
 namespace fs = std::filesystem;
@@ -18,26 +19,16 @@ namespace idlc
 {
 	// RPCs and RPC pointers, though different nodes, each have a signature, used to generate their marshaling info
 
-	class type_collection_pass {
+	class type_collection_pass : public generic_pass<type_collection_pass> {
 	public:
-		void operator()(const file& file) noexcept {}
-		void operator()(const include& include) noexcept {}
-		void operator()(const rpc& rpc) noexcept {}
-		void operator()(const require& require) noexcept {}
-		void operator()(const var_field& field) noexcept {}
-		void operator()(const rpc_field& field) noexcept {}
-		void operator()(const projection_type& proj) noexcept {}
-		void operator()(const primitive_type& prim) noexcept {}
-		void operator()(const type& ty) noexcept {}
-		void operator()(const signature& sig) noexcept {}
-		void operator()(const attributes& attribs) noexcept {}
-
-		void operator()(module& module) noexcept
+		[[gsl::suppress(c.128)]]
+		void visit_module(module& module) noexcept
 		{
 			m_types = &module.types;
 		}
 
-		void operator()(const projection& projection)
+		[[gsl::suppress(c.128)]]
+		void visit_projection(const projection& projection)
 		{
 			if (!m_types->insert(projection)) {
 				std::cout << "Encountered projection redefinition: " << projection.identifier() << "\n";
@@ -52,26 +43,16 @@ namespace idlc
 	// TODO: would be nice to have an error context
 	// NOTE: I don't think exceptions are terribly appropriate for this
 
-	class type_resolve_pass {
+	class type_resolve_pass : public generic_pass<type_resolve_pass> {
 	public:
-		void operator()(const file& file) noexcept {}
-		void operator()(const include& include) noexcept {}
-		void operator()(const rpc& rpc) noexcept {}
-		void operator()(const require& require) noexcept {}
-		void operator()(const primitive_type& prim) noexcept {}
-		void operator()(const var_field& field) noexcept {}
-		void operator()(const rpc_field& field) noexcept {}
-		void operator()(const type& ty) noexcept {}
-		void operator()(const signature& sig) noexcept {}
-		void operator()(const attributes& attribs) noexcept {}
-		void operator()(const projection& projection) noexcept {}
-
-		void operator()(module& module) noexcept
+		[[gsl::suppress(c.128)]]
+		void visit_module(module& module) noexcept
 		{
 			m_types = &module.types;
 		}
 
-		void operator()(projection_type& proj)
+		[[gsl::suppress(c.128)]]
+		void visit_projection_type(projection_type& proj)
 		{
 			const projection* def {m_types->get(proj.identifier())};
 			if (def) {
@@ -87,26 +68,14 @@ namespace idlc
 		node_map<const projection>* m_types;
 	};
 
-	class module_collection_pass {
+	class module_collection_pass : public generic_pass<module_collection_pass> {
 	public:
 		module_collection_pass(node_map<module>& modules) noexcept : m_modules {&modules}
 		{
 		}
 
-		void operator()(const include& include) noexcept {}
-		void operator()(const rpc& rpc) noexcept {}
-		void operator()(const require& require) noexcept {}
-		void operator()(const projection& projection) noexcept {}
-		void operator()(const primitive_type& prim) noexcept {}
-		void operator()(const var_field& field) noexcept {}
-		void operator()(const rpc_field& field) noexcept {}
-		void operator()(const type& ty) noexcept {}
-		void operator()(const signature& sig) noexcept {}
-		void operator()(const attributes& attribs) noexcept {}
-		void operator()(const projection_type& proj) noexcept {}
-		void operator()(const file& file) noexcept {}
-
-		void operator()(module& module)
+		[[gsl::suppress(c.128)]]
+		void visit_module(module& module)
 		{
 			if (!m_modules->insert(module)) {
 				std::cout << "Error: encountered module redefinition: " << module.identifier() << "\n";
@@ -118,7 +87,7 @@ namespace idlc
 		node_map<module>* m_modules;
 	};
 
-	class include_file_pass {
+	class include_file_pass : public generic_pass<include_file_pass> {
 	public:
 		include_file_pass(const fs::path& relative_to) :
 			m_relative_to {relative_to},
@@ -126,26 +95,16 @@ namespace idlc
 		{
 		}
 
-		void operator()(const rpc& rpc) noexcept {}
-		void operator()(const require& require) noexcept {}
-		void operator()(const projection& projection) noexcept {}
-		void operator()(const primitive_type& prim) noexcept {}
-		void operator()(const var_field& field) noexcept {}
-		void operator()(const rpc_field& field) noexcept {}
-		void operator()(const type& ty) noexcept {}
-		void operator()(const signature& sig) noexcept {}
-		void operator()(const attributes& attribs) noexcept {}
-		void operator()(const projection_type& proj) noexcept {}
-		void operator()(const module& module) noexcept {}
-
-		void operator()(file& file) noexcept
+		[[gsl::suppress(c.128)]]
+		void visit_file(file& file) noexcept
 		{
 			m_modules = &file.included_modules;
 		}
 
 		// These are for the analysis tool
 		[[gsl::suppress(type.3)]]
-		void operator()(include& include)
+		[[gsl::suppress(c.128)]]
+		void visit_include(include& include)
 		{
 			const fs::path path {m_relative_to / include.path()};
 			if (!fs::exists(path)) {
@@ -170,31 +129,23 @@ namespace idlc
 		node_map<module>* m_modules;
 	};
 
-	class verify_driver_idl_pass {
+	class verify_driver_idl_pass : public generic_pass<verify_driver_idl_pass> {
 	public:
-		void operator()(const require& require) noexcept {}
-		void operator()(const primitive_type& prim) noexcept {}
-		void operator()(const var_field& field) noexcept {}
-		void operator()(const rpc_field& field) noexcept {}
-		void operator()(const type& ty) noexcept {}
-		void operator()(const signature& sig) noexcept {}
-		void operator()(const attributes& attribs) noexcept {}
-		void operator()(const projection_type& proj) noexcept {}
-		void operator()(const file& file) noexcept {}
-		void operator()(const include& include) noexcept {}
-
-		void operator()(const rpc& rpc)
+		[[gsl::suppress(c.128)]]
+		void visit_rpc(const rpc& rpc)
 		{
 			std::cout << "Error: rpc definition " << rpc.identifier() << " illegal in driver module\n";
 			throw std::exception {};
 		}
 
-		void operator()(const projection& projection) {
+		[[gsl::suppress(c.128)]]
+		void visit_projection(const projection& projection) {
 			std::cout << "Error: projection definition " << projection.identifier() << " illegal in driver module\n";
 			throw std::exception {};
 		}
 
-		void operator()(const module& module)
+		[[gsl::suppress(c.128)]]
+		void visit_module(const module& module)
 		{
 			if (is_module_found) {
 				std::cout << "Error: driver definition IDL may only define the driver module\n";
@@ -208,26 +159,16 @@ namespace idlc
 		bool is_module_found {false};
 	};
 
-	class module_resolve_pass {
+	class module_resolve_pass : public generic_pass<module_resolve_pass> {
 	public:
-		void operator()(const include& include) noexcept {}
-		void operator()(const rpc& rpc) noexcept {}
-		void operator()(const projection& projection) noexcept {}
-		void operator()(const primitive_type& prim) noexcept {}
-		void operator()(const var_field& field) noexcept {}
-		void operator()(const rpc_field& field) noexcept {}
-		void operator()(const type& ty) noexcept {}
-		void operator()(const signature& sig) noexcept {}
-		void operator()(const attributes& attribs) noexcept {}
-		void operator()(const projection_type& proj) noexcept {}
-		void operator()(const module& module) noexcept {}
-
-		void operator()(const file& file) noexcept
+		[[gsl::suppress(c.128)]]
+		void visit_file(const file& file) noexcept
 		{
 			m_modules = &file.included_modules;
 		}
 
-		void operator()(const require& require)
+		[[gsl::suppress(c.128)]]
+		void visit_require(const require& require)
 		{
 			module* const ptr {m_modules->get(require.identifier())};
 			if (!ptr) {
@@ -259,6 +200,7 @@ int main(int argc, gsl::czstring<>* argv) {
 	}
 
 	try {
+
 		auto top_node = std::unique_ptr<idlc::file> {
 			const_cast<idlc::file*>(
 				static_cast<const idlc::file*>(

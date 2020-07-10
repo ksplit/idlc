@@ -55,7 +55,7 @@ protected:
     int value;
 };
 
-/* An interface/base class for the visitor pattern */
+/* An interface/generic_pass class for the visitor pattern */
 class Visitor{
 public:
     Visitor();
