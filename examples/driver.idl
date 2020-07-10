@@ -1,5 +1,5 @@
-include <kernel.idl>
+include <../examples/kernel.idl>
 
-module test {
+module dummy_driver {
   require kernel_nullnet;
 }

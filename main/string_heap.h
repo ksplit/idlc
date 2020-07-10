@@ -9,8 +9,9 @@
 namespace idlc {
 	class string_heap {
 	public:
-		string_heap()
+		string_heap() noexcept
 		{
+			[[gsl::suppress(f.6)]]
 			m_blocks.emplace_back(std::make_unique<block>());
 		}
 

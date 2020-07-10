@@ -40,7 +40,7 @@ namespace idlc {
 		unsigned_long_long_k
 	};
 
-	inline primitive_type_kind to_unsigned(primitive_type_kind kind)
+	inline primitive_type_kind to_unsigned(primitive_type_kind kind) noexcept
 	{
 		switch (kind) {
 		case primitive_type_kind::char_k:
@@ -72,11 +72,11 @@ namespace idlc {
 
 	class primitive_type {
 	public:
-		primitive_type(primitive_type_kind kind) : m_kind {kind}
+		primitive_type(primitive_type_kind kind) noexcept : m_kind {kind}
 		{
 		}
 
-		primitive_type_kind kind() const
+		primitive_type_kind kind() const noexcept
 		{
 			return m_kind;
 		}
@@ -89,22 +89,24 @@ namespace idlc {
 
 	class projection_type {
 	public:
-		projection_type(gsl::not_null<gsl::czstring<>> identifier) : m_identifier {identifier}
+		projection_type(gsl::not_null<gsl::czstring<>> identifier) noexcept :
+			m_identifier {identifier},
+			m_definition {nullptr}
 		{
 		}
 
-		gsl::czstring<> identifier() const
+		gsl::czstring<> identifier() const noexcept
 		{
 			return m_identifier;
 		}
 
-		const projection& definition() const
+		const projection& definition() const noexcept
 		{
 			Expects(m_definition != nullptr);
 			return *m_definition;
 		}
 
-		void definition(const projection* proj)
+		void definition(const projection* proj) noexcept
 		{
 			Expects(proj != nullptr);
 			m_definition = proj;
@@ -139,7 +141,7 @@ namespace idlc {
 			Expects(std::get<std::unique_ptr<type>>(m_variant) != nullptr);
 		}
 
-		auto kind() const
+		auto kind() const noexcept
 		{
 			return gsl::narrow_cast<copy_type_kind>(m_variant.index());
 		}
@@ -196,19 +198,19 @@ namespace idlc {
 		attribute_type attribute;
 	};
 
-	inline bool operator==(compact_attribute a, compact_attribute b)
+	inline bool operator==(compact_attribute a, compact_attribute b) noexcept
 	{
 		return a.share_op_side == b.share_op_side && a.attribute == b.attribute;
 	}
 
-	inline void* to_void_ptr(compact_attribute v)
+	inline void* to_void_ptr(compact_attribute v) noexcept
 	{
 		void* tmp;
 		std::memcpy(&tmp, &v, sizeof(v));
 		return tmp;
 	}
 
-	inline compact_attribute from_void_ptr(const void* ptr)
+	inline compact_attribute from_void_ptr(const void* ptr) noexcept
 	{
 		compact_attribute v;
 		std::memcpy(&v, &ptr, sizeof(v));
@@ -232,17 +234,17 @@ namespace idlc {
 			}
 		}
 
-		copy_direction get_value_copy_direction() const
+		copy_direction get_value_copy_direction() const noexcept
 		{
 			return static_cast<copy_direction>(m_value_copy);
 		}
 
-		rpc_side get_sharing_op_side() const
+		rpc_side get_sharing_op_side() const noexcept
 		{
 			return m_share_op_side;
 		}
 
-		sharing_op get_sharing_op() const
+		sharing_op get_sharing_op() const noexcept
 		{
 			return m_share_op;
 		}
@@ -270,7 +272,7 @@ namespace idlc {
 			return true;
 		}
 		
-		void update_value_copy(rpc_side side)
+		void update_value_copy(rpc_side side) noexcept
 		{
 			switch (side) {
 			case rpc_side::caller:
@@ -311,34 +313,34 @@ namespace idlc {
 
 	class type {
 	public:
-		type(std::unique_ptr<copy_type>&& copy_type, std::unique_ptr<attributes>&& attributes, unsigned int stars) :
+		type(std::unique_ptr<copy_type>&& copy_type, std::unique_ptr<attributes>&& attributes, unsigned int stars) noexcept :
 			m_copy_type {move(copy_type)},
 			m_attributes {move(attributes)},
 			m_stars {stars}
 		{
 		}
 
-		const copy_type* get_copy_type() const
+		const copy_type* get_copy_type() const noexcept
 		{
 			return m_copy_type.get();
 		}
 
-		copy_type* get_copy_type()
+		copy_type* get_copy_type() noexcept
 		{
 			return m_copy_type.get();
 		}
 
-		const attributes* get_attributes() const
+		const attributes* get_attributes() const noexcept
 		{
 			return m_attributes.get();
 		}
 
-		attributes* get_attributes()
+		attributes* get_attributes() noexcept
 		{
 			return m_attributes.get();
 		}
 
-		unsigned int stars() const
+		unsigned int stars() const noexcept
 		{
 			return m_stars;
 		}
@@ -354,24 +356,24 @@ namespace idlc {
 
 	class var_field {
 	public:
-		var_field(gsl::czstring<> identifier, std::unique_ptr<type>&& type) :
+		var_field(gsl::czstring<> identifier, std::unique_ptr<type>&& type) noexcept :
 			m_identifier {identifier},
 			m_type {move(type)}
 		{
 			Expects(m_type);
 		}
 
-		gsl::czstring<> identifier() const
+		gsl::czstring<> identifier() const noexcept
 		{
 			return m_identifier;
 		}
 
-		const type& get_type() const
+		const type& get_type() const noexcept
 		{
 			return *m_type;
 		}
 
-		type& get_type()
+		type& get_type() noexcept
 		{
 			return *m_type;
 		}
@@ -385,7 +387,7 @@ namespace idlc {
 
 	class rpc_field {
 	public:
-		rpc_field(gsl::czstring<> identifier, std::unique_ptr<signature>&& sig, std::unique_ptr<attributes>&& attrs) :
+		rpc_field(gsl::czstring<> identifier, std::unique_ptr<signature>&& sig, std::unique_ptr<attributes>&& attrs) noexcept :
 			m_identifier {identifier},
 			m_signature {move(sig)},
 			m_attributes {move(attrs)}
@@ -393,27 +395,27 @@ namespace idlc {
 			Expects(m_signature != nullptr);
 		}
 
-		gsl::czstring<> identifier() const
+		gsl::czstring<> identifier() const noexcept
 		{
 			return m_identifier;
 		}
 
-		const signature& get_signature() const
+		const signature& get_signature() const noexcept
 		{
 			return *m_signature;
 		}
 
-		signature& get_signature()
+		signature& get_signature() noexcept
 		{
 			return *m_signature;
 		}
 
-		const attributes* get_attributes() const
+		const attributes* get_attributes() const noexcept
 		{
 			return m_attributes.get();
 		}
 
-		attributes* get_attributes()
+		attributes* get_attributes() noexcept
 		{
 			return m_attributes.get();
 		}
@@ -438,7 +440,7 @@ namespace idlc {
 			Expects(std::get<std::unique_ptr<type>>(m_variant) != nullptr);
 		}
 
-		auto kind() const
+		auto kind() const noexcept
 		{
 			return gsl::narrow_cast<field_kind>(m_variant.index());
 		}
@@ -463,7 +465,7 @@ namespace idlc {
 
 	class signature {
 	public:
-		signature(std::unique_ptr<field>&& return_field, std::vector<std::unique_ptr<field>>&& arg_fields) :
+		signature(std::unique_ptr<field>&& return_field, std::vector<std::unique_ptr<field>>&& arg_fields) noexcept :
 			m_return_field {move(return_field)},
 			m_arguments {move(arg_fields)}
 		{
@@ -472,22 +474,22 @@ namespace idlc {
 				Expects(arg != nullptr);
 		}
 
-		const field& return_field() const
+		const field& return_field() const noexcept
 		{
 			return *m_return_field;
 		}
 
-		field& return_field()
+		field& return_field() noexcept
 		{
 			return *m_return_field;
 		}
 
-		gsl::span<const std::unique_ptr<field>> arguments() const
+		gsl::span<const std::unique_ptr<field>> arguments() const noexcept
 		{
 			return m_arguments;
 		}
 
-		gsl::span<std::unique_ptr<field>> arguments()
+		gsl::span<std::unique_ptr<field>> arguments() noexcept
 		{
 			return m_arguments;
 		}
@@ -512,17 +514,17 @@ namespace idlc {
 			Expects(m_signature != nullptr);
 		}
 
-		gsl::czstring<> identifier() const
+		gsl::czstring<> identifier() const noexcept
 		{
 			return m_identifier;
 		}
 
-		const signature& get_signature() const
+		const signature& get_signature() const noexcept
 		{
 			return *m_signature;
 		}
 
-		signature& get_signature()
+		signature& get_signature() noexcept
 		{
 			return *m_signature;
 		}
@@ -547,22 +549,22 @@ namespace idlc {
 				Expects(f != nullptr);
 		}
 
-		gsl::czstring<> identifier() const
+		gsl::czstring<> identifier() const noexcept
 		{
 			return m_identifier;
 		}
 
-		gsl::czstring<> real_type() const
+		gsl::czstring<> real_type() const noexcept
 		{
 			return m_real_type;
 		}
 
-		gsl::span<const std::unique_ptr<field>> fields() const
+		gsl::span<const std::unique_ptr<field>> fields() const noexcept
 		{
 			return m_fields;
 		}
 
-		gsl::span<std::unique_ptr<field>> fields()
+		gsl::span<std::unique_ptr<field>> fields() noexcept
 		{
 			return m_fields;
 		}
@@ -579,7 +581,7 @@ namespace idlc {
 		{
 		}
 
-		gsl::czstring<> identifier() const
+		gsl::czstring<> identifier() const noexcept
 		{
 			return m_identifier;
 		}
@@ -596,7 +598,7 @@ namespace idlc {
 			Expects(std::get<std::unique_ptr<type>>(m_variant) != nullptr);
 		}
 
-		auto kind() const
+		auto kind() const noexcept
 		{
 			return gsl::narrow_cast<module_item_kind>(m_variant.index());
 		}
@@ -628,7 +630,7 @@ namespace idlc {
 	class module {
 	public:
 		// May seem strange to "leave this out", but the contents are entirely up to the compiler passes
-		node_map<projection> types;
+		node_map<const projection> types;
 
 		module(gsl::not_null<gsl::czstring<>> identifier, std::vector<std::unique_ptr<module_item>>&& items) :
 			m_identifier {identifier},
@@ -638,17 +640,17 @@ namespace idlc {
 				Expects(i != nullptr);
 		}
 
-		gsl::czstring<> identifier() const
+		gsl::czstring<> identifier() const noexcept
 		{
 			return m_identifier;
 		}
 
-		gsl::span<const std::unique_ptr<module_item>> items() const
+		gsl::span<const std::unique_ptr<module_item>> items() const noexcept
 		{
 			return m_items;
 		}
 
-		gsl::span<std::unique_ptr<module_item>> items()
+		gsl::span<std::unique_ptr<module_item>> items() noexcept
 		{
 			return m_items;
 		}
@@ -685,7 +687,7 @@ namespace idlc {
 			Expects(std::get<std::unique_ptr<type>>(m_variant) != nullptr);
 		}
 
-		auto kind() const
+		auto kind() const noexcept
 		{
 			return gsl::narrow_cast<file_item_kind>(m_variant.index());
 		}
@@ -712,18 +714,19 @@ namespace idlc {
 	public:
 		node_map<module> included_modules;
 
-		file(std::vector<std::unique_ptr<file_item>>&& modules) : m_items {move(modules)}
+		file(std::vector<std::unique_ptr<file_item>>&& modules) noexcept :
+			m_items {move(modules)}
 		{
 			for (const auto& m : m_items)
 				Expects(m != nullptr);
 		}
 
-		gsl::span<const std::unique_ptr<file_item>> items() const
+		gsl::span<const std::unique_ptr<file_item>> items() const noexcept
 		{
 			return m_items;
 		}
 
-		gsl::span<std::unique_ptr<file_item>> items()
+		gsl::span<std::unique_ptr<file_item>> items() noexcept
 		{
 			return m_items;
 		}

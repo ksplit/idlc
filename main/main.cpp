@@ -9,6 +9,7 @@
 
 #include "node_map.h"
 #include "dump.h"
+#include "visit.h"
 #include "../parser/parser.h"
 
 namespace fs = std::filesystem;
@@ -17,181 +18,21 @@ namespace idlc
 {
 	// RPCs and RPC pointers, though different nodes, each have a signature, used to generate their marshaling info
 
-	template<typename pass_type>
-	void visit(pass_type& pass, file& file)
-	{
-		pass(file);
-		for (const auto& item : file.items()) {
-			visit(pass, *item);
-		}
-	}
-
-	template<typename pass_type>
-	void visit(pass_type& pass, file_item& item)
-	{
-		switch (item.kind()) {
-		case file_item_kind::include:
-			visit(pass, item.get<file_item_kind::include>());
-			break;
-
-		case file_item_kind::module:
-			visit(pass, item.get<file_item_kind::module>());
-			break;
-		}
-	}
-
-	template<typename pass_type>
-	void visit(pass_type& pass, include& include)
-	{
-		pass(include);
-	}
-
-	template<typename pass_type>
-	void visit(pass_type& pass, module& module)
-	{
-		pass(module);
-		for (const auto& item : module.items()) {
-			visit(pass, *item);
-		}
-	}
-
-	// Is there really a use case for this one?
-	// What we're really interested in is the content of the variant, after all
-
-	template<typename pass_type>
-	void visit(pass_type& pass, module_item& item)
-	{
-		switch (item.kind()) {
-		case module_item_kind::projection:
-			visit(pass, item.get<module_item_kind::projection>());
-			break;
-
-		case module_item_kind::rpc:
-			visit(pass, item.get<module_item_kind::rpc>());
-			break;
-
-		case module_item_kind::require:
-			visit(pass, item.get<module_item_kind::require>());
-			break;
-		}
-	}
-
-	template<typename pass_type>
-	void visit(pass_type& pass, projection& projection)
-	{
-		pass(projection);
-		for (const auto& field : projection.fields()) {
-			visit(pass, *field);
-		}
-	}
-
-	template<typename pass_type>
-	void visit(pass_type& pass, field& field)
-	{
-		switch (field.kind()) {
-		case field_kind::var:
-			visit(pass, field.get<field_kind::var>());
-			break;
-
-		case field_kind::rpc:
-			visit(pass, field.get<field_kind::rpc>());
-			break;
-		}
-	}
-
-	template<typename pass_type>
-	void visit(pass_type& pass, var_field& field)
-	{
-		pass(field);
-		visit(pass, field.get_type());
-	}
-
-	template<typename pass_type>
-	void visit(pass_type& pass, rpc_field& field)
-	{
-		pass(field);
-		visit(pass, field.get_signature());
-	}
-
-	template<typename pass_type>
-	void visit(pass_type& pass, type& type)
-	{
-		pass(type);
-		if (type.get_copy_type()) {
-			visit(pass, *type.get_copy_type());
-		}
-	}
-
-	template<typename pass_type>
-	void visit(pass_type& pass, copy_type& type)
-	{
-		switch (type.kind()) {
-		case copy_type_kind::projection:
-			visit(pass, type.get<copy_type_kind::projection>());
-			break;
-
-		case copy_type_kind::primitive:
-			visit(pass, type.get<copy_type_kind::primitive>());
-			break;
-		}
-	}
-
-	template<typename pass_type>
-	void visit(pass_type& pass, projection_type& type)
-	{
-		pass(type);
-	}
-
-	template<typename pass_type>
-	void visit(pass_type& pass, primitive_type& type)
-	{
-		pass(type);
-	}
-
-	template<typename pass_type>
-	void visit(pass_type& pass, rpc& rpc)
-	{
-		pass(rpc);
-		visit(pass, rpc.get_signature());
-	}
-
-	template<typename pass_type>
-	void visit(pass_type& pass, require& require)
-	{
-		pass(require);
-	}
-
-	template<typename pass_type>
-	void visit(pass_type& pass, signature& signature)
-	{
-		pass(signature);
-		visit(pass, signature.return_field());
-		for (const auto& arg : signature.arguments()) {
-			visit(pass, *arg);
-		}
-	}
-
-	template<typename pass_type>
-	void visit(pass_type& pass, attributes& attribs)
-	{
-		pass(attribs);
-	}
-
 	class type_collection_pass {
 	public:
-		void operator()(const file& file) {}
-		void operator()(const include& include) {}
-		void operator()(const rpc& rpc) {}
-		void operator()(const require& require) {}
-		void operator()(const var_field& field) {}
-		void operator()(const rpc_field& field) {}
-		void operator()(const projection_type& proj) {}
-		void operator()(const primitive_type& prim) {}
-		void operator()(const type& ty) {}
-		void operator()(const signature& sig) {}
-		void operator()(const attributes& attribs) {}
+		void operator()(const file& file) noexcept {}
+		void operator()(const include& include) noexcept {}
+		void operator()(const rpc& rpc) noexcept {}
+		void operator()(const require& require) noexcept {}
+		void operator()(const var_field& field) noexcept {}
+		void operator()(const rpc_field& field) noexcept {}
+		void operator()(const projection_type& proj) noexcept {}
+		void operator()(const primitive_type& prim) noexcept {}
+		void operator()(const type& ty) noexcept {}
+		void operator()(const signature& sig) noexcept {}
+		void operator()(const attributes& attribs) noexcept {}
 
-		void operator()(module& module)
+		void operator()(module& module) noexcept
 		{
 			m_types = &module.types;
 		}
@@ -205,7 +46,7 @@ namespace idlc
 		}
 
 	private:
-		node_map<projection>* m_types;
+		node_map<const projection>* m_types;
 	};
 
 	// TODO: would be nice to have an error context
@@ -213,19 +54,19 @@ namespace idlc
 
 	class type_resolve_pass {
 	public:
-		void operator()(const file& file) {}
-		void operator()(const include& include) {}
-		void operator()(const rpc& rpc) {}
-		void operator()(const require& require) {}
-		void operator()(const projection& projection) {}
-		void operator()(const primitive_type& prim) {}
-		void operator()(const var_field& field) {}
-		void operator()(const rpc_field& field) {}
-		void operator()(const type& ty) {}
-		void operator()(const signature& sig) {}
-		void operator()(const attributes& attribs) {}
+		void operator()(const file& file) noexcept {}
+		void operator()(const include& include) noexcept {}
+		void operator()(const rpc& rpc) noexcept {}
+		void operator()(const require& require) noexcept {}
+		void operator()(const primitive_type& prim) noexcept {}
+		void operator()(const var_field& field) noexcept {}
+		void operator()(const rpc_field& field) noexcept {}
+		void operator()(const type& ty) noexcept {}
+		void operator()(const signature& sig) noexcept {}
+		void operator()(const attributes& attribs) noexcept {}
+		void operator()(const projection& projection) noexcept {}
 
-		void operator()(module& module)
+		void operator()(module& module) noexcept
 		{
 			m_types = &module.types;
 		}
@@ -237,35 +78,35 @@ namespace idlc
 				proj.definition(def);
 			}
 			else {
-				std::cout << "Could not resolve projection: " << proj.identifier() << "\n";
+				std::cout << "Error: could not resolve projection: " << proj.identifier() << "\n";
 				throw std::exception {};
 			}
 		}
 
 	private:
-		node_map<projection>* m_types;
+		node_map<const projection>* m_types;
 	};
 
 	class module_collection_pass {
 	public:
-		module_collection_pass(node_map<module>& modules) : m_modules {&modules}
+		module_collection_pass(node_map<module>& modules) noexcept : m_modules {&modules}
 		{
 		}
 
-		void operator()(const include& include) {}
-		void operator()(const rpc& rpc) {}
-		void operator()(const require& require) {}
-		void operator()(const projection& projection) {}
-		void operator()(const primitive_type& prim) {}
-		void operator()(const var_field& field) {}
-		void operator()(const rpc_field& field) {}
-		void operator()(const type& ty) {}
-		void operator()(const signature& sig) {}
-		void operator()(const attributes& attribs) {}
-		void operator()(const projection_type& proj) {}
-		void operator()(const file& file) {}
+		void operator()(const include& include) noexcept {}
+		void operator()(const rpc& rpc) noexcept {}
+		void operator()(const require& require) noexcept {}
+		void operator()(const projection& projection) noexcept {}
+		void operator()(const primitive_type& prim) noexcept {}
+		void operator()(const var_field& field) noexcept {}
+		void operator()(const rpc_field& field) noexcept {}
+		void operator()(const type& ty) noexcept {}
+		void operator()(const signature& sig) noexcept {}
+		void operator()(const attributes& attribs) noexcept {}
+		void operator()(const projection_type& proj) noexcept {}
+		void operator()(const file& file) noexcept {}
 
-		void operator()(const module& module)
+		void operator()(module& module)
 		{
 			if (!m_modules->insert(module)) {
 				std::cout << "Error: encountered module redefinition: " << module.identifier() << "\n";
@@ -279,35 +120,46 @@ namespace idlc
 
 	class include_file_pass {
 	public:
-		include_file_pass(const fs::path& relative_to) : m_relative_to {relative_to}
+		include_file_pass(const fs::path& relative_to) :
+			m_relative_to {relative_to},
+			m_modules {nullptr}
 		{
 		}
 
-		void operator()(const rpc& rpc) {}
-		void operator()(const require& require) {}
-		void operator()(const projection& projection) {}
-		void operator()(const primitive_type& prim) {}
-		void operator()(const var_field& field) {}
-		void operator()(const rpc_field& field) {}
-		void operator()(const type& ty) {}
-		void operator()(const signature& sig) {}
-		void operator()(const attributes& attribs) {}
-		void operator()(const projection_type& proj) {}
-		void operator()(const module& module) {}
+		void operator()(const rpc& rpc) noexcept {}
+		void operator()(const require& require) noexcept {}
+		void operator()(const projection& projection) noexcept {}
+		void operator()(const primitive_type& prim) noexcept {}
+		void operator()(const var_field& field) noexcept {}
+		void operator()(const rpc_field& field) noexcept {}
+		void operator()(const type& ty) noexcept {}
+		void operator()(const signature& sig) noexcept {}
+		void operator()(const attributes& attribs) noexcept {}
+		void operator()(const projection_type& proj) noexcept {}
+		void operator()(const module& module) noexcept {}
 
-		void operator()(file& file)
+		void operator()(file& file) noexcept
 		{
 			m_modules = &file.included_modules;
 		}
 
+		// These are for the analysis tool
+		[[gsl::suppress(type.3)]]
 		void operator()(include& include)
 		{
 			const fs::path path {m_relative_to / include.path()};
-			std::cout << "Info: processing included file: " << fs::canonical(path).generic_string() << "\n";
+			if (!fs::exists(path)) {
+				std::cout << "Error: could not find include " << include.path().generic_string() << "\n";
+				throw std::exception {};
+			}
 
-			include.parsed_file.reset((idlc::file*)Parser::parse(path.generic_string()));
-			auto& file = *include.parsed_file;
+			std::cout << "Info: processing included file: " << path.generic_string() << "\n";
 
+			auto& file = *const_cast<idlc::file*>(
+				static_cast<const idlc::file*>(
+					Parser::parse(path.generic_string())));
+
+			include.parsed_file.reset(&file);
 			std::cout << "Info: collecting modules in file\n";
 			module_collection_pass tc_pass {*m_modules};
 			visit(tc_pass, file);
@@ -317,11 +169,89 @@ namespace idlc
 		fs::path m_relative_to;
 		node_map<module>* m_modules;
 	};
+
+	class verify_driver_idl_pass {
+	public:
+		void operator()(const require& require) noexcept {}
+		void operator()(const primitive_type& prim) noexcept {}
+		void operator()(const var_field& field) noexcept {}
+		void operator()(const rpc_field& field) noexcept {}
+		void operator()(const type& ty) noexcept {}
+		void operator()(const signature& sig) noexcept {}
+		void operator()(const attributes& attribs) noexcept {}
+		void operator()(const projection_type& proj) noexcept {}
+		void operator()(const file& file) noexcept {}
+		void operator()(const include& include) noexcept {}
+
+		void operator()(const rpc& rpc)
+		{
+			std::cout << "Error: rpc definition " << rpc.identifier() << " illegal in driver module\n";
+			throw std::exception {};
+		}
+
+		void operator()(const projection& projection) {
+			std::cout << "Error: projection definition " << projection.identifier() << " illegal in driver module\n";
+			throw std::exception {};
+		}
+
+		void operator()(const module& module)
+		{
+			if (is_module_found) {
+				std::cout << "Error: driver definition IDL may only define the driver module\n";
+				throw std::exception {};
+			}
+
+			is_module_found = true;
+		}
+
+	private:
+		bool is_module_found {false};
+	};
+
+	class module_resolve_pass {
+	public:
+		void operator()(const include& include) noexcept {}
+		void operator()(const rpc& rpc) noexcept {}
+		void operator()(const projection& projection) noexcept {}
+		void operator()(const primitive_type& prim) noexcept {}
+		void operator()(const var_field& field) noexcept {}
+		void operator()(const rpc_field& field) noexcept {}
+		void operator()(const type& ty) noexcept {}
+		void operator()(const signature& sig) noexcept {}
+		void operator()(const attributes& attribs) noexcept {}
+		void operator()(const projection_type& proj) noexcept {}
+		void operator()(const module& module) noexcept {}
+
+		void operator()(const file& file) noexcept
+		{
+			m_modules = &file.included_modules;
+		}
+
+		void operator()(const require& require)
+		{
+			module* const ptr {m_modules->get(require.identifier())};
+			if (!ptr) {
+				std::cout << "Error: could not resolve required module " << require.identifier() << "\n";
+				throw std::exception {};
+			}
+
+			std::cout << "Info: processing required module " << require.identifier() << "\n";
+
+			module& mod {*ptr};
+			type_collection_pass tc;
+			type_resolve_pass tr;
+			visit(tc, mod);
+			visit(tr, mod);
+		}
+
+	private:
+		const node_map<module>* m_modules;
+	};
 }
 
 
 int main(int argc, gsl::czstring<>* argv) {
-	gsl::span args {argv, gsl::narrow_cast<std::size_t>(argc)};
+	const gsl::span args {argv, gsl::narrow_cast<std::size_t>(argc)};
 
 	if (args.size() != 2 && args.size() != 3) {
 		std::cout << "Usage: idlc <source-file> [<dump-file>]\n";
@@ -329,30 +259,40 @@ int main(int argc, gsl::czstring<>* argv) {
 	}
 
 	try {
-		auto top_node = std::unique_ptr<idlc::file> {(idlc::file*)Parser::parse(std::string {args[1]})};
+		auto top_node = std::unique_ptr<idlc::file> {
+			const_cast<idlc::file*>(
+				static_cast<const idlc::file*>(
+					Parser::parse(std::string {gsl::at(args, 1)})))};
+
 		auto& file = *top_node;
 
-		std::cout << "IDL file OK\n";
+		std::cout << "Info: verified IDL syntax\n";
 
 		if (args.size() == 3) {
-			std::ofstream dump {args[2]};
-			std::cout << "Doing AST dump...\n";
+			std::ofstream dump {gsl::at(args, 2)};
+			std::cout << "Info: doing AST dump\n";
 			idlc::dump(file, dump);
 		}
 
-		const auto base_path = fs::path {args[1]}.parent_path();
+		idlc::verify_driver_idl_pass vdi_pass;
+		visit(vdi_pass, file);
+
+		const auto base_path = fs::path {gsl::at(args, 1)}.parent_path();
 		idlc::include_file_pass if_pass {base_path};
 		visit(if_pass, file);
+
+		idlc::module_resolve_pass mr_pass;
+		visit(mr_pass, file);
 
 		return 0;
 	}
 	catch (const Parser::ParseException& e) {
-		std::cerr << "Parsing failed\n" << std::endl;
+		std::cerr << "Error: parsing failed\n" << std::endl;
 		std::cerr << e.getReason() << std::endl;
 		return 1;
 	}
 	catch (const std::exception&) {
-		std::cout << "Compilation failed\n";
+		std::cout << "Error: compilation failed\n";
 		return 1;
 	}
 }

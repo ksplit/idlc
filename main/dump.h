@@ -134,7 +134,7 @@ namespace idlc {
 		tab_over(level, os) << ")\n";
 	}
 
-	gsl::czstring<> to_string(rpc_side side)
+	gsl::czstring<> to_string(rpc_side side) noexcept
 	{
 		switch (side) {
 		case rpc_side::none:

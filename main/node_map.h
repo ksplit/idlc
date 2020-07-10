@@ -9,7 +9,7 @@ namespace idlc {
 	template<typename node_type>
 	class node_map {
 	public:
-		const node_type* get(gsl::czstring<> identifier) const
+		node_type* get(gsl::czstring<> identifier) const
 		{
 			const auto first = begin(m_keys);
 			const auto last = end(m_keys);
@@ -24,7 +24,7 @@ namespace idlc {
 		}
 
 		// Returns false if we're trying to add an existing type
-		bool insert(const node_type& node)
+		bool insert(node_type& node)
 		{
 			const auto identifier = node.identifier();
 			const auto last = end(m_keys);
@@ -42,7 +42,7 @@ namespace idlc {
 
 	private:
 		std::vector<gsl::czstring<>> m_keys;
-		std::vector<const node_type*> m_types;
+		std::vector<node_type*> m_types;
 	};
 }
 
