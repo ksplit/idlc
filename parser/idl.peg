@@ -1,6 +1,7 @@
 start-symbol: file
 
 include: {{
+	#include "../main/string_heap.h"
 	#include "ast.h"
 
 	#include <sstream>
@@ -130,49 +131,109 @@ copy_type = void_kw {{
 	value = new copy_type(std::unique_ptr<projection_type>((projection_type*)proj.getValue()));
 }}
 
-type = ct:copy_type space_or_attribs stars:(star space*)+ {{
+type = ct:copy_type attrs:space_or_attribs stars:(star space*)+ {{
 	value = new type(
 		std::unique_ptr<copy_type>((copy_type*)ct.getValue()),
-		nullptr,
+		std::unique_ptr<attributes>((attributes*)attrs.getValue()),
 		gsl::narrow_cast<unsigned int>(stars.getValues().size()));
-}} | ct:copy_type space_or_attribs {{
+}} | ct:copy_type attrs:space_or_attribs {{
 	value = new type(
 		std::unique_ptr<copy_type>((copy_type*)ct.getValue()),
-		nullptr,
+		std::unique_ptr<attributes>((attributes*)attrs.getValue()),
 		0);
 }}
 
-wtype = ct:copy_type space_or_attribs stars:(star space*)+ {{
+wtype = ct:copy_type attrs:space_or_attribs stars:(star space*)+ {{
 	value = new type(
 		std::unique_ptr<copy_type>((copy_type*)ct.getValue()),
-		nullptr,
+		std::unique_ptr<attributes>((attributes*)attrs.getValue()),
 		gsl::narrow_cast<unsigned int>(stars.getValues().size()));
-}} | ct:copy_type wspace_or_attribs {{
+}} | ct:copy_type attrs:wspace_or_attribs {{
 	value = new type(
 		std::unique_ptr<copy_type>((copy_type*)ct.getValue()),
-		nullptr,
+		std::unique_ptr<attributes>((attributes*)attrs.getValue()),
 		0);
 }}
 
-container_side = caller_kw | callee_kw
-alloc_attrib = alloc_kw (space* oparen space* container_side space* cparen)?
-dealloc_attrib = dealloc_kw (space* oparen space* container_side space* cparen)?
-bind_attrib = bind_kw (space* oparen space* container_side space* cparen)?
-attribute = in_kw | out_kw | alloc_attrib | dealloc_attrib | bind_attrib
-attrib_list = attribute space* attrib_list_tail
-attrib_list_tail = comma space* attrib_list | <void>
-attributes = obracket space* attrib_list space* cbracket
-wspace_or_attribs =  space* attributes space* | whitespace
-space_or_attribs = space* attributes space* | space*
+container_side = caller_kw {{ value = (void*)rpc_side::caller; }} | callee_kw {{ value = (void*)rpc_side::callee; }}
+attrib_side = space* oparen space* side:container_side space* cparen {{ value = side.getValue(); }} | <void> {{ value = (void*)rpc_side::both; }}
+alloc_attrib = alloc_kw side:attrib_side {{
+	const auto call_side = (rpc_side)(std::uintptr_t)side.getValue();
+	value = to_void_ptr(compact_attribute {call_side, attribute_type::alloc});
+}}
 
-rpc_pseudo_field = rpc_kw wspace_or_attribs ret_field:pseudo_field oparen space* star space* cparen space* oparen space* args:arg_list space* cparen space* {{
+dealloc_attrib = dealloc_kw side:attrib_side {{
+	const auto call_side = (rpc_side)(std::uintptr_t)side.getValue();
+	value = to_void_ptr(compact_attribute {call_side, attribute_type::dealloc});
+}}
+
+bind_attrib = bind_kw side:attrib_side {{
+	const auto call_side = (rpc_side)(std::uintptr_t)side.getValue();
+	value = to_void_ptr(compact_attribute {call_side, attribute_type::bind});
+}}
+
+attribute = in_kw {{
+	value = to_void_ptr(compact_attribute {rpc_side::callee, attribute_type::copy});
+}} | out_kw {{
+	value = to_void_ptr(compact_attribute {rpc_side::caller, attribute_type::copy});
+}} | attr:alloc_attrib {{
+	value = attr.getValue();
+}} | attr:dealloc_attrib {{
+	value = attr.getValue();
+}} | attr:bind_attrib {{
+	value = attr.getValue();
+}}
+
+attrib_list = a:attribute space* tail:attrib_list_tail <predicate no_dups>{{
+	auto& list = *(std::vector<compact_attribute>*)tail.getValue();
+	const auto attrib = from_void_ptr(a.getValue());
+	no_dups = true;
+	for (const auto existing : list) {
+		if (existing == attrib) {
+			std::cout << "Error: encountered duplicate attribute while parsing\n";
+			no_dups = false;
+		}
+	}
+}} {{
+	auto& list = *(std::vector<compact_attribute>*)tail.getValue();
+	const auto attrib = from_void_ptr(a.getValue());
+	list.push_back(attrib);
+	value = tail.getValue();
+}}
+
+attrib_list_tail = comma space* list:attrib_list {{
+	value = list.getValue();
+}} | <void> {{ 
+	value = new std::vector<compact_attribute> {};	
+}}
+
+attributes = obracket space* list:attrib_list space* cbracket tmp:{{
+	auto& attrib_list = *(std::vector<compact_attribute>*)list.getValue();
+	value = [&attrib_list]() -> void* {
+		const auto obj = attributes::make(attrib_list);
+		if (obj) {
+			return new attributes(obj.value());
+		}
+		else {
+			return nullptr;
+		}
+	}();
+	delete &attrib_list;
+}} <predicate valid>{{
+	valid = tmp.getValue();
+}}
+
+wspace_or_attribs =  space* attrs:attributes space* {{ value = attrs.getValue(); }} | whitespace {{ value = nullptr; }}
+space_or_attribs = space* attrs:attributes space* {{ value = attrs.getValue(); }} | space* {{ value = nullptr; }}
+
+rpc_pseudo_field = rpc_kw attrs:wspace_or_attribs ret_field:pseudo_field oparen space* star space* cparen space* oparen space* args:arg_list space* cparen space* {{
 	auto& vec = *(std::vector<std::unique_ptr<field>>*)args.getValue();
 	std::reverse(begin(vec), end(vec));
 	auto sig = std::make_unique<signature>(
 		std::unique_ptr<field>((field*)ret_field.getValue()),
 		move(vec));
 	delete &vec;
-	value = new rpc_field(nullptr, move(sig));
+	value = new rpc_field(nullptr, move(sig), std::unique_ptr<attributes> {(attributes*)attrs.getValue()});
 }}
 
 var_pseudo_field = ty:type {{
@@ -198,14 +259,14 @@ wspace_pseudo_field = rf:rpc_pseudo_field {{
 }}
 
 rpc_ptr_ident = oparen space* star space* id:identifier space* cparen {{ value = id.getValue(); }}
-rpc_ptr = rpc_kw wspace_or_attribs ret_field:pseudo_field id:rpc_ptr_ident space* oparen space* args:arg_list space* cparen {{
+rpc_ptr = rpc_kw attrs:wspace_or_attribs ret_field:pseudo_field id:rpc_ptr_ident space* oparen space* args:arg_list space* cparen {{
 	auto& vec = *(std::vector<std::unique_ptr<field>>*)args.getValue();
 	std::reverse(begin(vec), end(vec));
 	auto sig = std::make_unique<signature>(
 		std::unique_ptr<field>((field*)ret_field.getValue()),
 		move(vec));
 	delete &vec;
-	value = new rpc_field((gsl::czstring<>)id.getValue(), move(sig));
+	value = new rpc_field((gsl::czstring<>)id.getValue(), move(sig), std::unique_ptr<attributes> {(attributes*)attrs.getValue()});
 }}
 
 rpc_decl = rpc_kw whitespace ret_field:wspace_pseudo_field id:identifier space* oparen space* args:arg_list space* cparen space* semi {{
@@ -218,10 +279,12 @@ rpc_decl = rpc_kw whitespace ret_field:wspace_pseudo_field id:identifier space* 
 	value = new rpc((gsl::czstring<>)id.getValue(), move(sig));
 }}
 
-arg_list = arg:argument space* v:arg_list_tail {{
+arg_list = arg:argument space* v:arg_list_tail{{
 	auto& vec = *(std::vector<std::unique_ptr<field>>*)v.getValue();
 	vec.emplace_back(std::unique_ptr<field>((field*)arg.getValue()));
 	value = &vec;
+}} | <void> {{
+	value = new std::vector<std::unique_ptr<field>>();
 }}
 
 arg_list_tail = comma space* v:arg_list {{

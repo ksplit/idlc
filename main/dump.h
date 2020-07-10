@@ -134,6 +134,88 @@ namespace idlc {
 		tab_over(level, os) << ")\n";
 	}
 
+	gsl::czstring<> to_string(rpc_side side)
+	{
+		switch (side) {
+		case rpc_side::none:
+			return "none";
+
+		case rpc_side::caller:
+			return "caller";
+
+		case rpc_side::callee:
+			return "callee";
+
+		case rpc_side::both:
+			return "both";
+
+		default:
+			Expects(false);
+		}
+	}
+
+	void dump(const attributes& attrs, std::ostream& os, unsigned int level)
+	{
+		tab_over(level, os) << "attributes (\n";
+		++level;
+
+		switch (attrs.get_value_copy_direction()) {
+		case copy_direction::none:
+			tab_over(level, os) << "value_copy_direction: none\n";
+			break;
+
+		case copy_direction::in:
+			tab_over(level, os) << "value_copy_direction: in\n";
+			break;
+
+		case copy_direction::out:
+			tab_over(level, os) << "value_copy_direction: out\n";
+			break;
+
+		case copy_direction::both:
+			tab_over(level, os) << "value_copy_direction: both\n";
+			break;
+		}
+
+		const auto share_side = attrs.get_sharing_op_side();
+		if (share_side == rpc_side::none) {
+			tab_over(level, os) << "sharing_op_side: none\n";
+			tab_over(level, os) << "sharing_op: null\n";
+		}
+		else {
+			switch (share_side) {
+			case rpc_side::caller:
+				tab_over(level, os) << "sharing_op_side: caller\n";
+				break;
+
+			case rpc_side::callee:
+				tab_over(level, os) << "sharing_op_side: callee\n";
+				break;
+
+			case rpc_side::both:
+				tab_over(level, os) << "sharing_op_side: both\n";
+				break;
+			}
+
+			switch (attrs.get_sharing_op()) {
+			case sharing_op::alloc:
+				tab_over(level, os) << "sharing_op: alloc\n";
+				break;
+
+			case sharing_op::dealloc:
+				tab_over(level, os) << "sharing_op: dealloc\n";
+				break;
+
+			case sharing_op::bind:
+				tab_over(level, os) << "sharing_op: bind\n";
+				break;
+			}
+		}
+
+		--level;
+		tab_over(level, os) << ")\n";
+	}
+
 	void dump(const type& type, std::ostream& os, unsigned int level)
 	{
 		tab_over(level, os) << "type (\n";
@@ -149,7 +231,7 @@ namespace idlc {
 
 		if (type.get_attributes()) {
 			tab_over(level, os) << "attributes:\n";
-			// TODO
+			dump(*type.get_attributes(), os, level + 1);
 		}
 		else {
 			tab_over(level, os) << "attributes: null\n";
@@ -194,6 +276,14 @@ namespace idlc {
 
 		tab_over(level, os) << "signature:\n";
 		dump(field.get_signature(), os, level + 1);
+
+		if (field.get_attributes()) {
+			tab_over(level, os) << "attributes:\n";
+			dump(*field.get_attributes(), os, level + 1);
+		}
+		else {
+			tab_over(level, os) << "attributes: null\n";
+		}
 
 		--level;
 		tab_over(level, os) << ")\n";

@@ -92,7 +92,7 @@ namespace idlc
 			break;
 
 		case field_kind::rpc:
-			// TODO
+			visit(pass, field.get<field_kind::rpc>());
 			break;
 		}
 	}
@@ -102,6 +102,13 @@ namespace idlc
 	{
 		pass(field);
 		visit(pass, field.get_type());
+	}
+
+	template<typename pass_type>
+	void visit(pass_type& pass, rpc_field& field)
+	{
+		pass(field);
+		visit(pass, field.get_signature());
 	}
 
 	template<typename pass_type>
@@ -122,7 +129,7 @@ namespace idlc
 			break;
 
 		case copy_type_kind::primitive:
-			// TODO
+			visit(pass, type.get<copy_type_kind::primitive>());
 			break;
 		}
 	}
@@ -134,15 +141,38 @@ namespace idlc
 	}
 
 	template<typename pass_type>
+	void visit(pass_type& pass, primitive_type& type)
+	{
+		pass(type);
+	}
+
+	template<typename pass_type>
 	void visit(pass_type& pass, rpc& rpc)
 	{
 		pass(rpc);
+		visit(pass, rpc.get_signature());
 	}
 
 	template<typename pass_type>
 	void visit(pass_type& pass, require& require)
 	{
 		pass(require);
+	}
+
+	template<typename pass_type>
+	void visit(pass_type& pass, signature& signature)
+	{
+		pass(signature);
+		visit(pass, signature.return_field());
+		for (const auto& arg : signature.arguments()) {
+			visit(pass, *arg);
+		}
+	}
+
+	template<typename pass_type>
+	void visit(pass_type& pass, attributes& attribs)
+	{
+		pass(attribs);
 	}
 
 	class type_collection_pass {
@@ -152,8 +182,12 @@ namespace idlc
 		void operator()(const rpc& rpc) {}
 		void operator()(const require& require) {}
 		void operator()(const var_field& field) {}
+		void operator()(const rpc_field& field) {}
 		void operator()(const projection_type& proj) {}
+		void operator()(const primitive_type& prim) {}
 		void operator()(const type& ty) {}
+		void operator()(const signature& sig) {}
+		void operator()(const attributes& attribs) {}
 
 		void operator()(module& module)
 		{
@@ -182,8 +216,12 @@ namespace idlc
 		void operator()(const rpc& rpc) {}
 		void operator()(const require& require) {}
 		void operator()(const projection& projection) {}
+		void operator()(const primitive_type& prim) {}
 		void operator()(const var_field& field) {}
+		void operator()(const rpc_field& field) {}
 		void operator()(const type& ty) {}
+		void operator()(const signature& sig) {}
+		void operator()(const attributes& attribs) {}
 
 		void operator()(module& module)
 		{
@@ -198,6 +236,7 @@ namespace idlc
 			}
 			else {
 				std::cout << "Could not resolve projection: " << proj.identifier() << "\n";
+				throw std::exception {};
 			}
 		}
 
@@ -212,6 +251,7 @@ int main(int argc, gsl::czstring<>* argv) {
 
 	if (args.size() != 2 && args.size() != 3) {
 		std::cout << "Usage: idlc <source-file> [<dump-file>]\n";
+		return 1;
 	}
 
 	try {
@@ -223,7 +263,7 @@ int main(int argc, gsl::czstring<>* argv) {
 		if (args.size() == 3) {
 			std::ofstream dump {args[2]};
 			std::cout << "Doing AST dump...\n";
-			idlc::dump(*top_node, dump);
+			idlc::dump(file, dump);
 		}
 
 		std::cout << "Collecting types\n";
@@ -237,7 +277,7 @@ int main(int argc, gsl::czstring<>* argv) {
 		return 0;
 	}
 	catch (const Parser::ParseException& e) {
-		std::cerr << "\n\nALERT!!! - Caught parser exception" << std::endl;
+		std::cerr << "Parsing failed\n" << std::endl;
 		std::cerr << e.getReason() << std::endl;
 		return 1;
 	}

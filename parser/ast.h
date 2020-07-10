@@ -5,6 +5,7 @@
 #include <variant>
 #include <gsl/gsl>
 #include <iostream>
+#include <optional>
 
 #ifdef __GNUC__
 #if __GNUC__ < 8
@@ -20,69 +21,9 @@ namespace std {
 #endif
 
 #include "../main/type_map.h"
+#include "../main/string_heap.h"
 
 namespace idlc {
-	class string_heap {
-	public:
-		string_heap()
-		{
-			m_blocks.emplace_back(std::make_unique<block>());
-		}
-
-		string_heap(string_heap&) = delete;
-		string_heap* operator=(string_heap&) = delete;
-
-		gsl::czstring<> intern(std::string_view string)
-		{
-			Expects(string.length() != block_size - 1); // Or else we will never fit the string
-
-			const auto sentinel = end(m_strings);
-			const auto find_iterator = std::find(begin(m_strings), sentinel, string);
-			if (find_iterator == sentinel) {
-				const gsl::czstring<> new_string {add_string(string)};
-				m_strings.push_back(new_string);
-				return new_string;
-			}
-			else {
-				return *find_iterator;
-			}
-		}
-
-		// Convenience method for transferring blocks between string heaps
-		template<std::size_t size>
-		void intern_all(std::array<gsl::czstring<>, size>& strings)
-		{
-			for (const auto& string : strings) {
-				string = intern(string);
-			}
-		}
-
-	private:
-		static constexpr std::size_t block_size {1024}; // TODO: Tune
-		using block = std::array<char, block_size>;
-
-		std::vector<gsl::czstring<>> m_strings {};
-		std::vector<std::unique_ptr<block>> m_blocks; // Allocate one free block
-		std::uint16_t m_free_index {};
-
-		gsl::czstring<> add_string(std::string_view string)
-		{
-			const auto end_index = m_free_index + string.length() + 1;
-			if (end_index < block_size) {
-				// Since the block is zero-initialized, we just copy the string bytes
-				const gsl::zstring<> new_string {&(*m_blocks.back())[m_free_index]};
-				std::memcpy(new_string, string.data(), string.length());
-				m_free_index = gsl::narrow<decltype(m_free_index)>(end_index);
-				return new_string;
-			}
-			else {
-				m_free_index = 0;
-				m_blocks.emplace_back(std::make_unique<block>());
-				return add_string(string); // does the branch get optimized out?
-			}
-		}
-	};
-
 	enum class primitive_type_kind {
 		bool_k,
 		float_k,
@@ -221,8 +162,151 @@ namespace idlc {
 			std::unique_ptr<projection_type>> m_variant;
 	};
 
-	class attributes {
+	enum class attribute_type : std::uint8_t {
+		copy,
+		alloc,
+		dealloc,
+		bind
+	};
 
+	// because why have a state machine in attributes() when you can just do bit-twiddling
+	enum class copy_direction : std::uint8_t {
+		none = 0b00,
+		in = 0b01,
+		out = 0b10,
+		both = 0b11
+	};
+
+	// for copy attributes, these correspond to caller -> out, callee -> in
+	enum class rpc_side : std::uint8_t {
+		none,
+		callee,
+		caller,
+		both
+	};
+
+	enum class sharing_op : std::uint8_t {
+		alloc,
+		dealloc,
+		bind
+	};
+
+	struct compact_attribute {
+		rpc_side share_op_side;
+		attribute_type attribute;
+	};
+
+	inline bool operator==(compact_attribute a, compact_attribute b)
+	{
+		return a.share_op_side == b.share_op_side && a.attribute == b.attribute;
+	}
+
+	inline void* to_void_ptr(compact_attribute v)
+	{
+		void* tmp;
+		std::memcpy(&tmp, &v, sizeof(v));
+		return tmp;
+	}
+
+	inline compact_attribute from_void_ptr(const void* ptr)
+	{
+		compact_attribute v;
+		std::memcpy(&v, &ptr, sizeof(v));
+		return v;
+	}
+
+	static_assert(sizeof(compact_attribute) == 2);
+	
+	// An odd consequence of how apply() works: the list [alloc] specifies that the value is only allocated, but no value is shared
+	class attributes {
+	public:
+		// Need to be able to "fail" construction, thus the factory
+		static std::optional<attributes> make(const std::vector<compact_attribute>& attribs)
+		{
+			attributes tmp;
+			if (tmp.apply(attribs)) {
+				return tmp;
+			}
+			else {
+				return std::nullopt;
+			}
+		}
+
+		copy_direction get_value_copy_direction() const
+		{
+			return static_cast<copy_direction>(m_value_copy);
+		}
+
+		rpc_side get_sharing_op_side() const
+		{
+			return m_share_op_side;
+		}
+
+		sharing_op get_sharing_op() const
+		{
+			return m_share_op;
+		}
+
+	private:
+		std::uint8_t m_value_copy {};
+		rpc_side m_share_op_side {rpc_side::none};
+		sharing_op m_share_op {};
+
+		attributes() = default;
+
+		bool apply(const std::vector<compact_attribute>& attribs)
+		{
+			for (const auto attr : attribs) {
+				if (attr.attribute == attribute_type::copy) {
+					update_value_copy(attr.share_op_side);
+				}
+				else {
+					if (!update_sharing(attr)) {
+						return false;
+					}
+				}
+			}
+
+			return true;
+		}
+		
+		void update_value_copy(rpc_side side)
+		{
+			switch (side) {
+			case rpc_side::caller:
+				m_value_copy |= static_cast<std::uint8_t>(copy_direction::out);
+				break;
+
+			case rpc_side::callee:
+				m_value_copy |= static_cast<std::uint8_t>(copy_direction::in);
+				break;
+			}
+		}
+
+		bool update_sharing(compact_attribute attr)
+		{
+			if (m_share_op_side != rpc_side::none) {
+				std::cout << "Error: over-specified sharing ops\n";
+				return false;
+			}
+
+			m_share_op_side = attr.share_op_side;
+			switch (attr.attribute) {
+			case attribute_type::alloc:
+				m_share_op = sharing_op::alloc;
+				break;
+
+			case attribute_type::dealloc:
+				m_share_op = sharing_op::dealloc;
+				break;
+
+			case attribute_type::bind:
+				m_share_op = sharing_op::bind;
+				break;
+			}
+
+			return true;
+		}
 	};
 
 	class type {
@@ -301,9 +385,10 @@ namespace idlc {
 
 	class rpc_field {
 	public:
-		rpc_field(gsl::czstring<> identifier, std::unique_ptr<signature>&& sig) :
+		rpc_field(gsl::czstring<> identifier, std::unique_ptr<signature>&& sig, std::unique_ptr<attributes>&& attrs) :
 			m_identifier {identifier},
-			m_signature {move(sig)}
+			m_signature {move(sig)},
+			m_attributes {move(attrs)}
 		{
 			Expects(m_signature != nullptr);
 		}
@@ -323,9 +408,20 @@ namespace idlc {
 			return *m_signature;
 		}
 
+		const attributes* get_attributes() const
+		{
+			return m_attributes.get();
+		}
+
+		attributes* get_attributes()
+		{
+			return m_attributes.get();
+		}
+
 	private:
 		gsl::czstring<> m_identifier;
 		std::unique_ptr<signature> m_signature;
+		std::unique_ptr<attributes> m_attributes;
 	};
 
 	enum class field_kind {
