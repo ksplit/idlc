@@ -7,9 +7,11 @@
 
 #include <fstream>
 
-#include "type_map.h"
+#include "node_map.h"
 #include "dump.h"
 #include "../parser/parser.h"
+
+namespace fs = std::filesystem;
 
 namespace idlc
 {
@@ -52,7 +54,7 @@ namespace idlc
 			visit(pass, *item);
 		}
 	}
-	
+
 	// Is there really a use case for this one?
 	// What we're really interested in is the content of the variant, after all
 
@@ -203,7 +205,7 @@ namespace idlc
 		}
 
 	private:
-		type_map* m_types;
+		node_map<projection>* m_types;
 	};
 
 	// TODO: would be nice to have an error context
@@ -241,7 +243,79 @@ namespace idlc
 		}
 
 	private:
-		type_map* m_types;
+		node_map<projection>* m_types;
+	};
+
+	class module_collection_pass {
+	public:
+		module_collection_pass(node_map<module>& modules) : m_modules {&modules}
+		{
+		}
+
+		void operator()(const include& include) {}
+		void operator()(const rpc& rpc) {}
+		void operator()(const require& require) {}
+		void operator()(const projection& projection) {}
+		void operator()(const primitive_type& prim) {}
+		void operator()(const var_field& field) {}
+		void operator()(const rpc_field& field) {}
+		void operator()(const type& ty) {}
+		void operator()(const signature& sig) {}
+		void operator()(const attributes& attribs) {}
+		void operator()(const projection_type& proj) {}
+		void operator()(const file& file) {}
+
+		void operator()(const module& module)
+		{
+			if (!m_modules->insert(module)) {
+				std::cout << "Error: encountered module redefinition: " << module.identifier() << "\n";
+				throw std::exception {};
+			}
+		}
+
+	private:
+		node_map<module>* m_modules;
+	};
+
+	class include_file_pass {
+	public:
+		include_file_pass(const fs::path& relative_to) : m_relative_to {relative_to}
+		{
+		}
+
+		void operator()(const rpc& rpc) {}
+		void operator()(const require& require) {}
+		void operator()(const projection& projection) {}
+		void operator()(const primitive_type& prim) {}
+		void operator()(const var_field& field) {}
+		void operator()(const rpc_field& field) {}
+		void operator()(const type& ty) {}
+		void operator()(const signature& sig) {}
+		void operator()(const attributes& attribs) {}
+		void operator()(const projection_type& proj) {}
+		void operator()(const module& module) {}
+
+		void operator()(file& file)
+		{
+			m_modules = &file.included_modules;
+		}
+
+		void operator()(include& include)
+		{
+			const fs::path path {m_relative_to / include.path()};
+			std::cout << "Info: processing included file: " << fs::canonical(path).generic_string() << "\n";
+
+			include.parsed_file.reset((idlc::file*)Parser::parse(path.generic_string()));
+			auto& file = *include.parsed_file;
+
+			std::cout << "Info: collecting modules in file\n";
+			module_collection_pass tc_pass {*m_modules};
+			visit(tc_pass, file);
+		}
+
+	private:
+		fs::path m_relative_to;
+		node_map<module>* m_modules;
 	};
 }
 
@@ -266,13 +340,9 @@ int main(int argc, gsl::czstring<>* argv) {
 			idlc::dump(file, dump);
 		}
 
-		std::cout << "Collecting types\n";
-		idlc::type_collection_pass tc_pass;
-		visit(tc_pass, file);
-
-		std::cout << "Resolving types\n";
-		idlc::type_resolve_pass tr_pass;
-		visit(tr_pass, file);
+		const auto base_path = fs::path {args[1]}.parent_path();
+		idlc::include_file_pass if_pass {base_path};
+		visit(if_pass, file);
 
 		return 0;
 	}

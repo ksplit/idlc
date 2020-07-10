@@ -20,7 +20,7 @@ namespace std {
 #include <filesystem>
 #endif
 
-#include "../main/type_map.h"
+#include "../main/node_map.h"
 #include "../main/string_heap.h"
 
 namespace idlc {
@@ -628,7 +628,7 @@ namespace idlc {
 	class module {
 	public:
 		// May seem strange to "leave this out", but the contents are entirely up to the compiler passes
-		type_map types;
+		node_map<projection> types;
 
 		module(gsl::not_null<gsl::czstring<>> identifier, std::vector<std::unique_ptr<module_item>>&& items) :
 			m_identifier {identifier},
@@ -658,8 +658,12 @@ namespace idlc {
 		std::vector<std::unique_ptr<module_item>> m_items;
 	};
 
+	class file;
+
 	class include {
 	public:
+		std::unique_ptr<file> parsed_file;
+
 		include(const std::filesystem::path& path) : m_path {path}
 		{
 		}
@@ -706,6 +710,8 @@ namespace idlc {
 
 	class file {
 	public:
+		node_map<module> included_modules;
+
 		file(std::vector<std::unique_ptr<file_item>>&& modules) : m_items {move(modules)}
 		{
 			for (const auto& m : m_items)
