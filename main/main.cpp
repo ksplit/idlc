@@ -21,13 +21,11 @@ namespace idlc
 
 	class type_collection_pass : public generic_pass<type_collection_pass> {
 	public:
-		[[gsl::suppress(c.128)]]
 		void visit_module(module& module) noexcept
 		{
 			m_types = &module.types;
 		}
 
-		[[gsl::suppress(c.128)]]
 		void visit_projection(const projection& projection)
 		{
 			if (!m_types->insert(projection)) {
@@ -45,13 +43,11 @@ namespace idlc
 
 	class type_resolve_pass : public generic_pass<type_resolve_pass> {
 	public:
-		[[gsl::suppress(c.128)]]
 		void visit_module(module& module) noexcept
 		{
 			m_types = &module.types;
 		}
 
-		[[gsl::suppress(c.128)]]
 		void visit_projection_type(projection_type& proj)
 		{
 			const projection* def {m_types->get(proj.identifier())};
@@ -74,7 +70,6 @@ namespace idlc
 		{
 		}
 
-		[[gsl::suppress(c.128)]]
 		void visit_module(module& module)
 		{
 			if (!m_modules->insert(module)) {
@@ -95,15 +90,11 @@ namespace idlc
 		{
 		}
 
-		[[gsl::suppress(c.128)]]
 		void visit_file(file& file) noexcept
 		{
 			m_modules = &file.included_modules;
 		}
 
-		// These are for the analysis tool
-		[[gsl::suppress(type.3)]]
-		[[gsl::suppress(c.128)]]
 		void visit_include(include& include)
 		{
 			const fs::path path {m_relative_to / include.path()};
@@ -131,20 +122,17 @@ namespace idlc
 
 	class verify_driver_idl_pass : public generic_pass<verify_driver_idl_pass> {
 	public:
-		[[gsl::suppress(c.128)]]
 		void visit_rpc(const rpc& rpc)
 		{
 			std::cout << "Error: rpc definition " << rpc.identifier() << " illegal in driver module\n";
 			throw std::exception {};
 		}
 
-		[[gsl::suppress(c.128)]]
 		void visit_projection(const projection& projection) {
 			std::cout << "Error: projection definition " << projection.identifier() << " illegal in driver module\n";
 			throw std::exception {};
 		}
 
-		[[gsl::suppress(c.128)]]
 		void visit_module(const module& module)
 		{
 			if (is_module_found) {
@@ -161,13 +149,11 @@ namespace idlc
 
 	class module_resolve_pass : public generic_pass<module_resolve_pass> {
 	public:
-		[[gsl::suppress(c.128)]]
 		void visit_file(const file& file) noexcept
 		{
 			m_modules = &file.included_modules;
 		}
 
-		[[gsl::suppress(c.128)]]
 		void visit_require(const require& require)
 		{
 			module* const ptr {m_modules->get(require.identifier())};
@@ -200,7 +186,6 @@ int main(int argc, gsl::czstring<>* argv) {
 	}
 
 	try {
-
 		auto top_node = std::unique_ptr<idlc::file> {
 			const_cast<idlc::file*>(
 				static_cast<const idlc::file*>(

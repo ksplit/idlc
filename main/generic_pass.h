@@ -8,72 +8,71 @@ namespace idlc {
 	private:
 		derived& self() noexcept
 		{
-			[[gsl::suppress(type.2)]]
 			return *static_cast<derived*>(this);
 		}
 
 	public:
-		void operator()(module& n) noexcept(noexcept(self().visit_module(n)))
+		void operator()(module& n)
 		{
 			self().visit_module(n);
 		}
 
-		void operator()(file& n) noexcept(noexcept(self().visit_file(n)))
+		void operator()(file& n)
 		{
 			self().visit_file(n);
 		}
 
-		void operator()(include& n) noexcept(noexcept(self().visit_include(n)))
+		void operator()(include& n)
 		{
 			self().visit_include(n);
 		}
 
-		void operator()(rpc& n) noexcept(noexcept(self().visit_rpc(n)))
+		void operator()(rpc& n)
 		{
 			self().visit_rpc(n);
 		}
 
-		void operator()(projection& n) noexcept(noexcept(self().visit_projection(n)))
+		void operator()(projection& n)
 		{
 			self().visit_projection(n);
 		}
 
-		void operator()(primitive_type& n) noexcept(noexcept(self().visit_primitive_type(n)))
+		void operator()(primitive_type& n)
 		{
 			self().visit_primitive_type(n);
 		}
 
-		void operator()(var_field& n) noexcept(noexcept(self().visit_var_field(n)))
+		void operator()(var_field& n)
 		{
 			self().visit_var_field(n);
 		}
 
-		void operator()(rpc_field& n) noexcept(noexcept(self().visit_rpc_field(n)))
+		void operator()(rpc_field& n)
 		{
 			self().visit_rpc_field(n);
 		}
 
-		void operator()(type& n) noexcept(noexcept(self().visit_type(n)))
+		void operator()(type& n)
 		{
 			self().visit_type(n);
 		}
 
-		void operator()(signature& n) noexcept(noexcept(self().visit_signature(n)))
+		void operator()(signature& n)
 		{
 			self().visit_signature(n);
 		}
 
-		void operator()(attributes& n) noexcept(noexcept(self().visit_attributes(n)))
+		void operator()(attributes& n)
 		{
 			self().visit_attributes(n);
 		}
 
-		void operator()(projection_type& n) noexcept(noexcept(self().visit_projection_type(n)))
+		void operator()(projection_type& n)
 		{
 			self().visit_projection_type(n);
 		}
 
-		void operator()(require& n) noexcept(noexcept(self().visit_require(n)))
+		void operator()(require& n)
 		{
 			self().visit_require(n);
 		}
