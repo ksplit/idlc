@@ -5,6 +5,13 @@ namespace idlc {
 	// TODO: possibly subject to revision, since it depends on name-hiding (that's why you see the gsl::suppress' everywhere)
 	template<typename derived>
 	class generic_pass {
+	private:
+		derived& self() noexcept
+		{
+			[[gsl::suppress(type.2)]]
+			return *static_cast<derived*>(this);
+		}
+
 	public:
 		void operator()(module& n) noexcept(noexcept(self().visit_module(n)))
 		{
@@ -84,13 +91,6 @@ namespace idlc {
 		void visit_attributes(attributes&) noexcept {}
 		void visit_projection_type(projection_type&) noexcept {}
 		void visit_require(require&) noexcept {}
-
-	private:
-		derived& self() noexcept
-		{
-			[[gsl::suppress(type.2)]]
-			return *static_cast<derived*>(this);
-		}
 	};
 }
 

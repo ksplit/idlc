@@ -15,6 +15,7 @@ set_property(TARGET idlc PROPERTY CXX_STANDARD 17)
 target_include_directories(idlc PRIVATE gsl/include)
 
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
+    target_compile_options(idlc PRIVATE "-Wno-attributes")
     if (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "8")
         message(STATUS "Applying filesystem header fix")
         target_link_libraries(idlc "-lstdc++fs")
