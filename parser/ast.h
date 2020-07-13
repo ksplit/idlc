@@ -222,10 +222,14 @@ namespace idlc {
 	// An odd consequence of how apply() works: the list [alloc] specifies that the value is only allocated, but no value is shared
 	class attributes {
 	public:
+		// The default [in] for pointers
+		attributes() = default;
+
 		// Need to be able to "fail" construction, thus the factory
 		static std::optional<attributes> make(const std::vector<compact_attribute>& attribs)
 		{
 			attributes tmp;
+			tmp.m_value_copy = 0;
 			if (tmp.apply(attribs)) {
 				return tmp;
 			}
@@ -250,11 +254,10 @@ namespace idlc {
 		}
 
 	private:
-		std::uint8_t m_value_copy {};
+		std::uint8_t m_value_copy {static_cast<std::uint8_t>(copy_direction::in)};
 		rpc_side m_share_op_side {rpc_side::none};
 		sharing_op m_share_op {};
 
-		attributes() = default;
 
 		bool apply(const std::vector<compact_attribute>& attribs)
 		{
@@ -318,6 +321,9 @@ namespace idlc {
 			m_attributes {move(attributes)},
 			m_stars {stars}
 		{
+			if (stars && !attributes) {
+				m_attributes = std::make_unique<class attributes>();
+			}
 		}
 
 		const copy_type* get_copy_type() const noexcept
@@ -387,7 +393,7 @@ namespace idlc {
 
 	class rpc_field {
 	public:
-		std::size_t signature_hash {};
+		gsl::czstring<> mangled_signature {};
 
 		rpc_field(gsl::czstring<> identifier, std::unique_ptr<signature>&& sig, std::unique_ptr<attributes>&& attrs) noexcept :
 			m_identifier {identifier},

@@ -7,7 +7,7 @@
 #include "dump.h"
 #include "visit.h"
 #include "generic_pass.h"
-#include "module_import.h"
+#include "rpc_import.h"
 #include "marshaling.h"
 #include "../parser/parser.h"
 
@@ -190,7 +190,7 @@ int main(int argc, gsl::czstring<>* argv) {
 
 	if (args.size() != 2 && args.size() != 3) {
 		std::cout << "Usage: idlc <source-file> [<dump-file>]\n";
-		return 1;
+		return 0;
 	}
 
 	const fs::path idl_path {gsl::at(args, 1)};
@@ -220,7 +220,7 @@ int main(int argc, gsl::czstring<>* argv) {
 
 		std::vector<idlc::marshal_unit> rpcs;
 		std::vector<idlc::marshal_unit> rpc_pointers;
-		idlc::module_import_pass mi_pass {rpcs, rpc_pointers, imports};
+		idlc::rpc_import_pass mi_pass {rpcs, rpc_pointers, imports};
 		visit(mi_pass, file);
 
 		for (const auto& unit : rpcs) {

@@ -6,9 +6,9 @@
 #include "marshaling.h"
 
 namespace idlc {
-	class module_import_pass : public generic_pass<module_import_pass> {
+	class rpc_import_pass : public generic_pass<rpc_import_pass> {
 	public:
-		module_import_pass(std::vector<marshal_unit>& rpcs, std::vector<marshal_unit>& rpc_pointers, node_map<module>& modules);
+		rpc_import_pass(std::vector<marshal_unit>& rpcs, std::vector<marshal_unit>& rpc_pointers, node_map<module>& modules);
 		void visit_require(const require& require);
 
 	private:
