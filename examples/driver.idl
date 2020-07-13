@@ -1,4 +1,4 @@
-include <../examples/kernel.idl>
+include <./kernel.idl>
 
 module dummy_driver {
   require kernel_nullnet;

@@ -107,6 +107,10 @@ namespace idlc {
 		if (type.get_copy_type()) {
 			visit(pass, *type.get_copy_type());
 		}
+
+		if (type.get_attributes()) {
+			visit(pass, *type.get_attributes());
+		}
 	}
 
 	template<typename pass_type>

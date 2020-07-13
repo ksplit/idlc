@@ -288,7 +288,7 @@ namespace idlc {
 		bool update_sharing(compact_attribute attr)
 		{
 			if (m_share_op_side != rpc_side::none) {
-				std::cout << "Error: over-specified sharing ops\n";
+				std::cout << "[error] Over-specified sharing ops\n";
 				return false;
 			}
 
@@ -387,6 +387,8 @@ namespace idlc {
 
 	class rpc_field {
 	public:
+		std::size_t signature_hash {};
+
 		rpc_field(gsl::czstring<> identifier, std::unique_ptr<signature>&& sig, std::unique_ptr<attributes>&& attrs) noexcept :
 			m_identifier {identifier},
 			m_signature {move(sig)},
@@ -712,8 +714,6 @@ namespace idlc {
 
 	class file {
 	public:
-		node_map<module> included_modules;
-
 		file(std::vector<std::unique_ptr<file_item>>&& modules) noexcept :
 			m_items {move(modules)}
 		{
