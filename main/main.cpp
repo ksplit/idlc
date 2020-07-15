@@ -9,6 +9,7 @@
 #include "generic_pass.h"
 #include "rpc_import.h"
 #include "marshaling.h"
+#include "log.h"
 #include "../parser/parser.h"
 
 namespace fs = std::filesystem;
@@ -18,14 +19,56 @@ namespace idlc {
 	public:
 		void visit_require(const require&)
 		{
-			std::cout << "[error] It is illegal to import a module in kernel-side modules\n";
+			log_error("It is illegal to import a module in kernel-side modules");
 			throw std::exception {};
 		}
 
 		void visit_include(const include&)
 		{
-			std::cout << "[warning] IDL inclusion in kernel-side IDL is presently unsupported\n";
+			log_warning("IDL inclusion in kernel-side IDL is currently unsupported");
+			log_warning("Include will be ignored");
 		}
+
+		void visit_type(const type& ty)
+		{
+			if (ty.stars() > 1) {
+				// When I say undefined, I mean it
+				// Generated code may *even* fail to build
+				log_warning("Multi-level pointer types are unsupported");
+				log_warning("Marshaling semantics are undefined");
+				log_note("In module: ", m_module, ", context: ", m_container, ", field: ", m_field);
+			}
+
+			if (ty.stars() && ty.get_copy_type() && ty.get_copy_type()->kind() == copy_type_kind::primitive) {
+				log_debug(m_field, " is a non-passing pointer");
+				log_note("In module: ", m_module, ", context: ", m_container);
+			}
+		}
+
+		void visit_var_field(const var_field& var)
+		{
+			m_field = var.identifier();
+		}
+
+		void visit_projection(const projection& proj)
+		{
+			m_container = proj.identifier();
+		}
+
+		void visit_rpc(const rpc& rpc)
+		{
+			m_container = rpc.identifier();
+		}
+
+		void visit_module(const module& mod)
+		{
+			m_module = mod.identifier();
+		}
+
+	private:
+		gsl::czstring<> m_module {};
+		gsl::czstring<> m_container {};
+		gsl::czstring<> m_field {};
 	};
 
 	class type_collection_pass : public generic_pass<type_collection_pass> {
@@ -39,7 +82,7 @@ namespace idlc {
 		void visit_projection(const projection& projection)
 		{
 			if (!m_types->insert(projection)) {
-				std::cout << "[error] Encountered projection redefinition: " << m_scope << "::" << projection.identifier() << "\n";
+				log_error("Encountered projection redefinition: ", m_scope, "::", projection.identifier());
 				throw std::exception {};
 			}
 		}
@@ -88,8 +131,8 @@ namespace idlc {
 				proj.definition(def);
 			}
 			else {
-				std::cout << "[error] Could not resolve projection: " << proj.identifier() << "\n";
-				std::cout << "[note] In: " << m_module << "::" << m_item <<  "\n";
+				log_error("Could not resolve projection: ", proj.identifier());
+				log_note("In: ", m_module, "::", m_item);
 				throw std::exception {};
 			}
 		}
@@ -109,7 +152,7 @@ namespace idlc {
 		void visit_module(module& module)
 		{
 			if (!m_modules->insert(module)) {
-				std::cout << "[error] Encountered module redefinition: " << module.identifier() << "\n";
+				log_error("Encountered module redefinition: ", module.identifier());
 				throw std::exception {};
 			}
 		}
@@ -130,11 +173,11 @@ namespace idlc {
 		{
 			const fs::path path {m_relative_to / include.path()};
 			if (!fs::exists(path)) {
-				std::cout << "[error] Could not find include " << include.path().generic_string() << "\n";
+				log_error("Could not find include ", include.path().generic_string(), "\n");
 				throw std::exception {};
 			}
 
-			std::cout << "[info] Processing included file: " << path.generic_string() << "\n";
+			log_note("Processing included file: ", path.generic_string());
 
 			auto& file = *const_cast<idlc::file*>(
 				static_cast<const idlc::file*>(
@@ -160,19 +203,19 @@ namespace idlc {
 	public:
 		void visit_rpc(const rpc& rpc)
 		{
-			std::cout << "[error] Rpc definition " << rpc.identifier() << " illegal in driver module\n";
+			log_error("Rpc definition ", rpc.identifier(), " illegal in driver module");
 			throw std::exception {};
 		}
 
 		void visit_projection(const projection& projection) {
-			std::cout << "[error] Projection definition " << projection.identifier() << " illegal in driver module\n";
+			log_error("Projection definition ", projection.identifier(), " illegal in driver module");
 			throw std::exception {};
 		}
 
 		void visit_module(const module& module)
 		{
 			if (is_module_found) {
-				std::cout << "[error] Driver definition IDL may only define the driver module\n";
+				log_error("Driver definition IDL may only define the driver module");
 				throw std::exception {};
 			}
 
@@ -182,14 +225,61 @@ namespace idlc {
 	private:
 		bool is_module_found {false};
 	};
+
+	enum class marshal_act {
+		marshal_val,
+		unmarshal_val,
+		alloc_cspace,
+		free_cspace,
+		bind_cspace
+	};
+
+	void process_marshal_units(gsl::span<const marshal_unit> units)
+	{
+		for (const auto& unit : units) {
+			log_debug("RPC marshal unit ", unit.identifier);
+			for (const auto& arg : unit.sig->arguments()) {
+				switch (arg->kind()) {
+				case idlc::field_kind::var: {
+					const auto& var_arg = arg->get<idlc::field_kind::var>();
+					const auto& arg_type = var_arg.get_type();
+					if (!arg_type.stars()) {
+						log_debug("\tArgument ", var_arg.identifier(), " is of value type and will be copy-marshaled");
+					}
+
+					break;
+				}
+
+				case idlc::field_kind::rpc:
+					break;
+				}
+			}
+
+			const auto& rf = unit.sig->return_field();
+			switch (rf.kind()) {
+			case idlc::field_kind::var: {
+				const auto& var_arg = rf.get<idlc::field_kind::var>();
+				const auto& arg_type = var_arg.get_type();
+				if (!arg_type.stars()) {
+					log_debug("\tReturn value is of value type and will be copy-marshaled");
+				}
+
+				break;
+			}
+
+			case idlc::field_kind::rpc:
+				break;
+			}
+		}
+	}
 }
 
 
 int main(int argc, gsl::czstring<>* argv) {
 	const gsl::span args {argv, gsl::narrow_cast<std::size_t>(argc)};
 
-	if (args.size() != 2 && args.size() != 3) {
-		std::cout << "Usage: idlc <source-file> [<dump-file>]\n";
+	if (args.size() != 2) {
+		std::cout << "Usage: idlc <source-file>\n";
 		return 0;
 	}
 
@@ -203,13 +293,7 @@ int main(int argc, gsl::czstring<>* argv) {
 
 		auto& file = *top_node;
 
-		std::cout << "[info] Verified IDL syntax\n";
-
-		if (args.size() == 3) {
-			std::ofstream dump {gsl::at(args, 2)};
-			std::cout << "[info] Doing AST dump\n";
-			idlc::dump(file, dump);
-		}
+		idlc::log_note("Verified IDL syntax");
 
 		idlc::verify_driver_idl_pass vdi_pass;
 		visit(vdi_pass, file);
@@ -223,23 +307,17 @@ int main(int argc, gsl::czstring<>* argv) {
 		idlc::rpc_import_pass mi_pass {rpcs, rpc_pointers, imports};
 		visit(mi_pass, file);
 
-		for (const auto& unit : rpcs) {
-			std::cout << "[info] RPC marshal unit " << unit.identifier << "\n";
-		}
-
-		for (const auto& unit : rpc_pointers) {
-			std::cout << "[info] RPC pointer marshal unit " << unit.identifier << "\n";
-		}
+		idlc::process_marshal_units(rpcs);
+		idlc::process_marshal_units(rpc_pointers);
 
 		return 0;
 	}
 	catch (const Parser::ParseException& e) {
-		std::cerr << "[error] Parsing failed\n" << std::endl;
-		std::cerr << e.getReason() << std::endl;
+		idlc::log_error("Parsing failed");
+		std::cout << e.getReason();
 		return 1;
 	}
 	catch (const std::exception&) {
-		std::cout << "[error] Compilation failed\n";
 		return 1;
 	}
 }

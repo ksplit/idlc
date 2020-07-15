@@ -5,6 +5,7 @@
 
 #include "visit.h"
 #include "marshaling.h"
+#include "log.h"
 
 namespace idlc {
 	namespace {
@@ -215,11 +216,11 @@ void idlc::rpc_import_pass::visit_require(const require& require)
 {
 	module* const ptr {m_modules.get(require.identifier())};
 	if (!ptr) {
-		std::cout << "[error] Could not resolve required module " << require.identifier() << "\n";
+		log_error("Could not resolve required module ", require.identifier());
 		throw std::exception {};
 	}
 
-	std::cout << "[info] Processing required module " << require.identifier() << "\n";
+	log_note("Processing required module ", require.identifier());
 
 	module& mod {*ptr};
 	rpc_field_signature_pass rfs;

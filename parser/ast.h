@@ -4,8 +4,9 @@
 #include <vector>
 #include <variant>
 #include <gsl/gsl>
-#include <iostream>
 #include <optional>
+
+#include "../main/log.h"
 
 #ifdef __GNUC__
 #if __GNUC__ < 8
@@ -291,7 +292,7 @@ namespace idlc {
 		bool update_sharing(compact_attribute attr)
 		{
 			if (m_share_op_side != rpc_side::none) {
-				std::cout << "[error] Over-specified sharing ops\n";
+				log_error("Over-specified sharing ops");
 				return false;
 			}
 
