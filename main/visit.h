@@ -5,167 +5,227 @@
 
 namespace idlc {
 	template<typename pass_type>
-	void visit(pass_type& pass, file& file)
+	bool visit(pass_type& pass, file& file)
 	{
-		pass(file);
-		for (const auto& item : file.items()) {
-			visit(pass, *item);
+		if (!pass(file)) {
+			return false;
 		}
+
+		for (const auto& item : file.items()) {
+			if (!visit(pass, *item)) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, file_item& item)
+	bool visit(pass_type& pass, file_item& item)
 	{
 		switch (item.kind()) {
 		case file_item_kind::include:
-			visit(pass, item.get<file_item_kind::include>());
-			break;
+			return visit(pass, item.get<file_item_kind::include>());
 
 		case file_item_kind::module:
-			visit(pass, item.get<file_item_kind::module>());
-			break;
+			return visit(pass, item.get<file_item_kind::module>());
+
+		default:
+			Expects(false);
 		}
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, include& include)
+	bool visit(pass_type& pass, include& include)
 	{
-		pass(include);
+		return pass(include);
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, module& module)
+	bool visit(pass_type& pass, module& module)
 	{
-		pass(module);
+		if (!pass(module)) {
+			return false;
+		}
+
 		for (const auto& item : module.items()) {
-			visit(pass, *item);
+			if (!visit(pass, *item)) {
+				return false;
+			}
 		}
+
+		return true;
 	}
 
 	// Is there really a use case for this one?
 	// What we're really interested in is the content of the variant, after all
 
 	template<typename pass_type>
-	void visit(pass_type& pass, module_item& item)
+	bool visit(pass_type& pass, module_item& item)
 	{
 		switch (item.kind()) {
 		case module_item_kind::projection:
-			visit(pass, item.get<module_item_kind::projection>());
-			break;
+			return visit(pass, item.get<module_item_kind::projection>());
 
 		case module_item_kind::rpc:
-			visit(pass, item.get<module_item_kind::rpc>());
-			break;
+			return visit(pass, item.get<module_item_kind::rpc>());
 
 		case module_item_kind::require:
-			visit(pass, item.get<module_item_kind::require>());
-			break;
+			return visit(pass, item.get<module_item_kind::require>());
+
+		default:
+			Expects(false);
 		}
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, projection& projection)
+	bool visit(pass_type& pass, projection& projection)
 	{
-		pass(projection);
-		for (const auto& field : projection.fields()) {
-			visit(pass, *field);
+		if (!pass(projection)) {
+			return false;
 		}
+
+		for (const auto& field : projection.fields()) {
+			if (!visit(pass, *field)) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, field& field)
+	bool visit(pass_type& pass, field& field)
 	{
 		switch (field.kind()) {
 		case field_kind::var:
-			visit(pass, field.get<field_kind::var>());
-			break;
+			return visit(pass, field.get<field_kind::var>());
 
 		case field_kind::rpc:
-			visit(pass, field.get<field_kind::rpc>());
-			break;
+			return visit(pass, field.get<field_kind::rpc>());
+
+		default:
+			Expects(false);
 		}
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, var_field& field)
+	bool visit(pass_type& pass, var_field& field)
 	{
-		pass(field);
-		visit(pass, field.get_type());
+		if (!pass(field)) {
+			return false;
+		}
+
+		return visit(pass, field.get_type());
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, rpc_field& field)
+	bool visit(pass_type& pass, rpc_field& field)
 	{
-		pass(field);
-		visit(pass, field.get_signature());
+		if (!pass(field)) {
+			return false;
+		}
+
+		if (!visit(pass, field.get_signature())) {
+			return false;
+		}
+
+		return true;
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, type& type)
+	bool visit(pass_type& pass, type& type)
 	{
-		pass(type);
+		if (!pass(type)) {
+			return false;
+		}
+
 		if (type.get_copy_type()) {
-			visit(pass, *type.get_copy_type());
+			if (!visit(pass, *type.get_copy_type())) {
+				return false;
+			}
 		}
 
 		if (type.get_attributes()) {
-			visit(pass, *type.get_attributes());
+			if (!visit(pass, *type.get_attributes())) {
+				return false;
+			}
 		}
+
+		return true;
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, copy_type& type)
+	bool visit(pass_type& pass, copy_type& type)
 	{
 		switch (type.kind()) {
 		case copy_type_kind::projection:
-			visit(pass, type.get<copy_type_kind::projection>());
-			break;
+			return visit(pass, type.get<copy_type_kind::projection>());
 
 		case copy_type_kind::primitive:
-			visit(pass, type.get<copy_type_kind::primitive>());
-			break;
+			return visit(pass, type.get<copy_type_kind::primitive>());
+
+		default:
+			Expects(false);
 		}
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, projection_type& type)
+	bool visit(pass_type& pass, projection_type& type)
 	{
-		pass(type);
+		return pass(type);
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, primitive_type& type)
+	bool visit(pass_type& pass, primitive_type& type)
 	{
-		pass(type);
+		return pass(type);
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, rpc& rpc)
+	bool visit(pass_type& pass, rpc& rpc)
 	{
-		pass(rpc);
-		visit(pass, rpc.get_signature());
+		if (!pass(rpc)) {
+			return false;
+		}
+
+		if (!visit(pass, rpc.get_signature())) {
+			return false;
+		}
+
+		return true;
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, require& require)
+	bool visit(pass_type& pass, require& require)
 	{
-		pass(require);
+		return pass(require);
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, signature& signature)
+	bool visit(pass_type& pass, signature& signature)
 	{
-		pass(signature);
-		visit(pass, signature.return_field());
+		if (!pass(signature)) {
+			return false;
+		}
+
+		if (!visit(pass, signature.return_field())) {
+			return false;
+		}
+
 		for (const auto& arg : signature.arguments()) {
-			visit(pass, *arg);
+			if (!visit(pass, *arg)) {
+				return false;
+			}
 		}
+
+		return true;
 	}
 
 	template<typename pass_type>
-	void visit(pass_type& pass, attributes& attribs)
+	bool visit(pass_type& pass, attributes& attribs)
 	{
-		pass(attribs);
+		return pass(attribs);
 	}
 }
 

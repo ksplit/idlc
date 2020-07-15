@@ -9,7 +9,7 @@ namespace idlc {
 	class rpc_import_pass : public generic_pass<rpc_import_pass> {
 	public:
 		rpc_import_pass(std::vector<marshal_unit>& rpcs, std::vector<marshal_unit>& rpc_pointers, node_map<module>& modules);
-		void visit_require(const require& require);
+		bool visit_require(const require& require);
 
 	private:
 		std::vector<marshal_unit>& m_rpcs;

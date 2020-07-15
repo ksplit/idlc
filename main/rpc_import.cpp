@@ -24,7 +24,7 @@ namespace idlc {
 			{
 			}
 
-			void visit_rpc(const rpc& rpc)
+			bool visit_rpc(const rpc& rpc)
 			{
 				m_rpcs.push_back(
 					{
@@ -32,9 +32,11 @@ namespace idlc {
 						"rpc_" + std::string {rpc.identifier()}
 					}
 				);
+
+				return true;
 			}
 
-			void visit_rpc_field(const rpc_field& rpc)
+			bool visit_rpc_field(const rpc_field& rpc)
 			{
 				std::stringstream stream;
 				stream << "rpc_ptr" << rpc.mangled_signature;
@@ -44,6 +46,8 @@ namespace idlc {
 						stream.str()
 					}
 				);
+
+				return true;
 			}
 
 		private:
@@ -58,23 +62,29 @@ namespace idlc {
 				m_mangle {mangle}
 			{}
 
-			void visit_projection_type(const projection_type& pt)
+			bool visit_projection_type(const projection_type& pt)
 			{
 				// Since the underlying type is guaranteed unique, we can just use the pointer to identify it
 				// Alternatively, the identifier pointer, due to the string_heap semantics
 				m_mangle += '_';
+				// If this weren't here, it'd be possible for mangled names to collide
+				m_mangle += pt.definition().parent_module; // ugly hack, but necessary, since projections are module-scoped
+				m_mangle += '_';
 				m_mangle += pt.identifier();
+				return true;
 			}
 
-			void visit_type(const type& ty)
+			bool visit_type(const type& ty)
 			{
-				m_mangle += '_' + std::to_string(ty.stars());
+				m_mangle += ty.stars() ? '_' + std::to_string(ty.stars()) : "";
 				if (!ty.get_copy_type()) {
 					m_mangle += "_void";
 				}
+
+				return true;
 			}
 
-			void visit_primitive_type(const primitive_type& pt)
+			bool visit_primitive_type(const primitive_type& pt)
 			{
 				switch (pt.kind()) {
 				case primitive_type_kind::bool_k:
@@ -129,9 +139,11 @@ namespace idlc {
 					m_mangle += "_unsigned_short";
 					break;
 				}
+
+				return true;
 			}
 
-			void visit_attributes(const attributes& attribs)
+			bool visit_attributes(const attributes& attribs)
 			{
 				switch (attribs.get_value_copy_direction()) {
 				case copy_direction::in:
@@ -159,7 +171,7 @@ namespace idlc {
 					break;
 
 				case rpc_side::none:
-					return;
+					return true; // no need to get the op
 				}
 
 				switch (attribs.get_sharing_op()) {
@@ -175,6 +187,8 @@ namespace idlc {
 					m_mangle += "_bind";
 					break;
 				}
+
+				return true;
 			}
 
 		private:
@@ -184,12 +198,17 @@ namespace idlc {
 
 		class rpc_field_signature_pass : public generic_pass<rpc_field_signature_pass> {
 		public:
-			void visit_rpc_field(rpc_field& field)
+			bool visit_rpc_field(rpc_field& field)
 			{
 				std::string mangle;
 				signature_mangle_pass sh {mangle};
-				visit(sh, field.get_signature());
+				if (!visit(sh, field.get_signature())) {
+					return false;
+				}
+
 				field.mangled_signature = mangle_heap.intern(mangle);
+
+				return true;
 			}
 
 		private:
@@ -212,7 +231,7 @@ idlc::rpc_import_pass::rpc_import_pass(
 {
 }
 
-void idlc::rpc_import_pass::visit_require(const require& require)
+bool idlc::rpc_import_pass::visit_require(const require& require)
 {
 	module* const ptr {m_modules.get(require.identifier())};
 	if (!ptr) {
@@ -225,6 +244,9 @@ void idlc::rpc_import_pass::visit_require(const require& require)
 	module& mod {*ptr};
 	rpc_field_signature_pass rfs;
 	marshal_unit_collection_pass muc {m_rpcs, m_rpc_pointers};
-	visit(rfs, mod);
-	visit(muc, mod);
+	if (!visit(rfs, mod)) {
+		return false;
+	}
+
+	return visit(muc, mod);
 }

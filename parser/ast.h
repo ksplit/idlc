@@ -545,6 +545,8 @@ namespace idlc {
 
 	class projection {
 	public:
+		gsl::czstring<> parent_module {};
+
 		projection(
 			gsl::not_null<gsl::czstring<>> identifier,
 			gsl::not_null<gsl::czstring<>> real_type,

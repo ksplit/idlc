@@ -14,84 +14,84 @@ namespace idlc {
 		}
 
 	public:
-		void operator()(module& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_module(n)))
+		bool operator()(module& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_module(n)))
 		{
-			self().visit_module(n);
+			return self().visit_module(n);
 		}
 
-		void operator()(file& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_file(n)))
+		bool operator()(file& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_file(n)))
 		{
-			self().visit_file(n);
+			return self().visit_file(n);
 		}
 
-		void operator()(include& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_include(n)))
+		bool operator()(include& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_include(n)))
 		{
-			self().visit_include(n);
+			return self().visit_include(n);
 		}
 
-		void operator()(rpc& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_rpc(n)))
+		bool operator()(rpc& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_rpc(n)))
 		{
-			self().visit_rpc(n);
+			return self().visit_rpc(n);
 		}
 
-		void operator()(projection& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_projection(n)))
+		bool operator()(projection& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_projection(n)))
 		{
-			self().visit_projection(n);
+			return self().visit_projection(n);
 		}
 
-		void operator()(primitive_type& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_primitive_type(n)))
+		bool operator()(primitive_type& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_primitive_type(n)))
 		{
-			self().visit_primitive_type(n);
+			return self().visit_primitive_type(n);
 		}
 
-		void operator()(var_field& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_var_field(n)))
+		bool operator()(var_field& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_var_field(n)))
 		{
-			self().visit_var_field(n);
+			return self().visit_var_field(n);
 		}
 
-		void operator()(rpc_field& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_rpc_field(n)))
+		bool operator()(rpc_field& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_rpc_field(n)))
 		{
-			self().visit_rpc_field(n);
+			return self().visit_rpc_field(n);
 		}
 
-		void operator()(type& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_type(n)))
+		bool operator()(type& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_type(n)))
 		{
-			self().visit_type(n);
+			return self().visit_type(n);
 		}
 
-		void operator()(signature& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_signature(n)))
+		bool operator()(signature& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_signature(n)))
 		{
-			self().visit_signature(n);
+			return self().visit_signature(n);
 		}
 
-		void operator()(attributes& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_attributes(n)))
+		bool operator()(attributes& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_attributes(n)))
 		{
-			self().visit_attributes(n);
+			return self().visit_attributes(n);
 		}
 
-		void operator()(projection_type& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_projection_type(n)))
+		bool operator()(projection_type& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_projection_type(n)))
 		{
-			self().visit_projection_type(n);
+			return self().visit_projection_type(n);
 		}
 
-		void operator()(require& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_require(n)))
+		bool operator()(require& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_require(n)))
 		{
-			self().visit_require(n);
+			return self().visit_require(n);
 		}
 
-		void visit_module(module&) noexcept {}
-		void visit_file(file&) noexcept {}
-		void visit_include(include&) noexcept {}
-		void visit_rpc(rpc&) noexcept {}
-		void visit_projection(projection&) noexcept {}
-		void visit_primitive_type(primitive_type&) noexcept {}
-		void visit_var_field(var_field&) noexcept {}
-		void visit_rpc_field(rpc_field&) noexcept {}
-		void visit_type(type&) noexcept {}
-		void visit_signature(signature&) noexcept {}
-		void visit_attributes(attributes&) noexcept {}
-		void visit_projection_type(projection_type&) noexcept {}
-		void visit_require(require&) noexcept {}
+		bool visit_module(module&) noexcept { return true; }
+		bool visit_file(file&) noexcept { return true; }
+		bool visit_include(include&) noexcept { return true; }
+		bool visit_rpc(rpc&) noexcept { return true; }
+		bool visit_projection(projection&) noexcept { return true; }
+		bool visit_primitive_type(primitive_type&) noexcept { return true; }
+		bool visit_var_field(var_field&) noexcept { return true; }
+		bool visit_rpc_field(rpc_field&) noexcept { return true; }
+		bool visit_type(type&) noexcept { return true; }
+		bool visit_signature(signature&) noexcept { return true; }
+		bool visit_attributes(attributes&) noexcept { return true; }
+		bool visit_projection_type(projection_type&) noexcept { return true; }
+		bool visit_require(require&) noexcept { return true; }
 	};
 }
 

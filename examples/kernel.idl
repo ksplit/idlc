@@ -77,7 +77,7 @@ module kernel_nullnet {
 	projection <struct rtnl_link_ops> rtnl_link_ops___rtnl_link_register {
 			rpc void (*setup)(projection net_device_setup * dev);
 			// Unsupported at this time, semantics unknown
-			rpc int (*validate)(projection nlattr_validate** tb, projection nlattr_validate** data);
+			/*rpc int (*validate)(projection nlattr_validate** tb, projection nlattr_validate** data);*/
 	}
 
 	projection <struct net_device> net_device_alloc_netdev_mqs { }

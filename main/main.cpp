@@ -17,52 +17,60 @@ namespace fs = std::filesystem;
 namespace idlc {
 	class verify_kernel_idl_pass : public generic_pass<verify_kernel_idl_pass> {
 	public:
-		void visit_require(const require&)
+		bool visit_require(const require&)
 		{
 			log_error("It is illegal to import a module in kernel-side modules");
-			throw std::exception {};
+			return false;
 		}
 
-		void visit_include(const include&)
+		bool visit_include(const include&)
 		{
 			log_warning("IDL inclusion in kernel-side IDL is currently unsupported");
 			log_warning("Include will be ignored");
+			return true;
 		}
 
-		void visit_type(const type& ty)
+		bool visit_type(const type& ty)
 		{
 			if (ty.stars() > 1) {
 				// When I say undefined, I mean it
 				// Generated code may *even* fail to build
+				// Unlikely, but I won't actively try to prevent it
 				log_warning("Multi-level pointer types are unsupported");
-				log_warning("Marshaling semantics are undefined");
-				log_note("In module: ", m_module, ", context: ", m_container, ", field: ", m_field);
+				log_warning("\tMarshaling semantics are undefined");
+				log_warning("\tIn module: ", m_module, ", context: ", m_container, ", field: ", m_field);
 			}
 
 			if (ty.stars() && ty.get_copy_type() && ty.get_copy_type()->kind() == copy_type_kind::primitive) {
 				log_debug(m_field, " is a non-passing pointer");
-				log_note("In module: ", m_module, ", context: ", m_container);
+				log_debug("\tIn module: ", m_module, ", context: ", m_container);
 			}
+
+			return true;
 		}
 
-		void visit_var_field(const var_field& var)
+		bool visit_var_field(const var_field& var)
 		{
 			m_field = var.identifier();
+			return true;
 		}
 
-		void visit_projection(const projection& proj)
+		bool visit_projection(const projection& proj)
 		{
 			m_container = proj.identifier();
+			return true;
 		}
 
-		void visit_rpc(const rpc& rpc)
+		bool visit_rpc(const rpc& rpc)
 		{
 			m_container = rpc.identifier();
+			return true;
 		}
 
-		void visit_module(const module& mod)
+		bool visit_module(const module& mod)
 		{
 			m_module = mod.identifier();
+			return true;
 		}
 
 	private:
@@ -73,18 +81,23 @@ namespace idlc {
 
 	class type_collection_pass : public generic_pass<type_collection_pass> {
 	public:
-		void visit_module(module& module) noexcept
+		bool visit_module(module& module) noexcept
 		{
 			m_scope = module.identifier();
 			m_types = &module.types;
+			return true;
 		}
 
-		void visit_projection(const projection& projection)
+		bool visit_projection(projection& projection)
 		{
 			if (!m_types->insert(projection)) {
 				log_error("Encountered projection redefinition: ", m_scope, "::", projection.identifier());
-				throw std::exception {};
+				return false;
 			}
+
+			projection.parent_module = m_scope;
+
+			return true;
 		}
 
 	private:
@@ -106,25 +119,28 @@ namespace idlc {
 	// A possible band-aid fix is just to ban by-value projections
 	class type_resolve_pass : public generic_pass<type_resolve_pass> {
 	public:
-		void visit_module(module& module) noexcept
+		bool visit_module(module& module) noexcept
 		{
 			m_module = module.identifier();
 			m_types = &module.types;
+			return true;
 		}
 
 		// Should account for parent scope of RPC pointers
 
-		void visit_projection(const projection& proj)
+		bool visit_projection(const projection& proj)
 		{
 			m_item = proj.identifier();
+			return true;
 		}
 
-		void visit_rpc(const rpc& rpc)
+		bool visit_rpc(const rpc& rpc)
 		{
 			m_item = rpc.identifier();
+			return true;
 		}
 
-		void visit_projection_type(projection_type& proj)
+		bool visit_projection_type(projection_type& proj)
 		{
 			const projection* def {m_types->get(proj.identifier())};
 			if (def) {
@@ -133,8 +149,10 @@ namespace idlc {
 			else {
 				log_error("Could not resolve projection: ", proj.identifier());
 				log_note("In: ", m_module, "::", m_item);
-				throw std::exception {};
+				return false;
 			}
+
+			return true;
 		}
 
 	private:
@@ -149,12 +167,14 @@ namespace idlc {
 		{
 		}
 
-		void visit_module(module& module)
+		bool visit_module(module& module)
 		{
 			if (!m_modules->insert(module)) {
 				log_error("Encountered module redefinition: ", module.identifier());
-				throw std::exception {};
+				return false;
 			}
+
+			return true;
 		}
 
 	private:
@@ -169,12 +189,12 @@ namespace idlc {
 		{
 		}
 
-		void visit_include(include& include)
+		bool visit_include(include& include)
 		{
 			const fs::path path {m_relative_to / include.path()};
 			if (!fs::exists(path)) {
 				log_error("Could not find include ", include.path().generic_string(), "\n");
-				throw std::exception {};
+				return false;
 			}
 
 			log_note("Processing included file: ", path.generic_string());
@@ -188,10 +208,19 @@ namespace idlc {
 			type_collection_pass tc;
 			type_resolve_pass tr;
 			module_collection_pass mc {m_modules};
-			visit(vki, file);
-			visit(tc, file);
-			visit(tr, file);
-			visit(mc, file);
+			if (!visit(vki, file)) {
+				return false;
+			}
+
+			if (!visit(tc, file)) {
+				return false;
+			}
+
+			if (!visit(tr, file)) {
+				return false;
+			}
+
+			return visit(mc, file);
 		}
 
 	private:
@@ -201,77 +230,32 @@ namespace idlc {
 
 	class verify_driver_idl_pass : public generic_pass<verify_driver_idl_pass> {
 	public:
-		void visit_rpc(const rpc& rpc)
+		bool visit_rpc(const rpc& rpc)
 		{
 			log_error("Rpc definition ", rpc.identifier(), " illegal in driver module");
-			throw std::exception {};
+			return false;
 		}
 
-		void visit_projection(const projection& projection) {
+		bool visit_projection(const projection& projection) {
 			log_error("Projection definition ", projection.identifier(), " illegal in driver module");
-			throw std::exception {};
+			return false;
 		}
 
-		void visit_module(const module& module)
+		bool visit_module(const module& module)
 		{
 			if (is_module_found) {
 				log_error("Driver definition IDL may only define the driver module");
-				throw std::exception {};
+				return false;
 			}
 
 			is_module_found = true;
+
+			return true;
 		}
 
 	private:
 		bool is_module_found {false};
 	};
-
-	enum class marshal_act {
-		marshal_val,
-		unmarshal_val,
-		alloc_cspace,
-		free_cspace,
-		bind_cspace
-	};
-
-	void process_marshal_units(gsl::span<const marshal_unit> units)
-	{
-		for (const auto& unit : units) {
-			log_debug("RPC marshal unit ", unit.identifier);
-			for (const auto& arg : unit.sig->arguments()) {
-				switch (arg->kind()) {
-				case idlc::field_kind::var: {
-					const auto& var_arg = arg->get<idlc::field_kind::var>();
-					const auto& arg_type = var_arg.get_type();
-					if (!arg_type.stars()) {
-						log_debug("\tArgument ", var_arg.identifier(), " is of value type and will be copy-marshaled");
-					}
-
-					break;
-				}
-
-				case idlc::field_kind::rpc:
-					break;
-				}
-			}
-
-			const auto& rf = unit.sig->return_field();
-			switch (rf.kind()) {
-			case idlc::field_kind::var: {
-				const auto& var_arg = rf.get<idlc::field_kind::var>();
-				const auto& arg_type = var_arg.get_type();
-				if (!arg_type.stars()) {
-					log_debug("\tReturn value is of value type and will be copy-marshaled");
-				}
-
-				break;
-			}
-
-			case idlc::field_kind::rpc:
-				break;
-			}
-		}
-	}
 }
 
 
@@ -296,16 +280,22 @@ int main(int argc, gsl::czstring<>* argv) {
 		idlc::log_note("Verified IDL syntax");
 
 		idlc::verify_driver_idl_pass vdi_pass;
-		visit(vdi_pass, file);
+		if (!visit(vdi_pass, file)) {
+			return 1;
+		}
 
 		idlc::node_map<idlc::module> imports;
 		idlc::include_file_pass if_pass {idl_path.parent_path(), imports};
-		visit(if_pass, file);
+		if (!visit(if_pass, file)) {
+			return 1;
+		}
 
 		std::vector<idlc::marshal_unit> rpcs;
 		std::vector<idlc::marshal_unit> rpc_pointers;
 		idlc::rpc_import_pass mi_pass {rpcs, rpc_pointers, imports};
-		visit(mi_pass, file);
+		if (!visit(mi_pass, file)) {
+			return 1;
+		}
 
 		idlc::process_marshal_units(rpcs);
 		idlc::process_marshal_units(rpc_pointers);
@@ -315,9 +305,6 @@ int main(int argc, gsl::czstring<>* argv) {
 	catch (const Parser::ParseException& e) {
 		idlc::log_error("Parsing failed");
 		std::cout << e.getReason();
-		return 1;
-	}
-	catch (const std::exception&) {
 		return 1;
 	}
 }

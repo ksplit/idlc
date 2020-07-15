@@ -17,31 +17,31 @@ namespace idlc {
 	template<typename ... arg_types>
 	void log_error(arg_types... args)
 	{
-		std::cout << "\x1b[31m[error] ";
+		std::cout << "\x1b[31m[error]\x1b[0m ";
 		log_insert(args...);
-		std::cout << "\x1b[0m\n";
+		std::cout << "\n";
 	}
 
 	template<typename ... arg_types>
 	void log_warning(arg_types... args)
 	{
-		std::cout << "\x1b[33m[warning] ";
+		std::cout << "\x1b[33m[warning]\x1b[0m ";
 		log_insert(args...);
-		std::cout << "\x1b[0m\n";
+		std::cout << "\n";
 	}
 
 	template<typename ... arg_types>
 	void log_debug(arg_types... args)
 	{
-		std::cout << "\x1b[36m[debug] ";
+		std::cout << "\x1b[36m[debug]\x1b[0m ";
 		log_insert(args...);
-		std::cout << "\x1b[0m\n";
+		std::cout << "\n";
 	}
 
 	template<typename ... arg_types>
 	void log_note(arg_types... args)
 	{
-		std::cout << "[note] ";
+		std::cout << "\x1b[32m[note]\x1b[0m ";
 		log_insert(args...);
 		std::cout << "\n";
 	}
