@@ -101,13 +101,13 @@ namespace idlc {
 			return m_identifier;
 		}
 
-		const projection& definition() const noexcept
+		projection& definition() const noexcept
 		{
 			Expects(m_definition != nullptr);
 			return *m_definition;
 		}
 
-		void definition(const projection* proj) noexcept
+		void definition(projection* proj) noexcept
 		{
 			Expects(proj != nullptr);
 			m_definition = proj;
@@ -115,7 +115,7 @@ namespace idlc {
 
 	private:
 		gsl::czstring<> m_identifier;
-		const projection* m_definition;
+		projection* m_definition;
 	};
 
 	enum class copy_type_kind {
@@ -223,9 +223,6 @@ namespace idlc {
 	// An odd consequence of how apply() works: the list [alloc] specifies that the value is only allocated, but no value is shared
 	class attributes {
 	public:
-		// The default [in] for pointers
-		attributes() = default;
-
 		// Need to be able to "fail" construction, thus the factory
 		static std::optional<attributes> make(const std::vector<compact_attribute>& attribs)
 		{
@@ -237,6 +234,25 @@ namespace idlc {
 			else {
 				return std::nullopt;
 			}
+		}
+
+		// Default attributes for pointers are [bind(callee)]
+		static attributes make_pointer_default()
+		{
+			attributes tmp;
+			tmp.m_value_copy = 0;
+			tmp.m_share_op = sharing_op::bind;
+			tmp.m_share_op_side = rpc_side::callee;
+			return tmp;
+		}
+
+		// Default attributes for pointers are [in]
+		static attributes make_value_default()
+		{
+			attributes tmp;
+			tmp.m_value_copy = static_cast<std::uint8_t>(copy_direction::in);
+			tmp.m_share_op_side = rpc_side::none;
+			return tmp;
 		}
 
 		copy_direction get_value_copy_direction() const noexcept
@@ -255,10 +271,12 @@ namespace idlc {
 		}
 
 	private:
-		std::uint8_t m_value_copy {static_cast<std::uint8_t>(copy_direction::in)};
-		rpc_side m_share_op_side {rpc_side::none};
+		std::uint8_t m_value_copy {};
+		rpc_side m_share_op_side {};
 		sharing_op m_share_op {};
 
+		// The default [in] for pointers
+		attributes() = default;
 
 		bool apply(const std::vector<compact_attribute>& attribs)
 		{
@@ -322,8 +340,12 @@ namespace idlc {
 			m_attributes {move(attributes)},
 			m_stars {stars}
 		{
-			if (stars && !attributes) {
-				m_attributes = std::make_unique<class attributes>();
+			if (stars && !m_attributes) {
+				m_attributes = std::make_unique<class attributes>(attributes::make_pointer_default());
+			}
+
+			if (!stars && !m_attributes) {
+				m_attributes = std::make_unique<class attributes>(attributes::make_value_default());
 			}
 		}
 
@@ -641,7 +663,7 @@ namespace idlc {
 	class module {
 	public:
 		// May seem strange to "leave this out", but the contents are entirely up to the compiler passes
-		node_map<const projection> types;
+		node_map<projection> types;
 
 		module(gsl::not_null<gsl::czstring<>> identifier, std::vector<std::unique_ptr<module_item>>&& items) :
 			m_identifier {identifier},

@@ -46,6 +46,13 @@ namespace idlc {
 				log_debug("\tIn module: ", m_module, ", context: ", m_container);
 			}
 
+			if (!ty.stars() && ty.get_copy_type() && ty.get_copy_type()->kind() == copy_type_kind::projection) {
+				// Have not decided how these will be handled by default
+				log_warning("Pass-by-value projections are unsupported");
+				log_warning("\tMarshaling semantics are undefined");
+				log_warning("\tIn module: ", m_module, ", context: ", m_container, ", field: ", m_field);
+			}
+
 			return true;
 		}
 
@@ -101,7 +108,7 @@ namespace idlc {
 		}
 
 	private:
-		node_map<const projection>* m_types;
+		node_map<projection>* m_types;
 		gsl::czstring<> m_scope;
 	};
 
@@ -142,7 +149,7 @@ namespace idlc {
 
 		bool visit_projection_type(projection_type& proj)
 		{
-			const projection* def {m_types->get(proj.identifier())};
+			projection* const def {m_types->get(proj.identifier())};
 			if (def) {
 				proj.definition(def);
 			}
@@ -156,7 +163,7 @@ namespace idlc {
 		}
 
 	private:
-		node_map<const projection>* m_types {};
+		node_map<projection>* m_types {};
 		gsl::czstring<> m_module {};
 		gsl::czstring<> m_item {};
 	};
@@ -297,8 +304,13 @@ int main(int argc, gsl::czstring<>* argv) {
 			return 1;
 		}
 
-		idlc::process_marshal_units(rpcs);
-		idlc::process_marshal_units(rpc_pointers);
+		if (!idlc::process_marshal_units(rpcs)) {
+			return 1;
+		}
+		
+		if (!idlc::process_marshal_units(rpc_pointers)) {
+			return 1;
+		}
 
 		return 0;
 	}
