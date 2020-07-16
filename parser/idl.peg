@@ -46,6 +46,16 @@ identifier = sc:ident_start rcs:ident_cont* {{
 	value = identifiers.intern(str.str().c_str());
 }}
 
+digit = [0123456789]
+number = digits:digit+ {{
+	std::uint64_t n = 0;
+	for (const auto v : digits.getValues()) {
+		n = n * 10 + (std::uint64_t)v.getValue();
+	}
+
+	value = (void*)n;
+}}
+
 rpc_kw = "rpc"
 int_kw = "int"
 short_kw = "short"
@@ -68,6 +78,7 @@ bind_kw = "bind"
 module_kw = "module"
 require_kw = "require"
 include_kw = "include"
+union_kw = "union"
 
 oparen = "("
 cparen = ")"
@@ -241,7 +252,11 @@ rpc_pseudo_field = rpc_kw attrs:wspace_or_attribs ret_field:pseudo_field oparen 
 	value = new rpc_field(nullptr, move(sig), std::unique_ptr<attributes> {(attributes*)attrs.getValue()});
 }}
 
-var_pseudo_field = ty:type {{
+const_size = obracket space* n:number space* cbracket
+dyn_size = obracket space* id:identifier space* cbracket
+size = const_size | dyn_size
+
+var_pseudo_field = ty:type (size space*)* {{
 	value = new var_field(nullptr, std::unique_ptr<type>((type*)ty.getValue()));
 }}
 
@@ -252,7 +267,7 @@ pseudo_field = rf:rpc_pseudo_field {{
 	value = new field(std::unique_ptr<var_field>((var_field*)vf.getValue()));
 }}
 
-wspace_var_pseudo_field = ty:wtype {{
+wspace_var_pseudo_field = ty:wtype (size space*)* {{
 	value = new var_field(nullptr, std::unique_ptr<type>((type*)ty.getValue()));
 }}
 
@@ -300,7 +315,7 @@ arg_list_tail = comma space* v:arg_list {{
 
 argument = rf:rpc_ptr {{
 	value = new field(std::unique_ptr<rpc_field>((rpc_field*)rf.getValue()));
-}} | ty:wtype id:identifier {{
+}} | ty:wtype id:identifier (space* size)* {{
 	value = new field(std::make_unique<var_field>((gsl::czstring<>)id.getValue(), std::unique_ptr<type>((type*)ty.getValue())));
 }}
 
@@ -308,7 +323,7 @@ projection_rpc_field = ptr:rpc_ptr space* semi {{
 	value = ptr.getValue();
 }}
 
-projection_var_field = ty:wtype id:identifier space* semi {{
+projection_var_field = ty:wtype id:identifier space* (size space*)* semi {{
 	value = new var_field((gsl::czstring<>)id.getValue(), std::unique_ptr<type>((type*)ty.getValue()));
 }}
 
@@ -318,7 +333,13 @@ proj_field = rf:projection_rpc_field {{
 	value = new field(std::unique_ptr<var_field>((var_field*)vf.getValue()));
 }}
 
-projection = proj_kw space* oangle space* struct_kw whitespace under:identifier space* cangle space* id:identifier space* obrace space* pfs:(pf:proj_field space* {{
+proj_underlying = struct_kw whitespace under:identifier {{
+	value = under.getValue();
+}} | union_kw whitespace under:identifier {{
+	value = under.getValue();
+}}
+
+projection = proj_kw space* oangle space* under:proj_underlying space* cangle space* id:identifier space* obrace space* pfs:(pf:proj_field space* {{
 	value = pf.getValue();
 }})* cbrace {{
 	std::vector<std::unique_ptr<field>> ptrs;

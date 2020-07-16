@@ -1,6 +1,6 @@
 module marshal_test {
 	projection <struct foobar> abominable {
-		int try_me;
+		int [in,out] try_me;
 	}
 
 	projection <struct bar> bar_proj {
@@ -9,7 +9,7 @@ module marshal_test {
 	}
 
 	projection <struct foo> foo_proj {
-		int[in] fp_a; // the annotation here is only meaningful if the projection is passed by pointer!
+		unsigned [in] fp_a; // the annotation here is only meaningful if the projection is passed by pointer!
 		int[out] fp_b;
 		int[in, out] fp_c;
 		projection bar_proj[in, out] * fp_d; // If we allow "in, out" inference, this is ambiguous
