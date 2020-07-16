@@ -17,7 +17,7 @@ module marshal_test {
 		// Or are we applying it to the "d" field of foo_proj?
 	}
 
-	rpc int do_widget(int flags, projection foo_proj[bind(callee)] * widget);
+	rpc int do_widget(unsigned flags, projection foo_proj[bind(callee)] * widget);
 }
 
 module kernel_nullnet {

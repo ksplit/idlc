@@ -251,6 +251,7 @@ idlc::field_marshal_kind idlc::find_marshal_kind(const type& ty)
 bool idlc::marshal_projection_ptr(marshal_op_list_writer& writer, unsigned int id, projection& def)
 {
 	log_debug("\t\tmarshal ", id, "\t// marshal pointer");
+	log_debug("\t\t\t\t// NOTE: pointer was assumed not null");
 	writer.add_marshal(id);
 	caller_marshal_subfield_pass pass {writer, id};
 	return visit(pass, def);

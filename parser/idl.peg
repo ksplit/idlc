@@ -90,7 +90,12 @@ star = "*"
 # argument types are either pointer types, primitive, or projection
 # return types are any of these (void, projection, primitive, pointer)
 
-unsigned_type = unsigned_kw whitespace ty:signed_type {{ value = (void*)to_unsigned((primitive_type_kind)(std::uintptr_t)ty.getValue()); }}
+unsigned_type = unsigned_kw whitespace ty:signed_type {{
+	value = (void*)to_unsigned((primitive_type_kind)(std::uintptr_t)ty.getValue());
+}} | unsigned_kw {{
+	value = (void*)primitive_type_kind::unsigned_int_k;
+}}
+
 signed_type = int_kw {{
 	value = (void*)primitive_type_kind::int_k;
 }} | short_kw {{
