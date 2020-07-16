@@ -1,0 +1,21 @@
+module marshal_test {
+	projection <struct foobar> abominable {
+		int[in,out] try_me;
+	}
+
+	projection <struct bar> bar_proj {
+		int[in,out] bp_a;
+		projection abominable* bp_b;
+	}
+
+	projection <struct foo> foo_proj {
+		unsigned[in] fp_a; // the annotation here is only meaningful if the projection is passed by pointer!
+		int[out] fp_b;
+		int[in, out] fp_c;
+		projection bar_proj[in, out] * fp_d; // If we allow "in, out" inference, this is ambiguous
+		// Are we applying the annotations to the field of bar_proj
+		// Or are we applying it to the "d" field of foo_proj?
+	}
+
+	rpc int do_widget(unsigned flags, projection foo_proj[bind(callee)] * widget);
+}

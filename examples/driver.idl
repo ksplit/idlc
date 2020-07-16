@@ -1,4 +1,6 @@
 include <kernel.idl>
+include <array_union.idl>
+include <marshal_test.idl>
 
 module dummy_driver {
   require marshal_test;

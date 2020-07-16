@@ -1,0 +1,7 @@
+module array_union_demo {
+	projection <union foo> union_proj {
+		int value_array[20][20];
+		int* dyn_array[size]; // currently omitting the "union_proj->"
+		unsigned size; // there is no identifier resolution yet
+	}
+}
