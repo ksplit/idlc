@@ -18,16 +18,4 @@ module marshal_test {
 	}
 
 	rpc int do_widget(unsigned flags, projection foo_proj [bind(callee)] * widget);
-
-	projection <struct rtnl_link_ops> rtnl_link_ops___rtnl_link_register {
-			rpc void (*setup)(projection net_device_setup * dev);
-	// Unsupported at this time, semantics unknown
-	/*rpc int (*validate)(projection nlattr_validate** tb, projection nlattr_validate** data);*/
-	}
-
-	projection <struct net_device> net_device_setup {}
-
-	// Driver passes a pointer to the ops. Create a shadow copy on the callee
-	//rpc int __rtnl_link_register(projection
-		//rtnl_link_ops___rtnl_link_register[alloc(callee)] * ops);
 }
