@@ -30,7 +30,9 @@ namespace idlc {
 		get,			// <parent> <child>				=> <$type> var_<$id> = var_<parent>-><$child-field>;
 		set,			// <parent> <child> <source>	=> var_<parent>-><$child-field> = var_<source>;
 		call,			//								=> [<$type> var_<$id> =] <real-function>(<$arguments>); slot = 0;
-		send			//								=> send(<$rpc-id>, buffer);
+		send,			//								=> send(<$rpc-id>, buffer);
+		if_not_null,	// <pointer>					=> if (var_<pointer>) {
+		end_if_not_null //								=> }
 	};
 
 	struct marshal_data {
@@ -90,6 +92,10 @@ namespace idlc {
 		std::string rpc_id;
 	};
 
+	struct if_not_null_data {
+		unsigned int pointer;
+	};
+
 	class marshal_op_list {
 	public:
 		marshal_op_list(
@@ -105,7 +111,8 @@ namespace idlc {
 			std::vector<get_data>&& get_data,
 			std::vector<set_data>&& set_data,
 			std::vector<call_data>&& call_data,
-			std::vector<send_data>&& send_data
+			std::vector<send_data>&& send_data,
+			std::vector<if_not_null_data>&& if_not_null_data
 		) :
 			m_ops {std::move(ops)},
 			m_marshal_data {std::move(marshal_data)},
@@ -120,6 +127,7 @@ namespace idlc {
 			m_set_data {std::move(set_data)},
 			m_call_data {std::move(call_data)},
 			m_send_data {std::move(send_data)},
+			m_if_not_null_data {std::move(if_not_null_data)},
 			m_op {0},
 			m_marshal {0},
 			m_unmarshal {0},
@@ -132,7 +140,8 @@ namespace idlc {
 			m_get {0},
 			m_set {0},
 			m_call {0},
-			m_send {0}
+			m_send {0},
+			m_if_not_null {0}
 		{
 		}
 
@@ -155,6 +164,7 @@ namespace idlc {
 		std::vector<set_data> m_set_data;
 		std::vector<call_data> m_call_data;
 		std::vector<send_data> m_send_data;
+		std::vector<if_not_null_data> m_if_not_null_data;
 
 		unsigned int m_op;
 		unsigned int m_marshal;
@@ -169,6 +179,7 @@ namespace idlc {
 		unsigned int m_set;
 		unsigned int m_call;
 		unsigned int m_send;
+		unsigned int m_if_not_null;
 	};
 
 	class marshal_op_list_writer {
@@ -255,6 +266,17 @@ namespace idlc {
 			m_send_data.push_back({rpc_id_str});
 		}
 
+		void add_if_not_null(unsigned int pointer)
+		{
+			m_ops.push_back(marshal_op::if_not_null);
+			m_if_not_null_data.push_back({pointer});
+		}
+
+		void add_end_if_not_null()
+		{
+			m_ops.push_back(marshal_op::end_if_not_null);
+		}
+
 		marshal_op_list move_to_list()
 		{
 			return {
@@ -270,7 +292,8 @@ namespace idlc {
 				std::move(m_get_data),
 				std::move(m_set_data),
 				std::move(m_call_data),
-				std::move(m_send_data)
+				std::move(m_send_data),
+				std::move(m_if_not_null_data)
 			};
 		}
 
@@ -289,6 +312,7 @@ namespace idlc {
 		std::vector<set_data> m_set_data;
 		std::vector<call_data> m_call_data;
 		std::vector<send_data> m_send_data;
+		std::vector<if_not_null_data> m_if_not_null_data;
 	};
 
 	bool process_marshal_units(gsl::span<const marshal_unit> units);

@@ -1,3 +1,4 @@
+// All of this is curently "undefined" in the compiler
 module array_union_demo {
 	projection <union foo> union_proj {
 		int value_array[20][20];
