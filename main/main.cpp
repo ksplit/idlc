@@ -288,12 +288,14 @@ int main(int argc, gsl::czstring<>* argv) {
 
 		idlc::verify_driver_idl_pass vdi_pass;
 		if (!visit(vdi_pass, file)) {
+			idlc::log_error("Compilation failed");
 			return 1;
 		}
 
 		idlc::node_map<idlc::module> imports;
 		idlc::include_file_pass if_pass {idl_path.parent_path(), imports};
 		if (!visit(if_pass, file)) {
+			idlc::log_error("Compilation failed");
 			return 1;
 		}
 
@@ -301,14 +303,17 @@ int main(int argc, gsl::czstring<>* argv) {
 		std::vector<idlc::marshal_unit> rpc_pointers;
 		idlc::rpc_import_pass mi_pass {rpcs, rpc_pointers, imports};
 		if (!visit(mi_pass, file)) {
+			idlc::log_error("Compilation failed");
 			return 1;
 		}
 
 		if (!idlc::process_marshal_units(rpcs)) {
+			idlc::log_error("Compilation failed");
 			return 1;
 		}
 		
 		if (!idlc::process_marshal_units(rpc_pointers)) {
+			idlc::log_error("Compilation failed");
 			return 1;
 		}
 

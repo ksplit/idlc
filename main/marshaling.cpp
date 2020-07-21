@@ -15,6 +15,7 @@ namespace idlc {
 	gsl::czstring<> get_primitive_string(primitive_type_kind kind);
 	std::string get_type_string(const type& ty);
 	field_marshal_kind get_var_marshal_kind(const type& ty);
+	attributes get_attributes_with_argument_default(const attributes* attribs);
 
 	enum class marshal_op {
 		// <$*> indicates a template field that is inferred somehow
@@ -374,20 +375,34 @@ namespace idlc {
 		std::vector<inject_trampoline_data> m_inject_trampoline_data;
 	};
 
-	bool caller_marshal_argument(marshal_op_writer& marshaling, const field& argument);
+	bool caller_marshal_argument(marshal_op_writer& marshaling, const field& argument, std::vector<unsigned int>& caller_argument_save_ids);
 	bool caller_marshal_rpc(marshal_op_writer& marshaling, const rpc_field& rpc);
-	bool caller_marshal_var(marshal_op_writer& marshaling, const var_field& rpc);
+	bool caller_marshal_var(marshal_op_writer& marshaling, const var_field& rpc, std::vector<unsigned int>& remarshal_ptr_ids);
 	bool caller_marshal_projection_rpc(marshal_op_writer& marshaling, const rpc_field& rpc, unsigned int parent_ptr_id);
 	bool caller_marshal_projection_var(marshal_op_writer& marshaling, const var_field& var, unsigned int parent_ptr_id);
 	bool caller_marshal_projection_field(marshal_op_writer& marshaling, const field& proj_field, unsigned int parent_ptr_id);
 
-	bool callee_unmarshal_argument(marshal_op_writer& marshaling, const field& argument);
+	bool caller_remarshal_argument(marshal_op_writer& marshaling, const field& argument, unsigned int save_id);
+	bool caller_remarshal_rpc(marshal_op_writer& marshaling, const rpc_field& rpc);
+	bool caller_remarshal_var(marshal_op_writer& marshaling, const var_field& rpc, unsigned int save_id);
+	bool caller_remarshal_projection_rpc(marshal_op_writer& marshaling, const rpc_field& rpc, unsigned int parent_ptr_id);
+	bool caller_remarshal_projection_var(marshal_op_writer& marshaling, const var_field& var, unsigned int parent_ptr_id);
+	bool caller_remarshal_projection_field(marshal_op_writer& marshaling, const field& proj_field, unsigned int parent_ptr_id);
+
+	bool callee_unmarshal_argument(marshal_op_writer& marshaling, const field& argument, std::vector<unsigned int>& argument_save_ids);
 	bool callee_unmarshal_rpc(marshal_op_writer& marshaling, const rpc_field& rpc);
-	bool callee_unmarshal_var(marshal_op_writer& marshaling, const var_field& var);
+	bool callee_unmarshal_var(marshal_op_writer& marshaling, const var_field& var, std::vector<unsigned int>& argument_save_ids);
 	bool callee_unmarshal_projection_rpc(marshal_op_writer& marshaling, const rpc_field& rpc, unsigned int parent_ptr_id);
 	bool callee_unmarshal_projection_var(marshal_op_writer& marshaling, const var_field& var, unsigned int parent_ptr_id);
 	bool callee_unmarshal_projection_field(marshal_op_writer& marshaling, const field& proj_field, unsigned int parent_ptr_id);
 	bool callee_insert_call(marshal_op_writer& marshaling, const signature& signature);
+
+	bool callee_remarshal_argument(marshal_op_writer& marshaling, const field& argument, unsigned int save_id);
+	bool callee_remarshal_rpc(marshal_op_writer& marshaling, const rpc_field& rpc);
+	bool callee_remarshal_var(marshal_op_writer& marshaling, const var_field& var, unsigned int save_id);
+	bool callee_remarshal_projection_rpc(marshal_op_writer& marshaling, const rpc_field& rpc, unsigned int parent_ptr_id);
+	bool callee_remarshal_projection_var(marshal_op_writer& marshaling, const var_field& var, unsigned int parent_ptr_id);
+	bool callee_remarshal_projection_field(marshal_op_writer& marshaling, const field& proj_field, unsigned int parent_ptr_id);
 }
 
 /*
@@ -411,6 +426,22 @@ idlc::field_marshal_kind idlc::get_var_marshal_kind(const type& ty)
 	}
 	else {
 		return field_marshal_kind::undefined;
+	}
+}
+
+// Not important ATM, but this should probably store the defaulted attributes into the type node
+idlc::attributes idlc::get_attributes_with_argument_default(const attributes* attribs)
+{
+	if (!attribs) {
+		return *attributes::make(
+			{
+				{rpc_side::callee, attribute_type::bind},	// bind(callee)
+				{rpc_side::callee, attribute_type::copy}	// in
+			}
+		);
+	}
+	else {
+		return *attribs;
 	}
 }
 
@@ -489,7 +520,6 @@ gsl::czstring<> idlc::get_primitive_string(primitive_type_kind kind)
 
 bool idlc::process_marshal_units(gsl::span<const marshal_unit> units)
 {
-
 	for (const marshal_unit& unit : units) {
 		marshal_op_writer caller_marshaling;
 		marshal_op_writer callee_marshaling;
@@ -501,25 +531,48 @@ bool idlc::process_marshal_units(gsl::span<const marshal_unit> units)
 
 		log_debug("Caller-side:");
 
+		// To keep track of projection pointers that need re-marshaling for [out] fields
+		std::vector<unsigned int> caller_argument_save_ids(signature.arguments().size());
+		caller_argument_save_ids.resize(0); // Keep the reserved space while allowing for push_back()
+
 		for (const std::unique_ptr<field>& field : signature.arguments()) {
-			if (!caller_marshal_argument(caller_marshaling, *field)) {
+			if (!caller_marshal_argument(caller_marshaling, *field, caller_argument_save_ids)) {
 				return false;
 			}
 		}
 
 		caller_marshaling.add_send(unit.identifier);
 
+		auto current_save_id = begin(caller_argument_save_ids);
+		for (const std::unique_ptr<field>& field : signature.arguments()) {
+			// Need to know save-id of each argument
+			if (!caller_remarshal_argument(caller_marshaling, *field, *(current_save_id++))) {
+				return false;
+			}
+		}
+
 		// Callee marshaling
 
 		log_debug("Callee-side:");
 
+		// To keep track of projection pointers that need re-marshaling for [out] fields
+		std::vector<unsigned int> callee_argument_save_ids(signature.arguments().size());
+		callee_argument_save_ids.resize(0); // Keep the reserved space while allowing for push_back()
+
 		for (const std::unique_ptr<field>& field : signature.arguments()) {
-			if (!callee_unmarshal_argument(callee_marshaling, *field)) {
+			if (!callee_unmarshal_argument(callee_marshaling, *field, callee_argument_save_ids)) {
 				return false;
 			}
 		}
 
 		callee_insert_call(callee_marshaling, signature);
+
+		current_save_id = begin(callee_argument_save_ids);
+		for (const std::unique_ptr<field>& field : signature.arguments()) {
+			if (!callee_remarshal_argument(callee_marshaling, *field, *(current_save_id++))) {
+				return false;
+			}
+		}
 	}
 
 	return true;
@@ -533,26 +586,12 @@ bool idlc::caller_marshal_rpc(marshal_op_writer& marshaling, const rpc_field& rp
 	return true;
 }
 
-bool idlc::caller_marshal_var(marshal_op_writer& marshaling, const var_field& var)
+bool idlc::caller_marshal_var(marshal_op_writer& marshaling, const var_field& var, std::vector<unsigned int>& argument_save_ids)
 {
 	const type& type {var.get_type()};
 
-	// Need to provide default attributes if none were specified
-
-	attributes def_attributes {};
-	const attributes* type_attribs {type.get_attributes()};
-	if (!type_attribs) {
-		def_attributes = *attributes::make(
-			{
-				{rpc_side::callee, attribute_type::bind},	// bind(callee)
-				{rpc_side::callee, attribute_type::copy}	// in
-			}
-		);
-
-		type_attribs = &def_attributes;
-	}
-
 	unsigned int save_id {marshaling.add_argument(get_type_string(type), var.identifier())};
+	argument_save_ids.push_back(save_id);
 	marshaling.add_marshal(save_id);
 
 	const field_marshal_kind marshal_kind {get_var_marshal_kind(type)};
@@ -588,6 +627,14 @@ bool idlc::caller_marshal_var(marshal_op_writer& marshaling, const var_field& va
 
 bool idlc::caller_marshal_projection_rpc(marshal_op_writer& marshaling, const rpc_field& rpc, unsigned int parent_ptr_id)
 {
+	attributes attribs {get_attributes_with_argument_default(rpc.get_attributes())};
+	const copy_direction field_copy_direction {attribs.get_value_copy_direction()};
+	if (!(field_copy_direction == copy_direction::both
+		|| field_copy_direction == copy_direction::in))
+	{
+		return true; // Do nothing, don't have to marshal
+	}
+
 	// NOTE: I think we can get away with the void* trick due to C's looser type system
 	const unsigned int save_id {marshaling.add_get(parent_ptr_id, rpc.identifier(), "void*")};
 	marshaling.add_marshal(save_id);
@@ -598,19 +645,8 @@ bool idlc::caller_marshal_projection_var(marshal_op_writer& marshaling, const va
 {
 	const type& type {var.get_type()};
 
-	attributes def_attributes {};
-	const attributes* type_attribs {type.get_attributes()};
-	if (!type_attribs) {
-		def_attributes = *attributes::make(
-			{
-				{rpc_side::callee, attribute_type::bind},	// bind(callee)
-				{rpc_side::callee, attribute_type::copy}	// in
-			}
-		);
-		type_attribs = &def_attributes;
-	}
-
-	const copy_direction field_copy_direction {type_attribs->get_value_copy_direction()};
+	attributes attribs {get_attributes_with_argument_default(type.get_attributes())};
+	const copy_direction field_copy_direction {attribs.get_value_copy_direction()};
 	if (!(field_copy_direction == copy_direction::both
 		|| field_copy_direction == copy_direction::in))
 	{
@@ -678,10 +714,140 @@ bool idlc::caller_marshal_projection_field(marshal_op_writer& marshaling, const 
 	return true;
 }
 
-bool idlc::caller_marshal_argument(marshal_op_writer& marshaling, const field& argument)
+bool idlc::caller_remarshal_argument(marshal_op_writer& marshaling, const field& argument, unsigned int save_id)
 {
 	switch (argument.kind()) {
 	case field_kind::rpc:
+		return true; // Meaningless to re-marshal an RPC pointer
+
+	case field_kind::var:
+		if (!caller_remarshal_var(marshaling, argument.get<field_kind::var>(), save_id)) {
+			return false;
+		}
+
+		break;
+	}
+
+	return true;
+}
+
+bool idlc::caller_remarshal_var(marshal_op_writer& marshaling, const var_field& var, unsigned int save_id)
+{
+	const type& type {var.get_type()};
+	const field_marshal_kind marshal_kind {get_var_marshal_kind(type)};
+
+	switch (marshal_kind) {
+	case field_marshal_kind::undefined:
+		log_error("\t", var.identifier(), " has undefined marshaling");
+		return false;
+
+	case field_marshal_kind::projection_ptr:
+		// Recurse into projection fields
+		// Needs save ID of the projection pointer and the projection definition
+
+		marshaling.add_if_not_null(save_id);
+
+		const projection& type_definition {type.get_copy_type()->get<copy_type_kind::projection>().definition()};
+		for (const std::unique_ptr<field>& pr_field : type_definition.fields()) {
+			if (!caller_remarshal_projection_field(marshaling, *pr_field, save_id)) {
+				return false;
+			}
+		}
+
+		marshaling.add_end_if_not_null();
+
+		break;
+	}
+
+	return true;
+}
+
+bool idlc::caller_remarshal_projection_rpc(marshal_op_writer& marshaling, const rpc_field& rpc, unsigned int parent_ptr_id)
+{
+	attributes attribs {get_attributes_with_argument_default(rpc.get_attributes())};
+	const copy_direction field_copy_direction {attribs.get_value_copy_direction()};
+	if (!(field_copy_direction == copy_direction::both
+		|| field_copy_direction == copy_direction::out))
+	{
+		return true; // Do nothing, don't have to marshal
+	}
+
+	// NOTE: I think we can get away with the void* trick due to C's looser type system
+	const unsigned int save_id {marshaling.add_inject_trampoline(marshaling.add_unmarshal("void*"), rpc.mangled_signature)};
+	marshaling.add_set(parent_ptr_id, save_id, rpc.identifier());
+	return true;
+}
+
+bool idlc::caller_remarshal_projection_var(marshal_op_writer& marshaling, const var_field& var, unsigned int parent_ptr_id)
+{
+	const type& type {var.get_type()};
+
+	attributes attribs {get_attributes_with_argument_default(type.get_attributes())};
+	const copy_direction field_copy_direction {attribs.get_value_copy_direction()};
+	if (!(field_copy_direction == copy_direction::both
+		|| field_copy_direction == copy_direction::out))
+	{
+		return true; // Do nothing, don't have to marshal
+	}
+
+	const unsigned int save_id {marshaling.add_unmarshal(get_type_string(type))};
+	marshaling.add_set(parent_ptr_id, save_id, var.identifier());
+	const field_marshal_kind marshal_kind {get_var_marshal_kind(type)};
+
+	switch (marshal_kind) {
+	case field_marshal_kind::undefined:
+		log_error("\t", var.identifier(), " has undefined marshaling");
+		return false;
+
+	case field_marshal_kind::projection_ptr:
+		// Recurse into projection fields
+		// Needs save ID of the projection pointer and the projection definition
+
+		marshaling.add_if_not_null(save_id);
+
+		const projection& type_definition {type.get_copy_type()->get<copy_type_kind::projection>().definition()};
+		for (const std::unique_ptr<field>& pr_field : type_definition.fields()) {
+			if (!caller_remarshal_projection_field(marshaling, *pr_field, save_id)) {
+				return false;
+			}
+		}
+
+		marshaling.add_end_if_not_null();
+
+		break;
+	}
+
+	return true;
+}
+
+bool idlc::caller_remarshal_projection_field(marshal_op_writer& marshaling, const field& proj_field, unsigned int parent_ptr_id)
+{
+	switch (proj_field.kind()) {
+	case field_kind::rpc:
+		if (!caller_remarshal_projection_rpc(marshaling, proj_field.get<field_kind::rpc>(), parent_ptr_id)) {
+			return false;
+		}
+
+		break;
+
+	case field_kind::var:
+		if (!caller_remarshal_projection_var(marshaling, proj_field.get<field_kind::var>(), parent_ptr_id)) {
+			return false;
+		}
+
+		break;
+	}
+
+	return true;
+}
+
+bool idlc::caller_marshal_argument(marshal_op_writer& marshaling, const field& argument, std::vector<unsigned int>& caller_argument_save_ids)
+{
+	switch (argument.kind()) {
+	case field_kind::rpc:
+		// Placeholder, easily shows in generated code if improperly used
+		// Anticipating need for other kinds of remarshaling
+		caller_argument_save_ids.push_back(std::numeric_limits<unsigned int>::max());
 		if (!caller_marshal_rpc(marshaling, argument.get<field_kind::rpc>())) {
 			return false;
 		}
@@ -689,7 +855,7 @@ bool idlc::caller_marshal_argument(marshal_op_writer& marshaling, const field& a
 		break;
 
 	case field_kind::var:
-		if (!caller_marshal_var(marshaling, argument.get<field_kind::var>())) {
+		if (!caller_marshal_var(marshaling, argument.get<field_kind::var>(), caller_argument_save_ids)) {
 			return false;
 		}
 
@@ -707,27 +873,16 @@ bool idlc::callee_unmarshal_rpc(marshal_op_writer& marshaling, const rpc_field& 
 	return true;
 }
 
-bool idlc::callee_unmarshal_var(marshal_op_writer& marshaling, const var_field& var)
+bool idlc::callee_unmarshal_var(marshal_op_writer& marshaling, const var_field& var, std::vector<unsigned int>& argument_save_ids)
 {
 	const type& type {var.get_type()};
 	const std::string type_string {get_type_string(type)};
+
 	const unsigned int save_id {marshaling.add_unmarshal(get_type_string(type))};
+	argument_save_ids.push_back(save_id);
 	marshaling.add_parameter(save_id, type_string, var.identifier());
+
 	const field_marshal_kind marshal_kind {get_var_marshal_kind(type)};
-
-	attributes def_attributes {};
-	const attributes* type_attribs {type.get_attributes()};
-	if (!type_attribs) {
-		def_attributes = *attributes::make(
-			{
-				{rpc_side::callee, attribute_type::bind},	// bind(callee)
-				{rpc_side::callee, attribute_type::copy}	// in
-			}
-		);
-
-		type_attribs = &def_attributes;
-	}
-
 	switch (marshal_kind) {
 	case field_marshal_kind::undefined:
 		log_error("\t", var.identifier(), " has undefined marshaling");
@@ -756,6 +911,14 @@ bool idlc::callee_unmarshal_var(marshal_op_writer& marshaling, const var_field& 
 
 bool idlc::callee_unmarshal_projection_rpc(marshal_op_writer& marshaling, const rpc_field& rpc, unsigned int parent_ptr_id)
 {
+	attributes attribs {get_attributes_with_argument_default(rpc.get_attributes())};
+	const copy_direction field_copy_direction {attribs.get_value_copy_direction()};
+	if (!(field_copy_direction == copy_direction::both
+		|| field_copy_direction == copy_direction::in))
+	{
+		return true; // Do nothing, don't have to marshal
+	}
+
 	// NOTE: I think we can get away with the void* trick due to C's looser type system
 	const unsigned int save_id {marshaling.add_inject_trampoline(marshaling.add_unmarshal("void*"), rpc.mangled_signature)};
 	marshaling.add_set(parent_ptr_id, save_id, rpc.identifier());
@@ -766,20 +929,8 @@ bool idlc::callee_unmarshal_projection_var(marshal_op_writer& marshaling, const 
 {
 	const type& type {var.get_type()};
 
-	attributes def_attributes {};
-	const attributes* type_attribs {type.get_attributes()};
-	if (!type_attribs) {
-		def_attributes = *attributes::make(
-			{
-				{rpc_side::callee, attribute_type::bind},	// bind(callee)
-				{rpc_side::callee, attribute_type::copy}	// in
-			}
-		);
-
-		type_attribs = &def_attributes;
-	}
-
-	const copy_direction field_copy_direction {type_attribs->get_value_copy_direction()};
+	attributes attribs {get_attributes_with_argument_default(type.get_attributes())};
+	const copy_direction field_copy_direction {attribs.get_value_copy_direction()};
 	if (!(field_copy_direction == copy_direction::both
 		|| field_copy_direction == copy_direction::in))
 	{
@@ -837,10 +988,12 @@ bool idlc::callee_unmarshal_projection_field(marshal_op_writer& marshaling, cons
 	return true;
 }
 
-bool idlc::callee_unmarshal_argument(marshal_op_writer& marshaling, const field& argument)
+bool idlc::callee_unmarshal_argument(marshal_op_writer& marshaling, const field& argument, std::vector<unsigned int>& argument_save_ids)
 {
 	switch (argument.kind()) {
 	case field_kind::rpc:
+		// Placeholder value
+		argument_save_ids.push_back(std::numeric_limits<unsigned int>::max());
 		if (!callee_unmarshal_rpc(marshaling, argument.get<field_kind::rpc>())) {
 			return false;
 		}
@@ -848,7 +1001,7 @@ bool idlc::callee_unmarshal_argument(marshal_op_writer& marshaling, const field&
 		break;
 
 	case field_kind::var:
-		if (!callee_unmarshal_var(marshaling, argument.get<field_kind::var>())) {
+		if (!callee_unmarshal_var(marshaling, argument.get<field_kind::var>(), argument_save_ids)) {
 			return false;
 		}
 
@@ -877,6 +1030,142 @@ bool idlc::callee_insert_call(marshal_op_writer& marshaling, const signature& si
 	}
 
 	marshaling.add_call(argument_string.str());
+
+	return true;
+}
+
+bool idlc::callee_remarshal_argument(marshal_op_writer& marshaling, const field& argument, unsigned int save_id)
+{
+	switch (argument.kind()) {
+	case field_kind::rpc:
+		return true; // Meaningless to re-marshal an RPC pointer
+
+	case field_kind::var:
+		if (!callee_remarshal_var(marshaling, argument.get<field_kind::var>(), save_id)) {
+			return false;
+		}
+
+		break;
+	}
+
+	return true;
+}
+
+bool idlc::callee_remarshal_var(marshal_op_writer& marshaling, const var_field& var, unsigned int save_id)
+{
+	const type& type {var.get_type()};
+
+	const field_marshal_kind marshal_kind {get_var_marshal_kind(type)};
+	switch (marshal_kind) {
+	case field_marshal_kind::undefined:
+		log_error("\t", var.identifier(), " has undefined marshaling");
+		return false;
+
+	case field_marshal_kind::value:
+		break;
+
+	case field_marshal_kind::projection_ptr: {
+		// Recurse into projection fields
+		// Needs save ID of the projection pointer and the projection definition
+
+		marshaling.add_if_not_null(save_id);
+
+		const projection& type_definition {type.get_copy_type()->get<copy_type_kind::projection>().definition()};
+		for (const std::unique_ptr<field>& pr_field : type_definition.fields()) {
+			if (!callee_remarshal_projection_field(marshaling, *pr_field, save_id)) {
+				return false;
+			}
+		}
+
+		marshaling.add_end_if_not_null();
+
+		break;
+	}
+	}
+
+	return true;
+}
+
+bool idlc::callee_remarshal_projection_rpc(marshal_op_writer& marshaling, const rpc_field& rpc, unsigned int parent_ptr_id)
+{
+	attributes attribs {get_attributes_with_argument_default(rpc.get_attributes())};
+	const copy_direction field_copy_direction {attribs.get_value_copy_direction()};
+	if (!(field_copy_direction == copy_direction::both
+		|| field_copy_direction == copy_direction::out))
+	{
+		return true; // Do nothing, don't have to marshal
+	}
+
+	// NOTE: I think we can get away with the void* trick due to C's looser type system
+	const unsigned int save_id {marshaling.add_get(parent_ptr_id, rpc.identifier(), "void*")};
+	marshaling.add_marshal(save_id);
+
+	return true;
+}
+
+bool idlc::callee_remarshal_projection_var(marshal_op_writer& marshaling, const var_field& var, unsigned int parent_ptr_id)
+{
+	const type& type {var.get_type()};
+
+	attributes attribs {get_attributes_with_argument_default(type.get_attributes())};
+	const copy_direction field_copy_direction {attribs.get_value_copy_direction()};
+	if (!(field_copy_direction == copy_direction::both
+		|| field_copy_direction == copy_direction::out))
+	{
+		return true; // Do nothing, don't have to marshal
+	}
+
+	unsigned int save_id {marshaling.add_get(parent_ptr_id, var.identifier(), get_type_string(type))};
+
+	const field_marshal_kind marshal_kind {get_var_marshal_kind(type)};
+	switch (marshal_kind) {
+	case field_marshal_kind::undefined:
+		log_error("\t", var.identifier(), " has undefined marshaling");
+		return false;
+
+	case field_marshal_kind::value:
+		marshaling.add_marshal(save_id);
+		break;
+
+	case field_marshal_kind::projection_ptr: {
+		// Recurse into projection fields
+		// Needs save ID of the projection pointer and the projection definition
+		marshaling.add_marshal(save_id);
+		marshaling.add_if_not_null(save_id);
+
+		const projection& type_definition {type.get_copy_type()->get<copy_type_kind::projection>().definition()};
+		for (const std::unique_ptr<field>& pr_field : type_definition.fields()) {
+			if (!callee_remarshal_projection_field(marshaling, *pr_field, save_id)) {
+				return false;
+			}
+		}
+
+		marshaling.add_end_if_not_null();
+
+		break;
+	}
+	}
+
+	return true;
+}
+
+bool idlc::callee_remarshal_projection_field(marshal_op_writer& marshaling, const field& proj_field, unsigned int parent_ptr_id)
+{
+	switch (proj_field.kind()) {
+	case field_kind::rpc:
+		if (!callee_remarshal_projection_rpc(marshaling, proj_field.get<field_kind::rpc>(), parent_ptr_id)) {
+			return false;
+		}
+
+		break;
+
+	case field_kind::var:
+		if (!callee_remarshal_projection_var(marshaling, proj_field.get<field_kind::var>(), parent_ptr_id)) {
+			return false;
+		}
+
+		break;
+	}
 
 	return true;
 }

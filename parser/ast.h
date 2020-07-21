@@ -222,10 +222,7 @@ namespace idlc {
 	
 	// An odd consequence of how apply() works: the list [alloc] specifies that the value is only allocated, but no value is shared
 	class attributes {
-	public:
-		// NOTE: OFficially undefined
-		attributes() = default;
-		
+	public:		
 		// Need to be able to "fail" construction, thus the factory
 		static std::optional<attributes> make(const std::vector<compact_attribute>& attribs)
 		{
@@ -259,6 +256,8 @@ namespace idlc {
 		rpc_side m_share_op_side {};
 		sharing_op m_share_op {};
 
+		// NOTE: OFficially undefined
+		attributes() = default;
 
 		bool apply(const std::vector<compact_attribute>& attribs)
 		{

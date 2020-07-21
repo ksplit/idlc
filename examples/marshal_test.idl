@@ -1,6 +1,6 @@
 module marshal_test {
 	projection <struct bar> bar_proj {
-		rpc [in, out] void (*in_out_var)(int foo);
+		rpc [in] void (*in_out_var)(int foo);
 	}
 
 	projection <struct foo> foo_proj {
