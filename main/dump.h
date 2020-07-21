@@ -80,7 +80,7 @@ namespace idlc {
 
 	void dump(const signature& sig, std::ostream& os, unsigned int level)
 	{
-		tab_over(level, os) << "signature (\n";
+		tab_over(level, os) << "rpc_signature (\n";
 		++level;
 
 		tab_over(level, os) << "return_field:\n";
@@ -274,7 +274,7 @@ namespace idlc {
 			tab_over(level, os) << "identifier: null\n";
 		}
 
-		tab_over(level, os) << "signature:\n";
+		tab_over(level, os) << "rpc_signature:\n";
 		dump(field.get_signature(), os, level + 1);
 
 		if (field.get_attributes()) {
@@ -337,7 +337,7 @@ namespace idlc {
 		++level;
 
 		tab_over(level, os) << "identifier: " << rpc.identifier() << "\n";
-		tab_over(level, os) << "signature:\n";
+		tab_over(level, os) << "rpc_signature:\n";
 		dump(rpc.get_signature(), os, level + 1);
 
 		--level;

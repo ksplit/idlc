@@ -11,7 +11,7 @@ namespace idlc {
 	namespace {
 		// Logically, collects the information of all signatures that need distinct marshaling
 		// Assigns them the names of the functions they bind to, or if they are fptrs, assigns them
-		// a signature-dependent mangle (function pointers with identical signatures will share identical
+		// a rpc_signature-dependent mangle (function pointers with identical signatures will share identical
 		// marshaling units)
 		class marshal_unit_collection_pass : public generic_pass<marshal_unit_collection_pass> {
 		public:

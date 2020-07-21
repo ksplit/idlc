@@ -129,7 +129,7 @@ namespace idlc {
 
 	// Have to stop thinking of pointers as types
 	// A "field" (arg, field, return slot, etc.) has a type, a set of annotations, and one or more stars
-	// An rpc field has a signature, not a type
+	// An rpc field has a rpc_signature, not a type
 	// Eliminate pointer_type
 
 	// What's the best place to check for non-nullnes? The constructor?
@@ -223,6 +223,9 @@ namespace idlc {
 	// An odd consequence of how apply() works: the list [alloc] specifies that the value is only allocated, but no value is shared
 	class attributes {
 	public:
+		// NOTE: OFficially undefined
+		attributes() = default;
+		
 		// Need to be able to "fail" construction, thus the factory
 		static std::optional<attributes> make(const std::vector<compact_attribute>& attribs)
 		{
@@ -234,25 +237,6 @@ namespace idlc {
 			else {
 				return std::nullopt;
 			}
-		}
-
-		// Default attributes for pointers are [bind(callee)]
-		static attributes make_pointer_default()
-		{
-			attributes tmp;
-			tmp.m_value_copy = 0;
-			tmp.m_share_op = sharing_op::bind;
-			tmp.m_share_op_side = rpc_side::callee;
-			return tmp;
-		}
-
-		// Default attributes for pointers are [in]
-		static attributes make_value_default()
-		{
-			attributes tmp;
-			tmp.m_value_copy = static_cast<std::uint8_t>(copy_direction::in);
-			tmp.m_share_op_side = rpc_side::none;
-			return tmp;
 		}
 
 		copy_direction get_value_copy_direction() const noexcept
@@ -275,8 +259,6 @@ namespace idlc {
 		rpc_side m_share_op_side {};
 		sharing_op m_share_op {};
 
-		// The default [in] for pointers
-		attributes() = default;
 
 		bool apply(const std::vector<compact_attribute>& attribs)
 		{
@@ -340,13 +322,6 @@ namespace idlc {
 			m_attributes {move(attributes)},
 			m_stars {stars}
 		{
-			if (stars && !m_attributes) {
-				m_attributes = std::make_unique<class attributes>(attributes::make_pointer_default());
-			}
-
-			if (!stars && !m_attributes) {
-				m_attributes = std::make_unique<class attributes>(attributes::make_value_default());
-			}
 		}
 
 		const copy_type* get_copy_type() const noexcept

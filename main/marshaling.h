@@ -5,7 +5,7 @@
 
 namespace idlc {
 	struct marshal_unit {
-		const signature* signature;
+		const signature* rpc_signature;
 		std::string identifier;
 	};
 

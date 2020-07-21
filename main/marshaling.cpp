@@ -24,22 +24,24 @@ namespace idlc {
 		// <$child-field> from the projection definition
 		// etc.
 
-		//				arguments						generated code
+		//					arguments						generated code
 
-		marshal,		// <source>						=> buffer[++slot] = var_<source>;
-		unmarshal,		//								=> <$type> var_<$id> = buffer[++slot];
-		create_cspace,	// <pointer>					=> <$type>* var_<$id> = create_cspace(<$type>, var_<pointer>);
-		destroy_cspace,	// <pointer>					=> destroy_cspace(var_<pointer>);
-		get_cspace,		// <pointer>					=> <$type>* var_<$id> = get_cspace(var_<pointer>);
-		parameter,		// <source>						=> <$type> <$parameter> = var_<source>;
-		argument,		//								=> <$type> var_<$id> = <$argument>;
-		return_value,	//								=> <$type> var_<$id> = var_ret_val;
-		get,			// <parent> <child>				=> <$type> var_<$id> = var_<parent>-><$child-field>;
-		set,			// <parent> <child> <source>	=> var_<parent>-><$child-field> = var_<source>;
-		call,			//								=> [<$type> var_<$id> =] <real-function>(<$arguments>); slot = 0;
-		send,			//								=> send(<$rpc-id>, buffer);
-		if_not_null,	// <pointer>					=> if (var_<pointer>) {
-		end_if_not_null //								=> }
+		marshal,			// <source>						=> buffer[++slot] = var_<source>;
+		unmarshal,			//								=> <$type> var_<$id> = buffer[++slot];
+		create_cspace,		// <pointer>					=> <$type>* var_<$id> = create_cspace(<$type>, var_<pointer>);
+		destroy_cspace,		// <pointer>					=> destroy_cspace(var_<pointer>);
+		find_cspace,		// <pointer>					=> find_cspace(var_<pointer>);
+		get_cspace,			// <pointer>					=> <$type>* var_<$id> = get_cspace(var_<pointer>);
+		parameter,			// <source>						=> <$type> <$parameter> = var_<source>;
+		argument,			//								=> <$type> var_<$id> = <$argument>;
+		return_value,		//								=> <$type> var_<$id> = var_ret_val;
+		get,				// <parent> <child>				=> <$type> var_<$id> = var_<parent>-><$child-field>;
+		set,				// <parent> <child> <source>	=> var_<parent>-><$child-field> = var_<source>;
+		call,				//								=> [<$type> var_ret_val =] <real-function>(<$arguments>); slot = 0;
+		send,				//								=> send(<$rpc-id>, buffer);
+		if_not_null,		// <pointer>					=> if (var_<pointer>) {
+		end_if_not_null,	//								=> }
+		inject_trampoline	// <fptr>						=> void* var_<$id> = inject_trampoline(var_<fptr>, <$rpc-id>);
 	};
 
 	struct marshal_data {
@@ -56,6 +58,10 @@ namespace idlc {
 	};
 
 	struct destroy_cspace_data {
+		unsigned int pointer;
+	};
+
+	struct find_cspace_data {
 		unsigned int pointer;
 	};
 
@@ -103,6 +109,11 @@ namespace idlc {
 		unsigned int pointer;
 	};
 
+	struct inject_trampoline_data {
+		unsigned int fptr;
+		gsl::czstring<> rpc_id;
+	};
+
 	class marshal_op_list {
 	public:
 		marshal_op_list(
@@ -111,6 +122,7 @@ namespace idlc {
 			std::vector<unmarshal_data>&& unmarshal_data,
 			std::vector<create_cspace_data>&& create_cspace_data,
 			std::vector<destroy_cspace_data>&& destroy_cspace_data,
+			std::vector<find_cspace_data>&& find_cspace_data,
 			std::vector<get_cspace_data>&& get_cspace_data,
 			std::vector<argument_data>&& argument_data,
 			std::vector<parameter_data>&& parameter_data,
@@ -119,13 +131,15 @@ namespace idlc {
 			std::vector<set_data>&& set_data,
 			std::vector<call_data>&& call_data,
 			std::vector<send_data>&& send_data,
-			std::vector<if_not_null_data>&& if_not_null_data
+			std::vector<if_not_null_data>&& if_not_null_data,
+			std::vector<inject_trampoline_data>&& inject_trampoline_data
 		) :
 			m_ops {std::move(ops)},
 			m_marshal_data {std::move(marshal_data)},
 			m_unmarshal_data {std::move(unmarshal_data)},
 			m_create_cspace_data {std::move(create_cspace_data)},
 			m_destroy_cspace_data {std::move(destroy_cspace_data)},
+			m_find_cspace_data {std::move(find_cspace_data)},
 			m_get_cspace_data {std::move(get_cspace_data)},
 			m_argument_data {std::move(argument_data)},
 			m_parameter_data {std::move(parameter_data)},
@@ -157,7 +171,7 @@ namespace idlc {
 			return m_ops[++m_op];
 		}
 
-		// TODO: getters for the argument data
+		// TODO: getters for the proj_field data
 
 	private:
 		std::vector<marshal_op> m_ops;
@@ -165,6 +179,7 @@ namespace idlc {
 		std::vector<unmarshal_data> m_unmarshal_data;
 		std::vector<create_cspace_data> m_create_cspace_data;
 		std::vector<destroy_cspace_data> m_destroy_cspace_data;
+		std::vector<find_cspace_data> m_find_cspace_data;
 		std::vector<get_cspace_data> m_get_cspace_data;
 		std::vector<argument_data> m_argument_data;
 		std::vector<parameter_data> m_parameter_data;
@@ -174,12 +189,14 @@ namespace idlc {
 		std::vector<call_data> m_call_data;
 		std::vector<send_data> m_send_data;
 		std::vector<if_not_null_data> m_if_not_null_data;
+		std::vector<inject_trampoline_data> m_inject_trampoline_data;
 
 		unsigned int m_op;
 		unsigned int m_marshal;
 		unsigned int m_unmarshal;
 		unsigned int m_create_cspace;
 		unsigned int m_destroy_cspace;
+		unsigned int m_find_cspace;
 		unsigned int m_get_cspace;
 		unsigned int m_argument;
 		unsigned int m_parameter;
@@ -202,7 +219,7 @@ namespace idlc {
 
 		unsigned int add_unmarshal(const std::string& type_str)
 		{
-			log_debug("\t", m_next_var_id + 1, "\tunmarshal");
+			log_debug("\t", m_next_var_id, "\tunmarshal");
 			m_ops.push_back(marshal_op::unmarshal);
 			m_unmarshal_data.push_back({type_str});
 			return m_next_var_id++;
@@ -210,6 +227,7 @@ namespace idlc {
 
 		unsigned int add_create_cspace(unsigned int pointer, const std::string& type_str)
 		{
+			log_debug("\t", m_next_var_id, "\tcreate_cspace ", pointer);
 			m_ops.push_back(marshal_op::create_cspace);
 			m_create_cspace_data.push_back({pointer, type_str});
 			return m_next_var_id++;
@@ -217,12 +235,22 @@ namespace idlc {
 
 		void add_destroy_cspace(unsigned int pointer)
 		{
+			log_debug("\t\tdestroy_cspace ", pointer);
 			m_ops.push_back(marshal_op::destroy_cspace);
 			m_destroy_cspace_data.push_back({pointer});
 		}
 
+		unsigned int add_find_cspace(unsigned int pointer)
+		{
+			log_debug("\t", m_next_var_id, "\tfind_cspace ", pointer);
+			m_ops.push_back(marshal_op::find_cspace);
+			m_find_cspace_data.push_back({pointer});
+			return m_next_var_id++;
+		}
+
 		unsigned int add_get_cspace(unsigned int source, const std::string& type_str)
 		{
+			log_debug("\t", m_next_var_id, "\tget_cspace ", source);
 			m_ops.push_back(marshal_op::get_cspace);
 			m_get_cspace_data.push_back({source, type_str});
 			return m_next_var_id++;
@@ -231,13 +259,14 @@ namespace idlc {
 
 		void add_parameter(unsigned int source, const std::string& type_str, const std::string& arg_str)
 		{
+			log_debug("\t\tparameter ", source);
 			m_ops.push_back(marshal_op::parameter);
 			m_parameter_data.push_back({source, type_str, arg_str});
 		}
 
 		unsigned int add_argument(const std::string& type_str, const std::string& param_str)
 		{
-			log_debug("\t", m_next_var_id + 1, "\targument ", param_str);
+			log_debug("\t", m_next_var_id, "\targument ", param_str);
 			m_ops.push_back(marshal_op::argument);
 			m_argument_data.push_back({type_str, param_str});
 			return m_next_var_id++;
@@ -245,6 +274,7 @@ namespace idlc {
 
 		unsigned int add_return_value(const std::string& type_str)
 		{
+			log_debug("\t\treturn_value");
 			m_ops.push_back(marshal_op::return_value);
 			m_return_value_data.push_back({type_str});
 			return m_next_var_id++;
@@ -253,6 +283,7 @@ namespace idlc {
 
 		unsigned int add_get(unsigned int parent, const std::string& child_field_str, const std::string& type_str)
 		{
+			log_debug("\t", m_next_var_id, "\tget ", parent, " ", child_field_str);
 			m_ops.push_back(marshal_op::get);
 			m_get_data.push_back({parent, child_field_str, type_str});
 			return m_next_var_id++;
@@ -261,32 +292,44 @@ namespace idlc {
 
 		void add_set(unsigned int parent, unsigned int source, const std::string& child_field_str)
 		{
+			log_debug("\t\tset ", parent, " ", child_field_str, " ", source);
 			m_ops.push_back(marshal_op::set);
 			m_set_data.push_back({parent, source, child_field_str});
 		}
 
-		unsigned int add_call(const std::string& arguments_str)
+		void add_call(const std::string& arguments_str)
 		{
+			log_debug("\t\tcall");
 			m_ops.push_back(marshal_op::call);
 			m_call_data.push_back({arguments_str});
-			return m_next_var_id++;
 		}
 
 		void add_send(const std::string& rpc_id_str)
 		{
+			log_debug("\t\tsend");
 			m_ops.push_back(marshal_op::send);
 			m_send_data.push_back({rpc_id_str});
 		}
 
 		void add_if_not_null(unsigned int pointer)
 		{
+			log_debug("\t\tif_not_null ", pointer);
 			m_ops.push_back(marshal_op::if_not_null);
 			m_if_not_null_data.push_back({pointer});
 		}
 
 		void add_end_if_not_null()
 		{
+			log_debug("\t\tend_if_not_null");
 			m_ops.push_back(marshal_op::end_if_not_null);
+		}
+
+		unsigned int add_inject_trampoline(unsigned int ptr_id, gsl::czstring<> rpc_id)
+		{
+			log_debug("\t", m_next_var_id, "\tinject_trampoline ", ptr_id);
+			m_ops.push_back(marshal_op::inject_trampoline);
+			m_inject_trampoline_data.push_back({ptr_id, rpc_id});
+			return m_next_var_id++;
 		}
 
 		marshal_op_list move_to_list()
@@ -297,6 +340,7 @@ namespace idlc {
 				std::move(m_unmarshal_data),
 				std::move(m_create_cspace_data),
 				std::move(m_destroy_cspace_data),
+				std::move(m_find_cspace_data),
 				std::move(m_get_cspace_data),
 				std::move(m_argument_data),
 				std::move(m_parameter_data),
@@ -305,7 +349,8 @@ namespace idlc {
 				std::move(m_set_data),
 				std::move(m_call_data),
 				std::move(m_send_data),
-				std::move(m_if_not_null_data)
+				std::move(m_if_not_null_data),
+				std::move(m_inject_trampoline_data)
 			};
 		}
 
@@ -316,6 +361,7 @@ namespace idlc {
 		std::vector<unmarshal_data> m_unmarshal_data;
 		std::vector<create_cspace_data> m_create_cspace_data;
 		std::vector<destroy_cspace_data> m_destroy_cspace_data;
+		std::vector<find_cspace_data> m_find_cspace_data;
 		std::vector<get_cspace_data> m_get_cspace_data;
 		std::vector<argument_data> m_argument_data;
 		std::vector<parameter_data> m_parameter_data;
@@ -325,13 +371,23 @@ namespace idlc {
 		std::vector<call_data> m_call_data;
 		std::vector<send_data> m_send_data;
 		std::vector<if_not_null_data> m_if_not_null_data;
+		std::vector<inject_trampoline_data> m_inject_trampoline_data;
 	};
 
 	bool caller_marshal_argument(marshal_op_writer& marshaling, const field& argument);
 	bool caller_marshal_rpc(marshal_op_writer& marshaling, const rpc_field& rpc);
+	bool caller_marshal_var(marshal_op_writer& marshaling, const var_field& rpc);
+	bool caller_marshal_projection_rpc(marshal_op_writer& marshaling, const rpc_field& rpc, unsigned int parent_ptr_id);
+	bool caller_marshal_projection_var(marshal_op_writer& marshaling, const var_field& var, unsigned int parent_ptr_id);
+	bool caller_marshal_projection_field(marshal_op_writer& marshaling, const field& proj_field, unsigned int parent_ptr_id);
 
 	bool callee_unmarshal_argument(marshal_op_writer& marshaling, const field& argument);
 	bool callee_unmarshal_rpc(marshal_op_writer& marshaling, const rpc_field& rpc);
+	bool callee_unmarshal_var(marshal_op_writer& marshaling, const var_field& var);
+	bool callee_unmarshal_projection_rpc(marshal_op_writer& marshaling, const rpc_field& rpc, unsigned int parent_ptr_id);
+	bool callee_unmarshal_projection_var(marshal_op_writer& marshaling, const var_field& var, unsigned int parent_ptr_id);
+	bool callee_unmarshal_projection_field(marshal_op_writer& marshaling, const field& proj_field, unsigned int parent_ptr_id);
+	bool callee_insert_call(marshal_op_writer& marshaling, const signature& signature);
 }
 
 /*
@@ -433,26 +489,37 @@ gsl::czstring<> idlc::get_primitive_string(primitive_type_kind kind)
 
 bool idlc::process_marshal_units(gsl::span<const marshal_unit> units)
 {
-	marshal_op_writer caller_marshaling;
-	marshal_op_writer callee_marshaling;
 
 	for (const marshal_unit& unit : units) {
+		marshal_op_writer caller_marshaling;
+		marshal_op_writer callee_marshaling;
+
 		log_debug(unit.identifier, ":");
-		const signature& signature {*unit.signature};
-		
-		log_debug("Caller-side:");
+		const signature& signature {*unit.rpc_signature};
 
 		// Caller marshaling
+
+		log_debug("Caller-side:");
+
 		for (const std::unique_ptr<field>& field : signature.arguments()) {
-			caller_marshal_argument(caller_marshaling, *field);
+			if (!caller_marshal_argument(caller_marshaling, *field)) {
+				return false;
+			}
 		}
+
+		caller_marshaling.add_send(unit.identifier);
+
+		// Callee marshaling
 
 		log_debug("Callee-side:");
 
-		// Callee marshaling
 		for (const std::unique_ptr<field>& field : signature.arguments()) {
-			callee_unmarshal_argument(callee_marshaling, *field);
+			if (!callee_unmarshal_argument(callee_marshaling, *field)) {
+				return false;
+			}
 		}
+
+		callee_insert_call(callee_marshaling, signature);
 	}
 
 	return true;
@@ -463,7 +530,151 @@ bool idlc::caller_marshal_rpc(marshal_op_writer& marshaling, const rpc_field& rp
 	// NOTE: I think we can get away with the void* trick due to C's looser type system
 	const unsigned int save_id {marshaling.add_argument("void*", rpc.identifier())};
 	marshaling.add_marshal(save_id);
-	log_warning("RPC pointers not implemented yet, marshaling raw pointer value instead");
+	return true;
+}
+
+bool idlc::caller_marshal_var(marshal_op_writer& marshaling, const var_field& var)
+{
+	const type& type {var.get_type()};
+
+	// Need to provide default attributes if none were specified
+
+	attributes def_attributes {};
+	const attributes* type_attribs {type.get_attributes()};
+	if (!type_attribs) {
+		def_attributes = *attributes::make(
+			{
+				{rpc_side::callee, attribute_type::bind},	// bind(callee)
+				{rpc_side::callee, attribute_type::copy}	// in
+			}
+		);
+
+		type_attribs = &def_attributes;
+	}
+
+	unsigned int save_id {marshaling.add_argument(get_type_string(type), var.identifier())};
+	marshaling.add_marshal(save_id);
+
+	const field_marshal_kind marshal_kind {get_var_marshal_kind(type)};
+	switch (marshal_kind) {
+	case field_marshal_kind::undefined:
+		log_error("\t", var.identifier(), " has undefined marshaling");
+		return false;
+
+	case field_marshal_kind::value:
+		break;
+
+	case field_marshal_kind::projection_ptr: {
+		// Recurse into projection fields
+		// Needs save ID of the projection pointer and the projection definition
+
+		marshaling.add_if_not_null(save_id);
+
+		const projection& type_definition {type.get_copy_type()->get<copy_type_kind::projection>().definition()};
+		for (const std::unique_ptr<field>& pr_field : type_definition.fields()) {
+			if (!caller_marshal_projection_field(marshaling, *pr_field, save_id)) {
+				return false;
+			}
+		}
+
+		marshaling.add_end_if_not_null();
+
+		break;
+	}
+	}
+
+	return true;
+}
+
+bool idlc::caller_marshal_projection_rpc(marshal_op_writer& marshaling, const rpc_field& rpc, unsigned int parent_ptr_id)
+{
+	// NOTE: I think we can get away with the void* trick due to C's looser type system
+	const unsigned int save_id {marshaling.add_get(parent_ptr_id, rpc.identifier(), "void*")};
+	marshaling.add_marshal(save_id);
+	return true;
+}
+
+bool idlc::caller_marshal_projection_var(marshal_op_writer& marshaling, const var_field& var, unsigned int parent_ptr_id)
+{
+	const type& type {var.get_type()};
+
+	attributes def_attributes {};
+	const attributes* type_attribs {type.get_attributes()};
+	if (!type_attribs) {
+		def_attributes = *attributes::make(
+			{
+				{rpc_side::callee, attribute_type::bind},	// bind(callee)
+				{rpc_side::callee, attribute_type::copy}	// in
+			}
+		);
+		type_attribs = &def_attributes;
+	}
+
+	const copy_direction field_copy_direction {type_attribs->get_value_copy_direction()};
+	if (!(field_copy_direction == copy_direction::both
+		|| field_copy_direction == copy_direction::in))
+	{
+		return true; // Do nothing, don't have to marshal
+	}
+
+	unsigned int save_id {marshaling.add_get(parent_ptr_id, var.identifier(), get_type_string(type))};
+
+	const field_marshal_kind marshal_kind {get_var_marshal_kind(type)};
+	switch (marshal_kind) {
+	case field_marshal_kind::undefined:
+		log_error("\t", var.identifier(), " has undefined marshaling");
+		return false;
+
+	case field_marshal_kind::value:
+		marshaling.add_marshal(save_id);
+		break;
+
+	case field_marshal_kind::projection_ptr: {
+		// Recurse into projection fields
+		// Needs save ID of the projection pointer and the projection definition
+		marshaling.add_marshal(save_id);
+		marshaling.add_if_not_null(save_id);
+
+		const projection& type_definition {type.get_copy_type()->get<copy_type_kind::projection>().definition()};
+		for (const std::unique_ptr<field>& pr_field : type_definition.fields()) {
+			if (!caller_marshal_projection_field(marshaling, *pr_field, save_id)) {
+				return false;
+			}
+		}
+
+		marshaling.add_end_if_not_null();
+
+		break;
+	}
+	}
+
+	return true;
+}
+
+/*
+	All function arguments are [in]
+	For [in] fields, dealloc(caller), bind(callee), alloc(callee), and dealloc(callee) are all valid
+	For [out] fields, dealloc(caller), bind(caller), alloc(caller), and dealloc(caller) are all valid
+*/
+
+bool idlc::caller_marshal_projection_field(marshal_op_writer& marshaling, const field& proj_field, unsigned int parent_ptr_id)
+{
+	switch (proj_field.kind()) {
+	case field_kind::rpc:
+		if (!caller_marshal_projection_rpc(marshaling, proj_field.get<field_kind::rpc>(), parent_ptr_id)) {
+			return false;
+		}
+
+		break;
+
+	case field_kind::var:
+		if (!caller_marshal_projection_var(marshaling, proj_field.get<field_kind::var>(), parent_ptr_id)) {
+			return false;
+		}
+
+		break;
+	}
+
 	return true;
 }
 
@@ -471,39 +682,158 @@ bool idlc::caller_marshal_argument(marshal_op_writer& marshaling, const field& a
 {
 	switch (argument.kind()) {
 	case field_kind::rpc:
-		caller_marshal_rpc(marshaling, argument.get<field_kind::rpc>());
+		if (!caller_marshal_rpc(marshaling, argument.get<field_kind::rpc>())) {
+			return false;
+		}
+
 		break;
 
 	case field_kind::var:
-		const var_field& var {argument.get<field_kind::var>()};
-
-		const type& type {var.get_type()};
-		const unsigned save_id {marshaling.add_argument(get_type_string(type), var.identifier())};
-		marshaling.add_marshal(save_id);
-
-		const field_marshal_kind marshal_kind {get_var_marshal_kind(type)};
-		switch (marshal_kind) {
-		case field_marshal_kind::undefined:
-			log_error("\t", var.identifier(), " has undefined marshaling");
+		if (!caller_marshal_var(marshaling, argument.get<field_kind::var>())) {
 			return false;
-
-		case field_marshal_kind::projection_ptr:
-			// Recurse into projection fields
-			// Needs save ID of the projection pointer and the projection definition
-
-			break;
 		}
+
+		break;
 	}
 
 	return true;
 }
 
-
 bool idlc::callee_unmarshal_rpc(marshal_op_writer& marshaling, const rpc_field& rpc)
 {
 	// NOTE: I think we can get away with the void* trick due to C's looser type system
-	const unsigned int save_id {marshaling.add_unmarshal("void*")};
-	log_warning("RPC pointers not implemented yet, unmarshaling raw pointer value instead");
+	const unsigned int save_id {marshaling.add_inject_trampoline(marshaling.add_unmarshal("void*"), rpc.mangled_signature)};
+	marshaling.add_parameter(save_id, "void*", rpc.identifier());
+	return true;
+}
+
+bool idlc::callee_unmarshal_var(marshal_op_writer& marshaling, const var_field& var)
+{
+	const type& type {var.get_type()};
+	const std::string type_string {get_type_string(type)};
+	const unsigned int save_id {marshaling.add_unmarshal(get_type_string(type))};
+	marshaling.add_parameter(save_id, type_string, var.identifier());
+	const field_marshal_kind marshal_kind {get_var_marshal_kind(type)};
+
+	attributes def_attributes {};
+	const attributes* type_attribs {type.get_attributes()};
+	if (!type_attribs) {
+		def_attributes = *attributes::make(
+			{
+				{rpc_side::callee, attribute_type::bind},	// bind(callee)
+				{rpc_side::callee, attribute_type::copy}	// in
+			}
+		);
+
+		type_attribs = &def_attributes;
+	}
+
+	switch (marshal_kind) {
+	case field_marshal_kind::undefined:
+		log_error("\t", var.identifier(), " has undefined marshaling");
+		return false;
+
+	case field_marshal_kind::projection_ptr:
+		// Recurse into projection fields
+		// Needs save ID of the projection pointer and the projection definition
+
+		marshaling.add_if_not_null(save_id);
+
+		const projection& type_definition {type.get_copy_type()->get<copy_type_kind::projection>().definition()};
+		for (const std::unique_ptr<field>& pr_field : type_definition.fields()) {
+			if (!callee_unmarshal_projection_field(marshaling, *pr_field, save_id)) {
+				return false;
+			}
+		}
+
+		marshaling.add_end_if_not_null();
+
+		break;
+	}
+
+	return true;
+}
+
+bool idlc::callee_unmarshal_projection_rpc(marshal_op_writer& marshaling, const rpc_field& rpc, unsigned int parent_ptr_id)
+{
+	// NOTE: I think we can get away with the void* trick due to C's looser type system
+	const unsigned int save_id {marshaling.add_inject_trampoline(marshaling.add_unmarshal("void*"), rpc.mangled_signature)};
+	marshaling.add_set(parent_ptr_id, save_id, rpc.identifier());
+	return true;
+}
+
+bool idlc::callee_unmarshal_projection_var(marshal_op_writer& marshaling, const var_field& var, unsigned int parent_ptr_id)
+{
+	const type& type {var.get_type()};
+
+	attributes def_attributes {};
+	const attributes* type_attribs {type.get_attributes()};
+	if (!type_attribs) {
+		def_attributes = *attributes::make(
+			{
+				{rpc_side::callee, attribute_type::bind},	// bind(callee)
+				{rpc_side::callee, attribute_type::copy}	// in
+			}
+		);
+
+		type_attribs = &def_attributes;
+	}
+
+	const copy_direction field_copy_direction {type_attribs->get_value_copy_direction()};
+	if (!(field_copy_direction == copy_direction::both
+		|| field_copy_direction == copy_direction::in))
+	{
+		return true; // Do nothing, don't have to marshal
+	}
+
+	const unsigned int save_id {marshaling.add_unmarshal(get_type_string(type))};
+	marshaling.add_set(parent_ptr_id, save_id, var.identifier());
+	const field_marshal_kind marshal_kind {get_var_marshal_kind(type)};
+
+	switch (marshal_kind) {
+	case field_marshal_kind::undefined:
+		log_error("\t", var.identifier(), " has undefined marshaling");
+		return false;
+
+	case field_marshal_kind::projection_ptr:
+		// Recurse into projection fields
+		// Needs save ID of the projection pointer and the projection definition
+
+		marshaling.add_if_not_null(save_id);
+
+		const projection& type_definition {type.get_copy_type()->get<copy_type_kind::projection>().definition()};
+		for (const std::unique_ptr<field>& pr_field : type_definition.fields()) {
+			if (!callee_unmarshal_projection_field(marshaling, *pr_field, save_id)) {
+				return false;
+			}
+		}
+
+		marshaling.add_end_if_not_null();
+
+		break;
+	}
+
+	return true;
+}
+
+bool idlc::callee_unmarshal_projection_field(marshal_op_writer& marshaling, const field& proj_field, unsigned int parent_ptr_id)
+{
+	switch (proj_field.kind()) {
+	case field_kind::rpc:
+		if (!callee_unmarshal_projection_rpc(marshaling, proj_field.get<field_kind::rpc>(), parent_ptr_id)) {
+			return false;
+		}
+
+		break;
+
+	case field_kind::var:
+		if (!callee_unmarshal_projection_var(marshaling, proj_field.get<field_kind::var>(), parent_ptr_id)) {
+			return false;
+		}
+
+		break;
+	}
+
 	return true;
 }
 
@@ -511,27 +841,42 @@ bool idlc::callee_unmarshal_argument(marshal_op_writer& marshaling, const field&
 {
 	switch (argument.kind()) {
 	case field_kind::rpc:
-		callee_unmarshal_rpc(marshaling, argument.get<field_kind::rpc>());
+		if (!callee_unmarshal_rpc(marshaling, argument.get<field_kind::rpc>())) {
+			return false;
+		}
+
 		break;
 
 	case field_kind::var:
-		const var_field& var {argument.get<field_kind::var>()};
-
-		const type& type {var.get_type()};
-		const unsigned int save_id {marshaling.add_unmarshal(get_type_string(type))};
-		const field_marshal_kind marshal_kind {get_var_marshal_kind(type)};
-
-		switch (marshal_kind) {
-		case field_marshal_kind::undefined:
-			log_error("\t", var.identifier(), " has undefined marshaling");
+		if (!callee_unmarshal_var(marshaling, argument.get<field_kind::var>())) {
 			return false;
+		}
 
-		case field_marshal_kind::projection_ptr:
-			// Recurse into projection fields
-			// Needs save ID of the projection pointer and the projection definition
+		break;
+	}
+
+	return true;
+}
+
+bool idlc::callee_insert_call(marshal_op_writer& marshaling, const signature& signature)
+{
+	bool use_comma {false};
+	std::stringstream argument_string;
+	for (const std::unique_ptr<field>& field : signature.arguments()) {
+		switch (field->kind()) {
+		case field_kind::rpc:
+			argument_string << (use_comma ? ", " : "") << field->get<field_kind::rpc>().identifier();
+			break;
+
+		case field_kind::var:
+			argument_string << (use_comma ? ", " : "") << field->get<field_kind::var>().identifier();
 			break;
 		}
+
+		use_comma = true;
 	}
+
+	marshaling.add_call(argument_string.str());
 
 	return true;
 }

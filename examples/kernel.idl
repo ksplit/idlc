@@ -1,3 +1,5 @@
+// Note that we do not presently support void*
+
 module kernel_nullnet {
 	projection <struct rtnl_link_stats64> rtnl_link_stats64_ndo_get_stats64 {
 		unsigned int tx_bytes;
@@ -43,7 +45,7 @@ module kernel_nullnet {
 											 projection rtnl_link_stats64_ndo_get_stats64* storage);
 
 		rpc void (*ndo_set_rx_mode)(projection net_device_ndo_set_rx_mode* dev);
-		rpc int (*ndo_set_mac_address)(projection net_device_ndo_set_mac_address* dev, void* addr);
+		rpc int (*ndo_set_mac_address)(projection net_device_ndo_set_mac_address* dev/*, void* addr*/);
 		rpc int (*ndo_change_carrier)(projection net_device_ndo_change_carrier* dev, bool new_carrier);
 	}
 
@@ -117,7 +119,7 @@ module kernel_nullnet {
 
 		rpc int eth_validate_addr(projection net_device_eth_validate_addr* dev);
 
-		rpc int eth_mac_addr(projection net_device_eth_mac_addr* dev, void* p);
+		rpc int eth_mac_addr(projection net_device_eth_mac_addr* dev/*, void* p*/);
 
 		rpc void ether_setup(projection net_device_ether_setup* dev);
 

@@ -1,15 +1,10 @@
 module marshal_test {
-	projection <struct foobar> abominable {
-		int [in,out] try_me;
-	}
-
 	projection <struct bar> bar_proj {
-		int [in,out] bp_a;
-		projection abominable* bp_b;
+		rpc [in, out] void (*in_out_var)(int foo);
 	}
 
 	projection <struct foo> foo_proj {
-		unsigned [in] fp_a; // the annotation here is only meaningful if the projection is passed by pointer!
+		int [in] fp_a; // the annotation here is only meaningful if the projection is passed by pointer!
 		int [out] fp_b;
 		int [in, out] fp_c;
 		projection bar_proj [in, out] * fp_d; // If we allow "in, out" inference, this is ambiguous
@@ -17,5 +12,11 @@ module marshal_test {
 		// Or are we applying it to the "d" field of foo_proj?
 	}
 
-	rpc int do_widget(unsigned flags, projection foo_proj [bind(callee)] * widget);
+	// dealloc(caller) has to use a local pointer to destroy the cspace
+	// destroy_cspace takes a local pointer
+	// find_cspace takes a remote pointer
+	// get_cspace_caller? No, only applicable to "arriving" pointers, which are always remote
+	// same with alloc, can't pass a pointer you don't already have
+	// or can you
+	rpc int do_widget(int flags, projection foo_proj [dealloc(caller)] * widget);
 }
