@@ -9,7 +9,12 @@ namespace idlc {
 		gsl::czstring<> identifier;
 	};
 
-	bool process_marshal_units(gsl::span<const marshal_unit> units);
+	enum class marshal_unit_kind {
+		direct,
+		indirect
+	};
+
+	bool process_marshal_units(gsl::span<const marshal_unit> units, marshal_unit_kind kind);
 }
 
 #endif // !_MARSHALING_H_

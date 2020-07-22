@@ -307,12 +307,12 @@ int main(int argc, gsl::czstring<>* argv) {
 			return 1;
 		}
 
-		if (!idlc::process_marshal_units(rpcs)) {
+		if (!idlc::process_marshal_units(rpcs, idlc::marshal_unit_kind::direct)) {
 			idlc::log_error("Compilation failed");
 			return 1;
 		}
 		
-		if (!idlc::process_marshal_units(rpc_pointers)) {
+		if (!idlc::process_marshal_units(rpc_pointers, idlc::marshal_unit_kind::indirect)) {
 			idlc::log_error("Compilation failed");
 			return 1;
 		}

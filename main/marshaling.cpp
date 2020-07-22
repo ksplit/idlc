@@ -14,6 +14,7 @@ namespace idlc {
 
 	gsl::czstring<> get_primitive_string(primitive_type_kind kind);
 	std::string get_type_string(const type& ty);
+	std::string get_rpc_string(const signature& signature);
 	field_marshal_kind get_var_marshal_kind(const type& ty);
 	attributes get_attributes_with_argument_default(const attributes* attribs);
 	attributes get_attributes_with_return_default(const attributes* attribs);
@@ -41,6 +42,7 @@ namespace idlc {
 		get,				// <parent> <child>				=> <$type> var_<$id> = var_<parent>-><$child-field>;
 		set,				// <parent> <child> <source>	=> var_<parent>-><$child-field> = var_<source>;
 		call,				//								=> [<$type> var_ret_val =] <real-function>(<$arguments>); slot = 0;
+		call_indirect,		// <source>						=> [<$type> var_ret_val =] ((<$type>)var_<source>)(<$arguments>); slot = 0;
 		send,				//								=> send(<$rpc-id>, buffer);
 		if_not_null,		// <pointer>					=> if (var_<pointer>) {
 		end_if_not_null,	//								=> }
@@ -105,6 +107,14 @@ namespace idlc {
 	};
 
 	struct call_data {
+		std::string return_type;
+		std::string arguments;
+	};
+
+	struct call_indirect_data {
+		unsigned int source;
+		std::string function_type;
+		std::string return_type;
 		std::string arguments;
 	};
 
@@ -138,6 +148,7 @@ namespace idlc {
 			std::vector<get_data>&& get_data,
 			std::vector<set_data>&& set_data,
 			std::vector<call_data>&& call_data,
+			std::vector<call_indirect_data>&& call_indirect_data,
 			std::vector<send_data>&& send_data,
 			std::vector<if_not_null_data>&& if_not_null_data,
 			std::vector<inject_trampoline_data>&& inject_trampoline_data
@@ -156,6 +167,7 @@ namespace idlc {
 			m_get_data {std::move(get_data)},
 			m_set_data {std::move(set_data)},
 			m_call_data {std::move(call_data)},
+			m_call_indirect_data {std::move(call_indirect_data)},
 			m_send_data {std::move(send_data)},
 			m_if_not_null_data {std::move(if_not_null_data)},
 			m_op {0},
@@ -171,6 +183,7 @@ namespace idlc {
 			m_get {0},
 			m_set {0},
 			m_call {0},
+			m_call_indirect {0},
 			m_send {0},
 			m_if_not_null {0}
 		{
@@ -198,6 +211,7 @@ namespace idlc {
 		std::vector<get_data> m_get_data;
 		std::vector<set_data> m_set_data;
 		std::vector<call_data> m_call_data;
+		std::vector<call_indirect_data> m_call_indirect_data;
 		std::vector<send_data> m_send_data;
 		std::vector<if_not_null_data> m_if_not_null_data;
 		std::vector<inject_trampoline_data> m_inject_trampoline_data;
@@ -216,6 +230,7 @@ namespace idlc {
 		unsigned int m_get;
 		unsigned int m_set;
 		unsigned int m_call;
+		unsigned int m_call_indirect;
 		unsigned int m_send;
 		unsigned int m_if_not_null;
 	};
@@ -268,7 +283,6 @@ namespace idlc {
 			return m_next_var_id++;
 		}
 
-
 		void add_parameter(unsigned int source, const std::string& type_str, const std::string& arg_str)
 		{
 			log_debug("\t\tparameter ", source);
@@ -307,7 +321,6 @@ namespace idlc {
 			return m_next_var_id++;
 		}
 
-
 		void add_set(unsigned int parent, unsigned int source, const std::string& child_field_str)
 		{
 			log_debug("\t\tset ", parent, " ", child_field_str, " ", source);
@@ -315,11 +328,18 @@ namespace idlc {
 			m_set_data.push_back({parent, source, child_field_str});
 		}
 
-		void add_call(const std::string& arguments_str)
+		void add_call(const std::string& return_type, const std::string& arguments_str)
 		{
 			log_debug("\t\tcall");
 			m_ops.push_back(marshal_op::call);
-			m_call_data.push_back({arguments_str});
+			m_call_data.push_back({return_type, arguments_str});
+		}
+
+		void add_call_indirect(unsigned int source, const std::string& function_type, const std::string& return_type, const std::string& arguments_str)
+		{
+			log_debug("\t\tcall_indirect ", source);
+			m_ops.push_back(marshal_op::call_indirect);
+			m_call_indirect_data.push_back({source, function_type, return_type, arguments_str});
 		}
 
 		void add_send(const std::string& rpc_id_str)
@@ -367,6 +387,7 @@ namespace idlc {
 				std::move(m_get_data),
 				std::move(m_set_data),
 				std::move(m_call_data),
+				std::move(m_call_indirect_data),
 				std::move(m_send_data),
 				std::move(m_if_not_null_data),
 				std::move(m_inject_trampoline_data)
@@ -389,6 +410,7 @@ namespace idlc {
 		std::vector<get_data> m_get_data;
 		std::vector<set_data> m_set_data;
 		std::vector<call_data> m_call_data;
+		std::vector<call_indirect_data> m_call_indirect_data;
 		std::vector<send_data> m_send_data;
 		std::vector<if_not_null_data> m_if_not_null_data;
 		std::vector<inject_trampoline_data> m_inject_trampoline_data;
@@ -407,6 +429,7 @@ namespace idlc {
 	*/
 
 	bool callee_insert_call(marshal_op_writer& marshaling, const signature& signature);
+	bool callee_insert_call_indirect(marshal_op_writer& marshaling, const signature& signature, unsigned int source);
 
 	bool caller_marshal_argument(marshal_op_writer& marshaling, const field& argument, std::vector<unsigned int>& caller_argument_save_ids);
 	bool caller_marshal_argument_rpc(marshal_op_writer& marshaling, const rpc_field& rpc);
@@ -532,6 +555,44 @@ std::string idlc::get_type_string(const type& ty)
 	return type_str.str();
 }
 
+// For use in the final cast in call_indirect
+std::string idlc::get_rpc_string(const signature& signature)
+{
+	std::stringstream rpc_string;
+	const field& return_field {signature.return_field()};
+	switch (return_field.kind()) {
+	case field_kind::rpc:
+		rpc_string << get_rpc_string(return_field.get<field_kind::rpc>().get_signature());
+		break;
+
+	case field_kind::var:
+		rpc_string << get_type_string(return_field.get<field_kind::var>().get_type());
+		break;
+	}
+
+	rpc_string << " (*)(";
+	bool use_comma {false};
+	for (const std::unique_ptr<field>& argument : signature.arguments()) {
+		if (use_comma) {
+			rpc_string << ", ";
+		}
+		
+		use_comma = true;
+
+		switch (argument->kind()) {
+		case field_kind::rpc:
+			rpc_string << get_rpc_string(return_field.get<field_kind::rpc>().get_signature());
+			break;
+
+		case field_kind::var:
+			rpc_string << get_type_string(return_field.get<field_kind::var>().get_type());
+			break;
+		}
+	}
+
+	return rpc_string.str();
+}
+
 gsl::czstring<> idlc::get_primitive_string(primitive_type_kind kind)
 {
 	switch (kind) {
@@ -579,7 +640,8 @@ gsl::czstring<> idlc::get_primitive_string(primitive_type_kind kind)
 	}
 }
 
-bool idlc::process_marshal_units(gsl::span<const marshal_unit> units)
+// TODO: add handling of indirect call for function pointers
+bool idlc::process_marshal_units(gsl::span<const marshal_unit> units, marshal_unit_kind kind)
 {
 	for (const marshal_unit& unit : units) {
 		marshal_op_writer caller_marshaling;
@@ -591,6 +653,12 @@ bool idlc::process_marshal_units(gsl::span<const marshal_unit> units)
 		// Caller marshaling
 
 		log_debug("Caller-side:");
+
+		if (kind == marshal_unit_kind::indirect) {
+			// rpc pointer stubs take the real pointer as their first argument
+			const unsigned int save_id {caller_marshaling.add_argument("void*", "underlying")};
+			caller_marshaling.add_marshal(save_id);
+		}
 
 		// To keep track of projection pointers that need re-marshaling for [out] fields
 		std::vector<unsigned int> caller_argument_save_ids(signature.arguments().size());
@@ -620,6 +688,12 @@ bool idlc::process_marshal_units(gsl::span<const marshal_unit> units)
 
 		log_debug("Callee-side:");
 
+		unsigned int underlying_ptr_save_id {0};
+		if (kind == marshal_unit_kind::indirect) {
+			// rpc pointer stubs take the real pointer as their first argument
+			underlying_ptr_save_id = callee_marshaling.add_unmarshal("void*");
+		}
+
 		// To keep track of projection pointers that need re-marshaling for [out] fields
 		std::vector<unsigned int> callee_argument_save_ids(signature.arguments().size());
 		callee_argument_save_ids.resize(0); // Keep the reserved space while allowing for push_back()
@@ -630,7 +704,12 @@ bool idlc::process_marshal_units(gsl::span<const marshal_unit> units)
 			}
 		}
 
-		callee_insert_call(callee_marshaling, signature);
+		if (kind == marshal_unit_kind::indirect) {
+			callee_insert_call_indirect(callee_marshaling, signature, underlying_ptr_save_id);
+		}
+		else {
+			callee_insert_call(callee_marshaling, signature);
+		}
 
 		current_save_id = begin(callee_argument_save_ids);
 		for (const std::unique_ptr<field>& field : signature.arguments()) {
@@ -665,7 +744,61 @@ bool idlc::callee_insert_call(marshal_op_writer& marshaling, const signature& si
 		use_comma = true;
 	}
 
-	marshaling.add_call(argument_string.str());
+	const field& return_field {signature.return_field()};
+	switch (return_field.kind()) {
+	case field_kind::var:
+		marshaling.add_call(get_type_string(return_field.get<field_kind::var>().get_type()), argument_string.str());
+		break;
+
+	case field_kind::rpc:
+		marshaling.add_call("void*", argument_string.str());
+		break;
+	}
+
+	return true;
+}
+
+bool idlc::callee_insert_call_indirect(marshal_op_writer& marshaling, const signature& signature, unsigned int source)
+{
+	bool use_comma {false};
+	std::stringstream argument_string;
+	for (const std::unique_ptr<field>& field : signature.arguments()) {
+		switch (field->kind()) {
+		case field_kind::rpc:
+			argument_string << (use_comma ? ", " : "") << field->get<field_kind::rpc>().identifier();
+			break;
+
+		case field_kind::var:
+			argument_string << (use_comma ? ", " : "") << field->get<field_kind::var>().identifier();
+			break;
+		}
+
+		use_comma = true;
+	}
+
+	const std::string function_type {get_rpc_string(signature)};
+	const field& return_field {signature.return_field()};
+	switch (return_field.kind()) {
+	case field_kind::var:
+		marshaling.add_call_indirect(
+			source,
+			function_type,
+			get_type_string(return_field.get<field_kind::var>().get_type()),
+			argument_string.str()
+		);
+
+		break;
+
+	case field_kind::rpc:
+		marshaling.add_call_indirect(
+			source,
+			function_type,
+			"void*",
+			argument_string.str()
+		);
+
+		break;
+	}
 
 	return true;
 }
