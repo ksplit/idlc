@@ -6,7 +6,7 @@
 namespace idlc {
 	struct marshal_unit {
 		const signature* rpc_signature;
-		std::string identifier;
+		gsl::czstring<> identifier;
 	};
 
 	bool process_marshal_units(gsl::span<const marshal_unit> units);

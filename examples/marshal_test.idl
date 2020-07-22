@@ -1,6 +1,10 @@
 module marshal_test {
+	// Note that in, out annotations on nested projections may not have expected meanings
+	// [out] subfield of [in, out] pointer only copies the field of the "new" pointer
+
 	projection <struct bar> bar_proj {
-		rpc [in] void (*in_out_var)(int foo);
+		rpc [out] void (*in_out_var)(int foo);
+		unsigned [out] yada_yada;
 	}
 
 	projection <struct foo> foo_proj {
@@ -18,5 +22,5 @@ module marshal_test {
 	// get_cspace_caller? No, only applicable to "arriving" pointers, which are always remote
 	// same with alloc, can't pass a pointer you don't already have
 	// or can you
-	rpc int do_widget(int flags, projection foo_proj [dealloc(caller)] * widget);
+	rpc projection bar_proj* do_widget(int flags, projection foo_proj [dealloc(caller)] * widget);
 }

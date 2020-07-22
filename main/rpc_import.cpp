@@ -29,7 +29,7 @@ namespace idlc {
 				m_rpcs.push_back(
 					{
 						&rpc.get_signature(),
-						"rpc_" + std::string {rpc.identifier()}
+						rpc.identifier()
 					}
 				);
 
@@ -38,16 +38,30 @@ namespace idlc {
 
 			bool visit_rpc_field(const rpc_field& rpc)
 			{
-				std::stringstream stream;
-				stream << "rpc_ptr" << rpc.mangled_signature;
-				m_rpc_pointers.push_back(
-					{
-						&rpc.get_signature(),
-						stream.str()
-					}
+				const auto is_same_rpc = [id = rpc.mangled_signature](auto&& unit) {
+					return unit.identifier == id;
+				};
+
+				const auto sentinel = end(m_rpc_pointers);
+				const auto find_iter = std::find_if(
+					begin(m_rpc_pointers),
+					sentinel,
+					is_same_rpc
 				);
 
-				return true;
+				if (find_iter == sentinel) {
+					m_rpc_pointers.push_back(
+						{
+							&rpc.get_signature(),
+							rpc.mangled_signature
+						}
+					);
+
+					return true;
+				}
+				else {
+					return true;
+				}
 			}
 
 		private:
@@ -213,6 +227,7 @@ namespace idlc {
 
 		private:
 			// TODO: best place for this?
+			// TODO: Must ensure this lives through marshaling!!!
 			static string_heap mangle_heap;
 		};
 
