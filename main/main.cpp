@@ -321,10 +321,10 @@ namespace idlc {
 			case marshal_op::call: {
 				const call_data& data {ops.get_next_call()};
 				if (data.return_type == "void") {
-					tab_over(indent_level, file) << host_id << "(" << data.arguments << "); slots = 0;\n";
+					tab_over(indent_level, file) << host_id << "(" << data.arguments << "); slot = 0;\n";
 				}
 				else {
-					tab_over(indent_level, file) << data.return_type << " var_return_value = " << host_id << "(" << data.arguments << "); slots = 0;\n";
+					tab_over(indent_level, file) << data.return_type << " var_return_value = " << host_id << "(" << data.arguments << "); slot = 0;\n";
 				}
 				break;
 			}
@@ -404,9 +404,11 @@ namespace idlc {
 		common_header.exceptions(std::fstream::badbit | std::fstream::failbit);
 
 		common_header << "#ifndef _COMMON_H_\n#define _COMMON_H_\n\n";
+		common_header << "#include <stddef.h>\n";
 		common_header << "#include <stdint.h>\n\n";
-		common_header << "#define MAX_MESSAGE_SLOTS 64\n";
-		common_header << "struct fipc_message {\n\tdispatch_id host_id;\n\tuint64_t slots[MAX_MESSAGE_SLOTS];\n}\n\n";
+		common_header << "#define MAX_MESSAGE_SLOTS 64\n\n";
+		common_header << "// TODO: implement trampoline injection\n";
+		common_header << "#define INJECT_TRAMPOLINE(id, pointer) NULL\n\n";
 		common_header << "enum dispatch_id {\n";
 
 		for (const marshal_unit_lists& unit : rpc_lists) {
@@ -417,7 +419,8 @@ namespace idlc {
 			common_header << "\trpc_ptr" << unit.identifier << ",\n";
 		}
 
-		common_header << "}\n\n";
+		common_header << "};\n\n";
+		common_header << "struct fipc_message {\n\tenum dispatch_id host_id;\n\tuint64_t slots[MAX_MESSAGE_SLOTS];\n};\n\n";
 		common_header << "#endif";
 		common_header.close();
 
@@ -426,17 +429,17 @@ namespace idlc {
 
 		kernel_dispatch_source << "#include \"common.h\"\n\n";
 		for (marshal_unit_lists& unit : rpc_lists) {
-			kernel_dispatch_source << "void direct_call_" << unit.identifier << "(struct fipc_message* message) {\n";
+			kernel_dispatch_source << "void " << unit.identifier << "_callee(struct fipc_message* message) {\n";
 			write_marshal_ops(kernel_dispatch_source, unit.callee_ops, unit.identifier, 1);
 			kernel_dispatch_source << "}\n\n";
 		}
 
 		kernel_dispatch_source << "int dispatch(struct fipc_message* message) {\n";
-		kernel_dispatch_source << "\tswitch (message.host_id) {\n";
+		kernel_dispatch_source << "\tswitch (message->host_id) {\n";
 
 		for (const marshal_unit_lists& unit : rpc_lists) {
 			kernel_dispatch_source << "\tcase rpc_" << unit.identifier << ":\n";
-			kernel_dispatch_source << "\t\tdirect_call_" << unit.identifier << "(message)" << ";\n";
+			kernel_dispatch_source << "\t\t" << unit.identifier << "_callee(message)" << ";\n";
 			kernel_dispatch_source << "\t\tbreak;\n\n";
 		}
 

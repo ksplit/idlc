@@ -19,7 +19,6 @@ namespace idlc {
 	attributes get_attributes_with_argument_default(const attributes* attribs);
 	attributes get_attributes_with_return_default(const attributes* attribs);
 
-
 	class marshal_op_writer {
 	public:
 		void add_marshal(unsigned int source)
@@ -216,6 +215,8 @@ namespace idlc {
 		and what is only superficially similar.
 	*/
 
+	// TODO: switch to string names, not numeric IDs
+
 	bool callee_insert_call(marshal_op_writer& marshaling, const signature& signature);
 	bool callee_insert_call_indirect(marshal_op_writer& marshaling, const signature& signature, unsigned int source);
 
@@ -245,7 +246,9 @@ namespace idlc {
 	bool callee_remarshal_argument_sub_var(marshal_op_writer& marshaling, const var_field& var, unsigned int parent_ptr_id);
 	bool callee_remarshal_argument_sub_field(marshal_op_writer& marshaling, const field& proj_field, unsigned int parent_ptr_id);
 
-	// No such thing as "remarshaling" a return value
+	// No such thing as "remarshaling" a return value (hence the fact that an [in] field on a return value is meaningless)
+	// NOTE: this is easily changed, it just uses the annotation to decide whether to skip the field or not
+	// So we can trivially invert the annotations for return values
 
 	bool caller_unmarshal_return(marshal_op_writer& marshaling, const field& return_field);
 	bool caller_unmarshal_return_var(marshal_op_writer& marshaling, const var_field& return_field);
