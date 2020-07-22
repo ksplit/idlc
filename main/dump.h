@@ -8,7 +8,7 @@ namespace idlc {
 	std::ostream& tab_over(unsigned int level, std::ostream& os)
 	{
 		for (unsigned int i {0}; i < level; ++i)
-			os << "  ";
+			os << "\t";
 
 		return os;
 	}

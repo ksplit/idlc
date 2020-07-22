@@ -19,221 +19,6 @@ namespace idlc {
 	attributes get_attributes_with_argument_default(const attributes* attribs);
 	attributes get_attributes_with_return_default(const attributes* attribs);
 
-	enum class marshal_op {
-		// <$*> indicates a template field that is inferred somehow
-		// <$id>, for instance, is monotonically increasing for each
-		// marshal_op with a result
-		// <$type> is inferred from type info
-		// <$child-field> from the projection definition
-		// etc.
-
-		//					arguments						generated code
-
-		marshal,			// <source>						=> buffer[++slot] = var_<source>;
-		unmarshal,			//								=> <$type> var_<$id> = buffer[++slot];
-		create_cspace,		// <pointer>					=> <$type>* var_<$id> = create_cspace(<$type>, var_<pointer>);
-		destroy_cspace,		// <pointer>					=> destroy_cspace(var_<pointer>);
-		find_cspace,		// <pointer>					=> find_cspace(var_<pointer>);
-		get_cspace,			// <pointer>					=> <$type>* var_<$id> = get_cspace(var_<pointer>);
-		parameter,			// <source>						=> <$type> <$parameter> = var_<source>;
-		argument,			//								=> <$type> var_<$id> = <$argument>;
-		get_return_value,	//								=> <$type> var_<$id> = var_ret_val;
-		return_var,			// <source>						=> return var_<source>;
-		get,				// <parent> <child>				=> <$type> var_<$id> = var_<parent>-><$child-field>;
-		set,				// <parent> <child> <source>	=> var_<parent>-><$child-field> = var_<source>;
-		call,				//								=> [<$type> var_ret_val =] <real-function>(<$arguments>); slot = 0;
-		call_indirect,		// <source>						=> [<$type> var_ret_val =] ((<$type>)var_<source>)(<$arguments>); slot = 0;
-		send,				//								=> send(<$rpc-id>, buffer);
-		if_not_null,		// <pointer>					=> if (var_<pointer>) {
-		end_if_not_null,	//								=> }
-		inject_trampoline	// <fptr>						=> void* var_<$id> = inject_trampoline(var_<fptr>, <$rpc-id>);
-	};
-
-	struct marshal_data {
-		unsigned int source;
-	};
-
-	struct unmarshal_data {
-		std::string type;
-	};
-
-	struct create_cspace_data {
-		unsigned int pointer;
-		std::string type;
-	};
-
-	struct destroy_cspace_data {
-		unsigned int pointer;
-	};
-
-	struct find_cspace_data {
-		unsigned int pointer;
-	};
-
-	struct get_cspace_data {
-		unsigned int pointer;
-		std::string type;
-	};
-
-	struct argument_data {
-		std::string type;
-		std::string argument;
-	};
-
-	struct parameter_data {
-		unsigned int source;
-		std::string type;
-		std::string argument;
-	};
-
-	struct get_return_value_data {
-		std::string type;
-	};
-
-	struct return_var_data {
-		unsigned int source;
-	};
-
-	struct get_data {
-		unsigned int parent;
-		std::string child_field;
-		std::string type;
-	};
-
-	struct set_data {
-		unsigned int parent;
-		unsigned int source;
-		std::string child_field;
-	};
-
-	struct call_data {
-		std::string return_type;
-		std::string arguments;
-	};
-
-	struct call_indirect_data {
-		unsigned int source;
-		std::string function_type;
-		std::string return_type;
-		std::string arguments;
-	};
-
-	struct send_data {
-		std::string rpc_id;
-	};
-
-	struct if_not_null_data {
-		unsigned int pointer;
-	};
-
-	struct inject_trampoline_data {
-		unsigned int fptr;
-		gsl::czstring<> rpc_id;
-	};
-
-	class marshal_op_list {
-	public:
-		marshal_op_list(
-			std::vector<marshal_op>&& ops,
-			std::vector<marshal_data>&& marshal_data,
-			std::vector<unmarshal_data>&& unmarshal_data,
-			std::vector<create_cspace_data>&& create_cspace_data,
-			std::vector<destroy_cspace_data>&& destroy_cspace_data,
-			std::vector<find_cspace_data>&& find_cspace_data,
-			std::vector<get_cspace_data>&& get_cspace_data,
-			std::vector<argument_data>&& argument_data,
-			std::vector<parameter_data>&& parameter_data,
-			std::vector<get_return_value_data>&& get_return_value_data,
-			std::vector<return_var_data>&& return_var_data,
-			std::vector<get_data>&& get_data,
-			std::vector<set_data>&& set_data,
-			std::vector<call_data>&& call_data,
-			std::vector<call_indirect_data>&& call_indirect_data,
-			std::vector<send_data>&& send_data,
-			std::vector<if_not_null_data>&& if_not_null_data,
-			std::vector<inject_trampoline_data>&& inject_trampoline_data
-		) :
-			m_ops {std::move(ops)},
-			m_marshal_data {std::move(marshal_data)},
-			m_unmarshal_data {std::move(unmarshal_data)},
-			m_create_cspace_data {std::move(create_cspace_data)},
-			m_destroy_cspace_data {std::move(destroy_cspace_data)},
-			m_find_cspace_data {std::move(find_cspace_data)},
-			m_get_cspace_data {std::move(get_cspace_data)},
-			m_argument_data {std::move(argument_data)},
-			m_parameter_data {std::move(parameter_data)},
-			m_get_return_value_data {std::move(get_return_value_data)},
-			m_return_var_data {std::move(return_var_data)},
-			m_get_data {std::move(get_data)},
-			m_set_data {std::move(set_data)},
-			m_call_data {std::move(call_data)},
-			m_call_indirect_data {std::move(call_indirect_data)},
-			m_send_data {std::move(send_data)},
-			m_if_not_null_data {std::move(if_not_null_data)},
-			m_op {0},
-			m_marshal {0},
-			m_unmarshal {0},
-			m_create_cspace {0},
-			m_destroy_cspace {0},
-			m_get_cspace {0},
-			m_argument {0},
-			m_parameter {0},
-			m_get_return_value {0},
-			m_return_var {0},
-			m_get {0},
-			m_set {0},
-			m_call {0},
-			m_call_indirect {0},
-			m_send {0},
-			m_if_not_null {0}
-		{
-		}
-
-		marshal_op get_next_op()
-		{
-			return m_ops[++m_op];
-		}
-
-		// TODO: getters for the proj_field data
-
-	private:
-		std::vector<marshal_op> m_ops;
-		std::vector<marshal_data> m_marshal_data;
-		std::vector<unmarshal_data> m_unmarshal_data;
-		std::vector<create_cspace_data> m_create_cspace_data;
-		std::vector<destroy_cspace_data> m_destroy_cspace_data;
-		std::vector<find_cspace_data> m_find_cspace_data;
-		std::vector<get_cspace_data> m_get_cspace_data;
-		std::vector<argument_data> m_argument_data;
-		std::vector<parameter_data> m_parameter_data;
-		std::vector<get_return_value_data> m_get_return_value_data;
-		std::vector<return_var_data> m_return_var_data;
-		std::vector<get_data> m_get_data;
-		std::vector<set_data> m_set_data;
-		std::vector<call_data> m_call_data;
-		std::vector<call_indirect_data> m_call_indirect_data;
-		std::vector<send_data> m_send_data;
-		std::vector<if_not_null_data> m_if_not_null_data;
-		std::vector<inject_trampoline_data> m_inject_trampoline_data;
-
-		unsigned int m_op;
-		unsigned int m_marshal;
-		unsigned int m_unmarshal;
-		unsigned int m_create_cspace;
-		unsigned int m_destroy_cspace;
-		unsigned int m_find_cspace;
-		unsigned int m_get_cspace;
-		unsigned int m_argument;
-		unsigned int m_parameter;
-		unsigned int m_get_return_value;
-		unsigned int m_return_var;
-		unsigned int m_get;
-		unsigned int m_set;
-		unsigned int m_call;
-		unsigned int m_call_indirect;
-		unsigned int m_send;
-		unsigned int m_if_not_null;
-	};
 
 	class marshal_op_writer {
 	public:
@@ -415,6 +200,9 @@ namespace idlc {
 		std::vector<if_not_null_data> m_if_not_null_data;
 		std::vector<inject_trampoline_data> m_inject_trampoline_data;
 	};
+
+	bool process_caller(marshal_op_writer& marshaling, const marshal_unit & unit, marshal_unit_kind kind);
+	bool process_callee(marshal_op_writer& marshaling, const marshal_unit & unit, marshal_unit_kind kind);
 
 	/*
 		TODO: Invest in a more thought-out implementation of marshaling
@@ -641,86 +429,100 @@ gsl::czstring<> idlc::get_primitive_string(primitive_type_kind kind)
 }
 
 // TODO: add handling of indirect call for function pointers
-bool idlc::process_marshal_units(gsl::span<const marshal_unit> units, marshal_unit_kind kind)
+bool idlc::process_marshal_units(gsl::span<const marshal_unit> units, marshal_unit_kind kind, std::vector<marshal_unit_lists>& unit_marshaling)
 {
+	unit_marshaling.clear();
+	unit_marshaling.reserve(units.size());
+
 	for (const marshal_unit& unit : units) {
 		marshal_op_writer caller_marshaling;
 		marshal_op_writer callee_marshaling;
-
 		log_debug(unit.identifier, ":");
-		const signature& signature {*unit.rpc_signature};
+		process_caller(caller_marshaling, unit, kind);
+		process_callee(callee_marshaling, unit, kind);
+		unit_marshaling.push_back({unit.identifier, caller_marshaling.move_to_list(), callee_marshaling.move_to_list()});
+	}
 
-		// Caller marshaling
+	return true;
+}
 
-		log_debug("Caller-side:");
+bool idlc::process_caller(marshal_op_writer& marshaling, const marshal_unit& unit, marshal_unit_kind kind)
+{
+	log_debug("Caller-side:");
 
-		if (kind == marshal_unit_kind::indirect) {
-			// rpc pointer stubs take the real pointer as their first argument
-			const unsigned int save_id {caller_marshaling.add_argument("void*", "underlying")};
-			caller_marshaling.add_marshal(save_id);
-		}
+	const signature& signature {*unit.rpc_signature};
 
-		// To keep track of projection pointers that need re-marshaling for [out] fields
-		std::vector<unsigned int> caller_argument_save_ids(signature.arguments().size());
-		caller_argument_save_ids.resize(0); // Keep the reserved space while allowing for push_back()
+	if (kind == marshal_unit_kind::indirect) {
+		// rpc pointer stubs take the real pointer as their first argument
+		const unsigned int save_id {marshaling.add_argument("void*", "underlying")};
+		marshaling.add_marshal(save_id);
+	}
 
-		for (const std::unique_ptr<field>& field : signature.arguments()) {
-			if (!caller_marshal_argument(caller_marshaling, *field, caller_argument_save_ids)) {
-				return false;
-			}
-		}
+	// To keep track of projection pointers that need re-marshaling for [out] fields
+	std::vector<unsigned int> caller_argument_save_ids(signature.arguments().size());
+	caller_argument_save_ids.resize(0); // Keep the reserved space while allowing for push_back()
 
-		caller_marshaling.add_send(unit.identifier);
-
-		auto current_save_id = begin(caller_argument_save_ids);
-		for (const std::unique_ptr<field>& field : signature.arguments()) {
-			// Need to know save-id of each argument
-			if (!caller_remarshal_argument(caller_marshaling, *field, *(current_save_id++))) {
-				return false;
-			}
-		}
-
-		if (!caller_unmarshal_return(caller_marshaling, signature.return_field())) {
+	for (const std::unique_ptr<field>& field : signature.arguments()) {
+		if (!caller_marshal_argument(marshaling, *field, caller_argument_save_ids)) {
 			return false;
 		}
+	}
 
-		// Callee marshaling
+	marshaling.add_send(unit.identifier);
 
-		log_debug("Callee-side:");
-
-		unsigned int underlying_ptr_save_id {0};
-		if (kind == marshal_unit_kind::indirect) {
-			// rpc pointer stubs take the real pointer as their first argument
-			underlying_ptr_save_id = callee_marshaling.add_unmarshal("void*");
-		}
-
-		// To keep track of projection pointers that need re-marshaling for [out] fields
-		std::vector<unsigned int> callee_argument_save_ids(signature.arguments().size());
-		callee_argument_save_ids.resize(0); // Keep the reserved space while allowing for push_back()
-
-		for (const std::unique_ptr<field>& field : signature.arguments()) {
-			if (!callee_unmarshal_argument(callee_marshaling, *field, callee_argument_save_ids)) {
-				return false;
-			}
-		}
-
-		if (kind == marshal_unit_kind::indirect) {
-			callee_insert_call_indirect(callee_marshaling, signature, underlying_ptr_save_id);
-		}
-		else {
-			callee_insert_call(callee_marshaling, signature);
-		}
-
-		current_save_id = begin(callee_argument_save_ids);
-		for (const std::unique_ptr<field>& field : signature.arguments()) {
-			if (!callee_remarshal_argument(callee_marshaling, *field, *(current_save_id++))) {
-				return false;
-			}
-		}
-
-		if (!callee_marshal_return(callee_marshaling, signature.return_field())) {
+	auto current_save_id = begin(caller_argument_save_ids);
+	for (const std::unique_ptr<field>& field : signature.arguments()) {
+		// Need to know save-id of each argument
+		if (!caller_remarshal_argument(marshaling, *field, *(current_save_id++))) {
 			return false;
 		}
+	}
+
+	if (!caller_unmarshal_return(marshaling, signature.return_field())) {
+		return false;
+	}
+
+	return true;
+}
+
+bool idlc::process_callee(marshal_op_writer& marshaling, const marshal_unit & unit, marshal_unit_kind kind)
+{
+	log_debug("Callee-side:");
+
+	const signature& signature {*unit.rpc_signature};
+
+	unsigned int underlying_ptr_save_id {0};
+	if (kind == marshal_unit_kind::indirect) {
+		// rpc pointer stubs take the real pointer as their first argument
+		underlying_ptr_save_id = marshaling.add_unmarshal("void*");
+	}
+
+	// To keep track of projection pointers that need re-marshaling for [out] fields
+	std::vector<unsigned int> callee_argument_save_ids(signature.arguments().size());
+	callee_argument_save_ids.resize(0); // Keep the reserved space while allowing for push_back()
+
+	for (const std::unique_ptr<field>& field : signature.arguments()) {
+		if (!callee_unmarshal_argument(marshaling, *field, callee_argument_save_ids)) {
+			return false;
+		}
+	}
+
+	if (kind == marshal_unit_kind::indirect) {
+		callee_insert_call_indirect(marshaling, signature, underlying_ptr_save_id);
+	}
+	else {
+		callee_insert_call(marshaling, signature);
+	}
+
+	auto current_save_id = begin(callee_argument_save_ids);
+	for (const std::unique_ptr<field>& field : signature.arguments()) {
+		if (!callee_remarshal_argument(marshaling, *field, *(current_save_id++))) {
+			return false;
+		}
+	}
+
+	if (!callee_marshal_return(marshaling, signature.return_field())) {
+		return false;
 	}
 
 	return true;

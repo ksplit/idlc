@@ -263,18 +263,198 @@ namespace idlc {
 	private:
 		bool is_module_found {false};
 	};
+
+	struct rpc_imports {
+		std::vector<idlc::marshal_unit> rpcs;
+		std::vector<idlc::marshal_unit> rpc_pointers;
+	};
+
+	std::optional<rpc_imports> import_rpcs(file& file, const std::filesystem::path& idl_path)
+	{
+		idlc::verify_driver_idl_pass vdi_pass;
+		if (!visit(vdi_pass, file)) {
+			return std::nullopt;
+		}
+
+		idlc::node_map<idlc::module> imports;
+		idlc::include_file_pass if_pass {idl_path.parent_path(), imports};
+		if (!visit(if_pass, file)) {
+			return std::nullopt;
+		}
+
+		std::vector<idlc::marshal_unit> rpcs;
+		std::vector<idlc::marshal_unit> rpc_pointers;
+		idlc::rpc_import_pass mi_pass {rpcs, rpc_pointers, imports};
+		if (!visit(mi_pass, file)) {
+			return std::nullopt;
+		}
+
+		return rpc_imports {rpcs, rpc_pointers};
+	}
+
+	void write_marshal_ops(
+		std::ofstream& file,
+		marshal_op_list& ops,
+		gsl::czstring<> host_id,
+		unsigned int indent_level
+	)
+	{
+		unsigned int next_var {0};
+
+		file << "\tunsigned int slot = 0;\n";
+
+		while (!ops.finished()) {
+			const marshal_op op {ops.get_next_op()};
+			switch (op) {
+			case marshal_op::unmarshal: {
+				const unmarshal_data& data {ops.get_next_unmarshal()};
+				tab_over(indent_level, file) << data.type << " var_" << next_var++ << " = *(" << data.type << "*)&message.slots[slot++];\n";
+				break;
+			}
+
+			case marshal_op::marshal: {
+				const marshal_data& data {ops.get_next_marshal()};
+				tab_over(indent_level, file) << "message.slots[slot++] = *(uint64_t*)&var_" << data.source << ";\n";
+				break;
+			}
+
+			case marshal_op::call: {
+				const call_data& data {ops.get_next_call()};
+				if (data.return_type == "void") {
+					tab_over(indent_level, file) << host_id << "(" << data.arguments << "); slots = 0;\n";
+				}
+				else {
+					tab_over(indent_level, file) << data.return_type << " var_return_value = " << host_id << "(" << data.arguments << "); slots = 0;\n";
+				}
+				break;
+			}
+
+			case marshal_op::inject_trampoline: {
+				const inject_trampoline_data& data {ops.get_next_inject_trampoline()};
+				tab_over(indent_level, file) << "void* var_" << next_var++ << " = INJECT_TRAMPOLINE(" << data.rpc_id << ", var_" << data.fptr << ");\n";
+				break;
+			}
+
+			case marshal_op::get_return_value: {
+				const get_return_value_data& data {ops.get_next_get_return_value()};
+				tab_over(indent_level, file) << data.type << " var_" << next_var++ << " = var_return_value;\n";
+				break;
+			}
+
+			case marshal_op::parameter: {
+				const parameter_data& data {ops.get_next_parameter()};
+				tab_over(indent_level, file) << data.type << " " << data.argument << " = var_" << data.source << ";\n";
+				break;
+			}
+
+			case marshal_op::if_not_null: {
+				const if_not_null_data& data {ops.get_next_if_not_null()};
+				tab_over(indent_level, file) << "if (var_" << data.pointer << " != NULL) {\n";
+				++indent_level;
+				break;
+			}
+
+			case marshal_op::end_if_not_null: {
+				--indent_level;
+				tab_over(indent_level, file) << "}\n";
+				break;
+			}
+
+			case marshal_op::set: {
+				const set_data& data {ops.get_next_set()};
+				tab_over(indent_level, file) << "var_" << data.parent << "->" << data.child_field << " = var_" << data.source << ";\n";
+				break;
+			}
+
+			case marshal_op::get: {
+				const get_data& data {ops.get_next_get()};
+				tab_over(indent_level, file) << data.type << " var_" << next_var++ << " = var_" << data.parent << "->" << data.child_field << ";\n";
+				break;
+			}
+
+			default:
+				tab_over(indent_level, file) << "// TODO\n";
+				break;
+			}
+		}
+	}
+
+	void do_code_generation(
+		const std::filesystem::path& destination,
+		gsl::span<marshal_unit_lists> rpc_lists,
+		gsl::span<marshal_unit_lists> rpc_pointer_lists
+	)
+	{
+		namespace fs = std::filesystem;
+
+		if (!fs::exists(destination)) {
+			fs::create_directories(destination);
+		}
+
+		// TODO: problem: we don't know which side the function pointers end up on
+		// TODO: we'll just put rpc pointers on both sides, they don't have the same name conflicts as RPCs do (the func-named facade and the actual func)
+
+		const fs::path kernel_dispatch_source_path {destination / "kernel_dispatch.c"}; // klcd
+		const fs::path kernel_dispatch_header_path {destination / "kernel_dispatch.h"}; // klcd
+		const fs::path driver_dispatch_source_path {destination / "driver_dispatch.c"}; // lcd
+		const fs::path driver_dispatch_header_path {destination / "driver_dispatch.h"}; // lcd
+		const fs::path common_header_path {destination / "common.h"}; // lcd
+
+		std::ofstream common_header {common_header_path};
+		common_header.exceptions(std::fstream::badbit | std::fstream::failbit);
+
+		common_header << "#ifndef _COMMON_H_\n#define _COMMON_H_\n\n";
+		common_header << "#include <stdint.h>\n\n";
+		common_header << "#define MAX_MESSAGE_SLOTS 64\n";
+		common_header << "struct fipc_message {\n\tdispatch_id host_id;\n\tuint64_t slots[MAX_MESSAGE_SLOTS];\n}\n\n";
+		common_header << "enum dispatch_id {\n";
+
+		for (const marshal_unit_lists& unit : rpc_lists) {
+			common_header << "\trpc_" << unit.identifier << ",\n";
+		}
+
+		for (const marshal_unit_lists& unit : rpc_pointer_lists) {
+			common_header << "\trpc_ptr" << unit.identifier << ",\n";
+		}
+
+		common_header << "}\n\n";
+		common_header << "#endif";
+		common_header.close();
+
+		std::ofstream kernel_dispatch_source {kernel_dispatch_source_path};
+		kernel_dispatch_source.exceptions(std::fstream::badbit | std::fstream::failbit);
+
+		kernel_dispatch_source << "#include <common.h>\n\n";
+		for (marshal_unit_lists& unit : rpc_lists) {
+			kernel_dispatch_source << "void direct_call_" << unit.identifier << "(struct fipc_message* message) {\n";
+			write_marshal_ops(kernel_dispatch_source, unit.callee_ops, unit.identifier, 1);
+			kernel_dispatch_source << "}\n\n";
+		}
+
+		kernel_dispatch_source << "int dispatch(struct fipc_message* message) {\n";
+		kernel_dispatch_source << "\tswitch (message.host_id) {\n";
+
+		for (const marshal_unit_lists& unit : rpc_lists) {
+			kernel_dispatch_source << "\tcase rpc_" << unit.identifier << ":\n";
+			kernel_dispatch_source << "\t\tdirect_call_" << unit.identifier << "(message)" << ";\n";
+			kernel_dispatch_source << "\t\tbreak;\n\n";
+		}
+
+		kernel_dispatch_source << "\t}\n}\n\n";
+	}
 }
 
 
 int main(int argc, gsl::czstring<>* argv) {
 	const gsl::span args {argv, gsl::narrow_cast<std::size_t>(argc)};
 
-	if (args.size() != 2) {
-		std::cout << "Usage: idlc <source-file>\n";
+	if (args.size() != 3) {
+		std::cout << "Usage: idlc <source-file> <destination-directory>\n";
 		return 0;
 	}
 
 	const fs::path idl_path {gsl::at(args, 1)};
+	const fs::path destination_path {gsl::at(args, 2)};
 
 	try {
 		auto top_node = std::unique_ptr<idlc::file> {
@@ -286,36 +466,27 @@ int main(int argc, gsl::czstring<>* argv) {
 
 		idlc::log_note("Verified IDL syntax");
 
-		idlc::verify_driver_idl_pass vdi_pass;
-		if (!visit(vdi_pass, file)) {
+		const std::optional<idlc::rpc_imports> imports_opt {idlc::import_rpcs(file, idl_path)};
+		if (!imports_opt) {
 			idlc::log_error("Compilation failed");
 			return 1;
 		}
 
-		idlc::node_map<idlc::module> imports;
-		idlc::include_file_pass if_pass {idl_path.parent_path(), imports};
-		if (!visit(if_pass, file)) {
+		auto& [rpcs, rpc_pointers] = *imports_opt;
+
+		std::vector<idlc::marshal_unit_lists> rpc_lists;
+		if (!idlc::process_marshal_units(rpcs, idlc::marshal_unit_kind::direct, rpc_lists)) {
 			idlc::log_error("Compilation failed");
 			return 1;
 		}
 
-		std::vector<idlc::marshal_unit> rpcs;
-		std::vector<idlc::marshal_unit> rpc_pointers;
-		idlc::rpc_import_pass mi_pass {rpcs, rpc_pointers, imports};
-		if (!visit(mi_pass, file)) {
+		std::vector<idlc::marshal_unit_lists> rpc_ptr_lists;
+		if (!idlc::process_marshal_units(rpc_pointers, idlc::marshal_unit_kind::indirect, rpc_ptr_lists)) {
 			idlc::log_error("Compilation failed");
 			return 1;
 		}
 
-		if (!idlc::process_marshal_units(rpcs, idlc::marshal_unit_kind::direct)) {
-			idlc::log_error("Compilation failed");
-			return 1;
-		}
-		
-		if (!idlc::process_marshal_units(rpc_pointers, idlc::marshal_unit_kind::indirect)) {
-			idlc::log_error("Compilation failed");
-			return 1;
-		}
+		idlc::do_code_generation(destination_path, rpc_lists, rpc_ptr_lists);
 
 		return 0;
 	}

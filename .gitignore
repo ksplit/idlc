@@ -3,6 +3,7 @@
 *.pyc
 *.o
 
+examples/driver-codegen
 build/
 out/
 CMakeSettings.json
