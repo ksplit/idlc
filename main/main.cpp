@@ -308,13 +308,13 @@ namespace idlc {
 			switch (op) {
 			case marshal_op::unmarshal: {
 				const unmarshal_data& data {ops.get_next_unmarshal()};
-				tab_over(indent_level, file) << data.type << " var_" << next_var++ << " = *(" << data.type << "*)&message.slots[slot++];\n";
+				tab_over(indent_level, file) << data.type << " var_" << next_var++ << " = *(" << data.type << "*)&message->slots[slot++];\n";
 				break;
 			}
 
 			case marshal_op::marshal: {
 				const marshal_data& data {ops.get_next_marshal()};
-				tab_over(indent_level, file) << "message.slots[slot++] = *(uint64_t*)&var_" << data.source << ";\n";
+				tab_over(indent_level, file) << "message->slots[slot++] = *(uint64_t*)&var_" << data.source << ";\n";
 				break;
 			}
 
@@ -424,7 +424,7 @@ namespace idlc {
 		std::ofstream kernel_dispatch_source {kernel_dispatch_source_path};
 		kernel_dispatch_source.exceptions(std::fstream::badbit | std::fstream::failbit);
 
-		kernel_dispatch_source << "#include <common.h>\n\n";
+		kernel_dispatch_source << "#include \"common.h\"\n\n";
 		for (marshal_unit_lists& unit : rpc_lists) {
 			kernel_dispatch_source << "void direct_call_" << unit.identifier << "(struct fipc_message* message) {\n";
 			write_marshal_ops(kernel_dispatch_source, unit.callee_ops, unit.identifier, 1);
