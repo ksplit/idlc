@@ -22,5 +22,5 @@ module marshal_test {
 	// get_cspace_caller? No, only applicable to "arriving" pointers, which are always remote
 	// same with alloc, can't pass a pointer you don't already have
 	// or can you
-	rpc projection bar_proj* do_widget(int flags, projection foo_proj [dealloc(caller)] * widget);
+	rpc rpc void (*)() do_widget(int flags, projection foo_proj [dealloc(caller)] * widget);
 }

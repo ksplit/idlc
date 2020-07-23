@@ -31,6 +31,6 @@ gsl::czstring<> idlc::string_heap::add_string(std::string_view string)
 	else {
 		m_free_index = 0;
 		m_blocks.emplace_back(std::make_unique<block>());
-		return add_string(string); // does the branch get optimized out?
+		return add_string(string); // does the branch get_field optimized out?
 	}
 }

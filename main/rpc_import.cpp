@@ -185,7 +185,7 @@ namespace idlc {
 					break;
 
 				case rpc_side::none:
-					return true; // no need to get the op
+					return true; // no need to get_field the op
 				}
 
 				switch (attribs.get_sharing_op()) {

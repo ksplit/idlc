@@ -128,7 +128,7 @@ namespace idlc {
 	// And argument/field types ("annotated_types") are either primitive, projection, or pointer
 
 	// Have to stop thinking of pointers as types
-	// A "field" (arg, field, return slot, etc.) has a type, a set of annotations, and one or more stars
+	// A "field" (arg, field, return slot, etc.) has a type, a set_field of annotations, and one or more stars
 	// An rpc field has a rpc_signature, not a type
 	// Eliminate pointer_type
 
