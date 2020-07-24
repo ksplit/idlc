@@ -24,7 +24,9 @@ add_executable(
 	"main/marshaling.h"
 	"main/log.h"
 	"main/marshaling.cpp"
- "main/code_generation.cpp" "main/dump.cpp")
+	"main/code_generation.cpp"
+	"main/dump.cpp"
+)
 
 set_property(TARGET idlc PROPERTY CXX_STANDARD 17)
 target_include_directories(idlc PRIVATE gsl/include)

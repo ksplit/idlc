@@ -88,6 +88,15 @@ namespace idlc {
 				return true;
 			}
 
+			bool visit_rpc_field(const rpc_field& rpc)
+			{
+				// Another ugly hack, this time to encode rpc pointers
+				// Essentially "rpc_ptr_<number of arguments + return>"
+				m_mangle += "_rpc_ptr_";
+				m_mangle += std::to_string(rpc.get_signature().arguments().size() + 1);
+				return true;
+			}
+
 			bool visit_type(const type& ty)
 			{
 				m_mangle += ty.stars() ? '_' + std::to_string(ty.stars()) : "";
@@ -146,7 +155,7 @@ namespace idlc {
 					break;
 
 				case primitive_type_kind::unsigned_long_long_k:
-					m_mangle += "_usnigned_long_long";
+					m_mangle += "_unsigned_long_long";
 					break;
 
 				case primitive_type_kind::unsigned_short_k:

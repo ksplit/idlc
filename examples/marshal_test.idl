@@ -1,23 +1,41 @@
 module marshal_test {
 	projection <struct b_struct> nested_proj {
-		int [out] a;
+		int [in, out] a;
 	}
 
 	projection <struct a_struct> callee_proj {
-		unsigned [in] a;
-		projection nested_proj [out, bind(callee)] * b;
+		unsigned [in, out] a;
+		projection nested_proj [in, bind(callee)] * b;
 
 		// [bind(callee)] is formally undefined in marshaling right now
 		// You need to explicitly specify in or out, or it might not behave the way you expect it to
 	}
 
 	projection <struct c_struct> caller_proj {
-		unsigned [in] a;
+		unsigned [in, out] a;
 		projection nested_proj [in, bind(caller)] * b;
+	}
+
+	projection <struct d_struct> return_proj {
+		unsigned [out] a;
+	}
+
+	projection <struct e_struct> return_callee_proj {
+		projection return_proj [out, bind(callee)] * a;
+		unsigned [out] b;
+	}
+
+	projection <struct e_struct> return_caller_proj {
+		projection return_proj [out, bind(caller)] * a;
+		unsigned [out] b;
 	}
 
 	rpc void pass_callee_bind_pointer(projection callee_proj [bind(callee)] * caller_pointer);
 	rpc void pass_caller_bind_pointer(projection caller_proj [bind(caller)] * callee_pointer);
+	rpc projection return_callee_proj [bind(callee)] * return_callee_bind_pointer();
+	rpc projection return_caller_proj [bind(caller)] * return_caller_bind_pointer();
+	rpc void pass_rpc(rpc rpc int (*)(int foo) (*rpc_pointer)(int foo));
+	rpc rpc rpc int (*)(int foo) (*)(int foo) return_rpc();
 	
 	// Behavior with plain annotations (bind, as opposed to bind(caller)),
 	// are ucrrently undefined, since it's not wholly clear what the semantics are
@@ -28,4 +46,8 @@ module marshal_test {
 	// - [(in | out | (in, out))]
 	// - 
 	// TODO: add compiler pass to detect the weird stuff
+
+	// Remarshaling is the most complex logic:
+	// We have to remarshal all [out] fields, even if their parent pointers aren't
+	// For marshaling, we can always ignore [out] argument subfields
 }

@@ -20,7 +20,7 @@ namespace fs = std::filesystem;
 		- Write in support for shadow copies
 			- bind(caller/callee) appears to be working for arguments/subfields
 			- The logical structure seems to have solidified there
-			- If we had a passing tree, it's be possible to add default
+			- Note: If we had a passing tree, it's be possible to add default
 			annotations more intelligently (instead of the weird need to
 			always specify in or out for subfields with bind)
 			- not yet done for return values
@@ -345,43 +345,46 @@ int main(int argc, gsl::czstring<>* argv) {
 	const fs::path idl_path {gsl::at(args, 1)};
 	const fs::path destination_path {gsl::at(args, 2)};
 
+	std::unique_ptr<idlc::file> top_node;
+	std::optional<idlc::rpc_imports> imports_opt {};
 	try {
-		auto top_node = std::unique_ptr<idlc::file> {
+		top_node.reset(
 			const_cast<idlc::file*>(
 				static_cast<const idlc::file*>(
-					Parser::parse(idl_path.generic_string())))};
+					Parser::parse(idl_path.generic_string()))));
 
 		auto& file = *top_node;
 
-		idlc::log_note("Verified IDL syntax");
-
-		const std::optional<idlc::rpc_imports> imports_opt {idlc::import_rpcs(file, idl_path)};
-		if (!imports_opt) {
-			idlc::log_error("Compilation failed");
-			return 1;
-		}
-
-		auto& [rpcs, rpc_pointers] = *imports_opt;
-
-		std::vector<idlc::marshal_unit_lists> rpc_lists;
-		if (!idlc::process_marshal_units(rpcs, idlc::marshal_unit_kind::direct, rpc_lists)) {
-			idlc::log_error("Compilation failed");
-			return 1;
-		}
-
-		std::vector<idlc::marshal_unit_lists> rpc_ptr_lists;
-		if (!idlc::process_marshal_units(rpc_pointers, idlc::marshal_unit_kind::indirect, rpc_ptr_lists)) {
-			idlc::log_error("Compilation failed");
-			return 1;
-		}
-
-		idlc::do_code_generation(destination_path, rpc_lists, rpc_ptr_lists);
-
-		return 0;
+		imports_opt = idlc::import_rpcs(file, idl_path);
 	}
 	catch (const Parser::ParseException& e) {
 		idlc::log_error("Parsing failed");
 		std::cout << e.getReason();
 		return 1;
 	}
+
+	idlc::log_note("Verified IDL syntax");
+
+	if (!imports_opt) {
+		idlc::log_error("Compilation failed");
+		return 1;
+	}
+
+	auto& [rpcs, rpc_pointers] = *imports_opt;
+
+	std::vector<idlc::marshal_unit_lists> rpc_lists;
+	if (!idlc::process_marshal_units(rpcs, idlc::marshal_unit_kind::direct, rpc_lists)) {
+		idlc::log_error("Compilation failed");
+		return 1;
+	}
+
+	std::vector<idlc::marshal_unit_lists> rpc_ptr_lists;
+	if (!idlc::process_marshal_units(rpc_pointers, idlc::marshal_unit_kind::indirect, rpc_ptr_lists)) {
+		idlc::log_error("Compilation failed");
+		return 1;
+	}
+
+	idlc::do_code_generation(destination_path, rpc_lists, rpc_ptr_lists);
+
+	return 0;
 }

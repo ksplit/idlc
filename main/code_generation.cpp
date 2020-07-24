@@ -122,6 +122,12 @@ void idlc::write_marshal_ops(std::ofstream& file, const std::vector<marshal_op>&
 			break;
 		}
 
+		case marshal_op_kind::return_to_caller: {
+			const auto args = std::get<return_to_caller>(op);
+			tab_over(indent, file) << "return " << args.name << ";\n";
+			break;
+		}
+
 		default:
 			tab_over(indent, file) << "// TODO\n";
 			break;
@@ -146,11 +152,33 @@ void idlc::generate_kernel_dispatch_source(
 		kernel_dispatch_source << "}\n\n";
 	}
 
+	for (marshal_unit_lists& unit : rpc_pointer_lists) {
+		kernel_dispatch_source << "void " << unit.identifier << "_callee(struct fipc_message* message) {\n";
+		kernel_dispatch_source << "\tunsigned int marshal_slot = 0;\n";
+		write_marshal_ops(kernel_dispatch_source, unit.callee_ops, 1);
+		kernel_dispatch_source << "}\n\n";
+	}
+
+	for (marshal_unit_lists& unit : rpc_pointer_lists) {
+		kernel_dispatch_source << unit.header << " {\n";
+		kernel_dispatch_source << "\tunsigned int marshal_slot = 0;\n";
+		kernel_dispatch_source << "\tstruct fipc_message message_buffer = {0};\n";
+		kernel_dispatch_source << "\tstruct fipc_message* message = &message_buffer;\n";
+		write_marshal_ops(kernel_dispatch_source, unit.caller_ops, 1);
+		kernel_dispatch_source << "}\n\n";
+	}
+
 	kernel_dispatch_source << "int dispatch(struct fipc_message* message) {\n";
 	kernel_dispatch_source << "\tswitch (message->host_id) {\n";
 
 	for (const marshal_unit_lists& unit : rpc_lists) {
 		kernel_dispatch_source << "\tcase rpc_" << unit.identifier << ":\n";
+		kernel_dispatch_source << "\t\t" << unit.identifier << "_callee(message)" << ";\n";
+		kernel_dispatch_source << "\t\tbreak;\n\n";
+	}
+
+	for (const marshal_unit_lists& unit : rpc_pointer_lists) {
+		kernel_dispatch_source << "\tcase rpc_ptr" << unit.identifier << ":\n";
 		kernel_dispatch_source << "\t\t" << unit.identifier << "_callee(message)" << ";\n";
 		kernel_dispatch_source << "\t\tbreak;\n\n";
 	}
@@ -169,9 +197,27 @@ void idlc::generate_driver_dispatch_source(
 
 	driver_dispatch_source << "#include \"common.h\"\n\n";
 	for (marshal_unit_lists& unit : rpc_lists) {
-		driver_dispatch_source << unit.header << "{\n";
+		driver_dispatch_source << unit.header << " {\n";
 		driver_dispatch_source << "\tunsigned int marshal_slot = 0;\n";
+		driver_dispatch_source << "\tstruct fipc_message message_buffer = {0};\n";
+		driver_dispatch_source << "\tstruct fipc_message* message = &message_buffer;\n";
 		write_marshal_ops(driver_dispatch_source, unit.caller_ops, 1);
+		driver_dispatch_source << "}\n\n";
+	}
+
+	for (marshal_unit_lists& unit : rpc_pointer_lists) {
+		driver_dispatch_source << unit.header << " {\n";
+		driver_dispatch_source << "\tunsigned int marshal_slot = 0;\n";
+		driver_dispatch_source << "\tstruct fipc_message message_buffer = {0};\n";
+		driver_dispatch_source << "\tstruct fipc_message* message = &message_buffer;\n";
+		write_marshal_ops(driver_dispatch_source, unit.caller_ops, 1);
+		driver_dispatch_source << "}\n\n";
+	}
+
+	for (marshal_unit_lists& unit : rpc_pointer_lists) {
+		driver_dispatch_source << "void rpc_ptr" << unit.identifier << "_callee(struct fipc_message* message) {\n";
+		driver_dispatch_source << "\tunsigned int marshal_slot = 0;\n";
+		write_marshal_ops(driver_dispatch_source, unit.callee_ops, 1);
 		driver_dispatch_source << "}\n\n";
 	}
 }
@@ -205,8 +251,8 @@ void idlc::do_code_generation(
 	common_header << "#include <stdint.h>\n\n";
 	common_header << "#define MAX_MESSAGE_SLOTS 64\n\n";
 	common_header << "// TODO: implement trampoline injection\n";
-	common_header << "#define fipc_marshal(value) message.slots[marshal_slot++] = *(uint64_t*)&value;\n";
-	common_header << "#define fipc_unmarshal(type) *(type*)&message.slots[marshal_slot++];\n";
+	common_header << "#define fipc_marshal(value) message->slots[marshal_slot++] = *(uint64_t*)&value;\n";
+	common_header << "#define fipc_unmarshal(type) *(type*)&message->slots[marshal_slot++];\n";
 	common_header << "#define inject_trampoline(id, pointer) NULL\n\n";
 	common_header << "enum dispatch_id {\n";
 
