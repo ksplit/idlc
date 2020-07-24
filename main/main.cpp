@@ -10,9 +10,50 @@
 #include "rpc_import.h"
 #include "marshaling.h"
 #include "log.h"
+#include "code_generation.h"
 #include "../parser/parser.h"
 
 namespace fs = std::filesystem;
+
+/*
+	BIG TASKS LEFT
+		- Write in support for shadow copies
+			- bind(caller/callee) appears to be working for arguments/subfields
+			- The logical structure seems to have solidified there
+			- If we had a passing tree, it's be possible to add default
+			annotations more intelligently (instead of the weird need to
+			always specify in or out for subfields with bind)
+			- not yet done for return values
+			- then alloc / dealloc (much simpler, hopefully)
+			- this is honestly the final nail in the coffin
+		- Finish code generation
+			- function trampolines
+			- user hooks (to provide declarations, etc.)
+			- much simpler (code generator is a *joy* to work in, compared to marshaler)
+*/
+
+/*
+	POST DEADLINE TODOs (Beside the ones that have sat, ignored, for the past four-and-a-half weeks)
+		- The marshaling code currently walks the AST in a very specific, very odd way
+		(following type definitions), and is often force to recompute defaulted values;
+		it's also possible that there are ways to memoize marshaling work that just aren't terribly visible
+		- There is definitely extensive code duplication, not all of which is obvious
+		- The essence of the marshaling algorithm is clouded by the traversal method,
+		and the absence of a good data structure makes memory management somewhat opaque
+		- std::string_view was a bad idea, const std::string& would've made the ownership clearer
+		(I think it's all owned by the op buffer)
+		- Some of these "strings" need to be strongly typed, and the aggregate initialization makes the code brittle
+		(not always obvious when something breaks)
+		- I cannot emphasize enough how much this code needs a better data structure.
+		The IR buffers are quite clear in their meaning, making code generation somewhat trivial.
+		But the actual marshaling analysis is cloudy, and doesn't happen at syntax-level.
+		- More brittleness for the eyes: naming conventions are implied, with the various name variants
+		(trampoline, rpc id, rpc ptr id, etc.) being recomputed. Sure, you can Ctrl-F, but it doesn't have to be this way
+		And it really shouldn't
+		- "Strongly typed C template strings" - do you mean C syntax nodes, David? It's not too late to add an LLVM dependency...
+		- I see two major refactoring points in idlc's future: moving to a C syntax tree representation,
+		and extracting passing trees from the AST
+*/
 
 namespace idlc {
 	class verify_kernel_idl_pass : public generic_pass<verify_kernel_idl_pass> {
@@ -113,7 +154,6 @@ namespace idlc {
 	};
 
 	// TODO: would be nice to have an error context
-	// NOTE: I don't think exceptions are terribly appropriate for this
 
 	// TODO: there is a subtle bug here
 	// If a projection contains itself, even indirectly, it will still parse and resolve,
@@ -269,78 +309,6 @@ namespace idlc {
 		std::vector<idlc::marshal_unit> rpc_pointers;
 	};
 
-	void write_marshal_ops(std::ofstream& file, const std::vector<marshal_op>& ops, unsigned int indent)
-	{
-		for (const marshal_op op : ops) {
-			switch (static_cast<marshal_op_kind>(op.index())) {
-			case marshal_op_kind::marshal: {
-				const auto args = std::get<marshal>(op);
-				tab_over(indent, file) << "fipc_marshal(" << args.name << ");\n";
-				break;
-			}
-
-			case marshal_op_kind::unmarshal: {
-				const auto args = std::get<unmarshal>(op);
-				tab_over(indent, file) << args.type << " " << args.name << " = fipc_unmarshal(" << args.type << ");\n";
-				break;
-			}
-
-			case marshal_op_kind::marshal_field: {
-				const auto args = std::get<marshal_field>(op);
-				tab_over(indent, file) << "fipc_marshal(" << args.parent << "->" << args.field << ");\n";
-				break;
-			}
-
-			case marshal_op_kind::unmarshal_field: {
-				const auto args = std::get<unmarshal_field>(op);
-				tab_over(indent, file) << args.parent << "->" << args.field << " = fipc_unmarshal(" << args.type << ");\n";
-				break;
-			}
-
-			case marshal_op_kind::block_if_not_null: {
-				const auto args = std::get<block_if_not_null>(op);
-				tab_over(indent, file) << "if (" << args.pointer << ") {\n";
-				++indent;
-				break;
-			}
-
-			case marshal_op_kind::end_block: {
-				--indent;
-				tab_over(indent, file) << "}\n";
-				break;
-			}
-
-			case marshal_op_kind::load_field_indirect: {
-				const auto args = std::get<load_field_indirect>(op);
-				tab_over(indent, file) << args.type << " " << args.name << " = " << args.parent << "->" << args.field << "\n";
-				break;
-			}
-
-			case marshal_op_kind::store_field_indirect: {
-				const auto args = std::get<store_field_indirect>(op);
-				tab_over(indent, file) << args.parent << "->" << args.field << " = " << args.name << "\n";
-				break;
-			}
-
-			case marshal_op_kind::call_direct: {
-				const auto args = std::get<call_direct>(op);
-				if (args.type == "void") {
-					tab_over(indent, file) << args.function << "(" << args.arguments_list << ");\n";
-				}
-				else {
-					tab_over(indent, file) << args.type << " return_value = " << args.function << "(" << args.arguments_list << ");\n";
-				}
-
-				break;
-			}
-
-			default:
-				tab_over(indent, file) << "// TODO\n";
-				break;
-			}
-		}
-	}
-
 	std::optional<rpc_imports> import_rpcs(file& file, const std::filesystem::path& idl_path)
 	{
 		idlc::verify_driver_idl_pass vdi_pass;
@@ -362,85 +330,6 @@ namespace idlc {
 		}
 
 		return rpc_imports {rpcs, rpc_pointers};
-	}
-
-	void generate_kernel_dispatch_source(
-		const std::filesystem::path& destination,
-		gsl::span<marshal_unit_lists> rpc_lists,
-		gsl::span<marshal_unit_lists> rpc_pointer_lists
-	)
-	{
-		std::ofstream kernel_dispatch_source {destination};
-		kernel_dispatch_source.exceptions(std::fstream::badbit | std::fstream::failbit);
-
-		kernel_dispatch_source << "#include \"common.h\"\n\n";
-		for (marshal_unit_lists& unit : rpc_lists) {
-			kernel_dispatch_source << "void " << unit.identifier << "_callee(struct fipc_message* message) {\n";
-			kernel_dispatch_source << "\tunsigned int marshal_slot = 0;\n";
-			write_marshal_ops(kernel_dispatch_source, unit.callee_ops, 1);
-			kernel_dispatch_source << "}\n\n";
-		}
-
-		kernel_dispatch_source << "int dispatch(struct fipc_message* message) {\n";
-		kernel_dispatch_source << "\tswitch (message->host_id) {\n";
-
-		for (const marshal_unit_lists& unit : rpc_lists) {
-			kernel_dispatch_source << "\tcase rpc_" << unit.identifier << ":\n";
-			kernel_dispatch_source << "\t\t" << unit.identifier << "_callee(message)" << ";\n";
-			kernel_dispatch_source << "\t\tbreak;\n\n";
-		}
-
-		kernel_dispatch_source << "\t}\n}\n\n";
-	}
-
-	void do_code_generation(
-		const std::filesystem::path& destination,
-		gsl::span<marshal_unit_lists> rpc_lists,
-		gsl::span<marshal_unit_lists> rpc_pointer_lists
-	)
-	{
-		namespace fs = std::filesystem;
-
-		if (!fs::exists(destination)) {
-			fs::create_directories(destination);
-		}
-
-		// TODO: problem: we don't know which side the function pointers end up on
-		// TODO: we'll just put rpc pointers on both sides, they don't have the same name conflicts as RPCs do (the func-named facade and the actual func)
-
-		const fs::path kernel_dispatch_source_path {destination / "kernel_dispatch.c"}; // klcd
-		const fs::path kernel_dispatch_header_path {destination / "kernel_dispatch.h"}; // klcd
-		const fs::path driver_dispatch_source_path {destination / "driver_dispatch.c"}; // lcd
-		const fs::path driver_dispatch_header_path {destination / "driver_dispatch.h"}; // lcd
-		const fs::path common_header_path {destination / "common.h"}; // lcd
-
-		std::ofstream common_header {common_header_path};
-		common_header.exceptions(std::fstream::badbit | std::fstream::failbit);
-
-		common_header << "#ifndef _COMMON_H_\n#define _COMMON_H_\n\n";
-		common_header << "#include <stddef.h>\n";
-		common_header << "#include <stdint.h>\n\n";
-		common_header << "#define MAX_MESSAGE_SLOTS 64\n\n";
-		common_header << "// TODO: implement trampoline injection\n";
-		common_header << "#define fipc_marshal(value) message.slots[marshal_slot++] = *(uint64_t*)&value;\n";
-		common_header << "#define fipc_unmarshal(type) *(type*)&message.slots[marshal_slot++];\n";
-		common_header << "#define inject_trampoline(id, pointer) NULL\n\n";
-		common_header << "enum dispatch_id {\n";
-
-		for (const marshal_unit_lists& unit : rpc_lists) {
-			common_header << "\trpc_" << unit.identifier << ",\n";
-		}
-
-		for (const marshal_unit_lists& unit : rpc_pointer_lists) {
-			common_header << "\trpc_ptr" << unit.identifier << ",\n";
-		}
-
-		common_header << "};\n\n";
-		common_header << "struct fipc_message {\n\tenum dispatch_id host_id;\n\tuint64_t slots[MAX_MESSAGE_SLOTS];\n};\n\n";
-		common_header << "#endif";
-		common_header.close();
-
-		generate_kernel_dispatch_source(kernel_dispatch_source_path, rpc_lists, rpc_pointer_lists);
 	}
 }
 

@@ -113,44 +113,44 @@ module kernel_nullnet {
 
 	projection <struct net_device> net_device_free_netdev { }
 
-		// free_netdev frees the shadow copy
-		rpc void free_netdev(projection net_device_free_netdev
-									[dealloc(caller)] * dev);
+	// free_netdev frees the shadow copy
+	rpc void free_netdev(projection net_device_free_netdev
+								[dealloc(caller)] * dev);
 
-		rpc int eth_validate_addr(projection net_device_eth_validate_addr* dev);
+	rpc int eth_validate_addr(projection net_device_eth_validate_addr* dev);
 
-		rpc int eth_mac_addr(projection net_device_eth_mac_addr* dev/*, void* p*/);
+	rpc int eth_mac_addr(projection net_device_eth_mac_addr* dev/*, void* p*/);
 
-		rpc void ether_setup(projection net_device_ether_setup* dev);
+	rpc void ether_setup(projection net_device_ether_setup* dev);
 
-		rpc int register_netdevice(projection net_device_register_netdevice* dev);
+	rpc int register_netdevice(projection net_device_register_netdevice* dev);
 
-		rpc void netif_carrier_off(projection net_device_netif_carrier_off* dev);
+	rpc void netif_carrier_off(projection net_device_netif_carrier_off* dev);
 
 
-		// Driver passes a pointer to the ops. Create a shadow copy on the callee
-		rpc int __rtnl_link_register(projection
-							rtnl_link_ops___rtnl_link_register[alloc(callee)] * ops);
+	// Driver passes a pointer to the ops. Create a shadow copy on the callee
+	rpc int __rtnl_link_register(projection
+						rtnl_link_ops___rtnl_link_register[alloc(callee)] * ops);
 
-		// Deallocate the allocated rtnl_link_ops at the callee
-		rpc void __rtnl_link_unregister(projection
-							rtnl_link_ops___rtnl_link_unregister[dealloc(callee)] * ops);
+	// Deallocate the allocated rtnl_link_ops at the callee
+	rpc void __rtnl_link_unregister(projection
+						rtnl_link_ops___rtnl_link_unregister[dealloc(callee)] * ops);
 
-		// Deallocate the allocated rtnl_link_ops at the callee
-		rpc void rtnl_link_unregister(projection
-							rtnl_link_ops_rtnl_link_unregister[dealloc(callee)] * ops);
+	// Deallocate the allocated rtnl_link_ops at the callee
+	rpc void rtnl_link_unregister(projection
+						rtnl_link_ops_rtnl_link_unregister[dealloc(callee)] * ops);
 
-		// Kernel allocates a piece of memory for us early in this function.  Before
-		// returning this object, kernel calls the _setup_ function provided by us
-		// and pass in a pointer to this newly created object.  When _setup_ is
-		// called, we need to create our shadow copy.
-		rpc projection net_device_alloc_netdev_mqs // implicit bind here
-				 * alloc_netdev_mqs(
-						int sizeof_priv,
-					 //const char *name, // this is problematic, atm
-					 unsigned char name_assign_type,
-					 rpc void (*setup)(projection net_device_setup[alloc(callee)] * dev),
-					 unsigned int txqs, unsigned int rxqs);
+	// Kernel allocates a piece of memory for us early in this function.  Before
+	// returning this object, kernel calls the _setup_ function provided by us
+	// and pass in a pointer to this newly created object.  When _setup_ is
+	// called, we need to create our shadow copy.
+	rpc projection net_device_alloc_netdev_mqs // implicit bind here
+				* alloc_netdev_mqs(
+					int sizeof_priv,
+					//const char *name, // this is problematic, atm
+					unsigned char name_assign_type,
+					rpc void (*setup)(projection net_device_setup[alloc(callee)] * dev),
+					unsigned int txqs, unsigned int rxqs);
 
 	 rpc void netif_carrier_on(projection net_device_netif_carrier_on* dev);
 

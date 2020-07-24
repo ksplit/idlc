@@ -16,8 +16,8 @@ namespace idlc {
 		unmarshal_field,
 		create_shadow,
 		destroy_shadow,
-		find_shadow_id,
-		find_shadow,
+		get_remote,
+		get_local,
 		return_to_caller,
 		load_field_indirect,
 		store_field_indirect,
@@ -29,13 +29,18 @@ namespace idlc {
 		inject_trampoline
 	};
 
+	/*
+		TODO: Considering all the subtly different kinds of strings in here,
+		it may be useful to strongly type them
+	*/
+
 	struct marshal {
 		std::string name;
 	};
 
 	struct unmarshal {
+		std::string declaration;
 		std::string type;
-		std::string name;
 	};
 
 	struct marshal_field {
@@ -49,25 +54,39 @@ namespace idlc {
 		std::string field;
 	};
 
+	// These ops always take remote pointers as opaque IDs
+	// <void*>
+
+	// Conceptually: <declaration> = fipc_create_shadow(<shadow-id>);
 	struct create_shadow {
+		std::string declaration;
+		std::string remote_pointer;
 	};
 
+	// fipc_destroy_shadow(<remote-pointer>);
 	struct destroy_shadow {
+		std::string remote_pointer;
 	};
 
-	struct find_shadow_id {
+	// <remote_declaration> = fipc_get_remote(<local-pointer>);
+	struct get_remote {
+		std::string remote_declaration;
+		std::string local_pointer;
 	};
 
-	struct find_shadow {
+	// <local_declaration> = fipc_get_local(<remote-pointer>);
+	struct get_local {
+		std::string local_declaration;
+		std::string remote_pointer;
 	};
 
 	struct return_to_caller {
 		std::string name;
 	};
 
+	// TODO: Switch this to the decl strings
 	struct load_field_indirect {
-		std::string type;
-		std::string name;
+		std::string declaration;
 		std::string parent;
 		std::string field;
 	};
@@ -79,13 +98,13 @@ namespace idlc {
 	};
 
 	struct call_direct {
-		std::string type;
+		std::string declaration;
 		std::string function;
 		std::string arguments_list;
 	};
 
 	struct call_indirect {
-		std::string type;
+		std::string declaration;
 		std::string function_type;
 		std::string pointer;
 		std::string arguments_list;
@@ -104,6 +123,7 @@ namespace idlc {
 
 	struct inject_trampoline {
 		std::string declaration;
+		std::string mangled_name;
 		std::string pointer;
 	};
 
@@ -114,8 +134,8 @@ namespace idlc {
 		unmarshal_field,
 		create_shadow,
 		destroy_shadow,
-		find_shadow_id,
-		find_shadow,
+		get_remote,
+		get_local,
 		return_to_caller,
 		load_field_indirect,
 		store_field_indirect,
@@ -129,6 +149,7 @@ namespace idlc {
 
 	struct marshal_unit_lists {
 		gsl::czstring<> identifier;
+		std::string header;
 		std::vector<marshal_op> caller_ops;
 		std::vector<marshal_op> callee_ops;
 	};

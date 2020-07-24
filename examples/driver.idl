@@ -3,5 +3,5 @@ include <marshal_test.idl>
 
 module dummy_driver {
   require marshal_test;
-  require kernel_nullnet;
+  //require kernel_nullnet;
 }

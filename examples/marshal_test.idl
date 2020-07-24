@@ -1,26 +1,31 @@
 module marshal_test {
-	// Note that in, out annotations on nested projections may not have expected meanings
-	// [out] subfield of [in, out] pointer only copies the field of the "new" pointer
-
-	projection <struct bar> bar_proj {
-		rpc [out] void (*in_out_var)(int foo);
-		unsigned [out] yada_yada;
+	projection <struct b_struct> nested_proj {
+		int [out] a;
 	}
 
-	projection <struct foo> foo_proj {
-		int [in] fp_a; // the annotation here is only meaningful if the projection is passed by pointer!
-		int [out] fp_b;
-		int [in, out] fp_c;
-		projection bar_proj [in, out] * fp_d; // If we allow "in, out" inference, this is ambiguous
-		// Are we applying the annotations to the field of bar_proj
-		// Or are we applying it to the "d" field of foo_proj?
+	projection <struct a_struct> callee_proj {
+		unsigned [in] a;
+		projection nested_proj [out, bind(callee)] * b;
+
+		// [bind(callee)] is formally undefined in marshaling right now
+		// You need to explicitly specify in or out, or it might not behave the way you expect it to
 	}
 
-	// dealloc(caller) has to use a local pointer to destroy the cspace
-	// destroy_cspace takes a local pointer
-	// find_cspace takes a remote pointer
-	// get_cspace_caller? No, only applicable to "arriving" pointers, which are always remote
-	// same with alloc, can't pass a pointer you don't already have
-	// or can you
-	rpc rpc void (*)() do_widget(int flags, projection foo_proj [dealloc(caller)] * widget);
+	projection <struct c_struct> caller_proj {
+		unsigned [in] a;
+		projection nested_proj [in, bind(caller)] * b;
+	}
+
+	rpc void pass_callee_bind_pointer(projection callee_proj [bind(callee)] * caller_pointer);
+	rpc void pass_caller_bind_pointer(projection caller_proj [bind(caller)] * callee_pointer);
+	
+	// Behavior with plain annotations (bind, as opposed to bind(caller)),
+	// are ucrrently undefined, since it's not wholly clear what the semantics are
+	// TODO: will be fixed
+
+	// What is defined:
+	// - [(in | out), (some other annotation)]
+	// - [(in | out | (in, out))]
+	// - 
+	// TODO: add compiler pass to detect the weird stuff
 }
