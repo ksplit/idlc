@@ -4,7 +4,7 @@
 #include <sstream>
 
 #include "visit.h"
-#include "marshaling.h"
+#include "../backend/marshaling.h"
 #include "log.h"
 
 namespace idlc {

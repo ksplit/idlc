@@ -21,10 +21,10 @@ add_executable(
 	"main/generic_pass.h"
 	"main/rpc_import.h"
 	"main/rpc_import.cpp"
-	"main/marshaling.h"
+	"backend/marshaling.h"
 	"main/log.h"
-	"main/marshaling.cpp"
-	"main/code_generation.cpp"
+	"backend/marshaling.cpp"
+	"backend/code_generation.cpp"
 	"main/dump.cpp"
 )
 

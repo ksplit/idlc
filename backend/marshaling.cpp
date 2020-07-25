@@ -1,7 +1,7 @@
 #include "marshaling.h"
 
-#include "generic_pass.h"
-#include "visit.h"
+#include "../main/generic_pass.h"
+#include "../main/visit.h"
 
 #include <sstream>
 
@@ -19,6 +19,8 @@ namespace idlc {
 	attributes get_attributes_with_argument_default(const attributes* attribs);
 	attributes get_attributes_with_return_default(const attributes* attribs);
 
+	// Evidence of a crude CCST rewrite
+
 	std::string stringify_header(std::string_view identifier, const signature& ty);
 
 	std::string stringify_type(const type& ty);
@@ -31,6 +33,8 @@ namespace idlc {
 
 	bool callee_insert_call(std::vector<marshal_op>& marshaling, gsl::czstring<> rpc_name, const signature& signature);
 	bool callee_insert_call_indirect(std::vector<marshal_op>& marshaling, const signature& signature, std::string_view pointer);
+
+	// Evidence of a "passing tree"
 
 	bool caller_marshal_argument(std::vector<marshal_op>& marshaling, const field& argument, std::vector<std::string>& caller_argument_save_ids);
 	bool caller_marshal_argument_rpc(std::vector<marshal_op>& marshaling, const rpc_field& rpc);

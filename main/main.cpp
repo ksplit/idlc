@@ -8,9 +8,9 @@
 #include "visit.h"
 #include "generic_pass.h"
 #include "rpc_import.h"
-#include "marshaling.h"
 #include "log.h"
-#include "code_generation.h"
+#include "../backend/marshaling.h"
+#include "../backend/code_generation.h"
 #include "../parser/parser.h"
 
 namespace fs = std::filesystem;
@@ -18,22 +18,30 @@ namespace fs = std::filesystem;
 /*
 	BIG TASKS LEFT
 		- Write in support for shadow copies
-			- bind(caller/callee) appears to be working for arguments/subfields
+			- DONE bind(caller/callee) appears to be working for arguments/subfields and return values
+			- NOT STARTED then alloc / dealloc (much simpler, hopefully)
 			- The logical structure seems to have solidified there
 			- Note: If we had a passing tree, it's be possible to add default
 			annotations more intelligently (instead of the weird need to
 			always specify in or out for subfields with bind)
-			- not yet done for return values
-			- then alloc / dealloc (much simpler, hopefully)
 			- this is honestly the final nail in the coffin
+		- Marshaling is too big of a mess presently to estimate
+		work needed to support unions / arrays. Grammar can still pull it off, though.
+			- Issue is that union vars are a new kind of marshaling, and thanks to the
+			poor choices in marshaling.cpp, that could result in as much as *double* the code,
+			making it even *harder* to work with.
+			- So I legitimately believe we should proceed with the move to marshal passing trees
+			before even considering unions / arrays / etc.
 		- Finish code generation
-			- function trampolines
-			- user hooks (to provide declarations, etc.)
+			- MOSTLY DONE function trampolines (mostly done, need to add the custom sections and inject_trampoline)
+			- MOSTLY DONE command -> code translation
+			- NOT STARTED user hooks (to provide declarations, etc.)
 			- much simpler (code generator is a *joy* to work in, compared to marshaler)
 */
 
 /*
 	POST DEADLINE TODOs (Beside the ones that have sat, ignored, for the past four-and-a-half weeks)
+		- Re-write marshaling in terms of passes over a "passing tree"
 		- The marshaling code currently walks the AST in a very specific, very odd way
 		(following type definitions), and is often force to recompute defaulted values;
 		it's also possible that there are ways to memoize marshaling work that just aren't terribly visible

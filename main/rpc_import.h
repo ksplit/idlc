@@ -3,7 +3,7 @@
 
 #include "../parser/ast.h"
 #include "generic_pass.h"
-#include "marshaling.h"
+#include "../backend/marshaling.h"
 
 namespace idlc {
 	class rpc_import_pass : public generic_pass<rpc_import_pass> {

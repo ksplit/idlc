@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "marshaling.h"
-#include "dump.h" // for tab_over()
+#include "../main/dump.h" // for tab_over()
 
 namespace idlc {
 	void write_marshal_ops(std::ofstream& file, const std::vector<marshal_op>& ops, unsigned int indent);
