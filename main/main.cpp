@@ -298,21 +298,27 @@ namespace idlc {
 
 		bool visit_module(const module& module)
 		{
-			if (is_module_found) {
+			if (m_driver_name) {
 				log_error("Driver definition IDL may only define the driver module");
 				return false;
 			}
 
-			is_module_found = true;
+			m_driver_name = module.identifier();
 
 			return true;
 		}
 
+		gsl::czstring<> get_driver_name()
+		{
+			return m_driver_name;
+		}
+
 	private:
-		bool is_module_found {false};
+		gsl::czstring<> m_driver_name {};
 	};
 
 	struct rpc_imports {
+		gsl::czstring<> driver_name;
 		std::vector<idlc::marshal_unit> rpcs;
 		std::vector<idlc::marshal_unit> rpc_pointers;
 	};
@@ -337,7 +343,7 @@ namespace idlc {
 			return std::nullopt;
 		}
 
-		return rpc_imports {rpcs, rpc_pointers};
+		return rpc_imports {vdi_pass.get_driver_name(), rpcs, rpc_pointers};
 	}
 }
 
@@ -353,46 +359,43 @@ int main(int argc, gsl::czstring<>* argv) {
 	const fs::path idl_path {gsl::at(args, 1)};
 	const fs::path destination_path {gsl::at(args, 2)};
 
-	std::unique_ptr<idlc::file> top_node;
-	std::optional<idlc::rpc_imports> imports_opt {};
 	try {
-		top_node.reset(
+		std::unique_ptr<idlc::file> top_node {
 			const_cast<idlc::file*>(
 				static_cast<const idlc::file*>(
-					Parser::parse(idl_path.generic_string()))));
+					Parser::parse(idl_path.generic_string())))};
 
 		auto& file = *top_node;
+		const auto imports_opt {idlc::import_rpcs(file, idl_path)};
 
-		imports_opt = idlc::import_rpcs(file, idl_path);
+		idlc::log_note("Verified IDL syntax");
+
+		if (!imports_opt) {
+			idlc::log_error("Compilation failed");
+			return 1;
+		}
+
+		auto& [driver, rpcs, rpc_pointers] = *imports_opt;
+
+		std::vector<idlc::marshal_unit_lists> rpc_lists;
+		if (!idlc::process_marshal_units(rpcs, idlc::marshal_unit_kind::direct, rpc_lists)) {
+			idlc::log_error("Compilation failed");
+			return 1;
+		}
+
+		std::vector<idlc::marshal_unit_lists> rpc_ptr_lists;
+		if (!idlc::process_marshal_units(rpc_pointers, idlc::marshal_unit_kind::indirect, rpc_ptr_lists)) {
+			idlc::log_error("Compilation failed");
+			return 1;
+		}
+
+		idlc::do_code_generation(driver, destination_path, rpc_lists, rpc_ptr_lists);
 	}
 	catch (const Parser::ParseException& e) {
 		idlc::log_error("Parsing failed");
 		std::cout << e.getReason();
 		return 1;
 	}
-
-	idlc::log_note("Verified IDL syntax");
-
-	if (!imports_opt) {
-		idlc::log_error("Compilation failed");
-		return 1;
-	}
-
-	auto& [rpcs, rpc_pointers] = *imports_opt;
-
-	std::vector<idlc::marshal_unit_lists> rpc_lists;
-	if (!idlc::process_marshal_units(rpcs, idlc::marshal_unit_kind::direct, rpc_lists)) {
-		idlc::log_error("Compilation failed");
-		return 1;
-	}
-
-	std::vector<idlc::marshal_unit_lists> rpc_ptr_lists;
-	if (!idlc::process_marshal_units(rpc_pointers, idlc::marshal_unit_kind::indirect, rpc_ptr_lists)) {
-		idlc::log_error("Compilation failed");
-		return 1;
-	}
-
-	idlc::do_code_generation(destination_path, rpc_lists, rpc_ptr_lists);
 
 	return 0;
 }

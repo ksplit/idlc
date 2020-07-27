@@ -584,7 +584,6 @@ bool idlc::callee_insert_call_indirect(std::vector<marshal_op>& marshaling, cons
 			marshaling.push_back(
 				call_indirect {
 					stringify_declaration(type, "return_value"),
-					function_type,
 					{pointer.data(), pointer.length()},
 					argument_string.str()
 				}
@@ -594,7 +593,6 @@ bool idlc::callee_insert_call_indirect(std::vector<marshal_op>& marshaling, cons
 			marshaling.push_back(
 				call_indirect {
 					"",
-					function_type,
 					{pointer.data(), pointer.length()},
 					argument_string.str()
 				}
@@ -608,7 +606,6 @@ bool idlc::callee_insert_call_indirect(std::vector<marshal_op>& marshaling, cons
 		marshaling.push_back(
 			call_indirect {
 				stringify_declaration(return_field.get<field_kind::rpc>().get_signature(), "return_value"),
-				function_type,
 				{pointer.data(), pointer.length()},
 				argument_string.str()
 			}

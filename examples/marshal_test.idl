@@ -11,7 +11,7 @@ module marshal_test {
 		// You need to explicitly specify in or out, or it might not behave the way you expect it to
 	}
 
-	projection <struct c_struct> caller_proj {
+	projection <struct a_struct> caller_proj {
 		unsigned [in, out] a;
 		projection nested_proj [in, bind(caller)] * b;
 	}
@@ -34,6 +34,7 @@ module marshal_test {
 	rpc void pass_caller_bind_pointer(projection caller_proj [bind(caller)] * callee_pointer);
 	rpc projection return_callee_proj [bind(callee)] * return_callee_bind_pointer();
 	rpc projection return_caller_proj [bind(caller)] * return_caller_bind_pointer();
+
 	rpc void pass_rpc(rpc rpc int (*)(int foo) (*rpc_pointer)(int foo));
 	rpc rpc rpc int (*)(int foo) (*)(int foo) return_rpc();
 	

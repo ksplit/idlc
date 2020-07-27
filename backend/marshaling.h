@@ -105,7 +105,6 @@ namespace idlc {
 
 	struct call_indirect {
 		std::string declaration;
-		std::string function_type;
 		std::string pointer;
 		std::string arguments_list;
 	};
