@@ -191,6 +191,7 @@ void idlc::write_pointer_stubs(std::ofstream& file, gsl::span<marshal_unit_lists
 	}
 
 	for (marshal_unit_lists& unit : rpc_pointer_lists) {
+		file << "__attribute__((__section__(\"stub" << unit.identifier << "\")))\n";
 		file << unit.header << " {\n";
 		file << "\tunsigned int marshal_slot = 0;\n";
 		file << "\tvoid* real_pointer = trampoline_recover();\n";
@@ -213,19 +214,24 @@ void idlc::generate_common_header(
 
 	common_header << "#ifndef _COMMON_H_\n#define _COMMON_H_\n\n";
 	common_header << "#include <stddef.h>\n";
+	common_header << "#include <string.h>\n";
+	common_header << "#include <sys/mman.h>\n";
 	common_header << "#include <stdint.h>\n\n";
 
 	common_header << "#include \"" << module_name << "_user.h\"\n\n";
 
 	common_header << "#define MAX_MESSAGE_SLOTS 64\n\n";
 
-	common_header << "// TODO: implement trampoline injection\n";
 	common_header << "#define fipc_marshal(value) message->slots[marshal_slot++] = *(uint64_t*)&value\n";
 	common_header << "#define fipc_unmarshal(type) *(type*)&message->slots[marshal_slot++]\n";
 	common_header << "#define fipc_send(rpc, msg_ptr) /* TODO */\n";
 	common_header << "#define fipc_get_remote(local) NULL\n";
 	common_header << "#define fipc_get_local(remote) NULL\n";
-	common_header << "#define inject_trampoline(id, pointer) NULL\n\n";
+	common_header << "#define fipc_create_shadow(remote) NULL\n";
+	common_header << "#define fipc_destroy_shadow(remote)\n\n";
+
+	common_header << "// TODO: implement trampoline injection\n";
+	common_header << "#define inject_trampoline(id, pointer) impl_inject_trampoline(&__start_##id, &__stop_##id, pointer)\n";
 	common_header << "#define trampoline_recover() NULL\n\n";
 
 	common_header << "enum dispatch_id {\n";
@@ -239,9 +245,26 @@ void idlc::generate_common_header(
 	}
 
 	common_header << "};\n\n";
+
+	for (const marshal_unit_lists& unit : rpc_ptr_lists) {
+		common_header << "extern char __start_stub" << unit.identifier << ";\n";
+		common_header << "extern char __stop_stub" << unit.identifier << ";\n";
+	}
+
+	common_header << "\n";
+
 	common_header << "struct fipc_message {\n\tenum dispatch_id host_id;\n\tuint64_t slots[MAX_MESSAGE_SLOTS];\n};\n\n";
+
+	common_header << "void* impl_inject_trampoline(void* stub_start, void* stub_end, void* ptr) {\n";
+	common_header << "\tsize_t stub_len = stub_end - stub_start;\n";
+	common_header << "\tvoid* buffer = mmap(NULL, stub_len + sizeof(void*), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);\n";
+	common_header << "\tmemcpy(buffer, &ptr, sizeof(void*));\n";
+	common_header << "\tmemcpy(buffer + sizeof(void*), stub_start, stub_len);\n";
+	common_header << "\tmprotect(buffer, stub_len + sizeof(void*), PROT_READ | PROT_EXEC);\n";
+	common_header << "\treturn buffer + sizeof(void*);\n";
+	common_header << "}\n\n";
+
 	common_header << "#endif";
-	common_header.close();
 }
 
 void idlc::generate_klcd_source(

@@ -231,7 +231,7 @@ std::string idlc::stringify_declaration(const type& ty, std::string_view name)
 std::string idlc::stringify_type(const signature& signature)
 {
 	std::stringstream call_string;
-	call_string  << "(*)(";
+	call_string << "(*)(";
 	bool use_comma {false};
 	for (const std::unique_ptr<field>& argument : signature.arguments()) {
 		if (use_comma) {
@@ -389,7 +389,7 @@ bool idlc::process_marshal_units(gsl::span<const marshal_unit> units, marshal_un
 	unit_marshaling.reserve(units.size());
 
 	for (const marshal_unit& unit : units) {
-		unit_marshaling.push_back({unit.identifier, {}, {}});		
+		unit_marshaling.push_back({unit.identifier, {}, {}});
 		marshal_unit_lists& lists {unit_marshaling.back()};
 
 		if (kind == marshal_unit_kind::direct) {
@@ -398,7 +398,7 @@ bool idlc::process_marshal_units(gsl::span<const marshal_unit> units, marshal_un
 		else {
 			lists.header = stringify_header(std::string {"trampoline"} + unit.identifier, *unit.rpc_signature);
 		}
-		
+
 		process_caller(lists.caller_ops, unit, kind);
 		process_callee(lists.callee_ops, unit, kind);
 	}
@@ -852,11 +852,13 @@ bool idlc::caller_remarshal_argument_sub_rpc(std::vector<marshal_op>& marshaling
 	marshaling.push_back(unmarshal {stringify_declaration(rpc.get_signature(), store_name), "void*"});
 	std::string trampoline {store_name};
 	trampoline += "_trampoline";
-	marshaling.push_back(inject_trampoline {
-		stringify_declaration(rpc.get_signature(), trampoline),
-		rpc.mangled_signature,
-		store_name
-		});
+	marshaling.push_back(
+		inject_trampoline {
+			stringify_declaration(rpc.get_signature(), trampoline),
+			std::string {"stub"} + rpc.mangled_signature,
+			store_name
+		}
+	);
 
 	marshaling.push_back(store_field_indirect {{parent.data(), parent.size()}, rpc.identifier(), trampoline});
 
@@ -1004,7 +1006,7 @@ bool idlc::callee_unmarshal_argument_rpc(std::vector<marshal_op>& marshaling, co
 	marshaling.push_back(
 		inject_trampoline {
 			stringify_declaration(rpc.get_signature(), rpc.identifier()),
-			rpc.mangled_signature,
+			std::string {"stub"} + rpc.mangled_signature,
 			store_name
 		}
 	);
@@ -1099,7 +1101,7 @@ bool idlc::callee_unmarshal_argument_sub_rpc(std::vector<marshal_op>& marshaling
 	marshaling.push_back(
 		inject_trampoline {
 			stringify_declaration(rpc.get_signature(), trampoline),
-			rpc.mangled_signature,
+			std::string {"stub"} + rpc.mangled_signature,
 			store_name
 		}
 	);
@@ -1478,7 +1480,7 @@ bool idlc::caller_unmarshal_return_rpc(std::vector<marshal_op>& marshaling, cons
 	marshaling.push_back(
 		inject_trampoline {
 			stringify_declaration(return_field.get_signature(), "return_value_trampoline"),
-			return_field.mangled_signature,
+			std::string {"stub"} + return_field.mangled_signature,
 			"return_value"
 		});
 	marshaling.push_back(return_to_caller {"return_value_trampoline"});
@@ -1561,7 +1563,7 @@ bool idlc::caller_unmarshal_return_sub_var(std::vector<marshal_op>& marshaling, 
 		else {
 			marshaling.push_back(unmarshal {stringify_declaration(type, save_id), stringify_type(type)});
 		}
-		
+
 		marshaling.push_back(store_field_indirect {{parent.data(), parent.length()}, return_field.identifier(), save_id});
 		marshaling.push_back(block_if_not_null {save_id});
 
@@ -1608,7 +1610,7 @@ bool idlc::caller_unmarshal_return_sub_rpc(std::vector<marshal_op>& marshaling, 
 	marshaling.push_back(
 		inject_trampoline {
 			stringify_declaration(return_field.get_signature(), trampoline),
-			return_field.mangled_signature,
+			std::string {"stub"} + return_field.mangled_signature,
 			store_name
 		}
 	);
@@ -1758,7 +1760,7 @@ bool idlc::callee_marshal_return_sub_var(std::vector<marshal_op>& marshaling, co
 		save_id += "_";
 		save_id += return_field.identifier();
 		marshaling.push_back(load_field_indirect {stringify_declaration(type, save_id), {parent.data(), parent.length()}, return_field.identifier()});
-		
+
 
 		std::string remote_save_id {save_id};
 		remote_save_id += "_key";
