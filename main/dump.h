@@ -5,7 +5,7 @@
 #include "../parser/ast.h"
 
 namespace idlc {
-	inline std::ostream& tab_over(unsigned int level, std::ostream& os)
+	inline std::ostream& tab_over(std::ostream& os, unsigned int level)
 	{
 		for (unsigned int i {0}; i < level; ++i)
 			os << "\t";
