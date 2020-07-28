@@ -955,9 +955,9 @@ bool idlc::caller_remarshal_argument_sub_var(std::vector<marshal_op>& marshaling
 			else if (attribs.get_sharing_op() == sharing_op::dealloc
 				&& attribs.get_sharing_op_side() == rpc_side::caller)
 			{
-				// dealloc(callee)
+				log_warning("dealloc(caller) is undefined here, treating as bind(caller)");
 				marshaling.push_back(unmarshal {stringify_declaration(type, remote_save_id), stringify_type(type)});
-				marshaling.push_back(get_local {stringify_declaration(type, save_id), "NULL"}); // Make sure we don't marshal a destroyed struct
+				marshaling.push_back(get_local {stringify_declaration(type, save_id), remote_save_id});
 			}
 			else {
 				marshaling.push_back(unmarshal {stringify_declaration(type, save_id), stringify_type(type)});
@@ -979,11 +979,6 @@ bool idlc::caller_remarshal_argument_sub_var(std::vector<marshal_op>& marshaling
 		}
 
 		marshaling.push_back(end_block {});
-
-		if (attribs.get_sharing_op() == sharing_op::dealloc
-			&& attribs.get_sharing_op_side() == rpc_side::caller) {
-			marshaling.push_back(destroy_shadow {remote_save_id});
-		}
 
 		break;
 	}
@@ -1102,7 +1097,7 @@ bool idlc::callee_unmarshal_argument_var(std::vector<marshal_op>& marshaling, co
 		{
 			// dealloc(callee)
 			marshaling.push_back(unmarshal {stringify_declaration(type, remote_save_id), stringify_type(type)});
-			marshaling.push_back(get_local {stringify_declaration(type, var.identifier()), "NULL"}); // Make sure we don't marshal a destroyed struct
+			marshaling.push_back(get_local {stringify_declaration(type, var.identifier()), remote_save_id});
 		}
 		else {
 			marshaling.push_back(unmarshal {stringify_declaration(type, var.identifier()), stringify_type(type)});
@@ -1118,11 +1113,6 @@ bool idlc::callee_unmarshal_argument_var(std::vector<marshal_op>& marshaling, co
 		}
 
 		marshaling.push_back(end_block {});
-
-		if (attribs.get_sharing_op() == sharing_op::dealloc
-			&& attribs.get_sharing_op_side() == rpc_side::callee) {
-			marshaling.push_back(destroy_shadow {remote_save_id});
-		}
 
 		break;
 	}
@@ -1215,7 +1205,7 @@ bool idlc::callee_unmarshal_argument_sub_var(std::vector<marshal_op>& marshaling
 		{
 			// dealloc(callee)
 			marshaling.push_back(unmarshal {stringify_declaration(type, remote_save_id), stringify_type(type)});
-			marshaling.push_back(get_local {stringify_declaration(type, save_id), "NULL"}); // Make sure we don't marshal a destroyed struct
+			marshaling.push_back(get_local {stringify_declaration(type, save_id), remote_save_id});
 		}
 		else {
 			marshaling.push_back(unmarshal {stringify_declaration(type, save_id), stringify_type(type)});
@@ -1232,11 +1222,6 @@ bool idlc::callee_unmarshal_argument_sub_var(std::vector<marshal_op>& marshaling
 		}
 
 		marshaling.push_back(end_block {});
-
-		if (attribs.get_sharing_op() == sharing_op::dealloc
-			&& attribs.get_sharing_op_side() == rpc_side::callee) {
-			marshaling.push_back(destroy_shadow {remote_save_id});
-		}
 
 		break;
 	}
@@ -1323,6 +1308,8 @@ bool idlc::callee_remarshal_argument_var(std::vector<marshal_op>& marshaling, co
 		// Recurse into projection fields
 		// Needs save ID of the projection pointer and the projection definition
 
+		// TODO: this is where the dealloc(callee) stuff will end up
+
 		marshaling.push_back(block_if_not_null {{save_id.data(), save_id.size()}});
 
 		const projection& type_definition {type.get_copy_type()->get<copy_type_kind::projection>().definition()};
@@ -1333,6 +1320,14 @@ bool idlc::callee_remarshal_argument_var(std::vector<marshal_op>& marshaling, co
 		}
 
 		marshaling.push_back(end_block {});
+
+		std::string remote_save_id {save_id.data(), save_id.size()};
+		remote_save_id += "_key";
+		if (attribs.get_sharing_op() == sharing_op::dealloc
+			&& attribs.get_sharing_op_side() == rpc_side::callee) {
+			log_debug("dealloc(callee) applied to argument");
+			marshaling.push_back(destroy_shadow {remote_save_id});
+		}
 
 		break;
 	}
@@ -1421,6 +1416,15 @@ bool idlc::callee_remarshal_argument_sub_var(std::vector<marshal_op>& marshaling
 				marshaling.push_back(marshal {save_id});
 			}
 		}
+		else {
+			// regardless of the above, we still need the remote key for any dealloc pointers
+			if (attribs.get_sharing_op() == sharing_op::dealloc
+				&& attribs.get_sharing_op_side() == rpc_side::callee)
+			{
+				// dealloc(callee)
+				marshaling.push_back(get_remote {stringify_declaration(type, remote_save_id), var.identifier()});
+			}
+		}
 
 		marshaling.push_back(block_if_not_null {save_id});
 
@@ -1433,8 +1437,13 @@ bool idlc::callee_remarshal_argument_sub_var(std::vector<marshal_op>& marshaling
 
 		marshaling.push_back(end_block {});
 
+		// TODO: does this UB hack work?
+		// NOTE: since [in, out, dealloc(callee)] is officially undefined behavior,
+		// this trick "should" work
 		if (attribs.get_sharing_op() == sharing_op::dealloc
 			&& attribs.get_sharing_op_side() == rpc_side::callee) {
+			log_warning("dealloc(callee) deallocs the *currently bound* pointer");
+			log_warning("behavior may be unexpected with [in, out, dealloc(callee)");
 			marshaling.push_back(destroy_shadow {remote_save_id});
 		}
 
@@ -1529,8 +1538,9 @@ bool idlc::caller_unmarshal_return_var(std::vector<marshal_op>& marshaling, cons
 			&& attribs.get_sharing_op_side() == rpc_side::caller)
 		{
 			// dealloc(callee)
+			log_warning("dealloc(caller) meaningless for return values");
 			marshaling.push_back(unmarshal {stringify_declaration(type, remote_save_id), stringify_type(type)});
-			marshaling.push_back(get_local {stringify_declaration(type, "return_value"), "NULL"}); // Make sure we don't marshal a destroyed struct
+			marshaling.push_back(get_local {stringify_declaration(type, "return_value"), remote_save_id});
 		}
 		else {
 			marshaling.push_back(unmarshal {stringify_declaration(type, "return_value"), stringify_type(type)});
@@ -1546,11 +1556,6 @@ bool idlc::caller_unmarshal_return_var(std::vector<marshal_op>& marshaling, cons
 		}
 
 		marshaling.push_back(end_block {});
-
-		if (attribs.get_sharing_op() == sharing_op::dealloc
-			&& attribs.get_sharing_op_side() == rpc_side::caller) {
-			marshaling.push_back(destroy_shadow {remote_save_id});
-		}
 
 		break;
 	}
@@ -1650,8 +1655,9 @@ bool idlc::caller_unmarshal_return_sub_var(std::vector<marshal_op>& marshaling, 
 			&& attribs.get_sharing_op_side() == rpc_side::caller)
 		{
 			// dealloc(callee)
+			log_warning("dealloc(caller) meaningless for returned sub-fields");
 			marshaling.push_back(unmarshal {stringify_declaration(type, remote_save_id), stringify_type(type)});
-			marshaling.push_back(get_local {stringify_declaration(type, save_id), "NULL"}); // Make sure we don't marshal a destroyed struct
+			marshaling.push_back(get_local {stringify_declaration(type, save_id), remote_save_id});
 		}
 		else {
 			marshaling.push_back(unmarshal {stringify_declaration(type, save_id), stringify_type(type)});
@@ -1668,11 +1674,6 @@ bool idlc::caller_unmarshal_return_sub_var(std::vector<marshal_op>& marshaling, 
 		}
 
 		marshaling.push_back(end_block {});
-
-		if (attribs.get_sharing_op() == sharing_op::dealloc
-			&& attribs.get_sharing_op_side() == rpc_side::caller) {
-			marshaling.push_back(destroy_shadow {remote_save_id});
-		}
 
 		break;
 	}

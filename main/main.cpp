@@ -19,7 +19,8 @@ namespace fs = std::filesystem;
 	BIG TASKS LEFT
 		- Write in support for shadow copies
 			- DONE bind(caller/callee) appears to be working for arguments/subfields and return values
-			- DONE then alloc / dealloc (much simpler, hopefully)
+			- ALMOST DONE then alloc / dealloc (much simpler, hopefully)
+				- TODO fix dealloc ordering (i.e., dealloc(callee) on an in field actually occurs during remarshaling)
 			- Note: If we had a passing tree, it's be possible to add default
 			annotations more intelligently (instead of the weird need to
 			always specify in or out for subfields with bind)
