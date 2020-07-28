@@ -307,6 +307,17 @@ void idlc::generate_lcd_source(
 	}
 
 	write_pointer_stubs(driver_dispatch_source, rpc_pointer_lists);
+
+	driver_dispatch_source << "int dispatch(struct fipc_message* message) {\n";
+	driver_dispatch_source << "\tswitch (message->host_id) {\n";
+
+	for (const marshal_unit_lists& unit : rpc_pointer_lists) {
+		driver_dispatch_source << "\tcase rpc_ptr" << unit.identifier << ":\n";
+		driver_dispatch_source << "\t\t" << unit.identifier << "_callee(message)" << ";\n";
+		driver_dispatch_source << "\t\tbreak;\n\n";
+	}
+
+	driver_dispatch_source << "\t}\n}\n\n";
 }
 
 void idlc::do_code_generation(
