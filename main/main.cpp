@@ -20,11 +20,9 @@ namespace fs = std::filesystem;
 		- Write in support for shadow copies
 			- DONE bind(caller/callee) appears to be working for arguments/subfields and return values
 			- DONE then alloc / dealloc (much simpler, hopefully)
-			- The logical structure seems to have solidified there
 			- Note: If we had a passing tree, it's be possible to add default
 			annotations more intelligently (instead of the weird need to
 			always specify in or out for subfields with bind)
-			- this is honestly the final nail in the coffin
 		- Marshaling is too big of a mess presently to estimate
 		work needed to support unions / arrays. Grammar can still pull it off, though.
 			- Issue is that union vars are a new kind of marshaling, and thanks to the
@@ -42,6 +40,9 @@ namespace fs = std::filesystem;
 /*
 	POST DEADLINE TODOs (Beside the ones that have sat, ignored, for the past four-and-a-half weeks)
 		- Re-write marshaling in terms of passes over a "passing tree"
+		- Now that I have much better understanding of what each of the annotations mean semantically,
+		and how marshaling code ends up beign structured, we're much better-equipped to handle the marshal graph
+		rewrite, which will then include such features as unions, arrays, etc.
 		- The marshaling code currently walks the AST in a very specific, very odd way
 		(following type definitions), and is often force to recompute defaulted values;
 		it's also possible that there are ways to memoize marshaling work that just aren't terribly visible
