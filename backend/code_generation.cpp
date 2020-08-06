@@ -46,6 +46,13 @@ namespace idlc {
 		gsl::span<marshal_unit_lists> rpc_lists,
 		gsl::span<marshal_unit_lists> rpc_pointer_lists
 	);
+
+	// Currently a criminal hack, since we don't handle identifier variants uniformly (yet)
+	inline std::string to_upper(std::string str)
+	{
+		std::transform(str.begin(), str.end(), str.begin(), [](char c) { return std::toupper(c); });
+		return str;
+	}
 }
 
 // Oversized, but clear
@@ -163,7 +170,7 @@ void idlc::write_marshal_ops(std::ofstream& file, const std::vector<marshal_op>&
 
 		case marshal_op_kind::send_rpc: {
 			const auto args = std::get<send_rpc>(op);
-			tab_over(file, indent) << "fipc_send(" << args.rpc << ", message);\n";
+			tab_over(file, indent) << "fipc_send(" << to_upper(args.rpc) << ", message);\n";
 			tab_over(file, indent) << "marshal_slot = 0;\n";
 			break;
 		}
@@ -236,11 +243,11 @@ void idlc::generate_common_header(
 	common_header << "enum dispatch_id {\n";
 
 	for (const marshal_unit_lists& unit : rpc_lists) {
-		common_header << "\trpc_" << unit.identifier << ",\n";
+		common_header << "\tRPC_" << to_upper(unit.identifier) << ",\n";
 	}
 
 	for (const marshal_unit_lists& unit : rpc_ptr_lists) {
-		common_header << "\trpc_ptr" << unit.identifier << ",\n";
+		common_header << "\tRPC_PTR" << to_upper(unit.identifier) << ",\n";
 	}
 
 	common_header << "};\n\n";
