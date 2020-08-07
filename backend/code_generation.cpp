@@ -22,27 +22,27 @@ namespace idlc {
 	);
 
 	void generate_common_header(
-		const std::filesystem::path& destination,
+		const std::filesystem::path& root,
 		std::string_view module_name,
 		gsl::span<marshal_unit_lists> rpc_lists,
 		gsl::span<marshal_unit_lists> rpc_ptr_lists
 	);
 
 	void generate_klcd_source(
-		const std::filesystem::path& destination,
+		const std::filesystem::path& root,
 		gsl::span<marshal_unit_lists> rpc_lists,
 		gsl::span<marshal_unit_lists> rpc_pointer_lists
 	);
 
 	void generate_lcd_source(
-		const std::filesystem::path& destination,
+		const std::filesystem::path& root,
 		gsl::span<marshal_unit_lists> rpc_lists,
 		gsl::span<marshal_unit_lists> rpc_pointer_lists
 	);
 
 	void do_code_generation(
 		std::string_view driver_name,
-		const std::filesystem::path& destination,
+		const std::filesystem::path& root,
 		gsl::span<marshal_unit_lists> rpc_lists,
 		gsl::span<marshal_unit_lists> rpc_pointer_lists
 	);
@@ -211,13 +211,13 @@ void idlc::write_pointer_stubs(std::ofstream& file, gsl::span<marshal_unit_lists
 }
 
 void idlc::generate_common_header(
-	const std::filesystem::path& destination,
+	const std::filesystem::path& root,
 	std::string_view module_name,
 	gsl::span<marshal_unit_lists> rpc_lists,
 	gsl::span<marshal_unit_lists> rpc_ptr_lists
 )
 {
-	std::ofstream common_header {destination};
+	std::ofstream common_header {root};
 	common_header.exceptions(std::fstream::badbit | std::fstream::failbit);
 
 	common_header << "#ifndef _COMMON_H_\n#define _COMMON_H_\n\n";
@@ -258,12 +258,12 @@ void idlc::generate_common_header(
 }
 
 void idlc::generate_klcd_source(
-	const std::filesystem::path& destination,
+	const std::filesystem::path& root,
 	gsl::span<marshal_unit_lists> rpc_lists,
 	gsl::span<marshal_unit_lists> rpc_pointer_lists
 )
 {
-	std::ofstream kernel_dispatch_source {destination};
+	std::ofstream kernel_dispatch_source {root};
 	kernel_dispatch_source.exceptions(std::fstream::badbit | std::fstream::failbit);
 
 	kernel_dispatch_source << "#include \"common.h\"\n\n";
@@ -295,12 +295,12 @@ void idlc::generate_klcd_source(
 }
 
 void idlc::generate_lcd_source(
-	const std::filesystem::path& destination,
+	const std::filesystem::path& root,
 	gsl::span<marshal_unit_lists> rpc_lists,
 	gsl::span<marshal_unit_lists> rpc_pointer_lists
 )
 {
-	std::ofstream driver_dispatch_source {destination};
+	std::ofstream driver_dispatch_source {root};
 	driver_dispatch_source.exceptions(std::fstream::badbit | std::fstream::failbit);
 
 	driver_dispatch_source << "#include \"common.h\"\n\n";
@@ -329,15 +329,15 @@ void idlc::generate_lcd_source(
 
 void idlc::do_code_generation(
 	std::string_view driver_name,
-	const std::filesystem::path& destination,
+	const std::filesystem::path& root,
 	gsl::span<marshal_unit_lists> rpc_lists,
 	gsl::span<marshal_unit_lists> rpc_pointer_lists
 )
 {
 	namespace fs = std::filesystem;
 
-	if (!fs::exists(destination)) {
-		fs::create_directories(destination);
+	if (!fs::exists(root)) {
+		fs::create_directories(root);
 	}
 
 	// TODO: problem: we don't know which side the function pointers end up on
@@ -349,11 +349,16 @@ void idlc::do_code_generation(
 	std::string lcd_name {driver_name.data(), driver_name.size()};
 	lcd_name += "_lcd";
 
-	const fs::path klcd_path {destination / (klcd_name + ".c")}; // klcd
-	const fs::path klcd_h_path {destination / (klcd_name + ".h")}; // klcd
-	const fs::path lcd_path {destination / (lcd_name + ".c")}; // lcd
-	const fs::path lcd_h_path {destination / (lcd_name + ".h")}; // lcd
-	const fs::path comm_path {destination / "common.h"}; // lcd
+	const fs::path klcd_dir {root / "klcd"};
+	const fs::path lcd_dir {root / "lcd"};
+	fs::create_directories(klcd_dir);
+	fs::create_directories(lcd_dir);
+
+	const fs::path klcd_path {klcd_dir / (klcd_name + ".c")};
+	const fs::path klcd_h_path {klcd_dir / (klcd_name + ".h")};
+	const fs::path lcd_path {lcd_dir / (lcd_name + ".c")};
+	const fs::path lcd_h_path {lcd_dir / (lcd_name + ".h")};
+	const fs::path comm_path {root / "common.h"};
 
 	generate_common_header(comm_path, driver_name, rpc_lists, rpc_pointer_lists);
 	generate_klcd_source(klcd_path, rpc_lists, rpc_pointer_lists);
