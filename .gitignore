@@ -9,6 +9,7 @@ out/
 CMakeSettings.json
 dump.txt
 notes.txt
+utest-mod/
 
 #parser generated files
 parser/peg_peg.py

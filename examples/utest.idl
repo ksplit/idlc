@@ -1,0 +1,11 @@
+module utest {
+    projection <struct widget> widget_create_widget {
+        unsigned a;
+        int b;
+    }
+
+    projection <struct widget> widget_destroy_widget {}
+    
+    rpc projection widget_create_widget [alloc(caller)]* create_widget(unsigned a, int b);
+    rpc void destroy_widget(projection widget_destroy_widget [dealloc(caller)]* widget);
+}
