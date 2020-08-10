@@ -1,11 +1,21 @@
 module utest {
     projection <struct widget> widget_create_widget {
-        unsigned a;
-        int b;
+        unsigned [out] a;
+        int [out] b;
     }
 
     projection <struct widget> widget_destroy_widget {}
+
+    projection <struct widget> widget_create_subwidget {
+        projection widget_create_widget [alloc(caller), out]* c;
+    }
+
+    projection <struct widget> widget_destroy_subwidget {
+        projection widget_destroy_widget [dealloc(caller), in]* c;
+    }
     
     rpc projection widget_create_widget [alloc(caller)]* create_widget(unsigned a, int b);
     rpc void destroy_widget(projection widget_destroy_widget [dealloc(caller)]* widget);
+    rpc void create_subwidget(projection widget_create_subwidget [bind(caller)]* widget, unsigned a, int b);
+    rpc void destroy_subwidget(projection widget_destroy_subwidget [bind(caller)]* widget);
 }
