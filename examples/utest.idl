@@ -11,7 +11,7 @@ module utest {
     }
 
     projection <struct widget> widget_destroy_subwidget {
-        projection widget_destroy_widget [dealloc(caller), in]* c;
+        projection widget_destroy_widget [dealloc(caller), in, out]* c;
     }
     
     rpc projection widget_create_widget [alloc(caller)]* create_widget(unsigned a, int b);
