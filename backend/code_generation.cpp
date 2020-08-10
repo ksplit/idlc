@@ -266,7 +266,7 @@ void idlc::generate_klcd_source(
 	std::ofstream kernel_dispatch_source {root};
 	kernel_dispatch_source.exceptions(std::fstream::badbit | std::fstream::failbit);
 
-	kernel_dispatch_source << "#include \"common.h\"\n\n";
+	kernel_dispatch_source << "#include \"../common.h\"\n\n";
 	for (marshal_unit_lists& unit : rpc_lists) {
 		kernel_dispatch_source << "void " << unit.identifier << "_callee(struct fipc_message* message) {\n";
 		kernel_dispatch_source << "\tunsigned int marshal_slot = 0;\n";
@@ -280,13 +280,13 @@ void idlc::generate_klcd_source(
 	kernel_dispatch_source << "\tswitch (message->host_id) {\n";
 
 	for (const marshal_unit_lists& unit : rpc_lists) {
-		kernel_dispatch_source << "\tcase rpc_" << unit.identifier << ":\n";
+		kernel_dispatch_source << "\tcase RPC_" << to_upper(unit.identifier) << ":\n";
 		kernel_dispatch_source << "\t\t" << unit.identifier << "_callee(message)" << ";\n";
 		kernel_dispatch_source << "\t\tbreak;\n\n";
 	}
 
 	for (const marshal_unit_lists& unit : rpc_pointer_lists) {
-		kernel_dispatch_source << "\tcase rpc_ptr" << unit.identifier << ":\n";
+		kernel_dispatch_source << "\tcase RPC_PTR" << to_upper(unit.identifier) << ":\n";
 		kernel_dispatch_source << "\t\t" << unit.identifier << "_callee(message)" << ";\n";
 		kernel_dispatch_source << "\t\tbreak;\n\n";
 	}
@@ -303,7 +303,7 @@ void idlc::generate_lcd_source(
 	std::ofstream driver_dispatch_source {root};
 	driver_dispatch_source.exceptions(std::fstream::badbit | std::fstream::failbit);
 
-	driver_dispatch_source << "#include \"common.h\"\n\n";
+	driver_dispatch_source << "#include \"../common.h\"\n\n";
 	for (marshal_unit_lists& unit : rpc_lists) {
 		driver_dispatch_source << unit.header << " {\n";
 		driver_dispatch_source << "\tunsigned int marshal_slot = 0;\n";
@@ -319,7 +319,7 @@ void idlc::generate_lcd_source(
 	driver_dispatch_source << "\tswitch (message->host_id) {\n";
 
 	for (const marshal_unit_lists& unit : rpc_pointer_lists) {
-		driver_dispatch_source << "\tcase rpc_ptr" << unit.identifier << ":\n";
+		driver_dispatch_source << "\tcase RPC_PTR" << to_upper(unit.identifier) << ":\n";
 		driver_dispatch_source << "\t\t" << unit.identifier << "_callee(message)" << ";\n";
 		driver_dispatch_source << "\t\tbreak;\n\n";
 	}
