@@ -1,7 +1,9 @@
 include <kernel.idl>
 include <marshal_test.idl>
+include <utest.idl>
 
 module dummy_driver {
 	//require marshal_test;
-	require kernel_nullnet;
+	//require kernel_nullnet;
+	require utest;
 }

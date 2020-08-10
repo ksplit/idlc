@@ -198,10 +198,10 @@ void idlc::write_pointer_stubs(std::ofstream& file, gsl::span<marshal_unit_lists
 	}
 
 	for (marshal_unit_lists& unit : rpc_pointer_lists) {
-		file << "LCD_TRAMPOLINE_DATA(" << unit.identifier << ")\n";
-		file << "LCD_TRAMPOLINE_LINKAGE(" << unit.identifier << ")\n";
+		file << "LCD_TRAMPOLINE_DATA(trampoline" << unit.identifier << ")\n";
+		file << "LCD_TRAMPOLINE_LINKAGE(trampoline" << unit.identifier << ")\n";
 		file << unit.header << " {\n";
-		file << "\tvoid* real_pointer;\n\tLCD_TRAMPOLINE_PROLOGUE(real_pointer, " << unit.identifier << ");\n";
+		file << "\tvoid* real_pointer;\n\tLCD_TRAMPOLINE_PROLOGUE(real_pointer, trampoline" << unit.identifier << ");\n";
 		file << "\tunsigned int marshal_slot = 0;\n";
 		file << "\tstruct fipc_message message_buffer = {0};\n";
 		file << "\tstruct fipc_message* message = &message_buffer;\n";
@@ -221,10 +221,8 @@ void idlc::generate_common_header(
 	common_header.exceptions(std::fstream::badbit | std::fstream::failbit);
 
 	common_header << "#ifndef _COMMON_H_\n#define _COMMON_H_\n\n";
-	common_header << "#include <stddef.h>\n";
-	common_header << "#include <string.h>\n";
-	common_header << "#include \"trampoline.h\"\n";
-	common_header << "#include <stdint.h>\n\n";
+	common_header << "#include <linux/types.h>\n\n";
+	common_header << "#include <liblcd/trampoline.h>\n";
 
 	common_header << "#include \"" << module_name << "_user.h\"\n\n";
 
@@ -233,12 +231,13 @@ void idlc::generate_common_header(
 	common_header << "#define fipc_marshal(value) message->slots[marshal_slot++] = *(uint64_t*)&value\n";
 	common_header << "#define fipc_unmarshal(type) *(type*)&message->slots[marshal_slot++]\n";
 	common_header << "#define fipc_send(rpc, msg_ptr) /* TODO */\n";
-	common_header << "#define fipc_get_remote(local) NULL\n";
-	common_header << "#define fipc_get_local(remote) NULL\n";
-	common_header << "#define fipc_create_shadow(remote) NULL\n";
-	common_header << "#define fipc_destroy_shadow(remote)\n\n";
+	common_header << "#define fipc_get_remote(local) NULL; (void)local\n";
+	common_header << "#define fipc_get_local(remote) NULL; (void)remote\n";
+	common_header << "#define fipc_create_shadow(remote) NULL; (void)remote\n";
+	common_header << "#define fipc_destroy_shadow(remote) (void)remote\n\n";
 
-	common_header << "#define inject_trampoline(id, pointer) LCD_DUP_TRAMPOLINE(id) + offsetof(struct lcd_trampoline_handle, trampoline)\n\n";
+	common_header << "#define inject_trampoline(id, pointer) (void*)((unsigned char*)LCD_DUP_TRAMPOLINE(trampoline##id)"
+		<< "+ offsetof(struct lcd_trampoline_handle, trampoline))\n\n";
 
 	common_header << "enum dispatch_id {\n";
 
@@ -263,35 +262,36 @@ void idlc::generate_klcd_source(
 	gsl::span<marshal_unit_lists> rpc_pointer_lists
 )
 {
-	std::ofstream kernel_dispatch_source {root};
-	kernel_dispatch_source.exceptions(std::fstream::badbit | std::fstream::failbit);
+	std::ofstream source {root};
+	source.exceptions(std::fstream::badbit | std::fstream::failbit);
 
-	kernel_dispatch_source << "#include \"../common.h\"\n\n";
+	source << "#include \"../common.h\"\n\n";
 	for (marshal_unit_lists& unit : rpc_lists) {
-		kernel_dispatch_source << "void " << unit.identifier << "_callee(struct fipc_message* message) {\n";
-		kernel_dispatch_source << "\tunsigned int marshal_slot = 0;\n";
-		write_marshal_ops(kernel_dispatch_source, unit.callee_ops, 1);
-		kernel_dispatch_source << "}\n\n";
+		source << "void " << unit.identifier << "_callee(struct fipc_message* message) {\n";
+		source << "\tunsigned int marshal_slot = 0;\n";
+		write_marshal_ops(source, unit.callee_ops, 1);
+		source << "}\n\n";
 	}
 
-	write_pointer_stubs(kernel_dispatch_source, rpc_pointer_lists);
+	write_pointer_stubs(source, rpc_pointer_lists);
 
-	kernel_dispatch_source << "int dispatch(struct fipc_message* message) {\n";
-	kernel_dispatch_source << "\tswitch (message->host_id) {\n";
+	source << "void dispatch(struct fipc_message* message) {\n";
+	source << "\tswitch (message->host_id) {\n";
 
 	for (const marshal_unit_lists& unit : rpc_lists) {
-		kernel_dispatch_source << "\tcase RPC_" << to_upper(unit.identifier) << ":\n";
-		kernel_dispatch_source << "\t\t" << unit.identifier << "_callee(message)" << ";\n";
-		kernel_dispatch_source << "\t\tbreak;\n\n";
+		source << "\tcase RPC_" << to_upper(unit.identifier) << ":\n";
+		source << "\t\t" << unit.identifier << "_callee(message)" << ";\n";
+		source << "\t\tbreak;\n\n";
 	}
 
 	for (const marshal_unit_lists& unit : rpc_pointer_lists) {
-		kernel_dispatch_source << "\tcase RPC_PTR" << to_upper(unit.identifier) << ":\n";
-		kernel_dispatch_source << "\t\t" << unit.identifier << "_callee(message)" << ";\n";
-		kernel_dispatch_source << "\t\tbreak;\n\n";
+		source << "\tcase RPC_PTR" << to_upper(unit.identifier) << ":\n";
+		source << "\t\t" << unit.identifier << "_callee(message)" << ";\n";
+		source << "\t\tbreak;\n\n";
 	}
 
-	kernel_dispatch_source << "\t}\n}\n\n";
+	source << "\tdefault:\n\t\tbreak;\n";
+	source << "\t}\n}\n\n";
 }
 
 void idlc::generate_lcd_source(
@@ -300,31 +300,32 @@ void idlc::generate_lcd_source(
 	gsl::span<marshal_unit_lists> rpc_pointer_lists
 )
 {
-	std::ofstream driver_dispatch_source {root};
-	driver_dispatch_source.exceptions(std::fstream::badbit | std::fstream::failbit);
+	std::ofstream source {root};
+	source.exceptions(std::fstream::badbit | std::fstream::failbit);
 
-	driver_dispatch_source << "#include \"../common.h\"\n\n";
+	source << "#include \"../common.h\"\n\n";
 	for (marshal_unit_lists& unit : rpc_lists) {
-		driver_dispatch_source << unit.header << " {\n";
-		driver_dispatch_source << "\tunsigned int marshal_slot = 0;\n";
-		driver_dispatch_source << "\tstruct fipc_message message_buffer = {0};\n";
-		driver_dispatch_source << "\tstruct fipc_message* message = &message_buffer;\n";
-		write_marshal_ops(driver_dispatch_source, unit.caller_ops, 1);
-		driver_dispatch_source << "}\n\n";
+		source << unit.header << " {\n";
+		source << "\tunsigned int marshal_slot = 0;\n";
+		source << "\tstruct fipc_message message_buffer = {0};\n";
+		source << "\tstruct fipc_message* message = &message_buffer;\n";
+		write_marshal_ops(source, unit.caller_ops, 1);
+		source << "}\n\n";
 	}
 
-	write_pointer_stubs(driver_dispatch_source, rpc_pointer_lists);
+	write_pointer_stubs(source, rpc_pointer_lists);
 
-	driver_dispatch_source << "int dispatch(struct fipc_message* message) {\n";
-	driver_dispatch_source << "\tswitch (message->host_id) {\n";
+	source << "void dispatch(struct fipc_message* message) {\n";
+	source << "\tswitch (message->host_id) {\n";
 
 	for (const marshal_unit_lists& unit : rpc_pointer_lists) {
-		driver_dispatch_source << "\tcase RPC_PTR" << to_upper(unit.identifier) << ":\n";
-		driver_dispatch_source << "\t\t" << unit.identifier << "_callee(message)" << ";\n";
-		driver_dispatch_source << "\t\tbreak;\n\n";
+		source << "\tcase RPC_PTR" << to_upper(unit.identifier) << ":\n";
+		source << "\t\t" << unit.identifier << "_callee(message)" << ";\n";
+		source << "\t\tbreak;\n\n";
 	}
 
-	driver_dispatch_source << "\t}\n}\n\n";
+	source << "\tdefault:\n\t\tbreak;\n";
+	source << "\t}\n}\n\n";
 }
 
 void idlc::do_code_generation(

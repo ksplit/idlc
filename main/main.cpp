@@ -398,6 +398,10 @@ int main(int argc, gsl::czstring<>* argv) {
 		std::cout << e.getReason();
 		return 1;
 	}
+	catch (const std::exception& e) {
+		idlc::log_error("Exception thrown, exiting: ", e.what());
+		return 1;
+	}
 
 	return 0;
 }
