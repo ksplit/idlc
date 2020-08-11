@@ -9,6 +9,8 @@
 // Here be tamer dragons
 // It's not bad, it's just not as clean as I'd like it
 
+namespace fs = std::filesystem;
+
 namespace idlc {
 	void write_marshal_ops(
 		std::ofstream& file,
@@ -22,27 +24,34 @@ namespace idlc {
 	);
 
 	void generate_common_header(
-		const std::filesystem::path& root,
+		const fs::path& root,
 		std::string_view module_name,
 		gsl::span<marshal_unit_lists> rpc_lists,
 		gsl::span<marshal_unit_lists> rpc_ptr_lists
 	);
 
 	void generate_klcd_source(
-		const std::filesystem::path& root,
+		const fs::path& root,
 		gsl::span<marshal_unit_lists> rpc_lists,
 		gsl::span<marshal_unit_lists> rpc_pointer_lists
 	);
 
 	void generate_lcd_source(
-		const std::filesystem::path& root,
+		const fs::path& root,
 		gsl::span<marshal_unit_lists> rpc_lists,
 		gsl::span<marshal_unit_lists> rpc_pointer_lists
 	);
 
-	void do_code_generation(
+	void generate_klcd(
+		const fs::path& root,
 		std::string_view driver_name,
-		const std::filesystem::path& root,
+		gsl::span<marshal_unit_lists> rpc_lists,
+		gsl::span<marshal_unit_lists> rpc_pointer_lists
+	);
+
+	void generate_lcd(
+		const fs::path& root,
+		std::string_view driver_name,
 		gsl::span<marshal_unit_lists> rpc_lists,
 		gsl::span<marshal_unit_lists> rpc_pointer_lists
 	);
@@ -53,6 +62,36 @@ namespace idlc {
 		std::transform(str.begin(), str.end(), str.begin(), [](char c) { return std::toupper(c); });
 		return str;
 	}
+}
+
+void idlc::generate_klcd(
+	const fs::path& root,
+	std::string_view driver_name,
+	gsl::span<marshal_unit_lists> rpc_lists,
+	gsl::span<marshal_unit_lists> rpc_pointer_lists
+)
+{
+	std::string name {driver_name.data(), driver_name.size()};
+	name += "_klcd";
+
+	const fs::path klcd_path {root / (name + ".c")};
+	const fs::path klcd_h_path {root / (name + ".h")};	
+	generate_klcd_source(klcd_path, rpc_lists, rpc_pointer_lists);
+}
+
+void idlc::generate_lcd(
+	const fs::path& root,
+	std::string_view driver_name,
+	gsl::span<marshal_unit_lists> rpc_lists,
+	gsl::span<marshal_unit_lists> rpc_pointer_lists
+)
+{
+	std::string name {driver_name.data(), driver_name.size()};
+	name += "_lcd";
+
+	const fs::path lcd_path {root / (name + ".c")};
+	const fs::path lcd_h_path {root / (name + ".h")};
+	generate_lcd_source(lcd_path, rpc_lists, rpc_pointer_lists);
 }
 
 // Oversized, but clear
@@ -328,9 +367,9 @@ void idlc::generate_lcd_source(
 	source << "\t}\n}\n\n";
 }
 
-void idlc::do_code_generation(
-	std::string_view driver_name,
+void idlc::generate_module(
 	const std::filesystem::path& root,
+	std::string_view driver_name,
 	gsl::span<marshal_unit_lists> rpc_lists,
 	gsl::span<marshal_unit_lists> rpc_pointer_lists
 )
@@ -344,24 +383,14 @@ void idlc::do_code_generation(
 	// TODO: problem: we don't know which side the function pointers end up on
 	// TODO: we'll just put rpc pointers on both sides, they don't have the same name conflicts as RPCs do (the func-named facade and the actual func)
 
-	std::string klcd_name {driver_name.data(), driver_name.size()};
-	klcd_name += "_klcd";
-
-	std::string lcd_name {driver_name.data(), driver_name.size()};
-	lcd_name += "_lcd";
-
 	const fs::path klcd_dir {root / "klcd"};
 	const fs::path lcd_dir {root / "lcd"};
 	fs::create_directories(klcd_dir);
 	fs::create_directories(lcd_dir);
 
-	const fs::path klcd_path {klcd_dir / (klcd_name + ".c")};
-	const fs::path klcd_h_path {klcd_dir / (klcd_name + ".h")};
-	const fs::path lcd_path {lcd_dir / (lcd_name + ".c")};
-	const fs::path lcd_h_path {lcd_dir / (lcd_name + ".h")};
+	generate_klcd(klcd_dir, driver_name, rpc_lists, rpc_pointer_lists);
+	generate_lcd(lcd_dir, driver_name, rpc_lists, rpc_pointer_lists);
+	
 	const fs::path comm_path {root / "common.h"};
-
 	generate_common_header(comm_path, driver_name, rpc_lists, rpc_pointer_lists);
-	generate_klcd_source(klcd_path, rpc_lists, rpc_pointer_lists);
-	generate_lcd_source(lcd_path, rpc_lists, rpc_pointer_lists);
 }

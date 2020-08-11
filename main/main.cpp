@@ -391,7 +391,7 @@ int main(int argc, gsl::czstring<>* argv) {
 			return 1;
 		}
 
-		idlc::do_code_generation(driver, destination_path, rpc_lists, rpc_ptr_lists);
+		idlc::generate_module(destination_path, driver, rpc_lists, rpc_ptr_lists);
 	}
 	catch (const Parser::ParseException& e) {
 		idlc::log_error("Parsing failed");

@@ -19,11 +19,11 @@ namespace std {
 #endif
 
 namespace idlc {
-	void do_code_generation(
-		std::string_view driver_name,
-
+	void generate_module(
 		const std::filesystem::path& destination,
-		gsl::span<marshal_unit_lists> rpc_lists, gsl::span<marshal_unit_lists> rpc_pointer_lists
+		std::string_view driver_name,
+		gsl::span<marshal_unit_lists> rpc_lists,
+		gsl::span<marshal_unit_lists> rpc_pointer_lists
 	);
 }
 
