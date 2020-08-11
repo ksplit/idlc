@@ -74,9 +74,16 @@ void idlc::generate_klcd(
 	std::string name {driver_name.data(), driver_name.size()};
 	name += "_klcd";
 
-	const fs::path klcd_path {root / (name + ".c")};
-	const fs::path klcd_h_path {root / (name + ".h")};	
-	generate_klcd_source(klcd_path, rpc_lists, rpc_pointer_lists);
+	const fs::path source_path {root / (name + ".c")};
+	const fs::path header_path {root / (name + ".h")};	
+	const fs::path kbuild_path {root / "Kbuild"};
+	generate_klcd_source(source_path, rpc_lists, rpc_pointer_lists);
+
+	std::ofstream kbuild {kbuild_path};
+	kbuild.exceptions(kbuild.badbit | kbuild.failbit);
+	kbuild << "obj-m += " << driver_name << "_klcd.o\n";
+	kbuild << "cppflags-y += $(NONISOLATED_CFLAGS)\n";
+	kbuild << "ccflags-y += $(NONISOLATED_CFLAGS) -Wno-error=declaration-after-statement\n";
 }
 
 void idlc::generate_lcd(
@@ -89,9 +96,18 @@ void idlc::generate_lcd(
 	std::string name {driver_name.data(), driver_name.size()};
 	name += "_lcd";
 
-	const fs::path lcd_path {root / (name + ".c")};
-	const fs::path lcd_h_path {root / (name + ".h")};
-	generate_lcd_source(lcd_path, rpc_lists, rpc_pointer_lists);
+	const fs::path source_path {root / (name + ".c")};
+	const fs::path header_path {root / (name + ".h")};
+	const fs::path kbuild_path {root / "Kbuild"};
+	generate_lcd_source(source_path, rpc_lists, rpc_pointer_lists);
+
+	std::ofstream kbuild {kbuild_path};
+	kbuild.exceptions(kbuild.badbit | kbuild.failbit);
+	kbuild << "obj-m += " << driver_name << "_lcd.o\n";
+	kbuild << "cppflags-y += $(ISOLATED_CFLAGS)\n";
+	kbuild << "ccflags-y += $(ISOLATED_CFLAGS) -Wno-error=declaration-after-statement\n";
+	kbuild << "extra-y += ../../../liblcd_build/common/vmfunc.lds\n";
+	kbuild << "ldflags-y += -T $(LIBLCD_BUILD_DIR)/common/vmfunc.lds\n";
 }
 
 // Oversized, but clear
@@ -276,7 +292,7 @@ void idlc::generate_common_header(
 	common_header << "#define fipc_destroy_shadow(remote) (void)remote\n\n";
 
 	common_header << "#define inject_trampoline(id, pointer) (void*)((unsigned char*)LCD_DUP_TRAMPOLINE(trampoline##id)"
-		<< "+ offsetof(struct lcd_trampoline_handle, trampoline))\n\n";
+		<< " + offsetof(struct lcd_trampoline_handle, trampoline))\n\n";
 
 	common_header << "enum dispatch_id {\n";
 
@@ -385,6 +401,7 @@ void idlc::generate_module(
 
 	const fs::path klcd_dir {root / "klcd"};
 	const fs::path lcd_dir {root / "lcd"};
+	const fs::path kbuild_path {root / "Kbuild"};
 	fs::create_directories(klcd_dir);
 	fs::create_directories(lcd_dir);
 
@@ -393,4 +410,9 @@ void idlc::generate_module(
 	
 	const fs::path comm_path {root / "common.h"};
 	generate_common_header(comm_path, driver_name, rpc_lists, rpc_pointer_lists);
+
+	std::ofstream kbuild {kbuild_path};
+	kbuild.exceptions(kbuild.badbit | kbuild.failbit);
+	kbuild << "obj-$(LCD_CONFIG_BUILD_" << to_upper(root.filename()) << "_LCD) += lcd/\n";
+	kbuild << "obj-$(LCD_CONFIG_BUILD_" << to_upper(root.filename()) << "_KLCD) += klcd/\n";
 }
