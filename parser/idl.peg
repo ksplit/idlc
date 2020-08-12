@@ -79,6 +79,7 @@ module_kw = "module"
 require_kw = "require"
 include_kw = "include"
 union_kw = "union"
+import_kw = "import"
 
 oparen = "("
 cparen = ")"
@@ -354,12 +355,23 @@ require = require_kw whitespace id:identifier space* semi {{
 	value = new require((gsl::czstring<>)id.getValue());
 }}
 
+header_import = import_kw space* oangle chs:path_char* cangle newline {{
+	std::string str;
+	for (const auto& ch : chs.getValues()) {
+		str.push_back((char)(std::uintptr_t)ch.getValue());
+	}
+
+	value = new header_import(std::filesystem::u8path(str));
+}}
+
 item = v:rpc_decl {{
 	value = new module_item(std::unique_ptr<rpc>((rpc*)v.getValue()));
 }} | v:projection {{
 	value = new module_item(std::unique_ptr<projection>((projection*)v.getValue()));
 }} | v:require {{
 	value = new module_item(std::unique_ptr<require>((require*)v.getValue()));
+}} |  v:header_import {{
+	value = new module_item(std::unique_ptr<header_import>((header_import*)v.getValue()));
 }}
 
 module = module_kw whitespace id:identifier space* obrace space* items:(i:item space* {{ value = i.getValue(); }})* cbrace {{

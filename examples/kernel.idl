@@ -1,6 +1,8 @@
 // Note that we do not presently support void*
 
 module kernel_nullnet {
+	import <linux/etherdevice.h>
+
 	projection <struct rtnl_link_stats64> rtnl_link_stats64_ndo_get_stats64 {
 		unsigned int tx_bytes;
 		unsigned int tx_packets;

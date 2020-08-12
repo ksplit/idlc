@@ -14,6 +14,11 @@ namespace idlc {
 		}
 
 	public:
+		bool operator()(header_import& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_header_import(n)))
+		{
+			return self().visit_header_import(n);
+		}
+
 		bool operator()(module& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_module(n)))
 		{
 			return self().visit_module(n);
@@ -79,6 +84,7 @@ namespace idlc {
 			return self().visit_require(n);
 		}
 
+		bool visit_header_import(header_import&) noexcept { return true; }
 		bool visit_module(module&) noexcept { return true; }
 		bool visit_file(file&) noexcept { return true; }
 		bool visit_include(include&) noexcept { return true; }

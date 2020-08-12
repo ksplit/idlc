@@ -73,9 +73,18 @@ namespace idlc {
 		case module_item_kind::require:
 			return visit(pass, item.get<module_item_kind::require>());
 
+		case module_item_kind::header_import:
+			return visit(pass, item.get<module_item_kind::header_import>());
+
 		default:
 			Expects(false);
 		}
+	}
+
+	template<typename pass_type>
+	bool visit(pass_type& pass, header_import& header_import)
+	{
+		return pass(header_import);
 	}
 
 	template<typename pass_type>

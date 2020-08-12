@@ -24,6 +24,8 @@ namespace std {
 #include "../main/node_map.h"
 #include "../main/string_heap.h"
 
+namespace fs = std::filesystem;
+
 namespace idlc {
 	enum class primitive_type_kind {
 		bool_k,
@@ -507,7 +509,8 @@ namespace idlc {
 	enum class module_item_kind {
 		rpc,
 		projection,
-		require
+		require,
+		header_import
 	};
 
 	class rpc {
@@ -597,12 +600,29 @@ namespace idlc {
 		gsl::czstring<> m_identifier;
 	};
 
+	class header_import {
+	public:
+		header_import(const fs::path& path) :
+			m_path {path}
+		{}
+
+		fs::path path()
+		{
+			return m_path;
+		} 
+
+	private:
+		fs::path m_path;
+	};
+
 	class module_item {
 	public:
 		template<typename type>
-		module_item(std::unique_ptr<type>&& obj) : m_variant {move(obj)}
+		module_item(std::unique_ptr<type>&& obj) :
+			m_variant {}
 		{
-			Expects(std::get<std::unique_ptr<type>>(m_variant) != nullptr);
+			Expects(obj != nullptr);
+			m_variant = std::move(obj);
 		}
 
 		auto kind() const noexcept
@@ -626,7 +646,8 @@ namespace idlc {
 		std::variant<
 			std::unique_ptr<rpc>,
 			std::unique_ptr<projection>,
-			std::unique_ptr<require>> m_variant;
+			std::unique_ptr<require>,
+			std::unique_ptr<header_import>> m_variant;
 	};
 
 	enum class file_item_kind {
@@ -673,17 +694,17 @@ namespace idlc {
 	public:
 		std::unique_ptr<file> parsed_file;
 
-		include(const std::filesystem::path& path) : m_path {path}
+		include(const fs::path& path) : m_path {path}
 		{
 		}
 
-		std::filesystem::path path() const
+		fs::path path() const
 		{
 			return m_path;
 		}
 
 	private:
-		std::filesystem::path m_path;
+		fs::path m_path;
 	};
 
 	class file_item {
