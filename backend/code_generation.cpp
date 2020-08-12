@@ -97,8 +97,7 @@ void idlc::generate_klcd(
 	kbuild.exceptions(kbuild.badbit | kbuild.failbit);
 	kbuild << "obj-m += " << driver_name << "_klcd.o\n";
 	kbuild << "obj-m += common.o\n";
-	kbuild << "cppflags-y += $(NONISOLATED_CFLAGS)\n";
-	kbuild << "ccflags-y += $(NONISOLATED_CFLAGS) -Wno-error=declaration-after-statement\n";
+	kbuild << "ccflags-y += $(NONISOLATED_CFLAGS) -Wno-error=declaration-after-statement -Wno-error=discarded-qualifiers\n";
 }
 
 void idlc::generate_lcd(
@@ -121,7 +120,7 @@ void idlc::generate_lcd(
 	kbuild << "obj-m += " << driver_name << "_lcd.o\n";
 	kbuild << "obj-m += common.o\n";
 	kbuild << "cppflags-y += $(ISOLATED_CFLAGS)\n";
-	kbuild << "ccflags-y += $(ISOLATED_CFLAGS) -Wno-error=declaration-after-statement\n";
+	kbuild << "ccflags-y += $(ISOLATED_CFLAGS) -Wno-error=declaration-after-statement -Wno-error=discarded-qualifiers\n";
 	kbuild << "extra-y += ../../../liblcd_build/common/vmfunc.lds\n";
 	kbuild << "ldflags-y += -T $(LIBLCD_BUILD_DIR)/common/vmfunc.lds\n";
 }

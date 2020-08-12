@@ -2,7 +2,7 @@ include <kernel.idl>
 include <marshal_test.idl>
 include <utest.idl>
 
-module dummy_driver {
+module nullnet {
 	//require marshal_test;
 	//require utest;
 	require kernel_nullnet;
