@@ -1,8 +1,5 @@
 #include "marshaling.h"
 
-#include "../main/generic_pass.h"
-#include "../main/visit.h"
-
 #include <sstream>
 
 // Here be dragons

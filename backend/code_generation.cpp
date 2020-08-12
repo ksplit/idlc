@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "marshaling.h"
-#include "../main/dump.h" // for tab_over()
+#include "../frontend/dump.h" // for tab_over()
 
 // Here be tamer dragons
 // It's not bad, it's just not as clean as I'd like it

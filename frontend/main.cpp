@@ -7,7 +7,7 @@
 #include "dump.h"
 #include "visit.h"
 #include "generic_pass.h"
-#include "rpc_import.h"
+#include "module_import.h"
 #include "log.h"
 #include "../backend/marshaling.h"
 #include "../backend/code_generation.h"

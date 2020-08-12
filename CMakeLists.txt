@@ -13,19 +13,12 @@ add_custom_command(
 add_executable(
 	idlc
 	"parser/parser.cpp"
-	"main/main.cpp"
-	"main/node_map.h"
-	"main/string_heap.h"
-	"main/string_heap.cpp"
-	"main/visit.h"
-	"main/generic_pass.h"
-	"main/rpc_import.h"
-	"main/rpc_import.cpp"
-	"backend/marshaling.h"
-	"main/log.h"
+	"frontend/main.cpp"
+	"frontend/string_heap.cpp"
+	"frontend/module_import.cpp"
+	"frontend/dump.cpp"
 	"backend/marshaling.cpp"
 	"backend/code_generation.cpp"
-	"main/dump.cpp"
 )
 
 set_property(TARGET idlc PROPERTY CXX_STANDARD 17)

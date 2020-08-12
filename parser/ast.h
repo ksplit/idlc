@@ -6,7 +6,7 @@
 #include <gsl/gsl>
 #include <optional>
 
-#include "../main/log.h"
+#include "../frontend/log.h"
 
 #ifdef __GNUC__
 #if __GNUC__ < 8
@@ -21,8 +21,8 @@ namespace std {
 #include <filesystem>
 #endif
 
-#include "../main/node_map.h"
-#include "../main/string_heap.h"
+#include "../frontend/node_map.h"
+#include "../frontend/string_heap.h"
 
 namespace fs = std::filesystem;
 

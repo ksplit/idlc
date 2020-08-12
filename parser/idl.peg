@@ -1,7 +1,7 @@
 start-symbol: file
 
 include: {{
-	#include "../main/string_heap.h"
+	#include "../frontend/string_heap.h"
 	#include "ast.h"
 
 	#include <sstream>
