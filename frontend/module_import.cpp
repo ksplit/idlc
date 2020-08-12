@@ -236,38 +236,60 @@ namespace idlc {
 
 		private:
 			// TODO: best place for this?
-			// TODO: Must ensure this lives through marshaling!!!
 			static string_heap mangle_heap;
 		};
 
 		string_heap rpc_field_signature_pass::mangle_heap;
+
+		class header_import_pass : public generic_pass<header_import_pass> {
+		public:
+			header_import_pass(std::vector<gsl::czstring<>>& headers) noexcept :
+				m_headers {headers}
+			{}
+
+			bool visit_header_import(const header_import& header)
+			{
+				m_headers.push_back(header.path());
+				return true;
+			}
+
+		private:
+			std::vector<gsl::czstring<>>& m_headers;
+		};
 	}
 }
 
-idlc::rpc_import_pass::rpc_import_pass(
+idlc::module_import_pass::module_import_pass(
+	std::vector<gsl::czstring<>>& headers,
 	std::vector<marshal_unit>& rpcs,
 	std::vector<marshal_unit>& rpc_pointers,
 	node_map<module>& modules
 ) :
+	m_headers {headers},
 	m_modules {modules},
 	m_rpcs {rpcs},
 	m_rpc_pointers {rpc_pointers}
 {
 }
 
-bool idlc::rpc_import_pass::visit_require(const require& require)
+bool idlc::module_import_pass::visit_require(const require& require)
 {
 	module* const ptr {m_modules.get(require.identifier())};
 	if (!ptr) {
 		log_error("Could not resolve required module ", require.identifier());
-		throw std::exception {};
+		return false;
 	}
 
 	log_note("Processing required module ", require.identifier());
 
 	module& mod {*ptr};
+	header_import_pass hip {m_headers};
 	rpc_field_signature_pass rfs;
 	marshal_unit_collection_pass muc {m_rpcs, m_rpc_pointers};
+	if (!visit(hip, mod)) {
+		return false;
+	}
+	
 	if (!visit(rfs, mod)) {
 		return false;
 	}

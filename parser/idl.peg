@@ -13,7 +13,7 @@ code: {{
 
 	// If you're confused, know this: this allows us to compare strings for equality by
 	// comparing their pointer values (that's why you see the lack of strcmp() or equivalents)
-	string_heap identifiers;
+	string_heap strings;
 }}
 
 # *must* pin down the semantics of everything Sarah's paper (some ambiguities)
@@ -43,7 +43,7 @@ identifier = sc:ident_start rcs:ident_cont* {{
 		str << (char)(std::uintptr_t)v.getValue();
 	}
 
-	value = identifiers.intern(str.str().c_str());
+	value = strings.intern(str.str().c_str());
 }}
 
 digit = [0123456789]
@@ -361,7 +361,7 @@ header_import = import_kw space* oangle chs:path_char* cangle newline {{
 		str.push_back((char)(std::uintptr_t)ch.getValue());
 	}
 
-	value = new header_import(std::filesystem::u8path(str));
+	value = new header_import(strings.intern(str));
 }}
 
 item = v:rpc_decl {{

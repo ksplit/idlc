@@ -22,8 +22,9 @@ namespace idlc {
 	void generate_module(
 		const std::filesystem::path& destination,
 		std::string_view driver_name,
-		gsl::span<marshal_unit_lists> rpc_lists,
-		gsl::span<marshal_unit_lists> rpc_pointer_lists
+		gsl::span<const gsl::czstring<>> headers,
+		gsl::span<const marshal_unit_lists> rpc_lists,
+		gsl::span<const marshal_unit_lists> rpc_pointer_lists
 	);
 }
 

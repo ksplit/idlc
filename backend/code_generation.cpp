@@ -20,42 +20,43 @@ namespace idlc {
 
 	void write_pointer_stubs(
 		std::ofstream& file,
-		gsl::span<marshal_unit_lists> rpc_pointer_lists
+		gsl::span<const marshal_unit_lists> rpc_pointer_lists
 	);
 
 	void generate_common_header(
 		const fs::path& root,
 		std::string_view module_name,
-		gsl::span<marshal_unit_lists> rpc_lists,
-		gsl::span<marshal_unit_lists> rpc_ptr_lists
+		gsl::span<const gsl::czstring<>> headers,
+		gsl::span<const marshal_unit_lists> rpc_lists,
+		gsl::span<const marshal_unit_lists> rpc_ptr_lists
 	);
 
 	void generate_common_source(const fs::path& root);
 
 	void generate_klcd_source(
 		const fs::path& root,
-		gsl::span<marshal_unit_lists> rpc_lists,
-		gsl::span<marshal_unit_lists> rpc_pointer_lists
+		gsl::span<const marshal_unit_lists> rpc_lists,
+		gsl::span<const marshal_unit_lists> rpc_pointer_lists
 	);
 
 	void generate_lcd_source(
 		const fs::path& root,
-		gsl::span<marshal_unit_lists> rpc_lists,
-		gsl::span<marshal_unit_lists> rpc_pointer_lists
+		gsl::span<const marshal_unit_lists> rpc_lists,
+		gsl::span<const marshal_unit_lists> rpc_pointer_lists
 	);
 
 	void generate_klcd(
 		const fs::path& root,
 		std::string_view driver_name,
-		gsl::span<marshal_unit_lists> rpc_lists,
-		gsl::span<marshal_unit_lists> rpc_pointer_lists
+		gsl::span<const marshal_unit_lists> rpc_lists,
+		gsl::span<const marshal_unit_lists> rpc_pointer_lists
 	);
 
 	void generate_lcd(
 		const fs::path& root,
 		std::string_view driver_name,
-		gsl::span<marshal_unit_lists> rpc_lists,
-		gsl::span<marshal_unit_lists> rpc_pointer_lists
+		gsl::span<const marshal_unit_lists> rpc_lists,
+		gsl::span<const marshal_unit_lists> rpc_pointer_lists
 	);
 
 	// Currently a criminal hack, since we don't handle identifier variants uniformly (yet)
@@ -81,8 +82,8 @@ void idlc::generate_common_source(const fs::path& root)
 void idlc::generate_klcd(
 	const fs::path& root,
 	std::string_view driver_name,
-	gsl::span<marshal_unit_lists> rpc_lists,
-	gsl::span<marshal_unit_lists> rpc_pointer_lists
+	gsl::span<const marshal_unit_lists> rpc_lists,
+	gsl::span<const marshal_unit_lists> rpc_pointer_lists
 )
 {
 	std::string name {driver_name.data(), driver_name.size()};
@@ -103,8 +104,8 @@ void idlc::generate_klcd(
 void idlc::generate_lcd(
 	const fs::path& root,
 	std::string_view driver_name,
-	gsl::span<marshal_unit_lists> rpc_lists,
-	gsl::span<marshal_unit_lists> rpc_pointer_lists
+	gsl::span<const marshal_unit_lists> rpc_lists,
+	gsl::span<const marshal_unit_lists> rpc_pointer_lists
 )
 {
 	std::string name {driver_name.data(), driver_name.size()};
@@ -258,16 +259,16 @@ void idlc::write_marshal_ops(std::ofstream& file, const std::vector<marshal_op>&
 	}
 }
 
-void idlc::write_pointer_stubs(std::ofstream& file, gsl::span<marshal_unit_lists> rpc_pointer_lists)
+void idlc::write_pointer_stubs(std::ofstream& file, gsl::span<const marshal_unit_lists> rpc_pointer_lists)
 {
-	for (marshal_unit_lists& unit : rpc_pointer_lists) {
+	for (const marshal_unit_lists& unit : rpc_pointer_lists) {
 		file << "void " << unit.identifier << "_callee(struct fipc_message* message) {\n";
 		file << "\tunsigned int marshal_slot = 0;\n";
 		write_marshal_ops(file, unit.callee_ops, 1);
 		file << "}\n\n";
 	}
 
-	for (marshal_unit_lists& unit : rpc_pointer_lists) {
+	for (const marshal_unit_lists& unit : rpc_pointer_lists) {
 		file << "LCD_TRAMPOLINE_DATA(trampoline" << unit.identifier << ")\n";
 		file << "LCD_TRAMPOLINE_LINKAGE(trampoline" << unit.identifier << ")\n";
 		file << unit.header << " {\n";
@@ -283,17 +284,26 @@ void idlc::write_pointer_stubs(std::ofstream& file, gsl::span<marshal_unit_lists
 void idlc::generate_common_header(
 	const std::filesystem::path& root,
 	std::string_view module_name,
-	gsl::span<marshal_unit_lists> rpc_lists,
-	gsl::span<marshal_unit_lists> rpc_ptr_lists
+	gsl::span<const gsl::czstring<>> headers,
+	gsl::span<const marshal_unit_lists> rpc_lists,
+	gsl::span<const marshal_unit_lists> rpc_ptr_lists
 )
 {
 	std::ofstream header {root};
 	header.exceptions(std::fstream::badbit | std::fstream::failbit);
 
 	header << "#ifndef _COMMON_H_\n#define _COMMON_H_\n\n";
-	header << "#include <linux/types.h>\n\n";
-	header << "#include <liblcd/trampoline.h>\n";
+	header << "#include <linux/types.h>\n";
+	header << "#include <liblcd/trampoline.h>\n\n";
+
 	header << "#include \"" << module_name << "_user.h\"\n\n";
+
+	for (const auto imp : headers) {
+		header << "#include <" << imp << ">\n";
+	}
+
+	header << "\n";
+
 	header << "#define MAX_MESSAGE_SLOTS 64\n\n";
 	header << "#define fipc_marshal(value) message->slots[marshal_slot++] = *(uint64_t*)&value\n";
 	header << "#define fipc_unmarshal(type) *(type*)&message->slots[marshal_slot++]\n";
@@ -321,15 +331,15 @@ void idlc::generate_common_header(
 
 void idlc::generate_klcd_source(
 	const std::filesystem::path& root,
-	gsl::span<marshal_unit_lists> rpc_lists,
-	gsl::span<marshal_unit_lists> rpc_pointer_lists
+	gsl::span<const marshal_unit_lists> rpc_lists,
+	gsl::span<const marshal_unit_lists> rpc_pointer_lists
 )
 {
 	std::ofstream source {root};
 	source.exceptions(std::fstream::badbit | std::fstream::failbit);
 
 	source << "#include \"../common.h\"\n\n";
-	for (marshal_unit_lists& unit : rpc_lists) {
+	for (const marshal_unit_lists& unit : rpc_lists) {
 		source << "void " << unit.identifier << "_callee(struct fipc_message* message) {\n";
 		source << "\tunsigned int marshal_slot = 0;\n";
 		write_marshal_ops(source, unit.callee_ops, 1);
@@ -359,15 +369,15 @@ void idlc::generate_klcd_source(
 
 void idlc::generate_lcd_source(
 	const std::filesystem::path& root,
-	gsl::span<marshal_unit_lists> rpc_lists,
-	gsl::span<marshal_unit_lists> rpc_pointer_lists
+	gsl::span<const marshal_unit_lists> rpc_lists,
+	gsl::span<const marshal_unit_lists> rpc_pointer_lists
 )
 {
 	std::ofstream source {root};
 	source.exceptions(std::fstream::badbit | std::fstream::failbit);
 
 	source << "#include \"../common.h\"\n\n";
-	for (marshal_unit_lists& unit : rpc_lists) {
+	for (const marshal_unit_lists& unit : rpc_lists) {
 		source << unit.header << " {\n";
 		source << "\tunsigned int marshal_slot = 0;\n";
 		source << "\tstruct fipc_message message_buffer = {0};\n";
@@ -394,8 +404,9 @@ void idlc::generate_lcd_source(
 void idlc::generate_module(
 	const std::filesystem::path& root,
 	std::string_view driver_name,
-	gsl::span<marshal_unit_lists> rpc_lists,
-	gsl::span<marshal_unit_lists> rpc_pointer_lists
+	gsl::span<const gsl::czstring<>> headers,
+	gsl::span<const marshal_unit_lists> rpc_lists,
+	gsl::span<const marshal_unit_lists> rpc_pointer_lists
 )
 {
 	namespace fs = std::filesystem;
@@ -419,7 +430,7 @@ void idlc::generate_module(
 	
 	const fs::path common_h {canon_root / "common.h"};
 	const fs::path common_c {canon_root / "common.c"};
-	generate_common_header(common_h, driver_name, rpc_lists, rpc_pointer_lists);
+	generate_common_header(common_h, driver_name, headers, rpc_lists, rpc_pointer_lists);
 	generate_common_source(common_c);
 
 	std::ofstream kbuild {kbuild_path};

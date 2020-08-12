@@ -319,13 +319,14 @@ namespace idlc {
 		gsl::czstring<> m_driver_name {};
 	};
 
-	struct rpc_imports {
+	struct module_imports {
 		gsl::czstring<> driver_name;
+		std::vector<gsl::czstring<>> headers;
 		std::vector<idlc::marshal_unit> rpcs;
 		std::vector<idlc::marshal_unit> rpc_pointers;
 	};
 
-	std::optional<rpc_imports> import_rpcs(file& file, const std::filesystem::path& idl_path)
+	std::optional<module_imports> import_modules(file& file, const std::filesystem::path& idl_path)
 	{
 		idlc::verify_driver_idl_pass vdi_pass;
 		if (!visit(vdi_pass, file)) {
@@ -338,14 +339,15 @@ namespace idlc {
 			return std::nullopt;
 		}
 
+		std::vector<gsl::czstring<>> headers;
 		std::vector<idlc::marshal_unit> rpcs;
 		std::vector<idlc::marshal_unit> rpc_pointers;
-		idlc::rpc_import_pass mi_pass {rpcs, rpc_pointers, imports};
+		idlc::module_import_pass mi_pass {headers, rpcs, rpc_pointers, imports};
 		if (!visit(mi_pass, file)) {
 			return std::nullopt;
 		}
 
-		return rpc_imports {vdi_pass.get_driver_name(), rpcs, rpc_pointers};
+		return module_imports {vdi_pass.get_driver_name(), headers, rpcs, rpc_pointers};
 	}
 }
 
@@ -368,7 +370,7 @@ int main(int argc, gsl::czstring<>* argv) {
 					Parser::parse(idl_path.generic_string())))};
 
 		auto& file = *top_node;
-		const auto imports_opt {idlc::import_rpcs(file, idl_path)};
+		const auto imports_opt {idlc::import_modules(file, idl_path)};
 
 		idlc::log_note("Verified IDL syntax");
 
@@ -377,7 +379,7 @@ int main(int argc, gsl::czstring<>* argv) {
 			return 1;
 		}
 
-		auto& [driver, rpcs, rpc_pointers] = *imports_opt;
+		auto& [driver, headers, rpcs, rpc_pointers] = *imports_opt;
 
 		std::vector<idlc::marshal_unit_lists> rpc_lists;
 		if (!idlc::process_marshal_units(rpcs, idlc::marshal_unit_kind::direct, rpc_lists)) {
@@ -391,7 +393,7 @@ int main(int argc, gsl::czstring<>* argv) {
 			return 1;
 		}
 
-		idlc::generate_module(destination_path, driver, rpc_lists, rpc_ptr_lists);
+		idlc::generate_module(destination_path, driver, headers, rpc_lists, rpc_ptr_lists);
 	}
 	catch (const Parser::ParseException& e) {
 		idlc::log_error("Parsing failed");

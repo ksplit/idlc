@@ -602,17 +602,17 @@ namespace idlc {
 
 	class header_import {
 	public:
-		header_import(const fs::path& path) :
+		header_import(gsl::czstring<> path) noexcept :
 			m_path {path}
 		{}
 
-		fs::path path()
+		gsl::czstring<> path() const noexcept
 		{
 			return m_path;
 		} 
 
 	private:
-		fs::path m_path;
+		gsl::czstring<> m_path;
 	};
 
 	class module_item {
