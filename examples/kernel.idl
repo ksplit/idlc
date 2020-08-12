@@ -23,9 +23,11 @@ module kernel_nullnet {
 		int len;
 	}
 
-	//projection <struct net_device> net_device_ndo_validate_addr {
-	//	unsigned char* dev_addr; // byte array, not supported
-	//}
+	projection <struct TODO_CUSTOM_MARSHALING> void_ptr {}
+
+	projection <struct net_device> net_device_ndo_validate_addr {
+		projection void_ptr* dev_addr; // byte array, not supported
+	}
 
 	projection <struct net_device> net_device_ndo_get_stats64 {
 		projection pcpu_dstats * dstats;
@@ -41,7 +43,7 @@ module kernel_nullnet {
 		rpc int (*ndo_init) (projection net_device_ndo_init * dev);
 		rpc void (*ndo_uninit) (projection net_device_ndo_uninit* dev);
 		rpc int (*ndo_start_xmit)(projection sk_buff_ndo_start_xmit* skb, projection net_device_stats* dev);
-		// rpc int (*ndo_validate_addr)(projection net_device_ndo_validate_addr* dev); // unuspported
+		rpc int (*ndo_validate_addr)(projection net_device_ndo_validate_addr* dev); // unuspported
 
 		rpc projection rtnl_link_stats64* (*ndo_get_stats64)
 											(projection net_device_ndo_get_stats64* dev,
@@ -122,7 +124,7 @@ module kernel_nullnet {
 
 	rpc int eth_validate_addr(projection net_device_eth_validate_addr* dev);
 
-	rpc int eth_mac_addr(projection net_device_eth_mac_addr* dev/*, void* p*/);
+	rpc int eth_mac_addr(projection net_device_eth_mac_addr* dev, projection void_ptr* p); // emulate void* with char*
 
 	rpc void ether_setup(projection net_device_ether_setup* dev);
 
@@ -150,7 +152,7 @@ module kernel_nullnet {
 	rpc projection net_device_alloc_netdev_mqs // implicit bind here
 				* alloc_netdev_mqs(
 					int sizeof_priv,
-					//const char *name, // this is problematic, atm
+					projection void_ptr *name, // this is problematic, atm
 					unsigned char name_assign_type,
 					rpc void (*setup)(projection net_device_setup[alloc(callee)] * dev),
 					unsigned int txqs, unsigned int rxqs);
