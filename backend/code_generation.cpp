@@ -73,7 +73,7 @@ void idlc::generate_common_source(const fs::path& root)
 	source.exceptions(std::fstream::badbit | std::fstream::failbit);
 
 	source << "#include \"common.h\"\n\n";
-	source << "void* inject_trampoline_impl(lcd_trampoline_handle* handle, void* impl) {\n";
+	source << "void* inject_trampoline_impl(struct lcd_trampoline_handle* handle, void* impl) {\n";
 	source << "\thandle->hidden_args = impl;\n";
 	source << "\treturn handle->trampoline;\n";
 	source << "}\n\n";
@@ -269,7 +269,6 @@ void idlc::write_pointer_stubs(std::ofstream& file, gsl::span<const marshal_unit
 	}
 
 	for (const marshal_unit_lists& unit : rpc_pointer_lists) {
-		file << "LCD_TRAMPOLINE_DATA(trampoline" << unit.identifier << ")\n";
 		file << "LCD_TRAMPOLINE_LINKAGE(trampoline" << unit.identifier << ")\n";
 		file << unit.header << " {\n";
 		file << "\tvoid* real_pointer;\n\tLCD_TRAMPOLINE_PROLOGUE(real_pointer, trampoline" << unit.identifier << ");\n";
@@ -325,7 +324,14 @@ void idlc::generate_common_header(
 
 	header << "};\n\n";
 	header << "struct fipc_message {\n\tenum dispatch_id host_id;\n\tuint64_t slots[MAX_MESSAGE_SLOTS];\n};\n\n";
-	header << "void* inject_trampoline_impl(lcd_trampoline_handle* handle, void* impl);\n\n";
+	header << "void* inject_trampoline_impl(struct lcd_trampoline_handle* handle, void* impl);\n\n";
+
+	for (const marshal_unit_lists& unit : rpc_ptr_lists) {
+		header << "LCD_TRAMPOLINE_DATA(trampoline" << unit.identifier << ")\n";
+		header << unit.header << ";\n\n";
+	}
+
+	header << "\n";
 	header << "#endif";
 }
 
