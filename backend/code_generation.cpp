@@ -30,6 +30,8 @@ namespace idlc {
 		gsl::span<marshal_unit_lists> rpc_ptr_lists
 	);
 
+	void generate_common_source(const fs::path& root);
+
 	void generate_klcd_source(
 		const fs::path& root,
 		gsl::span<marshal_unit_lists> rpc_lists,
@@ -64,6 +66,18 @@ namespace idlc {
 	}
 }
 
+void idlc::generate_common_source(const fs::path& root)
+{
+	std::ofstream source {root};
+	source.exceptions(std::fstream::badbit | std::fstream::failbit);
+
+	source << "#include \"common.h\"\n\n";
+	source << "void* inject_trampoline_impl(lcd_trampoline_handle* handle, void* impl) {\n";
+	source << "\thandle->hidden_args = impl;\n";
+	source << "\treturn handle->trampoline;\n";
+	source << "}\n\n";
+}
+
 void idlc::generate_klcd(
 	const fs::path& root,
 	std::string_view driver_name,
@@ -82,6 +96,7 @@ void idlc::generate_klcd(
 	std::ofstream kbuild {kbuild_path};
 	kbuild.exceptions(kbuild.badbit | kbuild.failbit);
 	kbuild << "obj-m += " << driver_name << "_klcd.o\n";
+	kbuild << "obj-m += common.o\n";
 	kbuild << "cppflags-y += $(NONISOLATED_CFLAGS)\n";
 	kbuild << "ccflags-y += $(NONISOLATED_CFLAGS) -Wno-error=declaration-after-statement\n";
 }
@@ -104,6 +119,7 @@ void idlc::generate_lcd(
 	std::ofstream kbuild {kbuild_path};
 	kbuild.exceptions(kbuild.badbit | kbuild.failbit);
 	kbuild << "obj-m += " << driver_name << "_lcd.o\n";
+	kbuild << "obj-m += common.o\n";
 	kbuild << "cppflags-y += $(ISOLATED_CFLAGS)\n";
 	kbuild << "ccflags-y += $(ISOLATED_CFLAGS) -Wno-error=declaration-after-statement\n";
 	kbuild << "extra-y += ../../../liblcd_build/common/vmfunc.lds\n";
@@ -272,43 +288,36 @@ void idlc::generate_common_header(
 	gsl::span<marshal_unit_lists> rpc_ptr_lists
 )
 {
-	std::ofstream common_header {root};
-	common_header.exceptions(std::fstream::badbit | std::fstream::failbit);
+	std::ofstream header {root};
+	header.exceptions(std::fstream::badbit | std::fstream::failbit);
 
-	common_header << "#ifndef _COMMON_H_\n#define _COMMON_H_\n\n";
-	common_header << "#include <linux/types.h>\n\n";
-	common_header << "#include <liblcd/trampoline.h>\n";
-
-	common_header << "#include \"" << module_name << "_user.h\"\n\n";
-
-	common_header << "#define MAX_MESSAGE_SLOTS 64\n\n";
-
-	common_header << "#define fipc_marshal(value) message->slots[marshal_slot++] = *(uint64_t*)&value\n";
-	common_header << "#define fipc_unmarshal(type) *(type*)&message->slots[marshal_slot++]\n";
-	common_header << "#define fipc_send(rpc, msg_ptr) /* TODO */\n";
-	common_header << "#define fipc_get_remote(local) NULL; (void)local\n";
-	common_header << "#define fipc_get_local(remote) NULL; (void)remote\n";
-	common_header << "#define fipc_create_shadow(remote) NULL; (void)remote\n";
-	common_header << "#define fipc_destroy_shadow(remote) (void)remote\n\n";
-
-	common_header << "#define inject_trampoline(id, pointer) (void*)((unsigned char*)LCD_DUP_TRAMPOLINE(trampoline##id)"
-		<< " + offsetof(struct lcd_trampoline_handle, trampoline))\n\n";
-
-	common_header << "enum dispatch_id {\n";
+	header << "#ifndef _COMMON_H_\n#define _COMMON_H_\n\n";
+	header << "#include <linux/types.h>\n\n";
+	header << "#include <liblcd/trampoline.h>\n";
+	header << "#include \"" << module_name << "_user.h\"\n\n";
+	header << "#define MAX_MESSAGE_SLOTS 64\n\n";
+	header << "#define fipc_marshal(value) message->slots[marshal_slot++] = *(uint64_t*)&value\n";
+	header << "#define fipc_unmarshal(type) *(type*)&message->slots[marshal_slot++]\n";
+	header << "#define fipc_send(rpc, msg_ptr) /* TODO */\n";
+	header << "#define fipc_get_remote(local) NULL; (void)local\n";
+	header << "#define fipc_get_local(remote) NULL; (void)remote\n";
+	header << "#define fipc_create_shadow(remote) NULL; (void)remote\n";
+	header << "#define fipc_destroy_shadow(remote) (void)remote\n\n";
+	header << "#define inject_trampoline(id, pointer) inject_trampoline_impl(LCD_DUP_TRAMPOLINE(trampoline##id), pointer)\n\n";
+	header << "enum dispatch_id {\n";
 
 	for (const marshal_unit_lists& unit : rpc_lists) {
-		common_header << "\tRPC_" << to_upper(unit.identifier) << ",\n";
+		header << "\tRPC_" << to_upper(unit.identifier) << ",\n";
 	}
 
 	for (const marshal_unit_lists& unit : rpc_ptr_lists) {
-		common_header << "\tRPC_PTR" << to_upper(unit.identifier) << ",\n";
+		header << "\tRPC_PTR" << to_upper(unit.identifier) << ",\n";
 	}
 
-	common_header << "};\n\n";
-
-	common_header << "struct fipc_message {\n\tenum dispatch_id host_id;\n\tuint64_t slots[MAX_MESSAGE_SLOTS];\n};\n\n";
-
-	common_header << "#endif";
+	header << "};\n\n";
+	header << "struct fipc_message {\n\tenum dispatch_id host_id;\n\tuint64_t slots[MAX_MESSAGE_SLOTS];\n};\n\n";
+	header << "void* inject_trampoline_impl(lcd_trampoline_handle* handle, void* impl);\n\n";
+	header << "#endif";
 }
 
 void idlc::generate_klcd_source(
@@ -399,20 +408,23 @@ void idlc::generate_module(
 	// TODO: problem: we don't know which side the function pointers end up on
 	// TODO: we'll just put rpc pointers on both sides, they don't have the same name conflicts as RPCs do (the func-named facade and the actual func)
 
-	const fs::path klcd_dir {root / "klcd"};
-	const fs::path lcd_dir {root / "lcd"};
-	const fs::path kbuild_path {root / "Kbuild"};
+	const auto canon_root = fs::canonical(root);
+	const fs::path klcd_dir {canon_root / "klcd"};
+	const fs::path lcd_dir {canon_root / "lcd"};
+	const fs::path kbuild_path {canon_root / "Kbuild"};
 	fs::create_directories(klcd_dir);
 	fs::create_directories(lcd_dir);
 
 	generate_klcd(klcd_dir, driver_name, rpc_lists, rpc_pointer_lists);
 	generate_lcd(lcd_dir, driver_name, rpc_lists, rpc_pointer_lists);
 	
-	const fs::path comm_path {root / "common.h"};
-	generate_common_header(comm_path, driver_name, rpc_lists, rpc_pointer_lists);
+	const fs::path common_h {canon_root / "common.h"};
+	const fs::path common_c {canon_root / "common.c"};
+	generate_common_header(common_h, driver_name, rpc_lists, rpc_pointer_lists);
+	generate_common_source(common_c);
 
 	std::ofstream kbuild {kbuild_path};
 	kbuild.exceptions(kbuild.badbit | kbuild.failbit);
-	kbuild << "obj-$(LCD_CONFIG_BUILD_" << to_upper(root.filename()) << "_LCD) += lcd/\n";
-	kbuild << "obj-$(LCD_CONFIG_BUILD_" << to_upper(root.filename()) << "_KLCD) += klcd/\n";
+	kbuild << "obj-$(LCD_CONFIG_BUILD_" << to_upper(canon_root.filename()) << "_LCD) += lcd/\n";
+	kbuild << "obj-$(LCD_CONFIG_BUILD_" << to_upper(canon_root.filename()) << "_KLCD) += klcd/\n";
 }

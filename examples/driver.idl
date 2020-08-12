@@ -4,6 +4,6 @@ include <utest.idl>
 
 module dummy_driver {
 	//require marshal_test;
-	//require kernel_nullnet;
-	require utest;
+	//require utest;
+	require kernel_nullnet;
 }
