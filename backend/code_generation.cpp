@@ -73,10 +73,6 @@ void idlc::generate_common_source(const fs::path& root)
 	source.exceptions(std::fstream::badbit | std::fstream::failbit);
 
 	source << "#include \"common.h\"\n\n";
-	source << "void* inject_trampoline_impl(struct lcd_trampoline_handle* handle, void* impl) {\n";
-	source << "\thandle->hidden_args = impl;\n";
-	source << "\treturn handle->trampoline;\n";
-	source << "}\n\n";
 }
 
 void idlc::generate_klcd(
@@ -196,7 +192,7 @@ void idlc::write_marshal_ops(std::ofstream& file, const std::vector<marshal_op>&
 				tab_over(file, indent) << args.declaration << " = " << args.function << "(" << args.arguments_list << ");\n";
 			}
 
-			tab_over(file, indent) << "marshal_slot = 0;\n";
+			tab_over(file, indent) << "message->end_slot = message->slots;\n";
 
 			break;
 		}
@@ -210,7 +206,7 @@ void idlc::write_marshal_ops(std::ofstream& file, const std::vector<marshal_op>&
 				tab_over(file, indent) << args.declaration << " = " << args.pointer << "(" << args.arguments_list << ");\n";
 			}
 
-			tab_over(file, indent) << "marshal_slot = 0;\n";
+			tab_over(file, indent) << "message->end_slot = message->slots;\n";
 
 			break;
 		}
@@ -242,7 +238,7 @@ void idlc::write_marshal_ops(std::ofstream& file, const std::vector<marshal_op>&
 		case marshal_op_kind::send_rpc: {
 			const auto args = std::get<send_rpc>(op);
 			tab_over(file, indent) << "fipc_send(" << to_upper(args.rpc) << ", message);\n";
-			tab_over(file, indent) << "marshal_slot = 0;\n";
+			tab_over(file, indent) << "message->end_slot = message->slots;\n";
 			break;
 		}
 
@@ -262,8 +258,7 @@ void idlc::write_marshal_ops(std::ofstream& file, const std::vector<marshal_op>&
 void idlc::write_pointer_stubs(std::ofstream& file, gsl::span<const marshal_unit_lists> rpc_pointer_lists)
 {
 	for (const marshal_unit_lists& unit : rpc_pointer_lists) {
-		file << "void " << unit.identifier << "_callee(struct fipc_message* message) {\n";
-		file << "\tunsigned int marshal_slot = 0;\n";
+		file << "void " << unit.identifier << "_callee(struct rpc_message* message) {\n";
 		write_marshal_ops(file, unit.callee_ops, 1);
 		file << "}\n\n";
 	}
@@ -272,9 +267,9 @@ void idlc::write_pointer_stubs(std::ofstream& file, gsl::span<const marshal_unit
 		file << "LCD_TRAMPOLINE_LINKAGE(trampoline" << unit.identifier << ")\n";
 		file << unit.header << " {\n";
 		file << "\tvoid* real_pointer;\n\tLCD_TRAMPOLINE_PROLOGUE(real_pointer, trampoline" << unit.identifier << ");\n";
-		file << "\tunsigned int marshal_slot = 0;\n";
-		file << "\tstruct fipc_message message_buffer = {0};\n";
-		file << "\tstruct fipc_message* message = &message_buffer;\n";
+		file << "\tstruct rpc_message message_buffer = {0};\n";
+		file << "\tmessage_buffer.end_slot = message_buffer.slots;\n";
+		file << "\tstruct rpc_message* message = &message_buffer;\n";
 		write_marshal_ops(file, unit.caller_ops, 1);
 		file << "}\n\n";
 	}
@@ -293,6 +288,7 @@ void idlc::generate_common_header(
 
 	header << "#ifndef _COMMON_H_\n#define _COMMON_H_\n\n";
 	header << "#include <linux/types.h>\n";
+	header << "#include <libfipc.h>\n";
 	header << "#include <liblcd/trampoline.h>\n\n";
 
 	header << "#include \"" << module_name << "_user.h\"\n\n";
@@ -304,9 +300,8 @@ void idlc::generate_common_header(
 	header << "\n";
 
 	header << "#define MAX_MESSAGE_SLOTS 64\n\n";
-	header << "#define fipc_marshal(value) message->slots[marshal_slot++] = *(uint64_t*)&value\n";
-	header << "#define fipc_unmarshal(type) *(type*)&message->slots[marshal_slot++]\n";
-	header << "#define fipc_send(rpc, msg_ptr) /* TODO */\n";
+	header << "#define fipc_marshal(value) *(message->end_slot++) = (uint64_t)value\n";
+	header << "#define fipc_unmarshal(type) (type)*(message->end_slot++)\n";
 	header << "#define fipc_get_remote(local) NULL; (void)local\n";
 	header << "#define fipc_get_local(remote) NULL; (void)remote\n";
 	header << "#define fipc_create_shadow(remote) NULL; (void)remote\n";
@@ -323,8 +318,53 @@ void idlc::generate_common_header(
 	}
 
 	header << "};\n\n";
-	header << "struct fipc_message {\n\tenum dispatch_id host_id;\n\tuint64_t slots[MAX_MESSAGE_SLOTS];\n};\n\n";
+	header << "struct rpc_message {\n\tuint64_t* end_slot;\n\tuint64_t slots[MAX_MESSAGE_SLOTS];\n};\n\n";
 	header << "void* inject_trampoline_impl(struct lcd_trampoline_handle* handle, void* impl);\n\n";
+
+	header << "inline void* inject_trampoline_impl(struct lcd_trampoline_handle* handle, void* impl) {\n";
+	header << "\thandle->hidden_args = impl;\n";
+	header << "\treturn handle->trampoline;\n";
+	header << "}\n\n";
+
+	header << "inline void fipc_send(enum dispatch_id rpc, struct rpc_message* msg) {\n";
+	header << "\tunsigned slots_used = msg->end_slot - msg->slots\n";
+	header << "\tstruct fipc_message fmsg;\n";
+	header << "\tfmsg.vmfunc_id = VMFUNC_RPC_CALL;\n";
+	header << "\tfmsg.rpc_id = rpc | (slots_used << 16); // composite id that also stores the used slots\n\n";
+	header << "\tunsigned max_fast_slots = FIPC_NR_REGS / 2;\n";
+	header << "\tunsigned fast_slots = min(slots_used, max_fast_slots);\n";
+	header << "\tunsigned slow_slots = min(slots_used - max_fast_slots, 0); // exploit wrap-around\n\n";
+	header << "\tfor (unsigned i = 0; i < fast_slots; ++i) {\n";
+	header << "\t\tunsigned b = i * 2;\n";
+	header << "\t\tfmsg.regs[b] = msg.slots[i] >> 32;\n";
+	header << "\t\tfmsg.regs[b + 1] = msg.slots[i] & 0xFFFFFFFF;\n";
+	header << "\t}\n\n";
+	header << "\tif (slow_slots) {\n";
+	header << "\t\tstruct ext_registers* ext = get_register_page(smp_processor_id());\n";
+	header << "\t\tfor (unsigned i = 0; i < slow_slots; ++i) {\n";
+	header << "\t\t\text->regs[i] = msg->slots[i + max_fast_slots];\n";
+	header << "\t\t}\n";
+	header << "\t}\n\n";
+	header << "\tvmfunc_wrapper(&fmsg);";
+	header << "}\n\n";
+
+	header << "inline void fipc_translate(struct fipc_message* msg, enum dispatch_id* rpc, struct rpc_message* pckt) {\n";
+	header << "\tunsigned slots_used = msg->rpc_id >> 16;\n";
+	header << "\t*rpc = msg->rpc_id & 0xFFFF;\n\n";
+	header << "\tunsigned max_fast_slots = FIPC_NR_REGS / 2;\n";
+	header << "\tunsigned fast_slots = min(slots_used, max_fast_slots);\n";
+	header << "\tunsigned slow_slots = min(slots_used - max_fast_slots, 0); // exploit wrap-around\n\n";
+	header << "\tfor (unsigned i = 0; i < fast_slots; ++i) {\n";
+	header << "\t\tunsigned b = i * 2;\n";
+	header << "\t\tpckt->slots[i] = ((uint64_t)msg->regs[b] << 32) | (uint64_t)msg->regs[b + 1];\n";
+	header << "\t}\n\n";
+	header << "\tif (slow_slots) {\n";
+	header << "\t\tstruct ext_registers* ext = get_register_page(smp_processor_id());\n";
+	header << "\t\tfor (unsigned i = 0; i < slow_slots; ++i) {\n";
+	header << "\t\t\tpckt->slots[i + max_fast_slots] = ext->regs[i];\n";
+	header << "\t\t}\n";
+	header << "\t}\n\n";
+	header << "}\n\n";
 
 	for (const marshal_unit_lists& unit : rpc_ptr_lists) {
 		header << "LCD_TRAMPOLINE_DATA(trampoline" << unit.identifier << ")\n";
@@ -346,16 +386,19 @@ void idlc::generate_klcd_source(
 
 	source << "#include \"../common.h\"\n\n";
 	for (const marshal_unit_lists& unit : rpc_lists) {
-		source << "void " << unit.identifier << "_callee(struct fipc_message* message) {\n";
-		source << "\tunsigned int marshal_slot = 0;\n";
+		source << "void " << unit.identifier << "_callee(struct rpc_message* message) {\n";
 		write_marshal_ops(source, unit.callee_ops, 1);
 		source << "}\n\n";
 	}
 
 	write_pointer_stubs(source, rpc_pointer_lists);
 
-	source << "void dispatch(struct fipc_message* message) {\n";
-	source << "\tswitch (message->host_id) {\n";
+	source << "void dispatch(struct fipc_message* received) {\n";
+	source << "\tenum dispatch_id rpc;\n";
+	source << "\tstruct rpc_message message_buffer;\n";
+	source << "\tstruct rpc_message* message = &message_buffer;\n";
+	source << "\tfipc_translate(received, &rpc, message);\n";
+	source << "\tswitch (rpc) {\n";
 
 	for (const marshal_unit_lists& unit : rpc_lists) {
 		source << "\tcase RPC_" << to_upper(unit.identifier) << ":\n";
@@ -385,17 +428,21 @@ void idlc::generate_lcd_source(
 	source << "#include \"../common.h\"\n\n";
 	for (const marshal_unit_lists& unit : rpc_lists) {
 		source << unit.header << " {\n";
-		source << "\tunsigned int marshal_slot = 0;\n";
-		source << "\tstruct fipc_message message_buffer = {0};\n";
-		source << "\tstruct fipc_message* message = &message_buffer;\n";
+		source << "\tstruct rpc_message message_buffer = {0};\n";
+		source << "\tmessage_buffer.end_slot = message_buffer.slots;\n";
+		source << "\tstruct rpc_message* message = &message_buffer;\n";
 		write_marshal_ops(source, unit.caller_ops, 1);
 		source << "}\n\n";
 	}
 
 	write_pointer_stubs(source, rpc_pointer_lists);
 
-	source << "void dispatch(struct fipc_message* message) {\n";
-	source << "\tswitch (message->host_id) {\n";
+	source << "void dispatch(struct fipc_message* received) {\n";
+	source << "\tenum dispatch_id rpc;\n";
+	source << "\tstruct rpc_message message_buffer;\n";
+	source << "\tstruct rpc_message* message = &message_buffer;\n";
+	source << "\tfipc_translate(received, &rpc, message);\n";
+	source << "\tswitch (rpc) {\n";
 
 	for (const marshal_unit_lists& unit : rpc_pointer_lists) {
 		source << "\tcase RPC_PTR" << to_upper(unit.identifier) << ":\n";
