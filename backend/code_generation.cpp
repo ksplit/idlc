@@ -73,6 +73,8 @@ void idlc::generate_common_source(const fs::path& root)
 	source.exceptions(std::fstream::badbit | std::fstream::failbit);
 
 	source << "#include \"common.h\"\n\n";
+	source << "DEFINE_HASHTABLE(locals, 5);";
+	source << "DEFINE_HASHTABLE(remotes, 5);";
 }
 
 void idlc::generate_klcd(
@@ -93,8 +95,8 @@ void idlc::generate_klcd(
 	std::ofstream kbuild {kbuild_path};
 	kbuild.exceptions(kbuild.badbit | kbuild.failbit);
 	kbuild << "obj-m += " << driver_name << "_klcd.o\n";
-	kbuild << "obj-m += common.o\n";
-	kbuild << "ccflags-y += $(NONISOLATED_CFLAGS) -Wno-error=declaration-after-statement -Wno-error=discarded-qualifiers\n";
+	kbuild << "obj-m += ../common.o\n";
+	kbuild << "ccflags-y += $(NONISOLATED_CFLAGS) -std=gnu99 -Wno-error=declaration-after-statement -Wno-error=discarded-qualifiers\n";
 }
 
 void idlc::generate_lcd(
@@ -115,9 +117,9 @@ void idlc::generate_lcd(
 	std::ofstream kbuild {kbuild_path};
 	kbuild.exceptions(kbuild.badbit | kbuild.failbit);
 	kbuild << "obj-m += " << driver_name << "_lcd.o\n";
-	kbuild << "obj-m += common.o\n";
+	kbuild << "obj-m += ../common.o\n";
 	kbuild << "cppflags-y += $(ISOLATED_CFLAGS)\n";
-	kbuild << "ccflags-y += $(ISOLATED_CFLAGS) -Wno-error=declaration-after-statement -Wno-error=discarded-qualifiers\n";
+	kbuild << "ccflags-y += $(ISOLATED_CFLAGS) -std=gnu99 -Wno-error=declaration-after-statement -Wno-error=discarded-qualifiers\n";
 	kbuild << "extra-y += ../../../liblcd_build/common/vmfunc.lds\n";
 	kbuild << "ldflags-y += -T $(LIBLCD_BUILD_DIR)/common/vmfunc.lds\n";
 }
@@ -302,11 +304,62 @@ void idlc::generate_common_header(
 	header << "#define MAX_MESSAGE_SLOTS 64\n\n";
 	header << "#define fipc_marshal(value) *(message->end_slot++) = (uint64_t)value\n";
 	header << "#define fipc_unmarshal(type) (type)*(message->end_slot++)\n";
-	header << "#define fipc_get_remote(local) NULL; (void)local\n";
-	header << "#define fipc_get_local(remote) NULL; (void)remote\n";
-	header << "#define fipc_create_shadow(remote) NULL; (void)remote\n";
-	header << "#define fipc_destroy_shadow(remote) (void)remote\n\n";
+	header << "#define fipc_create_shadow(remote) fipc_create_shadow_impl(remote, sizeof(*remote))\n\n";
 	header << "#define inject_trampoline(id, pointer) inject_trampoline_impl(LCD_DUP_TRAMPOLINE(trampoline##id), pointer)\n\n";
+	header << "struct ptr_node {\n";
+	header << "\tvoid* ptr;\n";
+	header << "\tvoid* key;\n";
+	header << "\tstruct hlist_node* hentry;\n";
+	header << "}\n\n";
+	header << "DECLARE_HASHTABLE(locals, 5);\n";
+	header << "DECLARE_HASHTABLE(remotes, 5);\n\n";
+
+	header << "inline void* fipc_get_remote(void* local) {\n";
+	header << "\tstruct ptr_node* node;\n";
+	header << "\thash_for_each_possible(remotes, node, hentry, (unsigned long)local) {\n";
+	header << "\t\tif (node->key == local) return node->ptr;\n";
+	header << "\t}\n\n";
+	header << "\tBUG();\n";
+	header << "\treturn NULL;\n";
+	header << "}\n\n";
+
+	header << "inline void* fipc_get_local(void* remote) {\n";
+	header << "\tstruct ptr_node* node;\n";
+	header << "\thash_for_each_possible(locals, node, hentry, (unsigned long)remote) {\n";
+	header << "\t\tif (node->key == remote) return node->ptr;\n";
+	header << "\t}\n\n";
+	header << "\tBUG();\n";
+	header << "\treturn NULL;\n";
+	header << "}\n\n";
+
+	header << "static inline void* fipc_create_shadow_impl(void* remote, size_t size) {\n";
+	header << "\tvoid* local = kmalloc(size, GFP_KERNEL);\n";
+	header << "\tstruct ptr_node* local_node = kmalloc(sizeof(struct ptr_node), GFP_KERNEL);\n";
+	header << "\tstruct ptr_node* remote_node = kmalloc(sizeof(struct ptr_node), GFP_KERNEL);\n";
+	header << "\tlocal_node->ptr = local;\n";
+	header << "\tlocal_node->key = remote;\n";
+	header << "\tremote_node->ptr = remote;\n";
+	header << "\tremote_node->key = local;\n";
+	header << "\thash_add(locals, &local_node->hentry, (unsigned long)remote);\n";
+	header << "\thash_add(remotes, &remote_node->hentry, (unsigned long)local);\n";
+	header << "\treturn local;\n";
+	header << "}\n\n";
+
+	header << "inline void fipc_destroy_shadow(void* remote) {\n";
+	header << "\tstruct ptr_node* local_node;\n";
+	header << "\tstruct ptr_node* remote_node;\n";
+	header << "\thash_for_each_possible(locals, local_node, hentry, (unsigned long)remote) {\n";
+	header << "\t\tif (local_node->key == remote) hash_del(&local_node->hentry);\n";
+	header << "\t}\n\n";
+	header << "\tvoid* local = local_node->ptr;\n";
+	header << "\thash_for_each_possible(remotes, remote_node, hentry, (unsigned long)local) {\n";
+	header << "\t\tif (remote_node->key == local) hash_del(&remote_node->hentry);\n";
+	header << "\t}\n\n";
+	header << "\tkfree(local);\n";
+	header << "\tkfree(local_node);\n";
+	header << "\tkfree(remote_node);\n";
+	header << "}\n\n";
+
 	header << "enum dispatch_id {\n";
 
 	for (const marshal_unit_lists& unit : rpc_lists) {
@@ -330,14 +383,11 @@ void idlc::generate_common_header(
 	header << "\tunsigned slots_used = msg->end_slot - msg->slots\n";
 	header << "\tstruct fipc_message fmsg;\n";
 	header << "\tfmsg.vmfunc_id = VMFUNC_RPC_CALL;\n";
-	header << "\tfmsg.rpc_id = rpc | (slots_used << 16); // composite id that also stores the used slots\n\n";
-	header << "\tunsigned max_fast_slots = FIPC_NR_REGS / 2;\n";
-	header << "\tunsigned fast_slots = min(slots_used, max_fast_slots);\n";
-	header << "\tunsigned slow_slots = min(slots_used - max_fast_slots, 0); // exploit wrap-around\n\n";
+	header << "\tfmsg.rpc_id = rpc | (slots_used << 16);\n\n";
+	header << "\tunsigned fast_slots = min(slots_used, FIPC_NR_REGS);\n";
+	header << "\tunsigned slow_slots = min(slots_used - FIPC_NR_REGS, 0);\n\n";
 	header << "\tfor (unsigned i = 0; i < fast_slots; ++i) {\n";
-	header << "\t\tunsigned b = i * 2;\n";
-	header << "\t\tfmsg.regs[b] = msg.slots[i] >> 32;\n";
-	header << "\t\tfmsg.regs[b + 1] = msg.slots[i] & 0xFFFFFFFF;\n";
+	header << "\t\tfmsg.regs[b] = msg.slots[i];\n";
 	header << "\t}\n\n";
 	header << "\tif (slow_slots) {\n";
 	header << "\t\tstruct ext_registers* ext = get_register_page(smp_processor_id());\n";
@@ -351,12 +401,10 @@ void idlc::generate_common_header(
 	header << "inline void fipc_translate(struct fipc_message* msg, enum dispatch_id* rpc, struct rpc_message* pckt) {\n";
 	header << "\tunsigned slots_used = msg->rpc_id >> 16;\n";
 	header << "\t*rpc = msg->rpc_id & 0xFFFF;\n\n";
-	header << "\tunsigned max_fast_slots = FIPC_NR_REGS / 2;\n";
-	header << "\tunsigned fast_slots = min(slots_used, max_fast_slots);\n";
-	header << "\tunsigned slow_slots = min(slots_used - max_fast_slots, 0); // exploit wrap-around\n\n";
+	header << "\tunsigned fast_slots = min(slots_used, FIPC_NR_REGS);\n";
+	header << "\tunsigned slow_slots = min(slots_used - FIPC_NR_REGS, 0);\n\n";
 	header << "\tfor (unsigned i = 0; i < fast_slots; ++i) {\n";
-	header << "\t\tunsigned b = i * 2;\n";
-	header << "\t\tpckt->slots[i] = ((uint64_t)msg->regs[b] << 32) | (uint64_t)msg->regs[b + 1];\n";
+	header << "\t\tpckt->slots[i] = msg->regs[i];\n";
 	header << "\t}\n\n";
 	header << "\tif (slow_slots) {\n";
 	header << "\t\tstruct ext_registers* ext = get_register_page(smp_processor_id());\n";
