@@ -3,7 +3,7 @@
 *.pyc
 *.o
 
-examples/dump
+idl_mod/
 build/
 out/
 CMakeSettings.json

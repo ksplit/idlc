@@ -48,6 +48,7 @@ namespace idlc {
 	void generate_klcd(
 		const fs::path& root,
 		std::string_view driver_name,
+		std::string_view module_root,
 		gsl::span<const marshal_unit_lists> rpc_lists,
 		gsl::span<const marshal_unit_lists> rpc_pointer_lists
 	);
@@ -55,9 +56,12 @@ namespace idlc {
 	void generate_lcd(
 		const fs::path& root,
 		std::string_view driver_name,
+		std::string_view module_root,
 		gsl::span<const marshal_unit_lists> rpc_lists,
 		gsl::span<const marshal_unit_lists> rpc_pointer_lists
 	);
+
+	void generate_linker_script(const fs::path& root, gsl::span<const marshal_unit_lists> rpc_pointers);
 
 	// Currently a criminal hack, since we don't handle identifier variants uniformly (yet)
 	inline std::string to_upper(std::string str)
@@ -67,60 +71,96 @@ namespace idlc {
 	}
 }
 
+void idlc::generate_linker_script(const fs::path& root, gsl::span<const marshal_unit_lists> rpc_pointers)
+{
+	std::ofstream script {root};
+	script.exceptions(script.badbit | script.failbit);
+	script << "#include <liblcd/trampoline_link.h>\n\n";
+	script << "SECTIONS\n{\n";
+
+	for (const auto& rpc : rpc_pointers) {
+		script << "\tLCD_TRAMPOLINE_LINKER_SECTION(trampoline" << rpc.identifier << ")\n";
+	}
+
+	script << "}\n";
+	script << "INSERT AFTER .text\n\n";
+}
+
 void idlc::generate_common_source(const fs::path& root)
 {
 	std::ofstream source {root};
 	source.exceptions(std::fstream::badbit | std::fstream::failbit);
 
 	source << "#include \"common.h\"\n\n";
-	source << "DEFINE_HASHTABLE(locals, 5);";
-	source << "DEFINE_HASHTABLE(remotes, 5);";
+	source << "DEFINE_HASHTABLE(locals, 5);\n";
+	source << "DEFINE_HASHTABLE(remotes, 5);\n\n";
 }
 
 void idlc::generate_klcd(
 	const fs::path& root,
 	std::string_view driver_name,
+	std::string_view module_root,
 	gsl::span<const marshal_unit_lists> rpc_lists,
 	gsl::span<const marshal_unit_lists> rpc_pointer_lists
 )
 {
-	std::string name {driver_name.data(), driver_name.size()};
-	name += "_klcd";
+	std::string module_name {"lcd_test_mod_"};
+	module_name += root.filename();
+	module_name += "_klcd";
 
-	const fs::path source_path {root / (name + ".c")};
-	const fs::path header_path {root / (name + ".h")};	
+	std::string glue_name {driver_name.data(), driver_name.size()};
+	glue_name += "_klcd";
+
+	const fs::path source_path {root / (glue_name + ".c")};
+	const fs::path header_path {root / (glue_name + ".h")};	
 	const fs::path kbuild_path {root / "Kbuild"};
+	const fs::path lnks_path {root / "trampolines.lds.S"};
 	generate_klcd_source(source_path, rpc_lists, rpc_pointer_lists);
+	generate_linker_script(lnks_path, rpc_pointer_lists);
 
 	std::ofstream kbuild {kbuild_path};
 	kbuild.exceptions(kbuild.badbit | kbuild.failbit);
-	kbuild << "obj-m += " << driver_name << "_klcd.o\n";
-	kbuild << "obj-m += ../common.o\n";
+	kbuild << "obj-m += " << module_name << ".o\n";
+	kbuild << module_name << "-y += " << driver_name << "_klcd.o\n";
+	kbuild << module_name << "-y += ../common.o\n";
+	kbuild << "extra-y += trampolines.lds\n";
+	kbuild << "ldflags-y += -T $(LCD_TEST_MODULES_BUILD_DIR)/" << module_root << "/klcd/trampolines.lds\n";
 	kbuild << "ccflags-y += $(NONISOLATED_CFLAGS) -std=gnu99 -Wno-error=declaration-after-statement -Wno-error=discarded-qualifiers\n";
+	kbuild << "cppflags-y += $(NONISOLATED_CFLAGS)\n";
 }
 
 void idlc::generate_lcd(
 	const fs::path& root,
 	std::string_view driver_name,
+	std::string_view module_root,
 	gsl::span<const marshal_unit_lists> rpc_lists,
 	gsl::span<const marshal_unit_lists> rpc_pointer_lists
 )
 {
-	std::string name {driver_name.data(), driver_name.size()};
-	name += "_lcd";
+	std::string module_name {"lcd_test_mod_"};
+	module_name += root.filename();
+	module_name += "_lcd";
 
-	const fs::path source_path {root / (name + ".c")};
-	const fs::path header_path {root / (name + ".h")};
+	std::string glue_name {driver_name.data(), driver_name.size()};
+	glue_name += "_lcd";
+
+	const fs::path source_path {root / (glue_name + ".c")};
+	const fs::path header_path {root / (glue_name + ".h")};
 	const fs::path kbuild_path {root / "Kbuild"};
+	const fs::path lnks_path {root / "trampolines.lds.S"};
 	generate_lcd_source(source_path, rpc_lists, rpc_pointer_lists);
+	generate_linker_script(lnks_path, rpc_pointer_lists);
 
 	std::ofstream kbuild {kbuild_path};
 	kbuild.exceptions(kbuild.badbit | kbuild.failbit);
-	kbuild << "obj-m += " << driver_name << "_lcd.o\n";
-	kbuild << "obj-m += ../common.o\n";
+	kbuild << "obj-m += " << module_name << ".o\n";
+	kbuild << module_name << "-y += " << driver_name << "_lcd.o\n";
+	kbuild << module_name << "-y += ../common.o\n";
+	kbuild << "extra-y += trampolines.lds\n";
 	kbuild << "cppflags-y += $(ISOLATED_CFLAGS)\n";
 	kbuild << "ccflags-y += $(ISOLATED_CFLAGS) -std=gnu99 -Wno-error=declaration-after-statement -Wno-error=discarded-qualifiers\n";
 	kbuild << "extra-y += ../../../liblcd_build/common/vmfunc.lds\n";
+	kbuild << "ldflags-y += -T $(LCD_TEST_MODULES_BUILD_DIR)/" << module_root << "/lcd/trampolines.lds\n";
 	kbuild << "ldflags-y += -T $(LIBLCD_BUILD_DIR)/common/vmfunc.lds\n";
 }
 
@@ -290,7 +330,9 @@ void idlc::generate_common_header(
 
 	header << "#ifndef _COMMON_H_\n#define _COMMON_H_\n\n";
 	header << "#include <linux/types.h>\n";
+	header << "#include <linux/hashtable.h>\n";
 	header << "#include <libfipc.h>\n";
+	header << "#include <liblcd/boot_info.h>\n";
 	header << "#include <liblcd/trampoline.h>\n\n";
 
 	header << "#include \"" << module_name << "_user.h\"\n\n";
@@ -309,12 +351,12 @@ void idlc::generate_common_header(
 	header << "struct ptr_node {\n";
 	header << "\tvoid* ptr;\n";
 	header << "\tvoid* key;\n";
-	header << "\tstruct hlist_node* hentry;\n";
-	header << "}\n\n";
+	header << "\tstruct hlist_node hentry;\n";
+	header << "};\n\n";
 	header << "DECLARE_HASHTABLE(locals, 5);\n";
 	header << "DECLARE_HASHTABLE(remotes, 5);\n\n";
 
-	header << "inline void* fipc_get_remote(void* local) {\n";
+	header << "static inline void* fipc_get_remote(void* local) {\n";
 	header << "\tstruct ptr_node* node;\n";
 	header << "\thash_for_each_possible(remotes, node, hentry, (unsigned long)local) {\n";
 	header << "\t\tif (node->key == local) return node->ptr;\n";
@@ -323,7 +365,7 @@ void idlc::generate_common_header(
 	header << "\treturn NULL;\n";
 	header << "}\n\n";
 
-	header << "inline void* fipc_get_local(void* remote) {\n";
+	header << "static inline void* fipc_get_local(void* remote) {\n";
 	header << "\tstruct ptr_node* node;\n";
 	header << "\thash_for_each_possible(locals, node, hentry, (unsigned long)remote) {\n";
 	header << "\t\tif (node->key == remote) return node->ptr;\n";
@@ -345,7 +387,7 @@ void idlc::generate_common_header(
 	header << "\treturn local;\n";
 	header << "}\n\n";
 
-	header << "inline void fipc_destroy_shadow(void* remote) {\n";
+	header << "static inline void fipc_destroy_shadow(void* remote) {\n";
 	header << "\tstruct ptr_node* local_node;\n";
 	header << "\tstruct ptr_node* remote_node;\n";
 	header << "\thash_for_each_possible(locals, local_node, hentry, (unsigned long)remote) {\n";
@@ -372,44 +414,43 @@ void idlc::generate_common_header(
 
 	header << "};\n\n";
 	header << "struct rpc_message {\n\tuint64_t* end_slot;\n\tuint64_t slots[MAX_MESSAGE_SLOTS];\n};\n\n";
-	header << "void* inject_trampoline_impl(struct lcd_trampoline_handle* handle, void* impl);\n\n";
 
-	header << "inline void* inject_trampoline_impl(struct lcd_trampoline_handle* handle, void* impl) {\n";
+	header << "static inline void* inject_trampoline_impl(struct lcd_trampoline_handle* handle, void* impl) {\n";
 	header << "\thandle->hidden_args = impl;\n";
 	header << "\treturn handle->trampoline;\n";
 	header << "}\n\n";
 
-	header << "inline void fipc_send(enum dispatch_id rpc, struct rpc_message* msg) {\n";
-	header << "\tunsigned slots_used = msg->end_slot - msg->slots\n";
+	header << "static inline void fipc_send(enum dispatch_id rpc, struct rpc_message* msg) {\n";
+	header << "\tunsigned slots_used = msg->end_slot - msg->slots;\n";
 	header << "\tstruct fipc_message fmsg;\n";
 	header << "\tfmsg.vmfunc_id = VMFUNC_RPC_CALL;\n";
 	header << "\tfmsg.rpc_id = rpc | (slots_used << 16);\n\n";
-	header << "\tunsigned fast_slots = min(slots_used, FIPC_NR_REGS);\n";
-	header << "\tunsigned slow_slots = min(slots_used - FIPC_NR_REGS, 0);\n\n";
+	header << "\tunsigned fast_slots = min(slots_used, (unsigned)(FIPC_NR_REGS));\n";
+	header << "\tunsigned slow_slots = min(slots_used - (unsigned)(FIPC_NR_REGS), 0u);\n\n";
 	header << "\tfor (unsigned i = 0; i < fast_slots; ++i) {\n";
-	header << "\t\tfmsg.regs[b] = msg.slots[i];\n";
+	header << "\t\tfmsg.regs[i] = msg->slots[i];\n";
 	header << "\t}\n\n";
 	header << "\tif (slow_slots) {\n";
 	header << "\t\tstruct ext_registers* ext = get_register_page(smp_processor_id());\n";
 	header << "\t\tfor (unsigned i = 0; i < slow_slots; ++i) {\n";
-	header << "\t\t\text->regs[i] = msg->slots[i + max_fast_slots];\n";
+	header << "\t\t\text->regs[i] = msg->slots[i + FIPC_NR_REGS];\n";
 	header << "\t\t}\n";
 	header << "\t}\n\n";
-	header << "\tvmfunc_wrapper(&fmsg);";
+	header << "\tvmfunc_wrapper(&fmsg);\n";
 	header << "}\n\n";
 
-	header << "inline void fipc_translate(struct fipc_message* msg, enum dispatch_id* rpc, struct rpc_message* pckt) {\n";
+	header << "static inline void fipc_translate(struct fipc_message* msg, enum dispatch_id* rpc, struct rpc_message* pckt) {\n";
 	header << "\tunsigned slots_used = msg->rpc_id >> 16;\n";
 	header << "\t*rpc = msg->rpc_id & 0xFFFF;\n\n";
-	header << "\tunsigned fast_slots = min(slots_used, FIPC_NR_REGS);\n";
-	header << "\tunsigned slow_slots = min(slots_used - FIPC_NR_REGS, 0);\n\n";
+	header << "\tunsigned fast_slots = min(slots_used, (unsigned)(FIPC_NR_REGS));\n";
+	header << "\tunsigned slow_slots = min(slots_used - (unsigned)(FIPC_NR_REGS), 0u);\n\n";
 	header << "\tfor (unsigned i = 0; i < fast_slots; ++i) {\n";
 	header << "\t\tpckt->slots[i] = msg->regs[i];\n";
 	header << "\t}\n\n";
 	header << "\tif (slow_slots) {\n";
 	header << "\t\tstruct ext_registers* ext = get_register_page(smp_processor_id());\n";
 	header << "\t\tfor (unsigned i = 0; i < slow_slots; ++i) {\n";
-	header << "\t\t\tpckt->slots[i + max_fast_slots] = ext->regs[i];\n";
+	header << "\t\t\tpckt->slots[i + FIPC_NR_REGS] = ext->regs[i];\n";
 	header << "\t\t}\n";
 	header << "\t}\n\n";
 	header << "}\n\n";
@@ -520,14 +561,15 @@ void idlc::generate_module(
 	// TODO: we'll just put rpc pointers on both sides, they don't have the same name conflicts as RPCs do (the func-named facade and the actual func)
 
 	const auto canon_root = fs::canonical(root);
-	const fs::path klcd_dir {canon_root / "klcd"};
-	const fs::path lcd_dir {canon_root / "lcd"};
-	const fs::path kbuild_path {canon_root / "Kbuild"};
+	const auto module_root = canon_root.filename();
+	const auto klcd_dir {canon_root / "klcd"};
+	const auto lcd_dir {canon_root / "lcd"};
+	const auto kbuild_path {canon_root / "Kbuild"};
 	fs::create_directories(klcd_dir);
 	fs::create_directories(lcd_dir);
 
-	generate_klcd(klcd_dir, driver_name, rpc_lists, rpc_pointer_lists);
-	generate_lcd(lcd_dir, driver_name, rpc_lists, rpc_pointer_lists);
+	generate_klcd(klcd_dir, driver_name, module_root.generic_string(), rpc_lists, rpc_pointer_lists);
+	generate_lcd(lcd_dir, driver_name, module_root.generic_string(), rpc_lists, rpc_pointer_lists);
 	
 	const fs::path common_h {canon_root / "common.h"};
 	const fs::path common_c {canon_root / "common.c"};
@@ -536,6 +578,6 @@ void idlc::generate_module(
 
 	std::ofstream kbuild {kbuild_path};
 	kbuild.exceptions(kbuild.badbit | kbuild.failbit);
-	kbuild << "obj-$(LCD_CONFIG_BUILD_" << to_upper(canon_root.filename()) << "_LCD) += lcd/\n";
-	kbuild << "obj-$(LCD_CONFIG_BUILD_" << to_upper(canon_root.filename()) << "_KLCD) += klcd/\n";
+	kbuild << "obj-$(LCD_CONFIG_BUILD_" << to_upper(module_root) << "_LCD) += lcd/\n";
+	kbuild << "obj-$(LCD_CONFIG_BUILD_" << to_upper(module_root) << "_KLCD) += klcd/\n";
 }

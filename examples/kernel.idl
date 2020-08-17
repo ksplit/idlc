@@ -26,8 +26,26 @@ module kernel_nullnet {
 
 	projection <struct TODO_CUSTOM_MARSHALING> void_ptr {}
 
+	projection <struct sockaddr_placeholder> sockaddr {
+		unsigned short sa_family;
+		char sa_data_0;
+		char sa_data_1;
+		char sa_data_2;
+		char sa_data_3;
+		char sa_data_4;
+		char sa_data_5;
+		char sa_data_6;
+		char sa_data_7;
+		char sa_data_8;
+		char sa_data_9;
+		char sa_data_10;
+		char sa_data_11;
+		char sa_data_12;
+		char sa_data_13;
+	}
+
 	projection <struct net_device> net_device_ndo_validate_addr {
-		projection void_ptr* dev_addr; // byte array, not supported
+		projection sockaddr* dev_addr; // byte array, not supported
 	}
 
 	projection <struct net_device> net_device_ndo_get_stats64 {
@@ -51,7 +69,7 @@ module kernel_nullnet {
 											 projection rtnl_link_stats64_ndo_get_stats64* storage);
 
 		rpc void (*ndo_set_rx_mode)(projection net_device_ndo_set_rx_mode* dev);
-		rpc int (*ndo_set_mac_address)(projection net_device_ndo_set_mac_address* dev/*, void* addr*/);
+		rpc int (*ndo_set_mac_address)(projection net_device_ndo_set_mac_address* dev, projection sockaddr* addr);
 		rpc int (*ndo_change_carrier)(projection net_device_ndo_change_carrier* dev, bool new_carrier);
 	}
 
@@ -85,7 +103,7 @@ module kernel_nullnet {
 	projection <struct rtnl_link_ops> rtnl_link_ops___rtnl_link_register {
 			rpc void (*setup)(projection net_device_setup * dev);
 			// Unsupported at this time, semantics unknown
-			/*rpc int (*validate)(projection nlattr_validate** tb, projection nlattr_validate** data);*/
+			rpc int (*validate)(projection void_ptr* tb, projection void_ptr* data);
 	}
 
 	projection <struct net_device> net_device_alloc_netdev_mqs { }
@@ -125,7 +143,7 @@ module kernel_nullnet {
 
 	rpc int eth_validate_addr(projection net_device_eth_validate_addr* dev);
 
-	rpc int eth_mac_addr(projection net_device_eth_mac_addr* dev, projection void_ptr* p); // emulate void* with char*
+	rpc int eth_mac_addr(projection net_device_eth_mac_addr* dev, projection sockaddr* p); // emulate void* with char*
 
 	rpc void ether_setup(projection net_device_ether_setup* dev);
 
