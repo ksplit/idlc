@@ -1,9 +1,0 @@
-include <kernel.idl>
-include <marshal_test.idl>
-include <utest.idl>
-
-module nullnet {
-	//require marshal_test;
-	//require utest;
-	require kernel_nullnet;
-}
