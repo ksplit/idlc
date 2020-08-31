@@ -122,9 +122,9 @@ void idlc::generate_klcd(
 	kbuild.exceptions(kbuild.badbit | kbuild.failbit);
 	kbuild << "obj-m += " << module_name << ".o\n";
 	kbuild << module_name << "-y += " << driver_name << "_klcd.o\n";
-	kbuild << module_name << "-y += ../common.o\n";
-	kbuild << "extra-y += trampolines.lds\n";
-	kbuild << "ldflags-y += -T $(LCD_TEST_MODULES_BUILD_DIR)/" << module_root << "/klcd/trampolines.lds\n";
+	kbuild << module_name << "-y += ../common.o\n\n";
+	kbuild << "extra-y += trampolines.lds\n\n";
+	kbuild << "ldflags-y += -T $(LCD_TEST_MODULES_BUILD_DIR)/" << module_root << "/klcd/trampolines.lds\n\n";
 	kbuild << "ccflags-y += $(NONISOLATED_CFLAGS) -std=gnu99 -Wno-error=declaration-after-statement -Wno-error=discarded-qualifiers\n";
 	kbuild << "cppflags-y += $(NONISOLATED_CFLAGS)\n";
 }
@@ -156,10 +156,11 @@ void idlc::generate_lcd(
 	kbuild << "obj-m += " << module_name << ".o\n";
 	kbuild << module_name << "-y += " << driver_name << "_lcd.o\n";
 	kbuild << module_name << "-y += ../common.o\n";
+	kbuild << module_name << "-y += $(LIBLCD)\n\n";
 	kbuild << "extra-y += trampolines.lds\n";
+	kbuild << "extra-y += ../../../liblcd_build/common/vmfunc.lds\n\n";
 	kbuild << "cppflags-y += $(ISOLATED_CFLAGS)\n";
-	kbuild << "ccflags-y += $(ISOLATED_CFLAGS) -std=gnu99 -Wno-error=declaration-after-statement -Wno-error=discarded-qualifiers\n";
-	kbuild << "extra-y += ../../../liblcd_build/common/vmfunc.lds\n";
+	kbuild << "ccflags-y += $(ISOLATED_CFLAGS) -std=gnu99 -Wno-error=declaration-after-statement -Wno-error=discarded-qualifiers\n\n";
 	kbuild << "ldflags-y += -T $(LCD_TEST_MODULES_BUILD_DIR)/" << module_root << "/lcd/trampolines.lds\n";
 	kbuild << "ldflags-y += -T $(LIBLCD_BUILD_DIR)/common/vmfunc.lds\n";
 }

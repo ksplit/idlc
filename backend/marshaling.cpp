@@ -380,7 +380,7 @@ gsl::czstring<> idlc::get_primitive_string(primitive_type_kind kind)
 	}
 }
 
-bool idlc::process_marshal_units(gsl::span<const marshal_unit> units, marshal_unit_kind kind, std::vector<marshal_unit_lists>& unit_marshaling)
+bool idlc::process_rpcs(gsl::span<const marshal_unit> units, std::vector<marshal_unit_lists>& unit_marshaling)
 {
 	unit_marshaling.clear();
 	unit_marshaling.reserve(units.size());
@@ -388,16 +388,25 @@ bool idlc::process_marshal_units(gsl::span<const marshal_unit> units, marshal_un
 	for (const marshal_unit& unit : units) {
 		unit_marshaling.push_back({unit.identifier, {}, {}});
 		marshal_unit_lists& lists {unit_marshaling.back()};
+		lists.header = stringify_header(unit.identifier, *unit.rpc_signature);
+		process_caller(lists.caller_ops, unit, marshal_unit_kind::direct);
+		process_callee(lists.callee_ops, unit, marshal_unit_kind::direct);
+	}
 
-		if (kind == marshal_unit_kind::direct) {
-			lists.header = stringify_header(unit.identifier, *unit.rpc_signature);
-		}
-		else {
-			lists.header = stringify_header(std::string {"trampoline"} + unit.identifier, *unit.rpc_signature);
-		}
+	return true;
+}
 
-		process_caller(lists.caller_ops, unit, kind);
-		process_callee(lists.callee_ops, unit, kind);
+bool idlc::process_rpc_pointers(gsl::span<const marshal_unit> units, std::vector<marshal_unit_lists>& unit_marshaling)
+{
+	unit_marshaling.clear();
+	unit_marshaling.reserve(units.size());
+
+	for (const marshal_unit& unit : units) {
+		unit_marshaling.push_back({unit.identifier, {}, {}});
+		marshal_unit_lists& lists {unit_marshaling.back()};
+		lists.header = stringify_header(std::string {"trampoline"} + unit.identifier, *unit.rpc_signature);
+		process_caller(lists.caller_ops, unit, marshal_unit_kind::indirect);
+		process_callee(lists.callee_ops, unit, marshal_unit_kind::indirect);
 	}
 
 	return true;

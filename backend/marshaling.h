@@ -158,7 +158,8 @@ namespace idlc {
 		indirect
 	};
 
-	bool process_marshal_units(gsl::span<const marshal_unit> units, marshal_unit_kind kind, std::vector<marshal_unit_lists>& unit_marshaling);
+	bool process_rpcs(gsl::span<const marshal_unit> units, std::vector<marshal_unit_lists>& unit_marshaling);
+	bool process_rpc_pointers(gsl::span<const marshal_unit> units, std::vector<marshal_unit_lists>& unit_marshaling);
 }
 
 #endif // !_MARSHALING_H_
