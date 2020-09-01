@@ -105,7 +105,7 @@ void idlc::generate_klcd(
 )
 {
 	std::string module_name {"lcd_test_mod_"};
-	module_name += root.filename();
+	module_name += root.parent_path().filename();
 	module_name += "_klcd";
 
 	std::string glue_name {driver_name.data(), driver_name.size()};
@@ -138,7 +138,7 @@ void idlc::generate_lcd(
 )
 {
 	std::string module_name {"lcd_test_mod_"};
-	module_name += root.filename();
+	module_name += root.parent_path().filename();
 	module_name += "_lcd";
 
 	std::string glue_name {driver_name.data(), driver_name.size()};
