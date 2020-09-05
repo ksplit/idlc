@@ -381,13 +381,13 @@ int main(int argc, gsl::czstring<>* argv) {
 
 		auto& [driver, headers, rpcs, rpc_pointers] = *imports_opt;
 
-		std::vector<idlc::marshal_unit_lists> rpc_lists;
+		std::vector<idlc::rpc_unit> rpc_lists;
 		if (!idlc::process_rpcs(rpcs, rpc_lists)) {
 			idlc::log_error("Compilation failed");
 			return 1;
 		}
 
-		std::vector<idlc::marshal_unit_lists> rpc_ptr_lists;
+		std::vector<idlc::rpc_pointer_unit> rpc_ptr_lists;
 		if (!idlc::process_rpc_pointers(rpc_pointers, rpc_ptr_lists)) {
 			idlc::log_error("Compilation failed");
 			return 1;

@@ -23,8 +23,8 @@ namespace idlc {
 		const std::filesystem::path& destination,
 		std::string_view driver_name,
 		gsl::span<const gsl::czstring<>> headers,
-		gsl::span<const marshal_unit_lists> rpc_lists,
-		gsl::span<const marshal_unit_lists> rpc_pointer_lists
+		gsl::span<const rpc_unit> rpc_lists,
+		gsl::span<const rpc_pointer_unit> rpc_pointer_lists
 	);
 }
 

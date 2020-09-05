@@ -146,9 +146,18 @@ namespace idlc {
 		inject_trampoline
 	>;
 
-	struct marshal_unit_lists {
+	struct rpc_unit {
 		gsl::czstring<> identifier;
 		std::string header;
+		std::vector<marshal_op> caller_ops;
+		std::vector<marshal_op> callee_ops;
+	};
+
+	struct rpc_pointer_unit {
+		gsl::czstring<> identifier;
+		std::string header;
+		std::string impl_header;
+		std::string impl_call;
 		std::vector<marshal_op> caller_ops;
 		std::vector<marshal_op> callee_ops;
 	};
@@ -158,8 +167,8 @@ namespace idlc {
 		indirect
 	};
 
-	bool process_rpcs(gsl::span<const marshal_unit> units, std::vector<marshal_unit_lists>& unit_marshaling);
-	bool process_rpc_pointers(gsl::span<const marshal_unit> units, std::vector<marshal_unit_lists>& unit_marshaling);
+	bool process_rpcs(gsl::span<const marshal_unit> units, std::vector<rpc_unit>& unit_marshaling);
+	bool process_rpc_pointers(gsl::span<const marshal_unit> units, std::vector<rpc_pointer_unit>& unit_marshaling);
 }
 
 #endif // !_MARSHALING_H_

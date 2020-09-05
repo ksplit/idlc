@@ -19,6 +19,8 @@ namespace idlc {
 	// Evidence of a crude CCST rewrite
 
 	std::string stringify_header(std::string_view identifier, const signature& ty);
+	std::string stringify_impl_header(std::string_view identifier, const signature& ty);
+	std::string stringify_impl_call(std::string_view identifier, const signature& signature);
 
 	std::string stringify_type(const type& ty);
 	std::string stringify_declaration(const type& ty, std::string_view name);
@@ -185,6 +187,97 @@ std::string idlc::stringify_header(std::string_view identifier, const signature&
 	}
 
 	return rpc_string.str();
+}
+
+std::string idlc::stringify_impl_header(std::string_view identifier, const signature& signature)
+{
+	std::stringstream call_string;
+	call_string << identifier << "(void* real_pointer";
+	for (const std::unique_ptr<field>& argument : signature.arguments()) {
+		call_string << ", ";
+
+		switch (argument->kind()) {
+		case field_kind::rpc: {
+			const rpc_field& rpc {argument->get<field_kind::rpc>()};
+			call_string << stringify_declaration(rpc.get_signature(), rpc.identifier());
+			break;
+		}
+
+		case field_kind::var: {
+			const var_field& var {argument->get<field_kind::var>()};
+			call_string << stringify_declaration(var.get_type(), var.identifier());
+			break;
+		}
+		}
+	}
+
+	call_string << ")";
+
+	std::stringstream rpc_string;
+	const field& return_field {signature.return_field()};
+	switch (return_field.kind()) {
+	case field_kind::rpc:
+		// Final nail in the coffin. DEfinitive evidence that we need a C syntax tree
+		// Or at least a formal template system
+		rpc_string << stringify_declaration(
+			return_field.get<field_kind::rpc>().get_signature(),
+			call_string.str()
+		);
+
+		break;
+
+	case field_kind::var:
+		rpc_string << stringify_declaration(
+			return_field.get<field_kind::var>().get_type(),
+			call_string.str()
+		);
+
+		break;
+	}
+
+	return rpc_string.str();
+}
+
+std::string idlc::stringify_impl_call(std::string_view identifier, const signature& signature)
+{
+	std::stringstream impl_string;
+	
+	const field& return_field {signature.return_field()};
+	switch (return_field.kind()) {
+	case field_kind::rpc:
+		impl_string << "return ";
+		break;
+
+	case field_kind::var:
+		if (return_field.get<field_kind::var>().get_type().get_copy_type()) {
+			impl_string << "return ";
+		}
+
+		break;
+	}
+
+	impl_string << "((typeof(" << identifier << ")*)(args->impl))(args->real_ptr";
+	for (const std::unique_ptr<field>& argument : signature.arguments()) {
+		impl_string << ", ";
+
+		switch (argument->kind()) {
+		case field_kind::rpc: {
+			const rpc_field& rpc {argument->get<field_kind::rpc>()};
+			impl_string << rpc.identifier();
+			break;
+		}
+
+		case field_kind::var: {
+			const var_field& var {argument->get<field_kind::var>()};
+			impl_string << var.identifier();
+			break;
+		}
+		}
+	}
+
+	impl_string << ")";
+
+	return impl_string.str();
 }
 
 /*
@@ -380,14 +473,14 @@ gsl::czstring<> idlc::get_primitive_string(primitive_type_kind kind)
 	}
 }
 
-bool idlc::process_rpcs(gsl::span<const marshal_unit> units, std::vector<marshal_unit_lists>& unit_marshaling)
+bool idlc::process_rpcs(gsl::span<const marshal_unit> units, std::vector<rpc_unit>& unit_marshaling)
 {
 	unit_marshaling.clear();
 	unit_marshaling.reserve(units.size());
 
 	for (const marshal_unit& unit : units) {
 		unit_marshaling.push_back({unit.identifier, {}, {}});
-		marshal_unit_lists& lists {unit_marshaling.back()};
+		rpc_unit& lists {unit_marshaling.back()};
 		lists.header = stringify_header(unit.identifier, *unit.rpc_signature);
 		process_caller(lists.caller_ops, unit, marshal_unit_kind::direct);
 		process_callee(lists.callee_ops, unit, marshal_unit_kind::direct);
@@ -396,15 +489,20 @@ bool idlc::process_rpcs(gsl::span<const marshal_unit> units, std::vector<marshal
 	return true;
 }
 
-bool idlc::process_rpc_pointers(gsl::span<const marshal_unit> units, std::vector<marshal_unit_lists>& unit_marshaling)
+bool idlc::process_rpc_pointers(gsl::span<const marshal_unit> units, std::vector<rpc_pointer_unit>& unit_marshaling)
 {
 	unit_marshaling.clear();
 	unit_marshaling.reserve(units.size());
 
 	for (const marshal_unit& unit : units) {
 		unit_marshaling.push_back({unit.identifier, {}, {}});
-		marshal_unit_lists& lists {unit_marshaling.back()};
+		rpc_pointer_unit& lists {unit_marshaling.back()};
 		lists.header = stringify_header(std::string {"trampoline"} + unit.identifier, *unit.rpc_signature);
+
+		const auto impl_id = std::string {"trampoline_impl"} + unit.identifier;
+		lists.impl_header = stringify_impl_header(impl_id, *unit.rpc_signature);
+		lists.impl_call = stringify_impl_call(impl_id, *unit.rpc_signature);
+
 		process_caller(lists.caller_ops, unit, marshal_unit_kind::indirect);
 		process_callee(lists.callee_ops, unit, marshal_unit_kind::indirect);
 	}

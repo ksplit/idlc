@@ -12,56 +12,63 @@
 namespace fs = std::filesystem;
 
 namespace idlc {
+	enum lcd_side {
+		klcd,
+		lcd
+	};
+
 	void write_marshal_ops(
 		std::ofstream& file,
 		const std::vector<marshal_op>& ops,
+		lcd_side side,
 		unsigned int indent
 	);
 
 	void write_pointer_stubs(
 		std::ofstream& file,
-		gsl::span<const marshal_unit_lists> rpc_pointer_lists
+		gsl::span<const rpc_pointer_unit> rpc_pointer_lists,
+		lcd_side side
 	);
 
 	void generate_common_header(
 		const fs::path& root,
 		std::string_view module_name,
 		gsl::span<const gsl::czstring<>> headers,
-		gsl::span<const marshal_unit_lists> rpc_lists,
-		gsl::span<const marshal_unit_lists> rpc_ptr_lists
+		gsl::span<const rpc_unit> rpc_lists,
+		gsl::span<const rpc_pointer_unit> rpc_ptr_lists
 	);
 
 	void generate_common_source(const fs::path& root);
 
 	void generate_klcd_source(
 		const fs::path& root,
-		gsl::span<const marshal_unit_lists> rpc_lists,
-		gsl::span<const marshal_unit_lists> rpc_pointer_lists
+		gsl::span<const rpc_unit> rpc_lists,
+		gsl::span<const rpc_pointer_unit> rpc_pointer_lists
 	);
 
 	void generate_lcd_source(
 		const fs::path& root,
-		gsl::span<const marshal_unit_lists> rpc_lists,
-		gsl::span<const marshal_unit_lists> rpc_pointer_lists
+		gsl::span<const rpc_unit> rpc_lists,
+		gsl::span<const rpc_pointer_unit> rpc_pointer_lists
 	);
 
 	void generate_klcd(
 		const fs::path& root,
 		std::string_view driver_name,
 		std::string_view module_root,
-		gsl::span<const marshal_unit_lists> rpc_lists,
-		gsl::span<const marshal_unit_lists> rpc_pointer_lists
+		gsl::span<const rpc_unit> rpc_lists,
+		gsl::span<const rpc_pointer_unit> rpc_pointer_lists
 	);
 
 	void generate_lcd(
 		const fs::path& root,
 		std::string_view driver_name,
 		std::string_view module_root,
-		gsl::span<const marshal_unit_lists> rpc_lists,
-		gsl::span<const marshal_unit_lists> rpc_pointer_lists
+		gsl::span<const rpc_unit> rpc_lists,
+		gsl::span<const rpc_pointer_unit> rpc_pointer_lists
 	);
 
-	void generate_linker_script(const fs::path& root, gsl::span<const marshal_unit_lists> rpc_pointers);
+	void generate_linker_script(const fs::path& root, gsl::span<const rpc_pointer_unit> rpc_pointers);
 
 	// Currently a criminal hack, since we don't handle identifier variants uniformly (yet)
 	inline std::string to_upper(std::string str)
@@ -71,7 +78,7 @@ namespace idlc {
 	}
 }
 
-void idlc::generate_linker_script(const fs::path& root, gsl::span<const marshal_unit_lists> rpc_pointers)
+void idlc::generate_linker_script(const fs::path& root, gsl::span<const rpc_pointer_unit> rpc_pointers)
 {
 	std::ofstream script {root};
 	script.exceptions(script.badbit | script.failbit);
@@ -100,8 +107,8 @@ void idlc::generate_klcd(
 	const fs::path& root,
 	std::string_view driver_name,
 	std::string_view module_root,
-	gsl::span<const marshal_unit_lists> rpc_lists,
-	gsl::span<const marshal_unit_lists> rpc_pointer_lists
+	gsl::span<const rpc_unit> rpc_lists,
+	gsl::span<const rpc_pointer_unit> rpc_pointer_lists
 )
 {
 	std::string module_name {"lcd_test_mod_"};
@@ -133,8 +140,8 @@ void idlc::generate_lcd(
 	const fs::path& root,
 	std::string_view driver_name,
 	std::string_view module_root,
-	gsl::span<const marshal_unit_lists> rpc_lists,
-	gsl::span<const marshal_unit_lists> rpc_pointer_lists
+	gsl::span<const rpc_unit> rpc_lists,
+	gsl::span<const rpc_pointer_unit> rpc_pointer_lists
 )
 {
 	std::string module_name {"lcd_test_mod_"};
@@ -167,8 +174,10 @@ void idlc::generate_lcd(
 
 // Oversized, but clear
 
-void idlc::write_marshal_ops(std::ofstream& file, const std::vector<marshal_op>& ops, unsigned int indent)
+void idlc::write_marshal_ops(std::ofstream& file, const std::vector<marshal_op>& ops, lcd_side side, unsigned int indent)
 {
+	const auto send_str = (side == lcd_side::klcd) ? "fipc_send_to_lcd" : "fipc_send_to_klcd";
+
 	for (const marshal_op op : ops) {
 		switch (static_cast<marshal_op_kind>(op.index())) {
 		case marshal_op_kind::marshal: {
@@ -280,7 +289,7 @@ void idlc::write_marshal_ops(std::ofstream& file, const std::vector<marshal_op>&
 
 		case marshal_op_kind::send_rpc: {
 			const auto args = std::get<send_rpc>(op);
-			tab_over(file, indent) << "fipc_send(" << to_upper(args.rpc) << ", message);\n";
+			tab_over(file, indent) << send_str << "(" << to_upper(args.rpc) << ", message);\n";
 			tab_over(file, indent) << "message->end_slot = message->slots;\n";
 			break;
 		}
@@ -298,22 +307,28 @@ void idlc::write_marshal_ops(std::ofstream& file, const std::vector<marshal_op>&
 	}
 }
 
-void idlc::write_pointer_stubs(std::ofstream& file, gsl::span<const marshal_unit_lists> rpc_pointer_lists)
+void idlc::write_pointer_stubs(std::ofstream& file, gsl::span<const rpc_pointer_unit> rpc_pointer_lists, lcd_side side)
 {
-	for (const marshal_unit_lists& unit : rpc_pointer_lists) {
-		file << "void " << unit.identifier << "_callee(struct rpc_message* message) {\n";
-		write_marshal_ops(file, unit.callee_ops, 1);
+	for (const auto& unit : rpc_pointer_lists) {
+		file << "void " << unit.identifier << "_callee(struct rpc_message* message)\n{\n";
+		write_marshal_ops(file, unit.callee_ops, side, 1);
 		file << "}\n\n";
 	}
 
-	for (const marshal_unit_lists& unit : rpc_pointer_lists) {
-		file << "LCD_TRAMPOLINE_LINKAGE(trampoline" << unit.identifier << ")\n";
-		file << unit.header << " {\n";
-		file << "\tvoid* real_pointer;\n\tLCD_TRAMPOLINE_PROLOGUE(real_pointer, trampoline" << unit.identifier << ");\n";
+	for (const auto& unit : rpc_pointer_lists) {
+		file << unit.impl_header << "\n{\n";
 		file << "\tstruct rpc_message message_buffer = {0};\n";
 		file << "\tmessage_buffer.end_slot = message_buffer.slots;\n";
 		file << "\tstruct rpc_message* message = &message_buffer;\n";
-		write_marshal_ops(file, unit.caller_ops, 1);
+		write_marshal_ops(file, unit.caller_ops, side, 1);
+		file << "}\n\n";
+	}
+
+	for (const auto& unit : rpc_pointer_lists) {
+		file << "LCD_TRAMPOLINE_LINKAGE(trampoline" << unit.identifier << ")\n";
+		file << unit.header << "\n{\n";
+		file << "\tstruct trampoline_args* args;\n\tLCD_TRAMPOLINE_PROLOGUE(args, trampoline" << unit.identifier << ");\n";
+		file << "\t" << unit.impl_call << ";\n";
 		file << "}\n\n";
 	}
 }
@@ -322,14 +337,16 @@ void idlc::generate_common_header(
 	const std::filesystem::path& root,
 	std::string_view module_name,
 	gsl::span<const gsl::czstring<>> headers,
-	gsl::span<const marshal_unit_lists> rpc_lists,
-	gsl::span<const marshal_unit_lists> rpc_ptr_lists
+	gsl::span<const rpc_unit> rpc_lists,
+	gsl::span<const rpc_pointer_unit> rpc_ptr_lists
 )
 {
 	std::ofstream header {root};
 	header.exceptions(std::fstream::badbit | std::fstream::failbit);
 
 	header << "#ifndef _COMMON_H_\n#define _COMMON_H_\n\n";
+	header << "#include <asm/pgtable_types.h>\n";
+	header << "#include <asm/cacheflush.h>\n";
 	header << "#include <linux/types.h>\n";
 	header << "#include <linux/hashtable.h>\n";
 	header << "#include <libfipc.h>\n";
@@ -348,14 +365,30 @@ void idlc::generate_common_header(
 	header << "#define fipc_marshal(value) *(message->end_slot++) = (uint64_t)value\n";
 	header << "#define fipc_unmarshal(type) (type)*(message->end_slot++)\n";
 	header << "#define fipc_create_shadow(remote) fipc_create_shadow_impl(remote, sizeof(*remote))\n\n";
-	header << "#define inject_trampoline(id, pointer) inject_trampoline_impl(LCD_DUP_TRAMPOLINE(trampoline##id), pointer)\n\n";
+	header << "#define inject_trampoline(id, pointer) inject_trampoline_impl(LCD_DUP_TRAMPOLINE(trampoline##id), trampoline_impl##id, LCD_TRAMPOLINE_SIZE(trampoline##id), pointer)\n\n";
 	header << "struct ptr_node {\n";
 	header << "\tvoid* ptr;\n";
 	header << "\tvoid* key;\n";
 	header << "\tstruct hlist_node hentry;\n";
 	header << "};\n\n";
-	header << "DECLARE_HASHTABLE(locals, 5);\n";
-	header << "DECLARE_HASHTABLE(remotes, 5);\n\n";
+
+	header << "enum dispatch_id {\n";
+
+	for (const auto& unit : rpc_lists) {
+		header << "\tRPC_" << to_upper(unit.identifier) << ",\n";
+	}
+
+	for (const auto& unit : rpc_ptr_lists) {
+		header << "\tRPC_PTR" << to_upper(unit.identifier) << ",\n";
+	}
+
+	header << "};\n\n";
+
+	header << "struct rpc_message {\n\tuint64_t* end_slot;\n\tuint64_t slots[MAX_MESSAGE_SLOTS];\n};\n\n";
+	header << "struct trampoline_args {\n\tvoid* impl;\n\tvoid* real_ptr;\n};\n\n";
+	
+	header << "extern DECLARE_HASHTABLE(locals, 5);\n";
+	header << "extern DECLARE_HASHTABLE(remotes, 5);\n\n";
 
 	header << "static inline void* fipc_get_remote(void* local) {\n";
 	header << "\tstruct ptr_node* node;\n";
@@ -392,52 +425,30 @@ void idlc::generate_common_header(
 	header << "\tstruct ptr_node* local_node;\n";
 	header << "\tstruct ptr_node* remote_node;\n";
 	header << "\thash_for_each_possible(locals, local_node, hentry, (unsigned long)remote) {\n";
-	header << "\t\tif (local_node->key == remote) hash_del(&local_node->hentry);\n";
+	header << "\t\tif (local_node->key == remote) {\n";
+	header << "\t\t\thash_del(&local_node->hentry);\n";
+	header << "\t\t\tbreak;\n";
+	header << "\t\t}\n";
 	header << "\t}\n\n";
 	header << "\tvoid* local = local_node->ptr;\n";
 	header << "\thash_for_each_possible(remotes, remote_node, hentry, (unsigned long)local) {\n";
-	header << "\t\tif (remote_node->key == local) hash_del(&remote_node->hentry);\n";
+	header << "\t\tif (remote_node->key == local) {\n";
+	header << "\t\t\thash_del(&remote_node->hentry);\n";
+	header << "\t\t\tbreak;\n";
+	header << "\t\t}\n";
 	header << "\t}\n\n";
 	header << "\tkfree(local);\n";
 	header << "\tkfree(local_node);\n";
 	header << "\tkfree(remote_node);\n";
 	header << "}\n\n";
 
-	header << "enum dispatch_id {\n";
-
-	for (const marshal_unit_lists& unit : rpc_lists) {
-		header << "\tRPC_" << to_upper(unit.identifier) << ",\n";
-	}
-
-	for (const marshal_unit_lists& unit : rpc_ptr_lists) {
-		header << "\tRPC_PTR" << to_upper(unit.identifier) << ",\n";
-	}
-
-	header << "};\n\n";
-	header << "struct rpc_message {\n\tuint64_t* end_slot;\n\tuint64_t slots[MAX_MESSAGE_SLOTS];\n};\n\n";
-
-	header << "static inline void* inject_trampoline_impl(struct lcd_trampoline_handle* handle, void* impl) {\n";
-	header << "\thandle->hidden_args = impl;\n";
+	header << "static inline void* inject_trampoline_impl(struct lcd_trampoline_handle* handle, void* impl, size_t size, void* real_ptr) {\n";
+	header << "\tstruct trampoline_args* args = kmalloc(sizeof(struct trampoline_args), GFP_KERNEL);\n";
+	header << "\targs->impl = impl;\n";
+	header << "\targs->real_ptr = real_ptr;\n";
+	header << "\thandle->hidden_args = args;\n";
+	header << "\tset_memory_x(((unsigned long)handle) & PAGE_MASK, ALIGN(size, PAGE_SIZE) >> PAGE_SHIFT);\n";
 	header << "\treturn handle->trampoline;\n";
-	header << "}\n\n";
-
-	header << "static inline void fipc_send(enum dispatch_id rpc, struct rpc_message* msg) {\n";
-	header << "\tunsigned slots_used = msg->end_slot - msg->slots;\n";
-	header << "\tstruct fipc_message fmsg;\n";
-	header << "\tfmsg.vmfunc_id = VMFUNC_RPC_CALL;\n";
-	header << "\tfmsg.rpc_id = rpc | (slots_used << 16);\n\n";
-	header << "\tunsigned fast_slots = min(slots_used, (unsigned)(FIPC_NR_REGS));\n";
-	header << "\tunsigned slow_slots = min(slots_used - (unsigned)(FIPC_NR_REGS), 0u);\n\n";
-	header << "\tfor (unsigned i = 0; i < fast_slots; ++i) {\n";
-	header << "\t\tfmsg.regs[i] = msg->slots[i];\n";
-	header << "\t}\n\n";
-	header << "\tif (slow_slots) {\n";
-	header << "\t\tstruct ext_registers* ext = get_register_page(smp_processor_id());\n";
-	header << "\t\tfor (unsigned i = 0; i < slow_slots; ++i) {\n";
-	header << "\t\t\text->regs[i] = msg->slots[i + FIPC_NR_REGS];\n";
-	header << "\t\t}\n";
-	header << "\t}\n\n";
-	header << "\tvmfunc_wrapper(&fmsg);\n";
 	header << "}\n\n";
 
 	header << "static inline void fipc_translate(struct fipc_message* msg, enum dispatch_id* rpc, struct rpc_message* pckt) {\n";
@@ -456,9 +467,44 @@ void idlc::generate_common_header(
 	header << "\t}\n\n";
 	header << "}\n\n";
 
-	for (const marshal_unit_lists& unit : rpc_ptr_lists) {
+	header << "static inline void fipc_pack(struct fipc_message* fmsg, enum dispatch_id rpc, struct rpc_message* msg) {\n";
+	header << "\tunsigned slots_used = msg->end_slot - msg->slots;\n";
+	header << "\tfmsg->vmfunc_id = VMFUNC_RPC_CALL;\n";
+	header << "\tfmsg->rpc_id = rpc | (slots_used << 16);\n\n";
+	header << "\tunsigned fast_slots = min(slots_used, (unsigned)(FIPC_NR_REGS));\n";
+	header << "\tunsigned slow_slots = min(slots_used - (unsigned)(FIPC_NR_REGS), 0u);\n\n";
+	header << "\tfor (unsigned i = 0; i < fast_slots; ++i) {\n";
+	header << "\t\tfmsg->regs[i] = msg->slots[i];\n";
+	header << "\t}\n\n";
+	header << "\tif (slow_slots) {\n";
+	header << "\t\tstruct ext_registers* ext = get_register_page(smp_processor_id());\n";
+	header << "\t\tfor (unsigned i = 0; i < slow_slots; ++i) {\n";
+	header << "\t\t\text->regs[i] = msg->slots[i + FIPC_NR_REGS];\n";
+	header << "\t\t}\n";
+	header << "\t}\n\n";
+	header << "}\n\n";
+
+	header << "static inline void fipc_send_to_klcd(enum dispatch_id rpc, struct rpc_message* msg) {\n";
+	header << "\tstruct fipc_message fmsg;\n";
+	header << "\tfipc_pack(&fmsg, rpc, msg);\n";
+	header << "\tvmfunc_wrapper(&fmsg);\n";
+	header << "\tfipc_translate(&fmsg, &rpc, msg);\n";
+	header << "}\n\n";
+
+	header << "static inline void fipc_send_to_lcd(enum dispatch_id rpc, struct rpc_message* msg) {\n";
+	header << "\tstruct fipc_message fmsg;\n";
+	header << "\tfipc_pack(&fmsg, rpc, msg);\n";
+	header << "\tvmfunc_klcd_wrapper(&fmsg, OTHER_DOMAIN);\n";
+	header << "\tfipc_translate(&fmsg, &rpc, msg);\n";
+	header << "}\n\n";
+
+	for (const auto& unit : rpc_ptr_lists) {
 		header << "LCD_TRAMPOLINE_DATA(trampoline" << unit.identifier << ")\n";
 		header << unit.header << ";\n\n";
+	}
+
+	for (const auto& unit : rpc_ptr_lists) {
+		header << unit.impl_header << ";\n\n";
 	}
 
 	header << "\n";
@@ -467,89 +513,95 @@ void idlc::generate_common_header(
 
 void idlc::generate_klcd_source(
 	const std::filesystem::path& root,
-	gsl::span<const marshal_unit_lists> rpc_lists,
-	gsl::span<const marshal_unit_lists> rpc_pointer_lists
+	gsl::span<const rpc_unit> rpc_lists,
+	gsl::span<const rpc_pointer_unit> rpc_pointer_lists
 )
 {
 	std::ofstream source {root};
 	source.exceptions(std::fstream::badbit | std::fstream::failbit);
 
 	source << "#include \"../common.h\"\n\n";
-	for (const marshal_unit_lists& unit : rpc_lists) {
+	for (const rpc_unit& unit : rpc_lists) {
 		source << "void " << unit.identifier << "_callee(struct rpc_message* message) {\n";
-		write_marshal_ops(source, unit.callee_ops, 1);
+		write_marshal_ops(source, unit.callee_ops, lcd_side::klcd, 1);
 		source << "}\n\n";
 	}
 
-	write_pointer_stubs(source, rpc_pointer_lists);
+	write_pointer_stubs(source, rpc_pointer_lists, lcd_side::klcd);
 
-	source << "void dispatch(struct fipc_message* received) {\n";
+	source << "int dispatch(struct fipc_message* received) {\n";
 	source << "\tenum dispatch_id rpc;\n";
 	source << "\tstruct rpc_message message_buffer;\n";
 	source << "\tstruct rpc_message* message = &message_buffer;\n";
 	source << "\tfipc_translate(received, &rpc, message);\n";
 	source << "\tswitch (rpc) {\n";
 
-	for (const marshal_unit_lists& unit : rpc_lists) {
-		source << "\tcase RPC_" << to_upper(unit.identifier) << ":\n";
+	for (const auto& unit : rpc_lists) {
+		const auto id = to_upper(unit.identifier);
+		source << "\tcase RPC_" << id << ":\n";
+		source << "\t\tklcd_trace(RPC_" << id << ");\n";
 		source << "\t\t" << unit.identifier << "_callee(message)" << ";\n";
 		source << "\t\tbreak;\n\n";
 	}
 
-	for (const marshal_unit_lists& unit : rpc_pointer_lists) {
-		source << "\tcase RPC_PTR" << to_upper(unit.identifier) << ":\n";
+	for (const auto& unit : rpc_pointer_lists) {
+		const auto id = to_upper(unit.identifier);
+		source << "\tcase RPC_PTR" << id << ":\n";
+		source << "\t\tklcd_trace(RPC_PTR" << id << ");\n";
 		source << "\t\t" << unit.identifier << "_callee(message)" << ";\n";
 		source << "\t\tbreak;\n\n";
 	}
 
 	source << "\tdefault:\n\t\tbreak;\n";
-	source << "\t}\n}\n\n";
+	source << "\t}\n\n\tfipc_pack(received, rpc, message);\n\n\treturn 0;\n}\n\n";
 }
 
 void idlc::generate_lcd_source(
 	const std::filesystem::path& root,
-	gsl::span<const marshal_unit_lists> rpc_lists,
-	gsl::span<const marshal_unit_lists> rpc_pointer_lists
+	gsl::span<const rpc_unit> rpc_lists,
+	gsl::span<const rpc_pointer_unit> rpc_pointer_lists
 )
 {
 	std::ofstream source {root};
 	source.exceptions(std::fstream::badbit | std::fstream::failbit);
 
 	source << "#include \"../common.h\"\n\n";
-	for (const marshal_unit_lists& unit : rpc_lists) {
+	for (const rpc_unit& unit : rpc_lists) {
 		source << unit.header << " {\n";
 		source << "\tstruct rpc_message message_buffer = {0};\n";
 		source << "\tmessage_buffer.end_slot = message_buffer.slots;\n";
 		source << "\tstruct rpc_message* message = &message_buffer;\n";
-		write_marshal_ops(source, unit.caller_ops, 1);
+		write_marshal_ops(source, unit.caller_ops, lcd_side::lcd, 1);
 		source << "}\n\n";
 	}
 
-	write_pointer_stubs(source, rpc_pointer_lists);
+	write_pointer_stubs(source, rpc_pointer_lists, lcd_side::lcd);
 
-	source << "void dispatch(struct fipc_message* received) {\n";
+	source << "int handle_rpc_calls(struct fipc_message* received) {\n";
 	source << "\tenum dispatch_id rpc;\n";
 	source << "\tstruct rpc_message message_buffer;\n";
 	source << "\tstruct rpc_message* message = &message_buffer;\n";
 	source << "\tfipc_translate(received, &rpc, message);\n";
 	source << "\tswitch (rpc) {\n";
 
-	for (const marshal_unit_lists& unit : rpc_pointer_lists) {
-		source << "\tcase RPC_PTR" << to_upper(unit.identifier) << ":\n";
+	for (const auto& unit : rpc_pointer_lists) {
+		const auto id = to_upper(unit.identifier);
+		source << "\tcase RPC_PTR" << id << ":\n";
+		source << "\t\tlcd_trace(RPC_PTR" << id << ");\n";
 		source << "\t\t" << unit.identifier << "_callee(message)" << ";\n";
 		source << "\t\tbreak;\n\n";
 	}
 
 	source << "\tdefault:\n\t\tbreak;\n";
-	source << "\t}\n}\n\n";
+	source << "\t}\n\n\tfipc_pack(received, rpc, message);\n\n\treturn 0;\n}\n\n";
 }
 
 void idlc::generate_module(
 	const std::filesystem::path& root,
 	std::string_view driver_name,
 	gsl::span<const gsl::czstring<>> headers,
-	gsl::span<const marshal_unit_lists> rpc_lists,
-	gsl::span<const marshal_unit_lists> rpc_pointer_lists
+	gsl::span<const rpc_unit> rpc_lists,
+	gsl::span<const rpc_pointer_unit> rpc_pointer_lists
 )
 {
 	namespace fs = std::filesystem;
