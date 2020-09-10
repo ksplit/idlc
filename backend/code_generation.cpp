@@ -98,9 +98,124 @@ void idlc::generate_common_source(const fs::path& root)
 	std::ofstream source {root};
 	source.exceptions(std::fstream::badbit | std::fstream::failbit);
 
-	source << "#include \"common.h\"\n\n";
+	source << "#include <lcd_config/pre_hook.h>\n#include \"../common.h\"\n#include <lcd_config/post_hook.h>\n\n";
+
 	source << "DEFINE_HASHTABLE(locals, 5);\n";
 	source << "DEFINE_HASHTABLE(remotes, 5);\n\n";
+
+	source << "void* fipc_get_remote(void* local) {\n";
+	source << "\tLIBLCD_MSG(\"Finding remote for %p\", local);\n";
+	source << "\tstruct ptr_node* node;\n";
+	source << "\thash_for_each_possible(remotes, node, hentry, (unsigned long)local) {\n";
+	source << "\t\tif (node->key == local)\n\t\treturn node->ptr;\n";
+	source << "\t}\n\n";
+	source << "\tBUG();\n";
+	source << "\treturn NULL;\n";
+	source << "}\n\n";
+
+	source << "void* fipc_get_local(void* remote) {\n";
+	source << "\tLIBLCD_MSG(\"Finding shadow for %p\", remote);\n";
+	source << "\tstruct ptr_node* node;\n";
+	source << "\thash_for_each_possible(locals, node, hentry, (unsigned long)remote) {\n";
+	source << "\t\tLIBLCD_MSG(\"Observed %p\", node->key);\n";
+	source << "\t\tif (node->key == remote)\n\t\treturn node->ptr;\n";
+	source << "\t}\n\n";
+	source << "\tBUG();\n";
+	source << "\treturn NULL;\n";
+	source << "}\n\n";
+
+	source << "void* fipc_create_shadow_impl(void* remote, size_t size) {\n";
+	source << "\tvoid* local = kmalloc(size, GFP_KERNEL);\n";
+	source << "\tstruct ptr_node* local_node = kmalloc(sizeof(struct ptr_node), GFP_KERNEL);\n";
+	source << "\tstruct ptr_node* remote_node = kmalloc(sizeof(struct ptr_node), GFP_KERNEL);\n";
+	source << "\tlocal_node->ptr = local;\n";
+	source << "\tlocal_node->key = remote;\n";
+	source << "\tremote_node->ptr = remote;\n";
+	source << "\tremote_node->key = local;\n";
+	source << "\thash_add(locals, &local_node->hentry, (unsigned long)remote);\n";
+	source << "\thash_add(remotes, &remote_node->hentry, (unsigned long)local);\n";
+	source << "\tLIBLCD_MSG(\"Pointer %p assigned shadow %p\", remote, local);\n";
+	source << "\treturn local;\n";
+	source << "}\n\n";
+
+	source << "void fipc_destroy_shadow(void* remote) {\n";
+	source << "\tstruct ptr_node* local_node;\n";
+	source << "\tstruct ptr_node* remote_node;\n";
+	source << "\thash_for_each_possible(locals, local_node, hentry, (unsigned long)remote) {\n";
+	source << "\t\tif (local_node->key == remote) {\n";
+	source << "\t\t\thash_del(&local_node->hentry);\n";
+	source << "\t\t\tbreak;\n";
+	source << "\t\t}\n";
+	source << "\t}\n\n";
+	source << "\tvoid* local = local_node->ptr;\n";
+	source << "\thash_for_each_possible(remotes, remote_node, hentry, (unsigned long)local) {\n";
+	source << "\t\tif (remote_node->key == local) {\n";
+	source << "\t\t\thash_del(&remote_node->hentry);\n";
+	source << "\t\t\tbreak;\n";
+	source << "\t\t}\n";
+	source << "\t}\n\n";
+	source << "\tkfree(local);\n";
+	source << "\tkfree(local_node);\n";
+	source << "\tkfree(remote_node);\n";
+	source << "\tLIBLCD_MSG(\"Destroyed shadow for %p\", remote);\n";
+	source << "}\n\n";
+
+	source << "void* inject_trampoline_impl(struct lcd_trampoline_handle* handle, void* impl, size_t size, void* real_ptr) {\n";
+	source << "\tstruct trampoline_args* args = kmalloc(sizeof(struct trampoline_args), GFP_KERNEL);\n";
+	source << "\targs->impl = impl;\n";
+	source << "\targs->real_ptr = real_ptr;\n";
+	source << "\thandle->hidden_args = args;\n";
+	source << "\tset_memory_x(((unsigned long)handle) & PAGE_MASK, ALIGN(size, PAGE_SIZE) >> PAGE_SHIFT);\n";
+	source << "\treturn handle->trampoline;\n";
+	source << "}\n\n";
+
+	source << "void fipc_translate(struct fipc_message* msg, enum dispatch_id* rpc, struct rpc_message* pckt) {\n";
+	source << "\tpckt->end_slot = pckt->slots;\n\n";
+	source << "\tunsigned slots_used = msg->rpc_id >> 16;\n";
+	source << "\t*rpc = msg->rpc_id & 0xFFFF;\n\n";
+	source << "\tunsigned fast_slots = min(slots_used, (unsigned)(FIPC_NR_REGS));\n";
+	source << "\tunsigned slow_slots = (slots_used > FIPC_NR_REGS) ? slots_used - FIPC_NR_REGS : 0;\n\n";
+	source << "\tfor (unsigned i = 0; i < fast_slots; ++i) {\n";
+	source << "\t\tpckt->slots[i] = msg->regs[i];\n";
+	source << "\t}\n\n";
+	source << "\tif (slow_slots) {\n";
+	source << "\t\tstruct ext_registers* ext = get_register_page(smp_processor_id());\n";
+	source << "\t\tfor (unsigned i = 0; i < slow_slots; ++i) {\n";
+	source << "\t\t\tpckt->slots[i + FIPC_NR_REGS] = ext->regs[i];\n";
+	source << "\t\t}\n";
+	source << "\t}\n\n";
+	source << "}\n\n";
+
+	source << "void fipc_pack(struct fipc_message* fmsg, enum dispatch_id rpc, struct rpc_message* msg) {\n";
+	source << "\tunsigned slots_used = msg->end_slot - msg->slots;\n";
+	source << "\tfmsg->vmfunc_id = VMFUNC_RPC_CALL;\n";
+	source << "\tfmsg->rpc_id = rpc | (slots_used << 16);\n\n";
+	source << "\tunsigned fast_slots = min(slots_used, (unsigned)(FIPC_NR_REGS));\n";
+	source << "\tunsigned slow_slots = (slots_used > FIPC_NR_REGS) ? slots_used - FIPC_NR_REGS : 0;\n\n";
+	source << "\tfor (unsigned i = 0; i < fast_slots; ++i) {\n";
+	source << "\t\tfmsg->regs[i] = msg->slots[i];\n";
+	source << "\t}\n\n";
+	source << "\tif (slow_slots) {\n";
+	source << "\t\tstruct ext_registers* ext = get_register_page(smp_processor_id());\n";
+	source << "\t\tfor (unsigned i = 0; i < slow_slots; ++i) {\n";
+	source << "\t\t\text->regs[i] = msg->slots[i + FIPC_NR_REGS];\n";
+	source << "\t\t}\n";
+	source << "\t}\n\n";
+	source << "}\n\n";
+
+	source << "void fipc_send_to_klcd(enum dispatch_id rpc, struct rpc_message* msg) {\n";
+	source << "\tstruct fipc_message fmsg;\n";
+	source << "\tfipc_pack(&fmsg, rpc, msg);\n";
+	source << "\tvmfunc_wrapper(&fmsg);\n";
+	source << "\tfipc_translate(&fmsg, &rpc, msg);\n";
+	source << "}\n\n";
+
+	source << "void fipc_send_to_lcd(enum dispatch_id rpc, struct rpc_message* msg) {\n";
+	source << "\tstruct fipc_message fmsg;\n";
+	source << "\tfipc_pack(&fmsg, rpc, msg);\n";
+	source << "\tvmfunc_klcd_wrapper(&fmsg, OTHER_DOMAIN);\n";
+	source << "\tfipc_translate(&fmsg, &rpc, msg);\n";
+	source << "}\n\n";
 }
 
 void idlc::generate_klcd(
@@ -119,17 +234,19 @@ void idlc::generate_klcd(
 	glue_name += "_klcd";
 
 	const fs::path source_path {root / (glue_name + ".c")};
-	const fs::path header_path {root / (glue_name + ".h")};	
+	const fs::path header_path {root / (glue_name + ".h")};
+	const fs::path comm_path {root / "common.c"};	
 	const fs::path kbuild_path {root / "Kbuild"};
 	const fs::path lnks_path {root / "trampolines.lds.S"};
 	generate_klcd_source(source_path, rpc_lists, rpc_pointer_lists);
 	generate_linker_script(lnks_path, rpc_pointer_lists);
+	generate_common_source(comm_path);
 
 	std::ofstream kbuild {kbuild_path};
 	kbuild.exceptions(kbuild.badbit | kbuild.failbit);
 	kbuild << "obj-m += " << module_name << ".o\n";
 	kbuild << module_name << "-y += " << driver_name << "_klcd.o\n";
-	kbuild << module_name << "-y += ../common.o\n\n";
+	kbuild << module_name << "-y += common.o\n\n";
 	kbuild << "extra-y += trampolines.lds\n\n";
 	kbuild << "ldflags-y += -T $(LCD_TEST_MODULES_BUILD_DIR)/" << module_root << "/klcd/trampolines.lds\n\n";
 	kbuild << "ccflags-y += $(NONISOLATED_CFLAGS) -std=gnu99 -Wno-error=declaration-after-statement -Wno-error=discarded-qualifiers\n";
@@ -153,16 +270,18 @@ void idlc::generate_lcd(
 
 	const fs::path source_path {root / (glue_name + ".c")};
 	const fs::path header_path {root / (glue_name + ".h")};
+	const fs::path comm_path {root / "common.c"};
 	const fs::path kbuild_path {root / "Kbuild"};
 	const fs::path lnks_path {root / "trampolines.lds.S"};
 	generate_lcd_source(source_path, rpc_lists, rpc_pointer_lists);
 	generate_linker_script(lnks_path, rpc_pointer_lists);
+	generate_common_source(comm_path);
 
 	std::ofstream kbuild {kbuild_path};
 	kbuild.exceptions(kbuild.badbit | kbuild.failbit);
 	kbuild << "obj-m += " << module_name << ".o\n";
 	kbuild << module_name << "-y += " << driver_name << "_lcd.o\n";
-	kbuild << module_name << "-y += ../common.o\n";
+	kbuild << module_name << "-y += common.o\n";
 	kbuild << module_name << "-y += $(LIBLCD)\n\n";
 	kbuild << "extra-y += trampolines.lds\n";
 	kbuild << "extra-y += ../../../liblcd_build/common/vmfunc.lds\n\n";
@@ -373,6 +492,8 @@ void idlc::generate_common_header(
 	header << "};\n\n";
 
 	header << "enum dispatch_id {\n";
+	header << "\tRPC_LCD_INIT,\n";
+	header << "\tRPC_LCD_EXIT,\n";
 
 	for (const auto& unit : rpc_lists) {
 		header << "\tRPC_" << to_upper(unit.identifier) << ",\n";
@@ -390,113 +511,15 @@ void idlc::generate_common_header(
 	header << "extern DECLARE_HASHTABLE(locals, 5);\n";
 	header << "extern DECLARE_HASHTABLE(remotes, 5);\n\n";
 
-	header << "static inline void* fipc_get_remote(void* local) {\n";
-	header << "\tstruct ptr_node* node;\n";
-	header << "\thash_for_each_possible(remotes, node, hentry, (unsigned long)local) {\n";
-	header << "\t\tif (node->key == local) return node->ptr;\n";
-	header << "\t}\n\n";
-	header << "\tBUG();\n";
-	header << "\treturn NULL;\n";
-	header << "}\n\n";
-
-	header << "static inline void* fipc_get_local(void* remote) {\n";
-	header << "\tstruct ptr_node* node;\n";
-	header << "\thash_for_each_possible(locals, node, hentry, (unsigned long)remote) {\n";
-	header << "\t\tif (node->key == remote) return node->ptr;\n";
-	header << "\t}\n\n";
-	header << "\tBUG();\n";
-	header << "\treturn NULL;\n";
-	header << "}\n\n";
-
-	header << "static inline void* fipc_create_shadow_impl(void* remote, size_t size) {\n";
-	header << "\tvoid* local = kmalloc(size, GFP_KERNEL);\n";
-	header << "\tstruct ptr_node* local_node = kmalloc(sizeof(struct ptr_node), GFP_KERNEL);\n";
-	header << "\tstruct ptr_node* remote_node = kmalloc(sizeof(struct ptr_node), GFP_KERNEL);\n";
-	header << "\tlocal_node->ptr = local;\n";
-	header << "\tlocal_node->key = remote;\n";
-	header << "\tremote_node->ptr = remote;\n";
-	header << "\tremote_node->key = local;\n";
-	header << "\thash_add(locals, &local_node->hentry, (unsigned long)remote);\n";
-	header << "\thash_add(remotes, &remote_node->hentry, (unsigned long)local);\n";
-	header << "\treturn local;\n";
-	header << "}\n\n";
-
-	header << "static inline void fipc_destroy_shadow(void* remote) {\n";
-	header << "\tstruct ptr_node* local_node;\n";
-	header << "\tstruct ptr_node* remote_node;\n";
-	header << "\thash_for_each_possible(locals, local_node, hentry, (unsigned long)remote) {\n";
-	header << "\t\tif (local_node->key == remote) {\n";
-	header << "\t\t\thash_del(&local_node->hentry);\n";
-	header << "\t\t\tbreak;\n";
-	header << "\t\t}\n";
-	header << "\t}\n\n";
-	header << "\tvoid* local = local_node->ptr;\n";
-	header << "\thash_for_each_possible(remotes, remote_node, hentry, (unsigned long)local) {\n";
-	header << "\t\tif (remote_node->key == local) {\n";
-	header << "\t\t\thash_del(&remote_node->hentry);\n";
-	header << "\t\t\tbreak;\n";
-	header << "\t\t}\n";
-	header << "\t}\n\n";
-	header << "\tkfree(local);\n";
-	header << "\tkfree(local_node);\n";
-	header << "\tkfree(remote_node);\n";
-	header << "}\n\n";
-
-	header << "static inline void* inject_trampoline_impl(struct lcd_trampoline_handle* handle, void* impl, size_t size, void* real_ptr) {\n";
-	header << "\tstruct trampoline_args* args = kmalloc(sizeof(struct trampoline_args), GFP_KERNEL);\n";
-	header << "\targs->impl = impl;\n";
-	header << "\targs->real_ptr = real_ptr;\n";
-	header << "\thandle->hidden_args = args;\n";
-	header << "\tset_memory_x(((unsigned long)handle) & PAGE_MASK, ALIGN(size, PAGE_SIZE) >> PAGE_SHIFT);\n";
-	header << "\treturn handle->trampoline;\n";
-	header << "}\n\n";
-
-	header << "static inline void fipc_translate(struct fipc_message* msg, enum dispatch_id* rpc, struct rpc_message* pckt) {\n";
-	header << "\tunsigned slots_used = msg->rpc_id >> 16;\n";
-	header << "\t*rpc = msg->rpc_id & 0xFFFF;\n\n";
-	header << "\tunsigned fast_slots = min(slots_used, (unsigned)(FIPC_NR_REGS));\n";
-	header << "\tunsigned slow_slots = min(slots_used - (unsigned)(FIPC_NR_REGS), 0u);\n\n";
-	header << "\tfor (unsigned i = 0; i < fast_slots; ++i) {\n";
-	header << "\t\tpckt->slots[i] = msg->regs[i];\n";
-	header << "\t}\n\n";
-	header << "\tif (slow_slots) {\n";
-	header << "\t\tstruct ext_registers* ext = get_register_page(smp_processor_id());\n";
-	header << "\t\tfor (unsigned i = 0; i < slow_slots; ++i) {\n";
-	header << "\t\t\tpckt->slots[i + FIPC_NR_REGS] = ext->regs[i];\n";
-	header << "\t\t}\n";
-	header << "\t}\n\n";
-	header << "}\n\n";
-
-	header << "static inline void fipc_pack(struct fipc_message* fmsg, enum dispatch_id rpc, struct rpc_message* msg) {\n";
-	header << "\tunsigned slots_used = msg->end_slot - msg->slots;\n";
-	header << "\tfmsg->vmfunc_id = VMFUNC_RPC_CALL;\n";
-	header << "\tfmsg->rpc_id = rpc | (slots_used << 16);\n\n";
-	header << "\tunsigned fast_slots = min(slots_used, (unsigned)(FIPC_NR_REGS));\n";
-	header << "\tunsigned slow_slots = min(slots_used - (unsigned)(FIPC_NR_REGS), 0u);\n\n";
-	header << "\tfor (unsigned i = 0; i < fast_slots; ++i) {\n";
-	header << "\t\tfmsg->regs[i] = msg->slots[i];\n";
-	header << "\t}\n\n";
-	header << "\tif (slow_slots) {\n";
-	header << "\t\tstruct ext_registers* ext = get_register_page(smp_processor_id());\n";
-	header << "\t\tfor (unsigned i = 0; i < slow_slots; ++i) {\n";
-	header << "\t\t\text->regs[i] = msg->slots[i + FIPC_NR_REGS];\n";
-	header << "\t\t}\n";
-	header << "\t}\n\n";
-	header << "}\n\n";
-
-	header << "static inline void fipc_send_to_klcd(enum dispatch_id rpc, struct rpc_message* msg) {\n";
-	header << "\tstruct fipc_message fmsg;\n";
-	header << "\tfipc_pack(&fmsg, rpc, msg);\n";
-	header << "\tvmfunc_wrapper(&fmsg);\n";
-	header << "\tfipc_translate(&fmsg, &rpc, msg);\n";
-	header << "}\n\n";
-
-	header << "static inline void fipc_send_to_lcd(enum dispatch_id rpc, struct rpc_message* msg) {\n";
-	header << "\tstruct fipc_message fmsg;\n";
-	header << "\tfipc_pack(&fmsg, rpc, msg);\n";
-	header << "\tvmfunc_klcd_wrapper(&fmsg, OTHER_DOMAIN);\n";
-	header << "\tfipc_translate(&fmsg, &rpc, msg);\n";
-	header << "}\n\n";
+	header << "void* fipc_get_remote(void* local);\n";
+	header << "void* fipc_get_local(void* remote);\n";
+	header << "void* fipc_create_shadow_impl(void* remote, size_t size);\n";
+	header << "void fipc_destroy_shadow(void* remote);\n";
+	header << "void* inject_trampoline_impl(struct lcd_trampoline_handle* handle, void* impl, size_t size, void* real_ptr);\n";
+	header << "void fipc_translate(struct fipc_message* msg, enum dispatch_id* rpc, struct rpc_message* pckt);\n";
+	header << "void fipc_pack(struct fipc_message* fmsg, enum dispatch_id rpc, struct rpc_message* msg);\n";
+	header << "void fipc_send_to_klcd(enum dispatch_id rpc, struct rpc_message* msg);\n";
+	header << "void fipc_send_to_lcd(enum dispatch_id rpc, struct rpc_message* msg);\n\n";
 
 	for (const auto& unit : rpc_ptr_lists) {
 		header << "LCD_TRAMPOLINE_DATA(trampoline" << unit.identifier << ")\n";
@@ -583,6 +606,12 @@ void idlc::generate_lcd_source(
 	source << "\tstruct rpc_message* message = &message_buffer;\n";
 	source << "\tfipc_translate(received, &rpc, message);\n";
 	source << "\tswitch (rpc) {\n";
+	source << "\tcase RPC_LCD_INIT:\n";
+	source << "\t\tlcd_trace(RPC_LCD_INIT);\n";
+	source << "\t\tbreak;\n\n";
+	source << "\tcase RPC_LCD_EXIT:\n";
+	source << "\t\tlcd_trace(RPC_LCD_EXIT);\n";
+	source << "\t\tbreak;\n\n";
 
 	for (const auto& unit : rpc_pointer_lists) {
 		const auto id = to_upper(unit.identifier);
@@ -627,10 +656,10 @@ void idlc::generate_module(
 	const fs::path common_h {canon_root / "common.h"};
 	const fs::path common_c {canon_root / "common.c"};
 	generate_common_header(common_h, driver_name, headers, rpc_lists, rpc_pointer_lists);
-	generate_common_source(common_c);
 
 	std::ofstream kbuild {kbuild_path};
 	kbuild.exceptions(kbuild.badbit | kbuild.failbit);
 	kbuild << "obj-$(LCD_CONFIG_BUILD_" << to_upper(module_root) << "_LCD) += lcd/\n";
 	kbuild << "obj-$(LCD_CONFIG_BUILD_" << to_upper(module_root) << "_KLCD) += klcd/\n";
+	kbuild << "obj-$(LCD_CONFIG_BUILD_" << to_upper(module_root) << "_BOOT) += boot/\n";
 }
