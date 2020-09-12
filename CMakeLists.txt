@@ -15,10 +15,7 @@ add_executable(
 	"parser/parser.cpp"
 	"frontend/main.cpp"
 	"frontend/string_heap.cpp"
-	"frontend/module_import.cpp"
 	"frontend/dump.cpp"
-	"backend/marshaling.cpp"
-	"backend/code_generation.cpp"
 )
 
 set_property(TARGET idlc PROPERTY CXX_STANDARD 17)

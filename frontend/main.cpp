@@ -7,10 +7,7 @@
 #include "dump.h"
 #include "visit.h"
 #include "generic_pass.h"
-#include "module_import.h"
 #include "log.h"
-#include "../backend/marshaling.h"
-#include "../backend/code_generation.h"
 #include "../parser/parser.h"
 
 namespace fs = std::filesystem;
@@ -319,35 +316,11 @@ namespace idlc {
 		gsl::czstring<> m_driver_name {};
 	};
 
-	struct module_imports {
-		gsl::czstring<> driver_name;
-		std::vector<gsl::czstring<>> headers;
-		std::vector<idlc::marshal_unit> rpcs;
-		std::vector<idlc::marshal_unit> rpc_pointers;
-	};
-
-	std::optional<module_imports> import_modules(file& file, const std::filesystem::path& idl_path)
+	bool import_modules(file& file, const std::filesystem::path& idl_path)
 	{
-		idlc::verify_driver_idl_pass vdi_pass;
-		if (!visit(vdi_pass, file)) {
-			return std::nullopt;
-		}
+		
 
-		idlc::node_map<idlc::module> imports;
-		idlc::include_file_pass if_pass {idl_path.parent_path(), imports};
-		if (!visit(if_pass, file)) {
-			return std::nullopt;
-		}
-
-		std::vector<gsl::czstring<>> headers;
-		std::vector<idlc::marshal_unit> rpcs;
-		std::vector<idlc::marshal_unit> rpc_pointers;
-		idlc::module_import_pass mi_pass {headers, rpcs, rpc_pointers, imports};
-		if (!visit(mi_pass, file)) {
-			return std::nullopt;
-		}
-
-		return module_imports {vdi_pass.get_driver_name(), headers, rpcs, rpc_pointers};
+		return true;
 	}
 }
 
@@ -370,38 +343,26 @@ int main(int argc, gsl::czstring<>* argv) {
 					Parser::parse(idl_path.generic_string())))};
 
 		auto& file = *top_node;
-		const auto imports_opt {idlc::import_modules(file, idl_path)};
+		const bool import {idlc::import_modules(file, idl_path)};
 
-		idlc::log_note("Verified IDL syntax");
-
-		if (!imports_opt) {
-			idlc::log_error("Compilation failed");
+		idlc::verify_driver_idl_pass vdi_pass;
+		if (!visit(vdi_pass, file)) {
+			idlc::log_error("Driver IDL failed verification");
 			return 1;
 		}
 
-		auto& [driver, headers, rpcs, rpc_pointers] = *imports_opt;
-
-		std::vector<idlc::rpc_unit> rpc_lists;
-		if (!idlc::process_rpcs(rpcs, rpc_lists)) {
-			idlc::log_error("Compilation failed");
+		idlc::node_map<idlc::module> imports;
+		idlc::include_file_pass if_pass {idl_path.parent_path(), imports};
+		if (!visit(if_pass, file)) {
+			idlc::log_error("One or more included files failed verification");
 			return 1;
 		}
 
-		std::vector<idlc::rpc_pointer_unit> rpc_ptr_lists;
-		if (!idlc::process_rpc_pointers(rpc_pointers, rpc_ptr_lists)) {
-			idlc::log_error("Compilation failed");
-			return 1;
-		}
-
-		idlc::generate_module(destination_path, driver, headers, rpc_lists, rpc_ptr_lists);
+		idlc::log_note("Verified IDL");
 	}
 	catch (const Parser::ParseException& e) {
 		idlc::log_error("Parsing failed");
 		std::cout << e.getReason();
-		return 1;
-	}
-	catch (const std::exception& e) {
-		idlc::log_error("Exception thrown, exiting: ", e.what());
 		return 1;
 	}
 
