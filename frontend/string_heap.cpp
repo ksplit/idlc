@@ -2,7 +2,9 @@
 
 #include <gsl/gsl>
 
-gsl::czstring<> idlc::string_heap::intern(std::string_view string)
+#include <absl/strings/string_view.h>
+
+gsl::czstring<> idlc::string_heap::intern(absl::string_view string)
 {
 	Expects(string.length() != block_size - 1); // Or else we will never fit the string
 
@@ -18,7 +20,7 @@ gsl::czstring<> idlc::string_heap::intern(std::string_view string)
 	}
 }
 
-gsl::czstring<> idlc::string_heap::add_string(std::string_view string)
+gsl::czstring<> idlc::string_heap::add_string(absl::string_view string)
 {
 	const auto end_index = m_free_index + string.length() + 1;
 	if (end_index < block_size) {
@@ -31,6 +33,6 @@ gsl::czstring<> idlc::string_heap::add_string(std::string_view string)
 	else {
 		m_free_index = 0;
 		m_blocks.emplace_back(std::make_unique<block>());
-		return add_string(string); // does the branch get_field optimized out?
+		return add_string(string); // does the branch get optimized out?
 	}
 }

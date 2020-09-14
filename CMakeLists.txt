@@ -7,6 +7,7 @@ project(lcds)
 
 find_package(Python2)
 find_package(Microsoft.GSL CONFIG REQUIRED)
+find_package(absl CONFIG REQUIRED)
 
 add_custom_command(
 	OUTPUT ${PROJECT_SOURCE_DIR}/parser/parser.cpp ${PROJECT_SOURCE_DIR}/parser/parser.h
@@ -18,7 +19,9 @@ add_executable(
 	idlc
 	"parser/parser.cpp"
 	"test/test.cpp"
+	"frontend/string_heap.cpp"
 )
 
 set_property(TARGET idlc PROPERTY CXX_STANDARD 14)
 target_link_libraries(idlc PRIVATE Microsoft.GSL::GSL)
+target_link_libraries(idlc PRIVATE absl::strings)

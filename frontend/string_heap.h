@@ -2,6 +2,9 @@
 #define _STRING_HEAP_H_
 
 #include <gsl/gsl>
+
+#include <absl/strings/string_view.h>
+
 #include <cstdint>
 #include <vector>
 #include <memory>
@@ -17,7 +20,7 @@ namespace idlc {
 		string_heap(string_heap&) = delete;
 		string_heap* operator=(string_heap&) = delete;
 
-		gsl::czstring<> intern(std::string_view string);
+		gsl::czstring<> intern(absl::string_view string);
 
 	private:
 		static constexpr std::size_t block_size {1024}; // TODO: Tune
@@ -27,7 +30,7 @@ namespace idlc {
 		std::vector<std::unique_ptr<block>> m_blocks; // Allocate one free block
 		std::uint16_t m_free_index {};
 
-		gsl::czstring<> add_string(std::string_view string);
+		gsl::czstring<> add_string(absl::string_view string);
 	};
 }
 

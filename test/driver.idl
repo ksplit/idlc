@@ -1,0 +1,4 @@
+driver nullnet {
+    import foo;
+    import bar;
+}

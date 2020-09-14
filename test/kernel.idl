@@ -1,0 +1,6 @@
+module netdev {
+    header <bar punk\foo.h>;
+    rpc alloc_netdev_mqs {
+
+    }
+}

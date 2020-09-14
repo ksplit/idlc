@@ -1,12 +1,81 @@
 start-symbol: file
 
 include: {{
+    #include <string>
+    #include <type_traits>
+
+    #include <gsl/gsl>
+
     #include "ast.h"
+    #include "../frontend/string_heap.h"
 }}
 
-# Keywords (parser produces better error messages when these are rules, not literals)
+code: {{
+    namespace idlc {
+        using namespace ::idlc;
+        using id = gsl::czstring<>;
+
+        template<typename type>
+        using uptr = std::unique_ptr<type>;
+
+        template<typename type>
+        constexpr bool is_arithmetic_v = std::is_arithmetic<type>::value;
+
+        template<typename type>
+        constexpr bool is_pointer_v = std::is_pointer<type>::value;
+
+        template<typename a, typename b>
+        constexpr bool is_same_v = std::is_same<a, b>::value;
+
+        template<bool v, typename type>
+        using enable_if_t = typename std::enable_if<v, type>::type;
+
+        template<typename type>
+        enable_if_t<is_arithmetic_v<type>, type> unbox(const Value& v)
+        {
+            return static_cast<type>(reinterpret_cast<std::uintptr_t>(v.getValue()));
+        }
+
+        template<typename type>
+        enable_if_t<is_pointer_v<type>, type> unbox(const Value& v)
+        {
+            const auto ptr = const_cast<void*>(v.getValue());
+            return static_cast<type>(ptr);
+        }
+
+        template<typename type>
+        uptr<type> unbox_uptr(const Value& v)
+        {
+            return uptr<type> {unbox<type*>(v)};
+        }
+
+        auto box(std::uintptr_t v)
+        {
+            return reinterpret_cast<const void*>(v);
+        }
+
+        id make_id(string_heap& heap, const Value& first, const Value& rest)
+        {
+            const auto rest_vals = rest.getValues();
+
+            std::string new_id {};
+            new_id.reserve(rest_vals.size() + 1);
+
+            new_id += unbox<char>(first);
+            for (const auto next : rest_vals) {
+                new_id += unbox<char>(next);
+            }
+
+            std::cout << "ID " << new_id << std::endl;
+
+            return heap.intern(new_id);
+        }
+    }
+}}
 
 rules:
+
+# Keywords (parser produces better error messages when these are rules, not literals)
 
 unsigned = "unsigned"
 long = "long"
@@ -17,5 +86,50 @@ const = "const"
 string = "string"
 projection = "projection"
 rpc = "rpc"
+driver = "driver"
+module = "module"
+header = "header"
+import = "import"
 
-file = rpc <eof>
+# Utility rules
+
+blank = [ \n\t] | comment
+wsp = blank*
+sp = wsp?
+
+alph = [abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]
+num = [0123456789]
+
+line_comment = "//" .* "\n"
+comment = line_comment
+
+# Identifiers
+
+id_start = "_" {{ value = idlc::box('_'); }} | alph
+id_cont = id_start | num
+id(ctx) = first:id_start rest:id_cont* {{
+    value = idlc::make_id(*idlc::unbox<idlc::string_heap*>(ctx), first, rest);
+}}
+
+st_import(ctx) = import sp id(ctx) sp ";" sp
+def_driver(ctx) = driver wsp id(ctx) sp "{" sp st_import(ctx)* "}" sp
+
+# Header statement
+
+header_path = "<" header_path_tail
+header_path_tail = ">" | . header_path_tail
+st_header = header sp header_path ";" sp
+
+def_rpc(ctx) = rpc wsp id(ctx) sp "{" sp "}" sp
+module_item(ctx) = def_rpc(ctx) | st_header
+def_module(ctx) = module wsp id(ctx) sp "{" sp module_item(ctx)* "}" sp
+
+driver_file(ctx) = sp def_driver(ctx) <eof>
+module_file(ctx) = sp def_module(ctx)+ <eof>
+
+file_inner(ctx) = driver_file(ctx) | module_file(ctx)
+file = ctx:{{
+    value = std::make_unique<idlc::string_heap>().release();
+}} file_inner(ctx) {{
+    idlc::unbox_uptr<idlc::string_heap>(ctx).reset();
+}}
