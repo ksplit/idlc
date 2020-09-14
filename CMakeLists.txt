@@ -13,8 +13,7 @@ add_custom_command(
 add_executable(
 	idlc
 	"parser/parser.cpp"
-	"frontend/main.cpp"
-	"frontend/string_heap.cpp"
+	"test/test.cpp"
 )
 
 set_property(TARGET idlc PROPERTY CXX_STANDARD 17)
