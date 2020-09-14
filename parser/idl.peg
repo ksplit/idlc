@@ -6,6 +6,8 @@ include: {{
 
 # Keywords (parser produces better error messages when these are rules, not literals)
 
+rules:
+
 unsigned = "unsigned"
 long = "long"
 short = "short"
@@ -16,3 +18,4 @@ string = "string"
 projection = "projection"
 rpc = "rpc"
 
+file = rpc <eof>

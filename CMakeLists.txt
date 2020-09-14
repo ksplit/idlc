@@ -1,8 +1,12 @@
 cmake_minimum_required(VERSION 3.10.0)
 
+set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake
+	CACHE STRING "Vcpkg toolchain file")
+
 project(lcds)
 
 find_package(Python2)
+find_package(Microsoft.GSL CONFIG REQUIRED)
 
 add_custom_command(
 	OUTPUT ${PROJECT_SOURCE_DIR}/parser/parser.cpp ${PROJECT_SOURCE_DIR}/parser/parser.h
@@ -16,12 +20,5 @@ add_executable(
 	"test/test.cpp"
 )
 
-set_property(TARGET idlc PROPERTY CXX_STANDARD 17)
-target_include_directories(idlc PRIVATE gsl/include)
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	if (${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "8")
-		message(STATUS "Applying filesystem header fix")
-		target_link_libraries(idlc "-lstdc++fs")
-	endif()
-endif()
+set_property(TARGET idlc PROPERTY CXX_STANDARD 14)
+target_link_libraries(idlc PRIVATE Microsoft.GSL::GSL)
