@@ -1,7 +1,11 @@
 #include "../parser/ast.h"
+#include "../parser/parser.h"
 
 #include <gsl/gsl>
 
-int main() {
+#include <string>
 
+int main()
+{
+    Parser::parse(std::string {"driver.idl"});
 }
