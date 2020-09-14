@@ -4,8 +4,6 @@
 #include "gsl/gsl"
 
 namespace idlc {
-	class projection;
-
 	template<typename node_type>
 	class node_map {
 	public:
@@ -23,7 +21,6 @@ namespace idlc {
 			}
 		}
 
-		// Returns false if we're trying to add an existing type
 		bool insert(node_type& node)
 		{
 			const auto identifier = node.identifier();

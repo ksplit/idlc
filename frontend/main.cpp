@@ -4,63 +4,12 @@
 #include <fstream>
 
 #include "node_map.h"
-#include "dump.h"
 #include "visit.h"
 #include "generic_pass.h"
 #include "log.h"
 #include "../parser/parser.h"
 
 namespace fs = std::filesystem;
-
-/*
-	BIG TASKS LEFT
-		- Write in support for shadow copies
-			- DONE bind(caller/callee) appears to be working for arguments/subfields and return values
-			- ALMOST DONE then alloc / dealloc (much simpler, hopefully)
-				- TODO fix dealloc ordering (i.e., dealloc(callee) on an in field actually occurs during remarshaling)
-			- Note: If we had a passing tree, it's be possible to add default
-			annotations more intelligently (instead of the weird need to
-			always specify in or out for subfields with bind)
-		- Marshaling is too big of a mess presently to estimate
-		work needed to support unions / arrays. Grammar can still pull it off, though.
-			- Issue is that union vars are a new kind of marshaling, and thanks to the
-			poor choices in marshaling.cpp, that could result in as much as *double* the code,
-			making it even *harder* to work with.
-			- So I legitimately believe we should proceed with the move to marshal passing trees
-			before even considering unions / arrays / etc.
-		- Finish code generation
-			- DONE function trampolines (mostly done, need to add the custom sections and inject_trampoline)
-			- DONE command -> code translation
-			- DONE user hooks (to provide declarations, etc.)
-			- much simpler (code generator is a *joy* to work in, compared to marshaler)
-*/
-
-/*
-	POST DEADLINE TODOs (Beside the ones that have sat, ignored, for the past four-and-a-half weeks)
-		- Re-write marshaling in terms of passes over a "passing tree"
-		- Now that I have much better understanding of what each of the annotations mean semantically,
-		and how marshaling code ends up beign structured, we're much better-equipped to handle the marshal graph
-		rewrite, which will then include such features as unions, arrays, etc.
-		- The marshaling code currently walks the AST in a very specific, very odd way
-		(following type definitions), and is often force to recompute defaulted values;
-		it's also possible that there are ways to memoize marshaling work that just aren't terribly visible
-		- There is definitely extensive code duplication, not all of which is obvious
-		- The essence of the marshaling algorithm is clouded by the traversal method,
-		and the absence of a good data structure makes memory management somewhat opaque
-		- std::string_view was a bad idea, const std::string& would've made the ownership clearer
-		(I think it's all owned by the op buffer)
-		- Some of these "strings" need to be strongly typed, and the aggregate initialization makes the code brittle
-		(not always obvious when something breaks)
-		- I cannot emphasize enough how much this code needs a better data structure.
-		The IR buffers are quite clear in their meaning, making code generation somewhat trivial.
-		But the actual marshaling analysis is cloudy, and doesn't happen at syntax-level.
-		- More brittleness for the eyes: naming conventions are implied, with the various name variants
-		(trampoline, rpc id, rpc ptr id, etc.) being recomputed. Sure, you can Ctrl-F, but it doesn't have to be this way
-		And it really shouldn't
-		- "Strongly typed C template strings" - do you mean C syntax nodes, David? It's not too late to add an LLVM dependency...
-		- I see two major refactoring points in idlc's future: moving to a C syntax tree representation,
-		and extracting passing trees from the AST
-*/
 
 namespace idlc {
 	class verify_kernel_idl_pass : public generic_pass<verify_kernel_idl_pass> {
@@ -77,61 +26,6 @@ namespace idlc {
 			log_warning("Include will be ignored");
 			return true;
 		}
-
-		bool visit_type(const type& ty)
-		{
-			if (ty.stars() > 1) {
-				// When I say undefined, I mean it
-				// Generated code may *even* fail to build
-				// Unlikely, but I won't actively try to prevent it
-				log_warning("Multi-level pointer types are unsupported");
-				log_warning("\tMarshaling semantics are undefined");
-				log_warning("\tIn module: ", m_module, ", context: ", m_container, ", field: ", m_field);
-			}
-
-			if (ty.stars() && ty.get_copy_type() && ty.get_copy_type()->kind() == copy_type_kind::primitive) {
-				log_debug(m_field, " is a non-passing pointer");
-				log_debug("\tIn module: ", m_module, ", context: ", m_container);
-			}
-
-			if (!ty.stars() && ty.get_copy_type() && ty.get_copy_type()->kind() == copy_type_kind::projection) {
-				// Have not decided how these will be handled by default
-				log_warning("Pass-by-value projections are unsupported");
-				log_warning("\tMarshaling semantics are undefined");
-				log_warning("\tIn module: ", m_module, ", context: ", m_container, ", field: ", m_field);
-			}
-
-			return true;
-		}
-
-		bool visit_var_field(const var_field& var)
-		{
-			m_field = var.identifier();
-			return true;
-		}
-
-		bool visit_projection(const projection& proj)
-		{
-			m_container = proj.identifier();
-			return true;
-		}
-
-		bool visit_rpc(const rpc& rpc)
-		{
-			m_container = rpc.identifier();
-			return true;
-		}
-
-		bool visit_module(const module& mod)
-		{
-			m_module = mod.identifier();
-			return true;
-		}
-
-	private:
-		gsl::czstring<> m_module {};
-		gsl::czstring<> m_container {};
-		gsl::czstring<> m_field {};
 	};
 
 	class type_collection_pass : public generic_pass<type_collection_pass> {
@@ -258,23 +152,25 @@ namespace idlc {
 					Parser::parse(path.generic_string())));
 
 			include.parsed_file.reset(&file);
-			verify_kernel_idl_pass vki;
-			type_collection_pass tc;
-			type_resolve_pass tr;
-			module_collection_pass mc {m_modules};
-			if (!visit(vki, file)) {
+
+			verify_kernel_idl_pass kidl_verify {};
+			if (!visit(kidl_verify, file)) {
 				return false;
 			}
 
-			if (!visit(tc, file)) {
+			type_collection_pass ty_collect {};
+			if (!visit(ty_collect, file)) {
 				return false;
 			}
 
-			if (!visit(tr, file)) {
+			type_resolve_pass ty_resolve {};
+			if (!visit(ty_resolve, file)) {
 				return false;
 			}
+			
+			module_collection_pass mod_collect {m_modules};
 
-			return visit(mc, file);
+			return visit(mod_collect, file);
 		}
 
 	private:

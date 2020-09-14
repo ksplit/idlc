@@ -93,8 +93,13 @@ semi = ";"
 comma = ","
 star = "*"
 
+# We don't actually need the exact primitive type involved *most* of the time
+# (Notable exception for possible packing optimization, i.e., need to know the type size)
+# C maps multiple different token sequences to the same data types, and don't look parseable by PEGs
+# So just track a token list, and then pattern-match in an AST walk to recognize the actual type
+
 # to simplify parsing, whitespace requirements are in the type rules
-# note that tho the grammar allows annotations on all indirections
+# note that though the grammar allows annotations on all indirections
 # current semantics give only the "topmost" ones meaning
 
 # there's really only 3 basic type categories: primitive, void, and projection
@@ -102,48 +107,12 @@ star = "*"
 # argument types are either pointer types, primitive, or projection
 # return types are any of these (void, projection, primitive, pointer)
 
-unsigned_type = unsigned_kw whitespace ty:signed_type {{
-	value = (void*)to_unsigned((primitive_type_kind)(std::uintptr_t)ty.getValue());
-}} | unsigned_kw {{
-	value = (void*)primitive_type_kind::unsigned_int_k;
-}}
-
-signed_type = int_kw {{
-	value = (void*)primitive_type_kind::int_k;
-}} | short_kw {{
-	value = (void*)primitive_type_kind::short_k;
-}} | char_kw {{
-	value = (void*)primitive_type_kind::char_k;
-}} | long_kw whitespace long_kw {{
-	value = (void*)primitive_type_kind::long_long_k;
-}} | long_kw {{
-	value = (void*)primitive_type_kind::long_k;
-}}
-
-fp_type = float_kw {{
-	value = (void*)primitive_type_kind::float_k;
-}} | double_kw {{
-	value = (void*)primitive_type_kind::double_k;
-}}
-
-primitive_type = ty:signed_type {{ 
-	value = new primitive_type((primitive_type_kind)(std::uintptr_t)ty.getValue());
-}} | ty:unsigned_type {{
-	value = new primitive_type((primitive_type_kind)(std::uintptr_t)ty.getValue());
-}} | ty:fp_type {{
-	value = new primitive_type((primitive_type_kind)(std::uintptr_t)ty.getValue());
-}} | ty:bool_kw {{
-	value = new primitive_type(primitive_type_kind::bool_k);
-}}
-
 projection_type = proj_kw whitespace id:identifier {{
 	value = new projection_type((gsl::czstring<>)id.getValue());
 }} # NOTE: empty projections are required for 2-level indirection (??)
 
 copy_type = void_kw {{
 	value = nullptr;
-}} | prim:primitive_type {{
-	value = new copy_type(std::unique_ptr<primitive_type>((primitive_type*)prim.getValue()));
 }} | proj:projection_type {{
 	value = new copy_type(std::unique_ptr<projection_type>((projection_type*)proj.getValue()));
 }}

@@ -27,7 +27,7 @@ namespace std {
 namespace fs = std::filesystem;
 
 namespace idlc {
-	enum class primitive_type_kind {
+	enum class scalar_token_kind {
 		bool_k,
 		float_k,
 		double_k,
@@ -35,36 +35,9 @@ namespace idlc {
 		short_k,
 		int_k,
 		long_k,
-		long_long_k,
-		unsigned_char_k,
-		unsigned_short_k,
-		unsigned_int_k,
-		unsigned_long_k,
-		unsigned_long_long_k
+		unsigned_k,
+		signed_k
 	};
-
-	inline primitive_type_kind to_unsigned(primitive_type_kind kind) noexcept
-	{
-		switch (kind) {
-		case primitive_type_kind::char_k:
-			return primitive_type_kind::unsigned_char_k;
-
-		case primitive_type_kind::short_k:
-			return primitive_type_kind::unsigned_short_k;
-
-		case primitive_type_kind::int_k:
-			return primitive_type_kind::unsigned_int_k;
-
-		case primitive_type_kind::long_k:
-			return primitive_type_kind::unsigned_long_k;
-
-		case primitive_type_kind::long_long_k:
-			return primitive_type_kind::unsigned_long_long_k;
-
-		default:
-			Expects(false);
-		}
-	}
 
 	template<typename type>
 	std::unique_ptr<type>&& move_not_null(std::unique_ptr<type> obj)
@@ -75,17 +48,11 @@ namespace idlc {
 
 	class primitive_type {
 	public:
-		primitive_type(primitive_type_kind kind) noexcept : m_kind {kind}
+		primitive_type() noexcept
 		{
-		}
-
-		primitive_type_kind kind() const noexcept
-		{
-			return m_kind;
 		}
 
 	private:
-		primitive_type_kind m_kind;
 	};
 
 	class projection;

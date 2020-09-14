@@ -3,6 +3,8 @@
 
 #include "../parser/ast.h"
 
+// TODO: write support for pre- and post- actions on nodes for traversal
+
 namespace idlc {
 	template<typename pass_type>
 	bool visit(pass_type& pass, file& file)
