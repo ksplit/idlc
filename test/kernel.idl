@@ -1,6 +1,20 @@
 module netdev {
     header <bar punk\foo.h>;
     rpc alloc_netdev_mqs {
+        projection <struct foo> proj {
+            unsigned long long a;
+            short b;
+            char c;
+            signed char d;
+        }
 
+        signature void ();
+    }
+
+    projection <union bar> global_proj {
+        unsigned long a;
+        short b;
+        char c;
+        signed char d;
     }
 }

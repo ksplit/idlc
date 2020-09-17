@@ -1,6 +1,7 @@
 start-symbol: file
 
 include: {{
+    #include <cstdint>
     #include <string>
     #include <type_traits>
 
@@ -24,11 +25,8 @@ code: {{
         template<typename type>
         constexpr bool is_pointer_v = std::is_pointer<type>::value;
 
-        template<typename a, typename b>
-        constexpr bool is_same_v = std::is_same<a, b>::value;
-
-        template<bool v, typename type>
-        using enable_if_t = typename std::enable_if<v, type>::type;
+        template<bool enable, typename type>
+        using enable_if_t = typename std::enable_if<enable, type>::type;
 
         template<typename type>
         enable_if_t<is_arithmetic_v<type>, type> unbox(const Value& v)
@@ -44,13 +42,10 @@ code: {{
         }
 
         template<typename type>
-        uptr<type> unbox_uptr(const Value& v)
+        auto box(type v) noexcept
         {
-            return uptr<type> {unbox<type*>(v)};
-        }
-
-        auto box(std::uintptr_t v)
-        {
+            static_assert(std::is_trivially_copyable<type>::value);
+            static_assert(sizeof(type) <= sizeof(const void*));
             return reinterpret_cast<const void*>(v);
         }
 
@@ -66,9 +61,86 @@ code: {{
                 new_id += unbox<char>(next);
             }
 
-            std::cout << "ID " << new_id << std::endl;
+            std::cout << "ID \"" << new_id << "\"" << std::endl;
 
             return heap.intern(new_id);
+        }
+
+        enum class primitive_token : std::uint8_t {
+            token_none,
+            token_char,
+            token_short,
+            token_int,
+            token_long,
+            token_unsigned,
+            token_signed
+        };
+        
+        constexpr auto primitive_id(primitive_token d) noexcept
+        {
+            return static_cast<std::uint32_t>(d);
+        }
+
+        constexpr auto primitive_id(primitive_token c, primitive_token d) noexcept
+        {
+            return (static_cast<std::uint32_t>(c) << (8 * 1)) | primitive_id(d);
+        }
+
+        constexpr auto primitive_id(primitive_token b, primitive_token c, primitive_token d) noexcept
+        {
+            return (static_cast<std::uint32_t>(b) << (8 * 2)) | primitive_id(c, d);
+        }
+
+        constexpr auto primitive_id(primitive_token a, primitive_token b, primitive_token c, primitive_token d) noexcept
+        {
+            return (static_cast<std::uint32_t>(a) << (8 * 3)) | primitive_id(b, c, d);
+        }
+
+        enum class parsed_primitive_type {
+            invalid,
+            char_type = primitive_id(primitive_token::token_char),
+            uchar_type = primitive_id(primitive_token::token_unsigned, primitive_token::token_char),
+            schar_type = primitive_id(primitive_token::token_signed, primitive_token::token_char),
+            short_type = primitive_id(primitive_token::token_short),
+            ushort_type = primitive_id(primitive_token::token_unsigned, primitive_token::token_short),
+            int_type = primitive_id(primitive_token::token_int),
+            uint_type = primitive_id(primitive_token::token_unsigned, primitive_token::token_int),
+            long_type = primitive_id(primitive_token::token_long),
+            ulong_type = primitive_id(primitive_token::token_unsigned, primitive_token::token_long),
+            longlong_type = primitive_id(primitive_token::token_long, primitive_token::token_short),
+            ulonglong_type = primitive_id(primitive_token::token_unsigned, primitive_token::token_long, primitive_token::token_long)
+        };
+
+        auto recognize_type(const Value& first, const Value& rest)
+        {
+            const auto& vals = rest.getValues();
+            const auto count = vals.size();
+            std::uint32_t tag {};
+            tag |= (idlc::unbox<std::uint8_t>(first) << (count * 8));
+            auto n_byte = count - 1;
+            for (const auto& val : vals) {
+                tag |= (idlc::unbox<std::uint8_t>(val) << (n_byte * 8));
+                --n_byte;
+            }
+
+            switch (static_cast<parsed_primitive_type>(tag)) {
+            case parsed_primitive_type::char_type: 
+            case parsed_primitive_type::uchar_type:
+            case parsed_primitive_type::schar_type:
+            case parsed_primitive_type::short_type:
+            case parsed_primitive_type::ushort_type:
+            case parsed_primitive_type::int_type:
+            case parsed_primitive_type::uint_type:
+            case parsed_primitive_type::long_type: 
+            case parsed_primitive_type::ulong_type:
+            case parsed_primitive_type::longlong_type:
+            case parsed_primitive_type::ulonglong_type:
+                return static_cast<parsed_primitive_type>(tag);
+
+            default:
+                std::cout << "Unrecognized type" << std::endl;
+                return parsed_primitive_type::invalid;
+            }
         }
     }
 }}
@@ -90,6 +162,38 @@ driver = "driver"
 module = "module"
 header = "header"
 import = "import"
+signature = "signature"
+struct = "struct"
+union = "union"
+char = "char"
+short = "short"
+int = "int"
+long = "long"
+signed = "signed"
+
+# Primitive types
+
+component = unsigned {{
+    value = idlc::box(idlc::primitive_token::token_unsigned);
+}} | signed {{
+    value = idlc::box(idlc::primitive_token::token_signed);
+}} | long {{
+    value = idlc::box(idlc::primitive_token::token_long);
+}} | int {{
+    value = idlc::box(idlc::primitive_token::token_int);
+}} | short {{
+    value = idlc::box(idlc::primitive_token::token_short);
+}} | char {{
+    value = idlc::box(idlc::primitive_token::token_char);
+}}
+
+primitive_type = first:component rest:(wsp c:component {{ value = c.getValue(); }})* <predicate ok>{{
+    // No valid primitive type is longer than 4 components
+    const auto& values = rest.getValues();
+    ok = values.size() <= 3;
+}} {{
+    value = idlc::box(idlc::recognize_type(first, rest));
+}}
 
 # Utility rules
 
@@ -97,39 +201,64 @@ blank = [ \n\t] | comment
 wsp = blank*
 sp = wsp?
 
-alph = [abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]
-num = [0123456789]
+letter = [abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]
+number = [0123456789]
 
 line_comment = "//" .* "\n"
 comment = line_comment
 
 # Identifiers
 
-id_start = "_" {{ value = idlc::box('_'); }} | alph
-id_cont = id_start | num
-id(ctx) = first:id_start rest:id_cont* {{
-    value = idlc::make_id(*idlc::unbox<idlc::string_heap*>(ctx), first, rest);
+id_start = "_" {{ value = idlc::box('_'); }} | letter
+id_next = id_start | number
+id(ctx) = first:id_start rest:id_next* {{
+    const gsl::not_null<idlc::string_heap*> strings {idlc::unbox<idlc::string_heap*>(ctx)};
+    value = idlc::make_id(*strings, first, rest);
 }}
 
-st_import(ctx) = import sp id(ctx) sp ";" sp
-def_driver(ctx) = driver wsp id(ctx) sp "{" sp st_import(ctx)* "}" sp
+# Driver block
+
+module_import(ctx) = import sp id(ctx) sp ";" sp
+driver_definition(ctx) = driver wsp id(ctx) sp "{" sp module_import(ctx)* "}" sp
 
 # Header statement
 
 header_path = "<" header_path_tail
 header_path_tail = ">" | . header_path_tail
-st_header = header sp header_path ";" sp
+header_import = header sp header_path ";" sp
 
-def_rpc(ctx) = rpc wsp id(ctx) sp "{" sp "}" sp
-module_item(ctx) = def_rpc(ctx) | st_header
-def_module(ctx) = module wsp id(ctx) sp "{" sp module_item(ctx)* "}" sp
+# Projection fields (effective parse tree mirrors the structure of the marshaling tree)
 
-driver_file(ctx) = sp def_driver(ctx) <eof>
-module_file(ctx) = sp def_module(ctx)+ <eof>
+primitive_field(ctx) = primitive_type wsp id(ctx) sp ";" sp
+projection_field(ctx) = primitive_field(ctx)
+
+# Projection block
+
+struct_tag(ctx) = struct wsp id(ctx) sp
+union_tag(ctx) = union wsp id(ctx) sp
+type_tag(ctx) = struct_tag(ctx) | union_tag(ctx)
+projection_definition(ctx) = projection sp "<" sp type_tag(ctx) ">" sp id(ctx) sp "{" sp projection_field(ctx)* "}" sp
+
+# RPC block
+
+rpc_signature(ctx) = signature wsp id(ctx) sp "(" sp ")" sp ";" sp
+rpc_item(ctx) = projection_definition(ctx) | rpc_signature(ctx)
+rpc_definition(ctx) = rpc wsp id(ctx) sp "{" sp rpc_item(ctx)* "}" sp
+
+# Module block
+
+module_item(ctx) = rpc_definition(ctx) | projection_definition(ctx) | header_import
+module_definition(ctx) = module wsp id(ctx) sp "{" sp module_item(ctx)* "}" sp
+
+# File structure
+
+driver_file(ctx) = sp driver_definition(ctx) <eof>
+module_file(ctx) = sp module_definition(ctx)+ <eof>
 
 file_inner(ctx) = driver_file(ctx) | module_file(ctx)
 file = ctx:{{
     value = std::make_unique<idlc::string_heap>().release();
 }} file_inner(ctx) {{
-    idlc::unbox_uptr<idlc::string_heap>(ctx).reset();
+    idlc::uptr<idlc::string_heap> ptr {idlc::unbox<idlc::string_heap*>(ctx)};
+    ptr.reset();
 }}
