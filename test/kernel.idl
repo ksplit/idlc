@@ -1,20 +1,20 @@
 module netdev {
-    header <bar punk\foo.h>;
+    header <bar_punk\foo.h>;
     rpc alloc_netdev_mqs {
         projection <struct foo> proj {
             unsigned long long a;
             short b;
-            char c;
+            rpc alloc_netdev_mqs c;
             projection global_proj [bind(callee)]* d;
         }
 
-        signature projection global_proj [alloc(caller)]* ();
+        signature projection global_proj [alloc(caller)]* (projection proj [bind(callee)]* foo, projection global_proj * bar);
     }
 
     projection <union bar> global_proj {
         unsigned long a;
         short b;
-        char c;
-        string d;
+        rpc alloc_netdev_mqs c;
+        string [bind(callee)]* d;
     }
 }
