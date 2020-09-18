@@ -5,16 +5,16 @@ module netdev {
             unsigned long long a;
             short b;
             char c;
-            signed char d;
+            projection global_proj [bind(callee)]* d;
         }
 
-        signature void ();
+        signature projection global_proj [alloc(caller)]* ();
     }
 
     projection <union bar> global_proj {
         unsigned long a;
         short b;
         char c;
-        signed char d;
+        string d;
     }
 }

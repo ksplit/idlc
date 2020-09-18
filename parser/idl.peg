@@ -29,7 +29,7 @@ code: {{
         using enable_if_t = typename std::enable_if<enable, type>::type;
 
         template<typename type>
-        enable_if_t<is_arithmetic_v<type>, type> unbox(const Value& v)
+        enable_if_t<is_arithmetic_v<type>, type> unbox(const Value& v) noexcept
         {
             return static_cast<type>(reinterpret_cast<std::uintptr_t>(v.getValue()));
         }
@@ -44,8 +44,8 @@ code: {{
         template<typename type>
         auto box(type v) noexcept
         {
-            static_assert(std::is_trivially_copyable<type>::value);
-            static_assert(sizeof(type) <= sizeof(const void*));
+            static_assert(std::is_trivially_copyable<type>::value, "only trivially copyable types are boxeable");
+            static_assert(sizeof(type) <= sizeof(const void*), "can't box something this big");
             return reinterpret_cast<const void*>(v);
         }
 
@@ -149,11 +149,6 @@ rules:
 
 # Keywords (parser produces better error messages when these are rules, not literals)
 
-unsigned = "unsigned"
-long = "long"
-short = "short"
-int = "int"
-char = "char"
 const = "const"
 string = "string"
 projection = "projection"
@@ -170,6 +165,8 @@ short = "short"
 int = "int"
 long = "long"
 signed = "signed"
+unsigned = "unsigned"
+void = "void"
 
 # Primitive types
 
@@ -187,7 +184,7 @@ component = unsigned {{
     value = idlc::box(idlc::primitive_token::token_char);
 }}
 
-primitive_type = first:component rest:(wsp c:component {{ value = c.getValue(); }})* <predicate ok>{{
+primitive_specifier = first:component rest:(wsp c:component {{ value = c.getValue(); }})* <predicate ok>{{
     // No valid primitive type is longer than 4 components
     const auto& values = rest.getValues();
     ok = values.size() <= 3;
@@ -227,10 +224,33 @@ header_path = "<" header_path_tail
 header_path_tail = ">" | . header_path_tail
 header_import = header sp header_path ";" sp
 
-# Projection fields (effective parse tree mirrors the structure of the marshaling tree)
+# Attributes
 
-primitive_field(ctx) = primitive_type wsp id(ctx) sp ";" sp
-projection_field(ctx) = primitive_field(ctx)
+attr_list = "[" sp attributes "]"
+attributes = attribute sp attributes_tail
+attributes_tail = "," sp attribute sp attributes_tail | <void>
+attribute = "alloc(caller)" | "alloc(callee)" | "bind(caller)" | "bind(callee)" | "dealloc(caller)" | "dealloc(callee)"
+
+# Types
+# Due to the unfortunate nature of left-recursion, and the fact that we have to deal with whitespace,
+# the parser includes the parsing of indirections into each specific rule
+
+indirections = attr_list sp "*" indirections_tail
+indirections_tail = sp attr_list sp "*" indirections_tail | <void>
+indirections_spacer = sp indirections sp | wsp
+
+void_type = void
+string_type = string (sp indirections)?
+string_var(ctx) = string indirections_spacer id(ctx)
+projection_type(ctx) = projection wsp id(ctx) (sp indirections)?
+projection_var(ctx) = projection wsp id(ctx) indirections_spacer id(ctx)
+primitive_type = primitive_specifier
+primitive_var(ctx) = primitive_specifier indirections_spacer id(ctx)
+
+# Projection fields
+
+variable(ctx) = primitive_var(ctx) | projection_var(ctx) | string_var(ctx)
+projection_field(ctx) = variable(ctx) sp ";" sp
 
 # Projection block
 
@@ -241,7 +261,8 @@ projection_definition(ctx) = projection sp "<" sp type_tag(ctx) ">" sp id(ctx) s
 
 # RPC block
 
-rpc_signature(ctx) = signature wsp id(ctx) sp "(" sp ")" sp ";" sp
+return_type(ctx) = void_type | string_type | projection_type(ctx) | primitive_type
+rpc_signature(ctx) = signature wsp return_type(ctx) sp "(" sp ")" sp ";" sp
 rpc_item(ctx) = projection_definition(ctx) | rpc_signature(ctx)
 rpc_definition(ctx) = rpc wsp id(ctx) sp "{" sp rpc_item(ctx)* "}" sp
 
