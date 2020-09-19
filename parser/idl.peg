@@ -268,16 +268,25 @@ attributes_tail = "," sp attribute sp attributes_tail | <void>
 attribute = "alloc(caller)" | "alloc(callee)" | "bind(caller)" | "bind(callee)" | "dealloc(caller)" | "dealloc(callee)" | "in" | "out"
 
 # Types
-# Due to the unfortunate nature of left-recursion, and the fact that we have to deal with whitespace,
-# the parser includes the parsing of indirections into each specific rule
-# notice that these rules enforce that projection are always pointer type, along with strings
-# Primitive types are always value types, as are rpcs, as they are not treated as other
-# pointers are
 
 indirection = (attr_list sp)? "*"
-indirection_spacer = sp indirection sp | wsp
+indirections = (sp indirection sp)+
+indirections_spacer = indirections | wsp
 
 attr_spacer = sp attr_list sp | wsp
+
+void_type = void
+string_type = string
+projection_type(ctx) = projection wsp id(ctx)
+rpc_type(ctx) = rpc wsp id(ctx)
+primitive_type = primitive_specifier
+
+type_name(ctx) = void_type | string_type | primitive_type | rpc_type(ctx) | projection_type(ctx)
+
+spaced_type(ctx) = void_type | string_type | primitive_type | rpc_type(ctx) | projection_type(ctx)
+
+# The one that requires correct spacing
+type_specifier(ctx) = spaced_type(ctx) indirections_spacer
 
 _void_type = void
 _string_type = string sp indirection
@@ -291,7 +300,7 @@ _rpc_var(ctx) = _rpc_type(ctx) wsp id(ctx)
 
 # Projection fields
 
-variable(ctx) = _primitive_var(ctx) | _projection_var(ctx) | _string_var(ctx) | _rpc_var(ctx)
+variable(ctx) = type_specifier(ctx) id(ctx)
 projection_field(ctx) = variable(ctx) sp ";" sp
 
 # Projection block
@@ -306,8 +315,7 @@ projection_definition(ctx) = projection sp "<" sp type_tag(ctx) ">" sp id(ctx) s
 
 arguments(ctx) = variable(ctx) sp arguments_tail(ctx)
 arguments_tail(ctx) = "," sp arguments(ctx) | <void>
-return_type(ctx) = _void_type | _string_type | _projection_type(ctx) | _primitive_type | _rpc_type(ctx)
-rpc_signature(ctx) = signature wsp return_type(ctx) sp "(" sp arguments(ctx)? ")" sp ";" sp
+rpc_signature(ctx) = signature wsp type_specifier(ctx) sp "(" sp arguments(ctx)? ")" sp ";" sp
 rpc_item(ctx) = projection_definition(ctx) | rpc_signature(ctx)
 rpc_definition(ctx) = rpc wsp id(ctx) sp "{" sp rpc_item(ctx)* "}" sp
 

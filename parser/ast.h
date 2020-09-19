@@ -26,7 +26,7 @@ namespace idlc {
     struct rpc_type;
     struct variable;
     struct attribute_set;
-    struct type_specifier;
+    struct type_name;
 
     using idl_file = std::variant<driver_file, module_file>;
     using rpc_definition_subitem = std::variant<struct_projection_definition, signature>;
@@ -78,18 +78,18 @@ namespace idlc {
         const pointer_action action;
     };
 
-    struct type_specifier {
+    struct type_name {
         const stem_type stem;
         const std::vector<attribute_set> stars;
     };
 
     struct variable {
-        const type_specifier type;
+        const type_name type;
         const gsl::czstring<> id;
     };
 
     struct signature {
-        const type_specifier ret_type;
+        const type_name ret_type;
         const std::vector<variable> arguments;
     };
 
