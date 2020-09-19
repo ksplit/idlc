@@ -4,11 +4,12 @@ include: {{
     #include <cstdint>
     #include <string>
     #include <type_traits>
+    #include <vector>
 
     #include <gsl/gsl>
 
     #include "ast.h"
-    #include "../frontend/string_heap.h"
+    #include "string_heap.h"
 }}
 
 code: {{
@@ -216,8 +217,28 @@ id(ctx) = first:id_start rest:id_next* {{
 
 # Driver block
 
-module_import(ctx) = import sp id(ctx) sp ";" sp
-driver_definition(ctx) = driver wsp id(ctx) sp "{" sp module_import(ctx)* "}" sp
+module_import(ctx) = import sp id:id(ctx) sp ";" sp {{
+    const idlc::module_import imp {
+        idlc::unbox<idlc::id>(id)
+    };
+
+    value = std::make_unique<idlc::module_import>(imp).release();
+}}
+
+driver_definition(ctx) = driver wsp id:id(ctx) sp "{" sp imports:module_import(ctx)* "}" sp {{
+    const auto& vals = imports.getValues();
+    std::vector<idlc::module_import> import_vec {};
+    import_vec.reserve(vals.size());
+    for (const auto& val : vals) {
+        const gsl::not_null import_ptr {idlc::unbox<idlc::module_import*>(val)};
+        idlc::uptr<idlc::module_import> import {import_ptr};
+        import_vec.push_back(*import);
+        import.reset();
+    }
+
+    const idlc::driver_definition def {idlc::unbox<idlc::id>(id), import_vec};
+    value = std::make_unique<idlc::driver_definition>(def).release();
+}}
 
 # Header statement
 
