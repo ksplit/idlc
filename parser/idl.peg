@@ -288,16 +288,6 @@ spaced_type(ctx) = void_type | string_type | primitive_type | rpc_type(ctx) | pr
 # The one that requires correct spacing
 type_specifier(ctx) = spaced_type(ctx) indirections_spacer
 
-_void_type = void
-_string_type = string sp indirection
-_string_var(ctx) = _string_type sp id(ctx)
-_projection_type(ctx) = projection wsp id(ctx) sp indirection
-_projection_var(ctx) = _projection_type(ctx) sp id(ctx)
-_primitive_type = primitive_specifier (sp attr_list)?
-_primitive_var(ctx) = primitive_specifier attr_spacer id(ctx)
-_rpc_type(ctx) = rpc wsp id(ctx)
-_rpc_var(ctx) = _rpc_type(ctx) wsp id(ctx)
-
 # Projection fields
 
 variable(ctx) = type_specifier(ctx) id(ctx)
