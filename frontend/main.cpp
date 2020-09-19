@@ -37,7 +37,7 @@ namespace idlc {
 			return true;
 		}
 
-		bool visit_projection(projection& projection)
+		bool visit_projection(struct_projection_definition& projection)
 		{
 			if (!m_types->insert(projection)) {
 				log_error("Encountered projection redefinition: ", m_scope, "::", projection.identifier());
@@ -50,7 +50,7 @@ namespace idlc {
 		}
 
 	private:
-		node_map<projection>* m_types;
+		node_map<struct_projection_definition>* m_types;
 		gsl::czstring<> m_scope;
 	};
 
@@ -76,13 +76,13 @@ namespace idlc {
 
 		// Should account for parent scope of RPC pointers
 
-		bool visit_projection(const projection& proj)
+		bool visit_projection(const struct_projection_definition& proj)
 		{
 			m_item = proj.identifier();
 			return true;
 		}
 
-		bool visit_rpc(const rpc& rpc)
+		bool visit_rpc(const rpc_definition& rpc)
 		{
 			m_item = rpc.identifier();
 			return true;
@@ -90,7 +90,7 @@ namespace idlc {
 
 		bool visit_projection_type(projection_type& proj)
 		{
-			projection* const def {m_types->get(proj.identifier())};
+			struct_projection_definition* const def {m_types->get(proj.identifier())};
 			if (def) {
 				proj.definition(def);
 			}
@@ -104,7 +104,7 @@ namespace idlc {
 		}
 
 	private:
-		node_map<projection>* m_types {};
+		node_map<struct_projection_definition>* m_types {};
 		gsl::czstring<> m_module {};
 		gsl::czstring<> m_item {};
 	};
@@ -180,13 +180,13 @@ namespace idlc {
 
 	class verify_driver_idl_pass : public generic_pass<verify_driver_idl_pass> {
 	public:
-		bool visit_rpc(const rpc& rpc)
+		bool visit_rpc(const rpc_definition& rpc)
 		{
 			log_error("Rpc definition ", rpc.identifier(), " illegal in driver module");
 			return false;
 		}
 
-		bool visit_projection(const projection& projection) {
+		bool visit_projection(const struct_projection_definition& projection) {
 			log_error("Projection definition ", projection.identifier(), " illegal in driver module");
 			return false;
 		}

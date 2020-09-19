@@ -167,6 +167,7 @@ long = "long"
 signed = "signed"
 unsigned = "unsigned"
 void = "void"
+include = "include"
 
 # Primitive types
 
@@ -220,34 +221,37 @@ driver_definition(ctx) = driver wsp id(ctx) sp "{" sp module_import(ctx)* "}" sp
 
 # Header statement
 
-header_path = "<" header_path_tail
-header_path_tail = ">" | . header_path_tail
-header_import = header sp header_path ";" sp
+path = "<" path_tail
+path_tail = ">" | . path_tail
+header_import = header sp path sp ";" sp
+idl_include = include sp path sp ";" sp
 
 # Attributes
 
 attr_list = "[" sp attributes "]"
 attributes = attribute sp attributes_tail
 attributes_tail = "," sp attribute sp attributes_tail | <void>
-attribute = "alloc(caller)" | "alloc(callee)" | "bind(caller)" | "bind(callee)" | "dealloc(caller)" | "dealloc(callee)"
+attribute = "alloc(caller)" | "alloc(callee)" | "bind(caller)" | "bind(callee)" | "dealloc(caller)" | "dealloc(callee)" | "in" | "out"
 
 # Types
 # Due to the unfortunate nature of left-recursion, and the fact that we have to deal with whitespace,
 # the parser includes the parsing of indirections into each specific rule
 # notice that these rules enforce that projection are always pointer type, along with strings
-# Primtive types are always value types, as are rpcs, as they are not treated as other
+# Primitive types are always value types, as are rpcs, as they are not treated as other
 # pointers are
 
 indirection = (attr_list sp)? "*"
 indirection_spacer = sp indirection sp | wsp
+
+attr_spacer = sp attr_list sp | wsp
 
 void_type = void
 string_type = string sp indirection
 string_var(ctx) = string_type sp id(ctx)
 projection_type(ctx) = projection wsp id(ctx) sp indirection
 projection_var(ctx) = projection_type(ctx) sp id(ctx)
-primitive_type = primitive_specifier
-primitive_var(ctx) = primitive_type wsp id(ctx)
+primitive_type = primitive_specifier (sp attr_list)?
+primitive_var(ctx) = primitive_specifier attr_spacer id(ctx)
 rpc_type(ctx) = rpc wsp id(ctx)
 rpc_var(ctx) = rpc_type(ctx) wsp id(ctx)
 
@@ -279,7 +283,8 @@ module_definition(ctx) = module wsp id(ctx) sp "{" sp module_item(ctx)* "}" sp
 
 # File structure
 
-driver_file(ctx) = sp driver_definition(ctx) <eof>
+# An incredibly ugly hack, but I would like to see a single person who puts includes *after* their code
+driver_file(ctx) = sp idl_include* sp driver_definition(ctx) <eof>
 module_file(ctx) = sp module_definition(ctx)+ <eof>
 
 file_inner(ctx) = driver_file(ctx) | module_file(ctx)

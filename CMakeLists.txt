@@ -22,6 +22,6 @@ add_executable(
 	"frontend/string_heap.cpp"
 )
 
-set_property(TARGET idlc PROPERTY CXX_STANDARD 14)
+set_property(TARGET idlc PROPERTY CXX_STANDARD 17)
 target_link_libraries(idlc PRIVATE Microsoft.GSL::GSL)
 target_link_libraries(idlc PRIVATE absl::strings)

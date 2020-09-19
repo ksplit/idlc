@@ -34,12 +34,12 @@ namespace idlc {
 			return self().visit_include(n);
 		}
 
-		bool operator()(rpc& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_rpc(n)))
+		bool operator()(rpc_definition& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_rpc(n)))
 		{
 			return self().visit_rpc(n);
 		}
 
-		bool operator()(projection& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_projection(n)))
+		bool operator()(struct_projection_definition& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_projection(n)))
 		{
 			return self().visit_projection(n);
 		}
@@ -59,7 +59,7 @@ namespace idlc {
 			return self().visit_rpc_field(n);
 		}
 
-		bool operator()(type& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_type(n)))
+		bool operator()(variable_type& n) noexcept(noexcept(std::declval<generic_pass>().self().visit_type(n)))
 		{
 			return self().visit_type(n);
 		}
@@ -88,12 +88,12 @@ namespace idlc {
 		bool visit_module(module&) noexcept { return true; }
 		bool visit_file(file&) noexcept { return true; }
 		bool visit_include(include&) noexcept { return true; }
-		bool visit_rpc(rpc&) noexcept { return true; }
-		bool visit_projection(projection&) noexcept { return true; }
+		bool visit_rpc(rpc_definition&) noexcept { return true; }
+		bool visit_projection(struct_projection_definition&) noexcept { return true; }
 		bool visit_primitive_type(primitive_type&) noexcept { return true; }
 		bool visit_var_field(var_field&) noexcept { return true; }
 		bool visit_rpc_field(rpc_field&) noexcept { return true; }
-		bool visit_type(type&) noexcept { return true; }
+		bool visit_type(variable_type&) noexcept { return true; }
 		bool visit_signature(signature&) noexcept { return true; }
 		bool visit_attributes(attributes&) noexcept { return true; }
 		bool visit_projection_type(projection_type&) noexcept { return true; }

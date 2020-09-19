@@ -90,7 +90,7 @@ namespace idlc {
 	}
 
 	template<typename pass_type>
-	bool visit(pass_type& pass, projection& projection)
+	bool visit(pass_type& pass, struct_projection_definition& projection)
 	{
 		if (!pass(projection)) {
 			return false;
@@ -145,7 +145,7 @@ namespace idlc {
 	}
 
 	template<typename pass_type>
-	bool visit(pass_type& pass, type& type)
+	bool visit(pass_type& pass, variable_type& type)
 	{
 		if (!pass(type)) {
 			return false;
@@ -194,7 +194,7 @@ namespace idlc {
 	}
 
 	template<typename pass_type>
-	bool visit(pass_type& pass, rpc& rpc)
+	bool visit(pass_type& pass, rpc_definition& rpc)
 	{
 		if (!pass(rpc)) {
 			return false;

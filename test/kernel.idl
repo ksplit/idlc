@@ -5,10 +5,10 @@ module netdev {
             unsigned long long a;
             short b;
             rpc alloc_netdev_mqs c;
-            projection global_proj [bind(callee)]* d;
+            projection global_proj [out, bind(callee)]* d;
         }
 
-        signature projection global_proj [alloc(caller)]* (projection proj [bind(callee)]* foo, projection global_proj * bar);
+        signature projection global_proj [alloc(caller)]* (projection proj [bind(callee)]* foo, projection global_proj * bar, string [in]* name);
     }
 
     projection <union bar> global_proj {
