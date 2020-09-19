@@ -1,5 +1,4 @@
 include <kernel.idl>;
-include <kernel.idl>;
 
 driver nullnet {
     import foo;

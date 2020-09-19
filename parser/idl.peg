@@ -242,10 +242,23 @@ driver_definition(ctx) = driver wsp id:id(ctx) sp "{" sp imports:module_import(c
 
 # Header statement
 
-path = "<" path_tail
-path_tail = ">" | . path_tail
-header_import = header sp path sp ";" sp
-idl_include = include sp path sp ";" sp
+path(ctx) = str:{{ value = std::make_unique<std::string>().release(); }} "<" path_tail(str) {{
+    idlc::uptr<std::string> text {idlc::unbox<std::string*>(str)};
+    const gsl::not_null<idlc::string_heap*> strings {idlc::unbox<idlc::string_heap*>(ctx)};
+    const auto path_id = strings->intern(*text);
+    std::cout << "PATH " << path_id << std::endl;
+    text.release();
+    value = path_id;
+}}
+
+path_tail(str) = ">" | ch:. {{
+    const auto c = idlc::unbox<char>(ch);
+    gsl::not_null<std::string*> text {idlc::unbox<std::string*>(str)};
+    *text += c;
+}} path_tail(str)
+
+header_import(ctx) = header sp path(ctx) sp ";" sp
+idl_include(ctx) = include sp path(ctx) sp ";" sp
 
 # Attributes
 
@@ -266,25 +279,26 @@ indirection_spacer = sp indirection sp | wsp
 
 attr_spacer = sp attr_list sp | wsp
 
-void_type = void
-string_type = string sp indirection
-string_var(ctx) = string_type sp id(ctx)
-projection_type(ctx) = projection wsp id(ctx) sp indirection
-projection_var(ctx) = projection_type(ctx) sp id(ctx)
-primitive_type = primitive_specifier (sp attr_list)?
-primitive_var(ctx) = primitive_specifier attr_spacer id(ctx)
-rpc_type(ctx) = rpc wsp id(ctx)
-rpc_var(ctx) = rpc_type(ctx) wsp id(ctx)
+_void_type = void
+_string_type = string sp indirection
+_string_var(ctx) = _string_type sp id(ctx)
+_projection_type(ctx) = projection wsp id(ctx) sp indirection
+_projection_var(ctx) = _projection_type(ctx) sp id(ctx)
+_primitive_type = primitive_specifier (sp attr_list)?
+_primitive_var(ctx) = primitive_specifier attr_spacer id(ctx)
+_rpc_type(ctx) = rpc wsp id(ctx)
+_rpc_var(ctx) = _rpc_type(ctx) wsp id(ctx)
 
 # Projection fields
 
-variable(ctx) = primitive_var(ctx) | projection_var(ctx) | string_var(ctx) | rpc_var(ctx)
+variable(ctx) = _primitive_var(ctx) | _projection_var(ctx) | _string_var(ctx) | _rpc_var(ctx)
 projection_field(ctx) = variable(ctx) sp ";" sp
 
 # Projection block
 
+value_ref(ctx) = id(ctx) ("->" id(ctx))* # Have to identify "this" keyword in passes
 struct_tag(ctx) = struct wsp id(ctx) sp
-union_tag(ctx) = union wsp id(ctx) sp
+union_tag(ctx) = union wsp id(ctx) sp "," sp value_ref(ctx) sp
 type_tag(ctx) = struct_tag(ctx) | union_tag(ctx)
 projection_definition(ctx) = projection sp "<" sp type_tag(ctx) ">" sp id(ctx) sp "{" sp projection_field(ctx)* "}" sp
 
@@ -292,20 +306,20 @@ projection_definition(ctx) = projection sp "<" sp type_tag(ctx) ">" sp id(ctx) s
 
 arguments(ctx) = variable(ctx) sp arguments_tail(ctx)
 arguments_tail(ctx) = "," sp arguments(ctx) | <void>
-return_type(ctx) = void_type | string_type | projection_type(ctx) | primitive_type | rpc_type(ctx)
+return_type(ctx) = _void_type | _string_type | _projection_type(ctx) | _primitive_type | _rpc_type(ctx)
 rpc_signature(ctx) = signature wsp return_type(ctx) sp "(" sp arguments(ctx)? ")" sp ";" sp
 rpc_item(ctx) = projection_definition(ctx) | rpc_signature(ctx)
 rpc_definition(ctx) = rpc wsp id(ctx) sp "{" sp rpc_item(ctx)* "}" sp
 
 # Module block
 
-module_item(ctx) = rpc_definition(ctx) | projection_definition(ctx) | header_import
+module_item(ctx) = rpc_definition(ctx) | projection_definition(ctx) | header_import(ctx)
 module_definition(ctx) = module wsp id(ctx) sp "{" sp module_item(ctx)* "}" sp
 
 # File structure
 
 # An incredibly ugly hack, but I would like to see a single person who puts includes *after* their code
-driver_file(ctx) = sp idl_include* sp driver_definition(ctx) <eof>
+driver_file(ctx) = sp idl_include(ctx)* sp driver_definition(ctx) <eof>
 module_file(ctx) = sp module_definition(ctx)+ <eof>
 
 file_inner(ctx) = driver_file(ctx) | module_file(ctx)
