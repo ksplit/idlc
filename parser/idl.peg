@@ -21,25 +21,32 @@ code: {{
         using uptr = std::unique_ptr<type>;
 
         template<typename type>
-        constexpr bool is_arithmetic_v = std::is_arithmetic<type>::value;
-
-        template<typename type>
-        constexpr bool is_pointer_v = std::is_pointer<type>::value;
-
-        template<bool enable, typename type>
-        using enable_if_t = typename std::enable_if<enable, type>::type;
-
-        template<typename type>
-        enable_if_t<is_arithmetic_v<type>, type> unbox(const Value& v) noexcept
+        std::enable_if_t<std::is_arithmetic_v<type>, type> unbox(const Value& v) noexcept
         {
             return static_cast<type>(reinterpret_cast<std::uintptr_t>(v.getValue()));
         }
 
         template<typename type>
-        enable_if_t<is_pointer_v<type>, type> unbox(const Value& v)
+        std::enable_if_t<std::is_enum_v<type>, type> unbox(const Value& v) noexcept
+        {
+            return static_cast<type>(reinterpret_cast<std::uintptr_t>(v.getValue()));
+        }
+
+        template<typename type>
+        std::enable_if_t<std::is_pointer_v<type>, type> unbox(const Value& v)
         {
             const auto ptr = const_cast<void*>(v.getValue());
             return static_cast<type>(ptr);
+        }
+
+        template<typename type>
+        type take(const Value& val)
+        {
+            const gsl::not_null<type*> ptr {unbox<type*>(val)};
+            uptr<type> owner {ptr};
+            const type object {*ptr};
+            owner.reset();
+            return object;
         }
 
         template<typename type>
@@ -76,7 +83,7 @@ code: {{
             token_unsigned,
             token_signed
         };
-        
+
         constexpr auto primitive_id(primitive_token d) noexcept
         {
             return static_cast<std::uint32_t>(d);
@@ -125,14 +132,14 @@ code: {{
             }
 
             switch (static_cast<parsed_primitive_type>(tag)) {
-            case parsed_primitive_type::char_type: 
+            case parsed_primitive_type::char_type:
             case parsed_primitive_type::uchar_type:
             case parsed_primitive_type::schar_type:
             case parsed_primitive_type::short_type:
             case parsed_primitive_type::ushort_type:
             case parsed_primitive_type::int_type:
             case parsed_primitive_type::uint_type:
-            case parsed_primitive_type::long_type: 
+            case parsed_primitive_type::long_type:
             case parsed_primitive_type::ulong_type:
             case parsed_primitive_type::longlong_type:
             case parsed_primitive_type::ulonglong_type:
@@ -141,6 +148,26 @@ code: {{
             default:
                 std::cout << "Unrecognized type" << std::endl;
                 return parsed_primitive_type::invalid;
+            }
+        }
+
+        struct type_attributes {
+            const std::vector<attribute_set> stars;
+            const attribute_set value;
+        };
+
+        auto make_type_name(const Value& ty, const Value& attrs)
+        {
+            if (attrs.getValue()) {
+                const auto attributes {take<type_attributes>(attrs)};
+                const auto type {take<stem_type>(ty)};
+                const type_name name {attributes.stars, type, attributes.value};
+                return std::make_unique<type_name>(name).release();
+            }
+            else {
+                const auto type {take<stem_type>(ty)};
+                const type_name name {{}, type, {} };
+                return std::make_unique<type_name>(name).release();
             }
         }
     }
@@ -230,10 +257,7 @@ driver_definition(ctx) = driver wsp id:id(ctx) sp "{" sp imports:module_import(c
     std::vector<idlc::module_import> import_vec {};
     import_vec.reserve(vals.size());
     for (const auto& val : vals) {
-        const gsl::not_null import_ptr {idlc::unbox<idlc::module_import*>(val)};
-        idlc::uptr<idlc::module_import> import {import_ptr};
-        import_vec.push_back(*import);
-        import.reset();
+        import_vec.push_back(idlc::take<idlc::module_import>(val));
     }
 
     const idlc::driver_definition def {idlc::unbox<idlc::id>(id), import_vec};
@@ -243,11 +267,9 @@ driver_definition(ctx) = driver wsp id:id(ctx) sp "{" sp imports:module_import(c
 # Header statement
 
 path(ctx) = str:{{ value = std::make_unique<std::string>().release(); }} "<" path_tail(str) {{
-    idlc::uptr<std::string> text {idlc::unbox<std::string*>(str)};
     const gsl::not_null<idlc::string_heap*> strings {idlc::unbox<idlc::string_heap*>(ctx)};
-    const auto path_id = strings->intern(*text);
+    const auto path_id = strings->intern(idlc::take<std::string>(str));
     std::cout << "PATH " << path_id << std::endl;
-    text.release();
     value = path_id;
 }}
 
@@ -257,46 +279,134 @@ path_tail(str) = ">" | ch:. {{
     *text += c;
 }} path_tail(str)
 
-header_import(ctx) = header sp path(ctx) sp ";" sp
-idl_include(ctx) = include sp path(ctx) sp ";" sp
+header_import(ctx) = header sp pt:path(ctx) sp ";" sp {{
+    const idlc::header_import node {idlc::unbox<idlc::id>(pt)};
+    value = std::make_unique<idlc::header_import>(node).release();
+}}
+
+idl_include(ctx) = include sp pt:path(ctx) sp ";" sp {{
+    const idlc::idl_include node {idlc::unbox<idlc::id>(pt)};
+    value = std::make_unique<idlc::idl_include>(node).release();
+}}
 
 # Attributes
 
-attr_list = "[" sp attributes "]"
-attributes = attribute sp attributes_tail
-attributes_tail = "," sp attribute sp attributes_tail | <void>
-attribute = "alloc(caller)" | "alloc(callee)" | "bind(caller)" | "bind(callee)" | "dealloc(caller)" | "dealloc(callee)" | "in" | "out"
+attribute_set = "[" sp attrs:attributes "]" {{ value = attrs.getValue(); }}
+
+attributes = new_attrs:attribute sp attrs:attributes_tail {{
+    const auto flags = idlc::unbox<idlc::attribute_set>(attrs);
+    const auto new_flags = idlc::unbox<idlc::attribute_set>(new_attrs);
+    value = idlc::box(flags | new_flags);
+}}
+
+attributes_tail = "," sp new_attrs:attribute sp attrs:attributes_tail {{
+    const auto flags = idlc::unbox<idlc::attribute_set>(attrs);
+    const auto new_flags = idlc::unbox<idlc::attribute_set>(new_attrs);
+    value = idlc::box(flags | new_flags);
+}} | <void> {{
+    value = idlc::box(idlc::attribute_set::none);
+}}
+
+attribute = "alloc(caller)" {{
+    value = idlc::box(idlc::attribute_set::alloc_caller);
+}} | "alloc(callee)" {{
+    value = idlc::box(idlc::attribute_set::alloc_callee);
+}} | "bind(caller)" {{
+    value = idlc::box(idlc::attribute_set::bind_caller);
+}} | "bind(callee)" {{
+    value = idlc::box(idlc::attribute_set::bind_callee);
+}} | "dealloc(caller)" {{
+    value = idlc::box(idlc::attribute_set::dealloc_caller);
+}} | "dealloc(callee)" {{
+    value = idlc::box(idlc::attribute_set::dealloc_callee);
+}} | "in" {{
+    value = idlc::box(idlc::attribute_set::in);
+}} | "out" {{
+    value = idlc::box(idlc::attribute_set::out);
+}}
 
 # Types
 
-indirection = (attr_list sp)? "*"
-indirections = (sp indirection sp)+
-indirections_spacer = indirections | wsp
+indirection = (attrs:attribute_set sp)? "*" {{ value = attrs.getValue(); }}
+type_tail = stars:(sp flags:indirection sp {{ value = flags.getValue(); }})+ sp attrs:attribute_set? {{
+    // Note that the defaulted nullptr is just the empty annotation set
+    const auto val_attrs = idlc::unbox<idlc::attribute_set>(attrs);
 
-attr_spacer = sp attr_list sp | wsp
+    const auto star_vals = stars.getValues();
+    std::vector<idlc::attribute_set> star_attrs {};
+    star_attrs.reserve(star_vals.size());
+    for (const auto& star : star_vals) {
+        star_attrs.push_back(idlc::unbox<idlc::attribute_set>(star));
+    }
 
-void_type = void
-string_type = string
-projection_type(ctx) = projection wsp id(ctx)
-rpc_type(ctx) = rpc wsp id(ctx)
-primitive_type = primitive_specifier
+    const idlc::type_attributes type_attrs {star_attrs, val_attrs};
 
-type_name(ctx) = void_type | string_type | primitive_type | rpc_type(ctx) | projection_type(ctx)
+    value = std::make_unique<idlc::type_attributes>(type_attrs).release();
+}} | sp attrs:attribute_set {{
+    // Note that the defaulted nullptr is just the empty annotation set
+    const auto val_attrs = idlc::unbox<idlc::attribute_set>(attrs);
+    const idlc::type_attributes type_attrs {{}, val_attrs};
+    value = std::make_unique<idlc::type_attributes>(type_attrs).release();
+}}
 
-spaced_type(ctx) = void_type | string_type | primitive_type | rpc_type(ctx) | projection_type(ctx)
+type_tail_spacer = set:type_tail {{ value = set.getValue(); }} | wsp {{ value = nullptr; }}
+
+void_type = void {{
+    value = std::make_unique<idlc::stem_type>(idlc::void_type {}).release();
+}}
+
+string_type = string {{
+    value = std::make_unique<idlc::stem_type>(idlc::string_type {}).release();
+}}
+
+projection_type(ctx) = projection wsp id:id(ctx) {{
+    value = std::make_unique<idlc::stem_type>(idlc::projection_type {idlc::unbox<idlc::id>(id)}).release();
+}}
+
+rpc_type(ctx) = rpc wsp id:id(ctx) {{
+    value = std::make_unique<idlc::stem_type>(idlc::rpc_type {idlc::unbox<idlc::id>(id)}).release();
+}}
+
+primitive_type = ty:primitive_specifier {{
+    value = std::make_unique<idlc::stem_type>(idlc::unbox<idlc::primitive_type>(ty)).release();
+}}
+
+spaced_stem_type(ctx) = ty:void_type {{
+    value = ty.getValue();
+}} | ty:string_type {{
+    value = ty.getValue();
+}} | ty:primitive_type {{
+    value = ty.getValue();
+}} | ty:rpc_type(ctx) {{
+    value = ty.getValue();
+}} | ty:projection_type(ctx) {{
+    value = ty.getValue();
+}}
+
+type_name(ctx) = ty:spaced_stem_type(ctx) attrs:type_tail {{
+    value = idlc::make_type_name(ty, attrs);
+}}
 
 # The one that requires correct spacing
-type_specifier(ctx) = spaced_type(ctx) indirections_spacer
+type_specifier(ctx) = ty:spaced_stem_type(ctx) attrs:type_tail_spacer {{
+    value = idlc::make_type_name(ty, attrs);
+}}
 
 # Projection fields
 
-variable(ctx) = type_specifier(ctx) id(ctx)
-projection_field(ctx) = variable(ctx) sp ";" sp
+variable(ctx) = ty:type_specifier(ctx) id:id(ctx) {{
+    value = std::make_unique<idlc::variable>(idlc::variable {
+        idlc::take<idlc::type_name>(ty),
+        idlc::unbox<idlc::id>(id)
+    }).release();
+}}
+
+projection_field(ctx) = var:variable(ctx) sp ";" sp {{ value = var.getValue(); }}
 
 # Projection block
 
 value_ref(ctx) = id(ctx) ("->" id(ctx))* # Have to identify "this" keyword in passes
-struct_tag(ctx) = struct wsp id(ctx) sp
+struct_tag(ctx) = struct wsp id:id(ctx) sp {{ value = id.getValue(); }}
 union_tag(ctx) = union wsp id(ctx) sp "," sp value_ref(ctx) sp
 type_tag(ctx) = struct_tag(ctx) | union_tag(ctx)
 projection_definition(ctx) = projection sp "<" sp type_tag(ctx) ">" sp id(ctx) sp "{" sp projection_field(ctx)* "}" sp
@@ -317,13 +427,32 @@ module_definition(ctx) = module wsp id(ctx) sp "{" sp module_item(ctx)* "}" sp
 # File structure
 
 # An incredibly ugly hack, but I would like to see a single person who puts includes *after* their code
-driver_file(ctx) = sp idl_include(ctx)* sp driver_definition(ctx) <eof>
+driver_file(ctx) = sp incs:idl_include(ctx)* sp def:driver_definition(ctx) <eof> {{
+    idlc::uptr<const idlc::driver_definition> definition {idlc::unbox<const idlc::driver_definition*>(def)};
+
+    const auto& vals = incs.getValues();
+    std::vector<idlc::idl_include> includes {};
+    includes.reserve(vals.size());
+    for (const auto node : vals) {
+        includes.push_back(idlc::take<idlc::idl_include>(node));
+    }
+
+    const idlc::driver_file file_node {idlc::take<idlc::driver_definition>(def), includes};
+
+    value = std::make_unique<idlc::driver_file>(file_node).release();
+}}
+
 module_file(ctx) = sp module_definition(ctx)+ <eof>
 
-file_inner(ctx) = driver_file(ctx) | module_file(ctx)
+file_inner(ctx) = file:driver_file(ctx) {{
+    const idlc::idl_file node {idlc::take<idlc::driver_file>(file)};
+    value = std::make_unique<idlc::idl_file>(node).release();
+}} | module_file(ctx)
+
 file = ctx:{{
     value = std::make_unique<idlc::string_heap>().release();
-}} file_inner(ctx) {{
+}} file:file_inner(ctx) {{
     idlc::uptr<idlc::string_heap> ptr {idlc::unbox<idlc::string_heap*>(ctx)};
     ptr.reset();
+    value = file.getValue();
 }}

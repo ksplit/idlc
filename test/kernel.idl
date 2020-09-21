@@ -8,7 +8,7 @@ module netdev {
             projection global_proj [out, bind(callee)]* d;
         }
 
-        signature projection global_proj [alloc(caller)]* (projection proj [bind(callee)]* foo, projection global_proj * bar, string [in]* name);
+        signature projection global_proj [out] (projection proj [bind(callee)]* foo, projection global_proj * bar, string [in]* name);
     }
 
     projection <union bar, this> global_proj {

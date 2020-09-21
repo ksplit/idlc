@@ -25,7 +25,7 @@ namespace idlc {
     struct projection_type;
     struct rpc_type;
     struct variable;
-    struct attribute_set;
+    enum class attribute_set : std::uint8_t;
     struct type_name;
 
     using idl_file = std::variant<driver_file, module_file>;
@@ -59,28 +59,47 @@ namespace idlc {
 
     struct void_type {};
 
-    enum class passing_direction {
-        in,
-        out
+    enum class attribute_set : std::uint8_t {
+        none = 0b00000000,
+        alloc_caller = 0b00000001,
+        alloc_callee = 0b00000010,
+        dealloc_caller = 0b00000100,
+        dealloc_callee = 0b00001000,
+        bind_caller = 0b00010000,
+        bind_callee = 0b00100000,
+        in = 0b01000000,
+        out = 0b10000000
     };
 
-    enum class pointer_action {
-        alloc_caller,
-        alloc_callee,
-        dealloc_caller,
-        dealloc_callee,
-        bind_caller,
-        bind_callee
-    };
+    inline attribute_set operator|(attribute_set flags, attribute_set new_flags)
+    {
+        return static_cast<attribute_set>(static_cast<std::uint8_t>(flags) | static_cast<std::uint8_t>(new_flags));
+    }
 
-    struct attribute_set {
-        const passing_direction direction;
-        const pointer_action action;
-    };
+    inline attribute_set operator&(attribute_set flags, attribute_set new_flags)
+    {
+        return static_cast<attribute_set>(static_cast<std::uint8_t>(flags) & static_cast<std::uint8_t>(new_flags));
+    }
+
+    inline attribute_set operator~(attribute_set flags)
+    {
+        return static_cast<attribute_set>(~static_cast<std::uint8_t>(flags));
+    }
+
+    inline attribute_set& operator|=(attribute_set& flags, attribute_set new_flags)
+    {
+        flags = flags | new_flags;
+    }
+
+    inline attribute_set& operator&=(attribute_set& flags, attribute_set new_flags)
+    {
+        flags = flags & new_flags;
+    }
 
     struct type_name {
-        const stem_type stem;
         const std::vector<attribute_set> stars;
+        const stem_type stem;
+        const attribute_set attributes; // Conceptually, the "value" attributes
     };
 
     struct variable {
