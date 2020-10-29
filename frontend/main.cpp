@@ -23,6 +23,41 @@ namespace idlc {
     }
 }
 
+/*
+	There's not really a need for AST re-writing as of yet, the resolution tasks can be done in-place,
+	and the passing tree IR will most likely replace it in later stages. Passing tree gets rooted
+	in a particular rpc node, which contains enough information to generate correctly-named stubs.
+	An rpc node *could* be tagged as a function pointer, which slightly modifies how the stub is generated,
+	adds a trampoline for it, and how the impl itself is called, but otherwise does not modify the marshaling logic.
+
+	Marshaling logic gets outputted as a per-passing-tree list of "blocks" that form a graph structure.
+	These are essentially visitors, which visit the fields at runtime to correctly pack them into the message buffer.
+	The goal is to encode enough information here that we could later do optimization passes over it. Such passes
+	would only be justified if it's places where the compiler cannot feasibly optimize it for us, or places where
+	said optimization improves debuggability. The major candidates are trampoline elision, static assignment of IPC
+	registers, 
+
+	Identifiers: we often require identifier variants. The important ones are for RPCs: we need the original, the RPC
+	enum identifier, the RPC impl identifier, and the RPC trampoline identifier, if one is needed. There also the
+	variants marshaling needs to give meaningful names to temporaries.
+
+	As for outptutting C code for marshaling instructions: we've run into the issue before of having to wrap function
+	pointer types in awkward ways. IIRC, we needed to know the pointer types of RPC pointers in a very "full" way,
+	both the specifier form and the actual type name. Check lvd_linux's generated drivers for more info.
+
+	These can be handled similar to variants: pre-computed strings that we can generate in batches. We could generate
+	the type "forms" on a per-node basis in the passing trees, and simply cache that.
+
+	These type specifiers / declarators and the identifier variants could be done during the C output stage, or as part
+	of marshalling generation: temporary variable names could be decided during IR generation, or perhaps the IR itself
+	encodes enough information to generate that later.
+
+	Note that each IR "block" will end up generating a marshal_* function.
+	Each block is per-projection, and RPC-scoped projections will get names correspondingly prepended with the RPC name
+
+	Follow the valgrind conventions on efficiency, preferably
+*/
+
 int main(int argc, char** argv)
 {
     const gsl::span<gsl::zstring<>> args {argv, gsl::narrow<std::size_t>(argc)};
