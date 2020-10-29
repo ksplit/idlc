@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <memory>
 #include <optional>
 #include <variant>
@@ -16,6 +17,7 @@ namespace idlc {
     struct rpc_definition;
     struct signature;
     struct struct_projection_definition;
+    struct union_projection_definition;
     struct idl_include;
     struct driver_file;
     struct module_file;
@@ -28,10 +30,23 @@ namespace idlc {
     enum class attribute_set : std::uint8_t;
     struct type_name;
 
+    using id_ref = gsl::not_null<gsl::czstring<>>;
+
+    /*
+        FIXME: if we ever end up needing to modify the tree frequently, it will become useful to put every node
+        behind a unique_ptr. If we intend the tree to be completely immutable, we'll probably end up being better off
+        doing such a pointer-based layout anyways, but allocating them depth-first on a stack allocator.
+    */
+
     using idl_file = std::variant<driver_file, module_file>;
     using rpc_definition_subitem = std::variant<struct_projection_definition, signature>;
-    using module_subitem = std::variant<header_import, rpc_definition, struct_projection_definition>;
     using stem_type = std::variant<void_type, rpc_type, primitive_type, projection_type, string_type>;
+    using module_subitem = std::variant<
+        header_import,
+        rpc_definition,
+        struct_projection_definition,
+        union_projection_definition
+    >;
 
     struct string_type {};
 
@@ -50,11 +65,11 @@ namespace idlc {
     };
 
     struct projection_type {
-        const gsl::czstring<> id;
+        const id_ref id;
     };
 
     struct rpc_type {
-        const gsl::czstring<> id;
+        const id_ref id;
     };
 
     struct void_type {};
@@ -89,11 +104,13 @@ namespace idlc {
     inline attribute_set& operator|=(attribute_set& flags, attribute_set new_flags)
     {
         flags = flags | new_flags;
+        return flags;
     }
 
     inline attribute_set& operator&=(attribute_set& flags, attribute_set new_flags)
     {
         flags = flags & new_flags;
+        return flags;
     }
 
     struct type_name {
@@ -104,7 +121,7 @@ namespace idlc {
 
     struct variable {
         const type_name type;
-        const gsl::czstring<> id;
+        const id_ref id;
     };
 
     struct signature {
@@ -113,31 +130,38 @@ namespace idlc {
     };
 
     struct struct_projection_definition {
-        const gsl::czstring<> id;
-        const gsl::czstring<> underlying;
+        const id_ref id;
+        const id_ref underlying;
+        const std::vector<variable> fields;
+    };
+
+    struct union_projection_definition {
+        const id_ref id;
+        const id_ref underlying;
+        const std::vector<id_ref> value_ref;
         const std::vector<variable> fields;
     };
 
     struct rpc_definition {
-        const gsl::czstring<> id;
+        const id_ref id;
         const std::vector<rpc_definition_subitem> items;
     };
 
     struct header_import {
-        const gsl::czstring<> raw_path;
+        const id_ref raw_path;
     };
 
     struct idl_include {
-        const gsl::czstring<> raw_path;
+        const id_ref raw_path;
     };
 
     struct module_definition {
-        const gsl::czstring<> id;
+        const id_ref id;
         const std::vector<module_subitem> items;
     };
 
     struct driver_definition {
-        const gsl::czstring<> id;
+        const id_ref id;
         const std::vector<module_import> imports;
     };
 
@@ -147,10 +171,106 @@ namespace idlc {
     };
 
     struct module_import {
-        const gsl::czstring<> id;
+        const id_ref id;
     };
 
     struct module_file {
         const std::vector<module_definition> modules;
+    };
+
+    template<typename derived>
+    class ast_visitor {
+    public:
+        bool traverse_idl_file(idl_file& node)
+        {
+            const auto visitor = [this](auto&& subnode)
+            {
+                if constexpr (std::is_same_v<decltype(subnode), driver_file>) {
+                    if (!self().traverse_driver_file(subnode))
+                        return false;
+                }
+                else if constexpr (std::is_same_v<decltype(subnode), module_file>) {
+                    if (!self().traverse_module_file(subnode))
+                        return false;
+                }
+                else {
+                    assert(false);
+                }
+
+                return true;
+            };
+
+            return std::visit(visitor, node);
+        }
+
+        bool traverse_driver_file(driver_file& node)
+        {
+            if (!self().traverse_driver_definition(node.driver))
+                return false;
+
+            for (auto& subnode : node.includes) {
+                if (!self().traverse_idl_include(subnode))
+                    return false;
+            }
+
+            return true;
+        }
+
+        bool traverse_driver_definition(driver_definition& node)
+        {
+            for (auto& subnode : node.imports) {
+                if (!self().traverse_module_import(subnode))
+                    return false;
+            }
+
+            return true;
+        }
+
+        bool traverse_idl_include(idl_include& node)
+        {
+            return true;
+        }
+
+        bool traverse_module_file(module_file& node)
+        {
+            for (auto& subnode : node.modules) {
+                if (!self().traverse_module_definition(node))
+                    return false;
+            }
+
+            return true;
+        }
+
+        bool traverse_module_definition(module_definition& node)
+        {
+            for (auto& subnode : node.items) {
+                if (!self().traverse_module_subitem(node))
+                    return false;
+            }
+
+            return true;
+        }
+
+        bool traverse_module_import(module_import& node)
+        {
+            return true;
+        }
+
+        bool traverse_module_subitem(module_subitem& node)
+        {
+            // TODO:
+            return true;
+        }
+
+    private:
+        derived& self()
+        {
+            // This is 100% kosher CRTP
+            return *reinterpret_cast<derived*>(this);
+        }
+    };
+
+    class null_ast_walk : public ast_visitor<null_ast_walk> {
+
     };
 }

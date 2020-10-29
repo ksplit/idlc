@@ -1,5 +1,0 @@
-include <userspace_test.idl>
-
-module utest_driver {
-    require utest;
-}

@@ -4,7 +4,6 @@
 #include <utility>
 
 namespace idlc {
-	// TODO: possibly subject to revision, since it depends on name-hiding (that's why you see the gsl::suppress' everywhere)
 	template<typename derived>
 	class generic_pass {
 	private:

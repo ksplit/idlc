@@ -1,0 +1,13 @@
+module foo {
+    rpc add_widget {
+        projection <struct bar> foobar {
+
+        }
+
+        projection <union bar, this->foo> foobar {
+            
+        }
+
+        signature void(projection foobar *foo);
+    }
+}
