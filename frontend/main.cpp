@@ -15,6 +15,7 @@ namespace idlc {
                 return true;
             }
             catch (const Parser::ParseException& e) {
+				std::cout << e.getReason() << std::endl;
                 return false;
             }
         }
