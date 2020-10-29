@@ -8,16 +8,14 @@
 
 namespace idlc {
     namespace {
-        std::unique_ptr<idlc::idl_file> parse_driver(gsl::czstring<> path)
+        bool parse_driver(gsl::czstring<> path)
         {
             try {
-                const auto raw_ptr = Parser::parse(std::string {path});
-                const auto ptr = const_cast<void*>(raw_ptr);
-                return std::unique_ptr<idlc::idl_file> {static_cast<idlc::idl_file*>(ptr)};
+                Parser::parse(std::string {path});
+                return true;
             }
             catch (const Parser::ParseException& e) {
-                std::cout << e.getReason() << std::endl;
-                return nullptr;
+                return false;
             }
         }
     }
@@ -71,9 +69,5 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    idlc::null_ast_walk null {};
-    if (!null.traverse_idl_file(*driver_idl)) {
-        std::cout << "Walk failed" << std::endl;
-        return 1;
-    }
+	std::cout << "File was parsed correctly" << std::endl;
 }

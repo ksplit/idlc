@@ -39,7 +39,7 @@ namespace idlc {
     */
 
     using idl_file = std::variant<driver_file, module_file>;
-    using rpc_definition_subitem = std::variant<struct_projection_definition, signature>;
+    using rpc_definition_subitem = std::variant<struct_projection_definition, union_projection_definition, signature>;
     using stem_type = std::variant<void_type, rpc_type, primitive_type, projection_type, string_type>;
     using module_subitem = std::variant<
         header_import,
@@ -258,7 +258,133 @@ namespace idlc {
 
         bool traverse_module_subitem(module_subitem& node)
         {
+            const auto visitor = [this](auto&& subnode) {
+                if constexpr (std::is_same_v<decltype(subnode), header_import>) {
+                    if (!self().traverse_header_import(subnode))
+                        return false;
+                }
+                else if constexpr (std::is_same_v<decltype(subnode), rpc_definition>) {
+                    if (!self().traverse_rpc_definition(subnode))
+                        return false;
+                }
+                else if constexpr (std::is_same_v<decltype(subnode), struct_projection_definition>) {
+                    if (!self().traverse_struct_projection_definition(subnode))
+                        return false;
+                }
+                else if constexpr (std::is_same_v<decltype(subnode), union_projection_definition>) {
+                    if (!self().traverse_union_projection_definition(subnode))
+                        return false;
+                }
+                else {
+                    assert(false);
+                }
+
+                return true;
+            };
+
+            return std::visit(visitor, node);
+        }
+
+        bool traverse_header_import(header_import& node)
+        {
+            return true;
+        }
+
+        bool traverse_rpc_definition(rpc_definition& node)
+        {
             // TODO:
+            return true;
+        }
+
+        bool traverse_struct_projection_definition(struct_projection_definition& node)
+        {
+            for (auto& subnode : node.fields) {
+                if (!self().traverse_variable(subnode))
+                    return false;
+            }
+
+            return true;
+        }
+
+        bool traverse_union_projection_definition(union_projection_definition& node)
+        {
+            for (auto& subnode : node.fields) {
+                if (!self().traverse_variable(subnode))
+                    return false;
+            }
+
+            return true;
+        }
+
+        bool traverse_variable(variable& node)
+        {
+            if (!self().traverse_type_name(node.type))
+                return false;
+
+            return true;
+        }
+
+        bool traverse_type_name(type_name& node)
+        {
+            if (!self().traverse_stem_type(node.stem))
+                return false;
+
+            return true;
+        }
+
+        bool traverse_stem_type(stem_type& node)
+        {
+            const auto visitor = [this](auto&& subnode) {
+                if constexpr (std::is_same_v<decltype(subnode), void_type>) {
+                    if (!traverse_void_type(subnode))
+                        return false;
+                }
+                else if constexpr (std::is_same_v<decltype(subnode), rpc_type>) {
+                    if (!traverse_rpc_type(subnode))
+                        return false;
+                }
+                else if constexpr (std::is_same_v<decltype(subnode), primitive_type>) {
+                    if (!traverse_primitive_type(subnode))
+                        return false;
+                }
+                else if constexpr (std::is_same_v<decltype(subnode), projection_type>) {
+                    if (!traverse_projection_type(subnode))
+                        return false;
+                }
+                else if constexpr (std::is_same_v<decltype(subnode), string_type>) {
+                    if (!traverse_string_type(subnode))
+                        return false;
+                }
+                else {
+                    assert(false);
+                }
+            };
+
+            return std::visit(visitor, node);
+        }
+
+        bool traverse_void_type(void_type& node)
+        {
+            return true;
+        }
+
+        bool traverse_rpc_type(rpc_type& node)
+        {
+            return true;
+        }
+
+        bool traverse_primitive_type(primitive_type& node)
+        {
+            return true;
+        }
+
+        bool traverse_projection_type(projection_type& node)
+        {
+            return true;
+        }
+
+        bool traverse_string_type(string_type& node)
+        {
             return true;
         }
 

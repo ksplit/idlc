@@ -15,161 +15,9 @@ include: {{
 code: {{
     namespace idlc {
         using namespace ::idlc;
-        using id = gsl::czstring<>;
 
         template<typename type>
         using uptr = std::unique_ptr<type>;
-
-        template<typename type>
-        std::enable_if_t<std::is_arithmetic_v<type>, type> unbox(const Value& v) noexcept
-        {
-            return static_cast<type>(reinterpret_cast<std::uintptr_t>(v.getValue()));
-        }
-
-        template<typename type>
-        std::enable_if_t<std::is_enum_v<type>, type> unbox(const Value& v) noexcept
-        {
-            return static_cast<type>(reinterpret_cast<std::uintptr_t>(v.getValue()));
-        }
-
-        template<typename type>
-        std::enable_if_t<std::is_pointer_v<type>, type> unbox(const Value& v)
-        {
-            const auto ptr = const_cast<void*>(v.getValue());
-            return static_cast<type>(ptr);
-        }
-
-        template<typename type>
-        type take(const Value& val)
-        {
-            const gsl::not_null<type*> ptr {unbox<type*>(val)};
-            uptr<type> owner {ptr};
-            const type object {*ptr};
-            owner.reset();
-            return object;
-        }
-
-        template<typename type>
-        auto box(type v) noexcept
-        {
-            static_assert(std::is_trivially_copyable<type>::value, "only trivially copyable types are boxeable");
-            static_assert(sizeof(type) <= sizeof(const void*), "can't box something this big");
-            return reinterpret_cast<const void*>(v);
-        }
-
-        id make_id(string_heap& heap, const Value& first, const Value& rest)
-        {
-            const auto rest_vals = rest.getValues();
-
-            std::string new_id {};
-            new_id.reserve(rest_vals.size() + 1);
-
-            new_id += unbox<char>(first);
-            for (const auto next : rest_vals) {
-                new_id += unbox<char>(next);
-            }
-
-            std::cout << "ID \"" << new_id << "\"" << std::endl;
-
-            return heap.intern(new_id);
-        }
-
-        enum class primitive_token : std::uint8_t {
-            token_none,
-            token_char,
-            token_short,
-            token_int,
-            token_long,
-            token_unsigned,
-            token_signed
-        };
-
-        constexpr auto primitive_id(primitive_token d) noexcept
-        {
-            return static_cast<std::uint32_t>(d);
-        }
-
-        constexpr auto primitive_id(primitive_token c, primitive_token d) noexcept
-        {
-            return (static_cast<std::uint32_t>(c) << (8 * 1)) | primitive_id(d);
-        }
-
-        constexpr auto primitive_id(primitive_token b, primitive_token c, primitive_token d) noexcept
-        {
-            return (static_cast<std::uint32_t>(b) << (8 * 2)) | primitive_id(c, d);
-        }
-
-        constexpr auto primitive_id(primitive_token a, primitive_token b, primitive_token c, primitive_token d) noexcept
-        {
-            return (static_cast<std::uint32_t>(a) << (8 * 3)) | primitive_id(b, c, d);
-        }
-
-        enum class parsed_primitive_type {
-            invalid,
-            char_type = primitive_id(primitive_token::token_char),
-            uchar_type = primitive_id(primitive_token::token_unsigned, primitive_token::token_char),
-            schar_type = primitive_id(primitive_token::token_signed, primitive_token::token_char),
-            short_type = primitive_id(primitive_token::token_short),
-            ushort_type = primitive_id(primitive_token::token_unsigned, primitive_token::token_short),
-            int_type = primitive_id(primitive_token::token_int),
-            uint_type = primitive_id(primitive_token::token_unsigned, primitive_token::token_int),
-            long_type = primitive_id(primitive_token::token_long),
-            ulong_type = primitive_id(primitive_token::token_unsigned, primitive_token::token_long),
-            longlong_type = primitive_id(primitive_token::token_long, primitive_token::token_short),
-            ulonglong_type = primitive_id(primitive_token::token_unsigned, primitive_token::token_long, primitive_token::token_long)
-        };
-
-        auto recognize_type(const Value& first, const Value& rest)
-        {
-            const auto& vals = rest.getValues();
-            const auto count = vals.size();
-            std::uint32_t tag {};
-            tag |= (idlc::unbox<std::uint8_t>(first) << (count * 8));
-            auto n_byte = count - 1;
-            for (const auto& val : vals) {
-                tag |= (idlc::unbox<std::uint8_t>(val) << (n_byte * 8));
-                --n_byte;
-            }
-
-            switch (static_cast<parsed_primitive_type>(tag)) {
-            case parsed_primitive_type::char_type:
-            case parsed_primitive_type::uchar_type:
-            case parsed_primitive_type::schar_type:
-            case parsed_primitive_type::short_type:
-            case parsed_primitive_type::ushort_type:
-            case parsed_primitive_type::int_type:
-            case parsed_primitive_type::uint_type:
-            case parsed_primitive_type::long_type:
-            case parsed_primitive_type::ulong_type:
-            case parsed_primitive_type::longlong_type:
-            case parsed_primitive_type::ulonglong_type:
-                return static_cast<parsed_primitive_type>(tag);
-
-            default:
-                std::cout << "Unrecognized type" << std::endl;
-                return parsed_primitive_type::invalid;
-            }
-        }
-
-        struct type_attributes {
-            const std::vector<attribute_set> stars;
-            const attribute_set value;
-        };
-
-        auto make_type_name(const Value& ty, const Value& attrs)
-        {
-            if (attrs.getValue()) {
-                const auto attributes {take<type_attributes>(attrs)};
-                const auto type {take<stem_type>(ty)};
-                const type_name name {attributes.stars, type, attributes.value};
-                return std::make_unique<type_name>(name).release();
-            }
-            else {
-                const auto type {take<stem_type>(ty)};
-                const type_name name {{}, type, {} };
-                return std::make_unique<type_name>(name).release();
-            }
-        }
     }
 }}
 
@@ -196,30 +44,15 @@ signed = "signed"
 unsigned = "unsigned"
 void = "void"
 include = "include"
+array = "array"
+null = "null"
 
 # Primitive types
 
-component = unsigned {{
-    value = idlc::box(idlc::primitive_token::token_unsigned);
-}} | signed {{
-    value = idlc::box(idlc::primitive_token::token_signed);
-}} | long {{
-    value = idlc::box(idlc::primitive_token::token_long);
-}} | int {{
-    value = idlc::box(idlc::primitive_token::token_int);
-}} | short {{
-    value = idlc::box(idlc::primitive_token::token_short);
-}} | char {{
-    value = idlc::box(idlc::primitive_token::token_char);
-}}
+component = unsigned | signed | long | int | short | char
 
-primitive_specifier = first:component rest:(wsp c:component {{ value = c.getValue(); }})* <predicate ok>{{
-    // No valid primitive type is longer than 4 components
-    const auto& values = rest.getValues();
-    ok = values.size() <= 3;
-}} {{
-    value = idlc::box(idlc::recognize_type(first, rest));
-}}
+# NOTE: no valid primitive specifier is longer than 4
+primitive_specifier = first:component rest:(wsp c:component)*
 
 # Utility rules
 
@@ -235,178 +68,77 @@ comment = line_comment
 
 # Identifiers
 
-id_start = "_" {{ value = idlc::box('_'); }} | letter
+id_start = "_" | letter
 id_next = id_start | number
-id(ctx) = first:id_start rest:id_next* {{
-    const gsl::not_null<idlc::string_heap*> strings {idlc::unbox<idlc::string_heap*>(ctx)};
-    value = idlc::make_id(*strings, first, rest);
-}}
+id(ctx) = first:id_start rest:id_next* 
 
 # Driver block
 
-module_import(ctx) = import sp id:id(ctx) sp ";" sp {{
-    const idlc::module_import imp {
-        idlc::unbox<idlc::id>(id)
-    };
+module_import(ctx) = import sp id:id(ctx) sp ";" sp
 
-    value = std::make_unique<idlc::module_import>(imp).release();
-}}
-
-driver_definition(ctx) = driver wsp id:id(ctx) sp "{" sp imports:module_import(ctx)* "}" sp {{
-    const auto& vals = imports.getValues();
-    std::vector<idlc::module_import> import_vec {};
-    import_vec.reserve(vals.size());
-    for (const auto& val : vals) {
-        import_vec.push_back(idlc::take<idlc::module_import>(val));
-    }
-
-    const idlc::driver_definition def {idlc::unbox<idlc::id>(id), import_vec};
-    value = std::make_unique<idlc::driver_definition>(def).release();
-}}
+driver_definition(ctx) = driver wsp id:id(ctx) sp "{" sp imports:module_import(ctx)* "}" sp
 
 # Header statement
 
-path(ctx) = str:{{ value = std::make_unique<std::string>().release(); }} "<" path_tail(str) {{
-    const gsl::not_null<idlc::string_heap*> strings {idlc::unbox<idlc::string_heap*>(ctx)};
-    const auto path_id = strings->intern(idlc::take<std::string>(str));
-    std::cout << "PATH " << path_id << std::endl;
-    value = path_id;
-}}
+path(ctx) = "<" path_tail
 
-path_tail(str) = ">" | ch:. {{
-    const auto c = idlc::unbox<char>(ch);
-    gsl::not_null<std::string*> text {idlc::unbox<std::string*>(str)};
-    *text += c;
-}} path_tail(str)
+path_tail = ">" | . path_tail
 
-header_import(ctx) = header sp pt:path(ctx) sp ";" sp {{
-    const idlc::header_import node {idlc::unbox<idlc::id>(pt)};
-    value = std::make_unique<idlc::header_import>(node).release();
-}}
+header_import(ctx) = header sp pt:path(ctx) sp ";" sp
 
-idl_include(ctx) = include sp pt:path(ctx) sp ";" sp {{
-    const idlc::idl_include node {idlc::unbox<idlc::id>(pt)};
-    value = std::make_unique<idlc::idl_include>(node).release();
-}}
+idl_include(ctx) = include sp pt:path(ctx) sp ";" sp
 
 # Attributes
 
-attribute_set = "[" sp attrs:attributes "]" {{ value = attrs.getValue(); }}
+attribute_set = "[" sp attrs:attributes "]"
 
-attributes = new_attrs:attribute sp attrs:attributes_tail {{
-    const auto flags = idlc::unbox<idlc::attribute_set>(attrs);
-    const auto new_flags = idlc::unbox<idlc::attribute_set>(new_attrs);
-    value = idlc::box(flags | new_flags);
-}}
+attributes = new_attrs:attribute sp attrs:attributes_tail
 
-attributes_tail = "," sp new_attrs:attribute sp attrs:attributes_tail {{
-    const auto flags = idlc::unbox<idlc::attribute_set>(attrs);
-    const auto new_flags = idlc::unbox<idlc::attribute_set>(new_attrs);
-    value = idlc::box(flags | new_flags);
-}} | <void> {{
-    value = idlc::box(idlc::attribute_set::none);
-}}
+attributes_tail = "," sp new_attrs:attribute sp attrs:attributes_tail | <void>
 
-attribute = "alloc(caller)" {{
-    value = idlc::box(idlc::attribute_set::alloc_caller);
-}} | "alloc(callee)" {{
-    value = idlc::box(idlc::attribute_set::alloc_callee);
-}} | "bind(caller)" {{
-    value = idlc::box(idlc::attribute_set::bind_caller);
-}} | "bind(callee)" {{
-    value = idlc::box(idlc::attribute_set::bind_callee);
-}} | "dealloc(caller)" {{
-    value = idlc::box(idlc::attribute_set::dealloc_caller);
-}} | "dealloc(callee)" {{
-    value = idlc::box(idlc::attribute_set::dealloc_callee);
-}} | "in" {{
-    value = idlc::box(idlc::attribute_set::in);
-}} | "out" {{
-    value = idlc::box(idlc::attribute_set::out);
-}}
+attribute = "alloc(caller)" | "alloc(callee)" | "bind(caller)" | "bind(callee)" | "dealloc(caller)" | "dealloc(callee)" | "in" | "out"
 
 # Types
 
-indirection = (attrs:attribute_set sp)? "*" {{ value = attrs.getValue(); }}
-type_tail = stars:(sp flags:indirection sp {{ value = flags.getValue(); }})+ sp attrs:attribute_set? {{
-    // Note that the defaulted nullptr is just the empty annotation set
-    const auto val_attrs = idlc::unbox<idlc::attribute_set>(attrs);
+indirection = (attrs:attribute_set sp)? "*"
+type_tail = stars:(sp flags:indirection sp)+ sp attrs:attribute_set? | sp attrs:attribute_set
 
-    const auto star_vals = stars.getValues();
-    std::vector<idlc::attribute_set> star_attrs {};
-    star_attrs.reserve(star_vals.size());
-    for (const auto& star : star_vals) {
-        star_attrs.push_back(idlc::unbox<idlc::attribute_set>(star));
-    }
+type_tail_spacer = set:type_tail | wsp
 
-    const idlc::type_attributes type_attrs {star_attrs, val_attrs};
+void_type = void
 
-    value = std::make_unique<idlc::type_attributes>(type_attrs).release();
-}} | sp attrs:attribute_set {{
-    // Note that the defaulted nullptr is just the empty annotation set
-    const auto val_attrs = idlc::unbox<idlc::attribute_set>(attrs);
-    const idlc::type_attributes type_attrs {{}, val_attrs};
-    value = std::make_unique<idlc::type_attributes>(type_attrs).release();
-}}
+string_type = string
 
-type_tail_spacer = set:type_tail {{ value = set.getValue(); }} | wsp {{ value = nullptr; }}
+projection_type(ctx) = projection wsp id:id(ctx)
 
-void_type = void {{
-    value = std::make_unique<idlc::stem_type>(idlc::void_type {}).release();
-}}
+rpc_type(ctx) = rpc wsp id:id(ctx)
 
-string_type = string {{
-    value = std::make_unique<idlc::stem_type>(idlc::string_type {}).release();
-}}
+primitive_type = ty:primitive_specifier
 
-projection_type(ctx) = projection wsp id:id(ctx) {{
-    value = std::make_unique<idlc::stem_type>(idlc::projection_type {idlc::unbox<idlc::id>(id)}).release();
-}}
+# FIXME: these generate void_type AST nodes rn
+# NOTE: PEG parsers cache parse results, so it's not safe to free pointers in here in general
 
-rpc_type(ctx) = rpc wsp id:id(ctx) {{
-    value = std::make_unique<idlc::stem_type>(idlc::rpc_type {idlc::unbox<idlc::id>(id)}).release();
-}}
+array_type(ctx) = array "<" sp type_name(ctx) sp "," sp null sp ">" | array "<" sp type_name(ctx) sp "," sp number sp ">" | array "<" sp type_name(ctx) sp "," sp value_ref(ctx) sp ">"
 
-primitive_type = ty:primitive_specifier {{
-    value = std::make_unique<idlc::stem_type>(idlc::unbox<idlc::primitive_type>(ty)).release();
-}}
+spaced_stem_type(ctx) = ty:void_type | ty:string_type | ty:primitive_type | ty:rpc_type(ctx) | ty:projection_type(ctx)
 
-spaced_stem_type(ctx) = ty:void_type {{
-    value = ty.getValue();
-}} | ty:string_type {{
-    value = ty.getValue();
-}} | ty:primitive_type {{
-    value = ty.getValue();
-}} | ty:rpc_type(ctx) {{
-    value = ty.getValue();
-}} | ty:projection_type(ctx) {{
-    value = ty.getValue();
-}}
+unspaced_stem_type(ctx) = ty:array_type(ctx)
 
-type_name(ctx) = ty:spaced_stem_type(ctx) attrs:type_tail {{
-    value = idlc::make_type_name(ty, attrs);
-}}
+type_name(ctx) = ty:spaced_stem_type(ctx) attrs:type_tail | ty:unspaced_stem_type(ctx) attrs:type_tail
 
 # The one that requires correct spacing
-type_specifier(ctx) = ty:spaced_stem_type(ctx) attrs:type_tail_spacer {{
-    value = idlc::make_type_name(ty, attrs);
-}}
+type_specifier(ctx) = ty:spaced_stem_type(ctx) attrs:type_tail_spacer | ty:unspaced_stem_type(ctx) sp attrs:type_tail? sp
 
 # Projection fields
 
-variable(ctx) = ty:type_specifier(ctx) id:id(ctx) {{
-    value = std::make_unique<idlc::variable>(idlc::variable {
-        idlc::take<idlc::type_name>(ty),
-        idlc::unbox<idlc::id>(id)
-    }).release();
-}}
+variable(ctx) = ty:type_specifier(ctx) id:id(ctx)
 
-projection_field(ctx) = var:variable(ctx) sp ";" sp {{ value = var.getValue(); }}
+projection_field(ctx) = var:variable(ctx) sp ";" sp
 
 # Projection block
 
 value_ref(ctx) = id(ctx) ("->" id(ctx))* # Have to identify "this" keyword in passes
-struct_tag(ctx) = struct wsp id:id(ctx) sp {{ value = id.getValue(); }}
+struct_tag(ctx) = struct wsp id:id(ctx) sp
 union_tag(ctx) = union wsp id(ctx) sp "," sp value_ref(ctx) sp
 type_tag(ctx) = struct_tag(ctx) | union_tag(ctx)
 projection_definition(ctx) = projection sp "<" sp type_tag(ctx) ">" sp id(ctx) sp "{" sp projection_field(ctx)* "}" sp
@@ -427,32 +159,14 @@ module_definition(ctx) = module wsp id(ctx) sp "{" sp module_item(ctx)* "}" sp
 # File structure
 
 # An incredibly ugly hack, but I would like to see a single person who puts includes *after* their code
-driver_file(ctx) = sp incs:idl_include(ctx)* sp def:driver_definition(ctx) <eof> {{
-    idlc::uptr<const idlc::driver_definition> definition {idlc::unbox<const idlc::driver_definition*>(def)};
-
-    const auto& vals = incs.getValues();
-    std::vector<idlc::idl_include> includes {};
-    includes.reserve(vals.size());
-    for (const auto node : vals) {
-        includes.push_back(idlc::take<idlc::idl_include>(node));
-    }
-
-    const idlc::driver_file file_node {idlc::take<idlc::driver_definition>(def), includes};
-
-    value = std::make_unique<idlc::driver_file>(file_node).release();
-}}
+driver_file(ctx) = sp incs:idl_include(ctx)* sp def:driver_definition(ctx) <eof>
 
 module_file(ctx) = sp module_definition(ctx)+ <eof>
 
-file_inner(ctx) = file:driver_file(ctx) {{
-    const idlc::idl_file node {idlc::take<idlc::driver_file>(file)};
-    value = std::make_unique<idlc::idl_file>(node).release();
-}} | module_file(ctx)
+file_inner(ctx) = file:driver_file(ctx) | module_file(ctx)
 
 file = ctx:{{
     value = std::make_unique<idlc::string_heap>().release();
 }} file:file_inner(ctx) {{
-    idlc::uptr<idlc::string_heap> ptr {idlc::unbox<idlc::string_heap*>(ctx)};
-    ptr.reset();
-    value = file.getValue();
+    delete reinterpret_cast<const idlc::string_heap*>(ctx.getValue());
 }}
