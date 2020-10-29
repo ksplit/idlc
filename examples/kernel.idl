@@ -11,7 +11,9 @@ module netdev {
         signature projection global_proj [out] (
             projection proj [bind(callee)]* foo,
             projection global_proj * bar,
-            string [in]* name
+            array<string [in]*, this->foo->a> dyn_array,
+            array<string [in]*, null> terminated_array,
+            array<string [in]*, 10 > sized_array
         );
     }
 
