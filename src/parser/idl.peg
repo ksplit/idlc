@@ -37,6 +37,7 @@ tok_kw_dealloc = "dealloc"
 tok_kw_bind = "bind"
 tok_kw_caller = "caller"
 tok_kw_callee = "callee"
+tok_kw_any_of = "any_of"
 tok_ident = lex_keyword <predicate ok> {{ ok = false; }} | lex_ident_start lex_ident_rest*
 tok_space = lex_blank+
 tok_arrow = "->"
@@ -96,6 +97,7 @@ lex_keyword = tok_kw_const
 	| tok_kw_bind
 	| tok_kw_caller
 	| tok_kw_callee
+	| tok_kw_any_of
 
 # PARSER
 
@@ -197,8 +199,12 @@ typename_rpc = tok_kw_rpc tok_space tok_ident
 
 typename_proj = tok_kw_projection tok_space tok_ident
 
+typename_any_of = tok_kw_any_of tok_space? tok_langle tok_space? field_ref tok_space? tok_comma tok_space? type_list tok_space? tok_rangle
+
+type_list = typename (tok_space? tok_comma tok_space? typename)*
+
 # These are types free of const or pointers
-typename_stem = typename_array | typename_string | typename_rpc | typename_proj | typename_arith
+typename_stem = typename_array | typename_string | typename_rpc | typename_proj | typename_arith | typename_any_of
 
 indirection = (ptr_attrs tok_space?)? tok_star (tok_space? tok_kw_const)?
 

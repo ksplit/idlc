@@ -7,6 +7,7 @@ module netdev {
         rpc alloc_netdev_mqs c;
         const string [in, alloc] * const [in, out] d;
         array<const projection global_proj [in, alloc] * const [in, bind] * [in], null> e;
+        any_of<this->a, projection global_proj, int, short>* g;
     }
 
     rpc alloc_netdev_mqs {
