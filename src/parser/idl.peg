@@ -1,0 +1,220 @@
+start-symbol: file
+
+include: {{
+	#include "../ast/ast.h"
+}}
+
+rules:
+
+# LEXING: These are the logical "tokens" of the language
+
+tok_kw_const = "const"
+tok_kw_string = "string"
+tok_kw_projection = "projection"
+tok_kw_rpc = "rpc"
+tok_kw_driver = "driver"
+tok_kw_module = "module"
+tok_kw_header = "header"
+tok_kw_import = "import"
+tok_kw_signature = "signature"
+tok_kw_struct = "struct"
+tok_kw_union = "union"
+tok_kw_char = "char"
+tok_kw_short = "short"
+tok_kw_int = "int"
+tok_kw_long = "long"
+tok_kw_signed = "signed"
+tok_kw_unsigned = "unsigned"
+tok_kw_void = "void"
+tok_kw_include = "include"
+tok_kw_array = "array"
+tok_kw_null = "null"
+tok_kw_this = "this"
+tok_kw_in = "in"
+tok_kw_out = "out"
+tok_kw_alloc = "alloc"
+tok_kw_dealloc = "dealloc"
+tok_kw_bind = "bind"
+tok_kw_caller = "caller"
+tok_kw_callee = "callee"
+tok_ident = lex_keyword <predicate ok> {{ ok = false; }} | lex_ident_start lex_ident_rest*
+tok_space = lex_whitespace+ | lex_comment
+tok_arrow = "->"
+tok_langle = "<"
+tok_rangle = ">"
+tok_lbrace = "{"
+tok_rbrace = "}"
+tok_lbrack = "["
+tok_rbrack = "]"
+tok_lpar = "("
+tok_rpar = ")"
+tok_star = "*"
+tok_semi = ";"
+tok_comma = ","
+tok_path = "<" lex_path_tail
+tok_string = <ascii 34> lex_string_tail
+tok_number = [0123456789]+
+
+lex_string_tail = <ascii 34> | [\n\r] <predicate ok> {{ ok = false; }} | . lex_string_tail
+lex_path_tail = ">" | . lex_path_tail
+lex_whitespace = [ \t\n\r]
+lex_line_comment_tail = "\n" | . lex_line_comment_tail
+lex_line_comment = "//" lex_line_comment_tail
+lex_block_comment = "/*" lex_block_comment_tail
+lex_block_comment_tail = "*/" | . lex_block_comment_tail
+lex_comment = lex_line_comment | lex_block_comment
+lex_ident_start = [_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]
+lex_ident_rest = [01234567890] | lex_ident_start
+
+lex_keyword = tok_kw_const 
+	| tok_kw_string 
+	| tok_kw_projection 
+	| tok_kw_rpc 
+	| tok_kw_driver 
+	| tok_kw_module 
+	| tok_kw_header 
+	| tok_kw_import 
+	| tok_kw_signature 
+	| tok_kw_struct 
+	| tok_kw_union 
+	| tok_kw_char 
+	| tok_kw_short 
+	| tok_kw_int 
+	| tok_kw_long 
+	| tok_kw_signed 
+	| tok_kw_unsigned 
+	| tok_kw_void 
+	| tok_kw_include 
+	| tok_kw_array 
+	| tok_kw_null 
+	| tok_kw_this
+	| tok_kw_in
+	| tok_kw_out
+	| tok_kw_alloc
+	| tok_kw_dealloc
+	| tok_kw_bind
+	| tok_kw_caller
+	| tok_kw_callee
+
+# PARSER
+
+file = driver_file | module_file
+
+driver_file = (tok_space? include_list)? tok_space? driver_def (tok_space? include_list)? tok_space? <eof>
+
+include_list = include_stmt (tok_space? include_stmt)*
+
+include_stmt = tok_kw_include tok_space? tok_path tok_space? tok_semi
+
+driver_def = tok_kw_driver tok_space tok_ident tok_space? tok_lbrace (tok_space? import_list)? tok_space? tok_rbrace
+
+import_list = import_stmt (tok_space? import_stmt)*
+
+import_stmt = tok_kw_import tok_space tok_ident tok_space? tok_semi
+
+module_file = tok_space? module_list tok_space? <eof>
+
+module_list = module_def (tok_space? module_def)*
+
+module_def = tok_kw_module tok_space tok_ident tok_space? tok_lbrace (tok_space? module_item_list)? tok_space? tok_rbrace
+
+module_item_list = module_item (tok_space? module_item)*
+
+module_item = header_stmt | proj_def | rpc_def
+
+header_stmt = tok_kw_header tok_space? tok_path tok_space? tok_semi
+	| tok_kw_header tok_space? tok_string tok_space? tok_semi
+
+proj_def = tok_kw_projection tok_space? tok_langle tok_space? proj_type tok_space? tok_rangle tok_space? tok_ident tok_space? tok_lbrace (tok_space? proj_field_list)? tok_space? tok_rbrace
+
+proj_type = proj_struct_type | proj_union_type
+
+proj_struct_type = tok_kw_struct tok_space tok_ident
+
+proj_union_type = tok_kw_union tok_space tok_ident tok_space? tok_comma tok_space? field_ref
+
+field_ref = field_rel_ref | field_abs_ref
+
+field_rel_ref = tok_ident (tok_arrow tok_ident)*
+
+field_abs_ref = tok_kw_this (tok_arrow field_rel_ref)?
+
+proj_field_list = proj_field (tok_space? proj_field)*
+
+proj_field = var_decl tok_space? tok_semi
+
+# NOTE: we assume type_spec has the correct whitespace attached
+# TOOD: parse types
+
+typename_ptr = typename_any_no_ptr (tok_space? val_attrs)? ((tok_space? ptr_attrs)? tok_space? tok_star (tok_space? tok_kw_const)?)*
+
+val_attr = tok_kw_in | tok_kw_out
+
+rpc_side_spec = tok_kw_caller | tok_kw_callee
+
+ptr_attr = tok_kw_in
+	| tok_kw_out
+	| tok_kw_alloc (tok_space? tok_lpar tok_space? rpc_side_spec tok_space? tok_rpar)?
+	| tok_kw_dealloc (tok_space? tok_lpar tok_space? rpc_side_spec tok_space? tok_rpar)?
+	| tok_kw_bind (tok_space? tok_lpar tok_space? rpc_side_spec tok_space? tok_rpar)?
+
+val_attrs = tok_lbrack tok_space? val_attr_list tok_space? tok_rbrack
+
+ptr_attrs = tok_lbrack tok_space? ptr_attr_list tok_space? tok_rbrack
+
+val_attr_list = val_attr (tok_space? tok_comma tok_space? val_attr)*
+
+ptr_attr_list = ptr_attr (tok_space? tok_comma tok_space? ptr_attr)*
+
+var_decl = typename_string tok_space tok_ident
+	| typename_arith tok_space tok_ident
+	| typename_rpc tok_space tok_ident
+	| typename_proj tok_space tok_ident
+	| typename_array tok_space? tok_ident
+	| typename_ptr tok_space? tok_ident
+
+typename_any_no_ptr = typename_arith (tok_space? val_attrs)?
+	| typename_array (tok_space? val_attrs)?
+	| typename_string (tok_space? val_attrs)?
+	| typename_rpc (tok_space? val_attrs)?
+	| typename_proj (tok_space? val_attrs)?
+
+typename_any = typename_arith (tok_space? val_attrs)?
+	| typename_array (tok_space? val_attrs)?
+	| typename_string (tok_space? val_attrs)?
+	| typename_rpc (tok_space? val_attrs)?
+	| typename_proj (tok_space? val_attrs)?
+	| typename_ptr (tok_space? val_attrs)?
+
+# HACK: we sort these alternates by length to get the parser to greedy-match them
+
+typename_arith = (tok_kw_const tok_space)? tok_kw_unsigned tok_space tok_kw_long tok_space tok_kw_long
+	| (tok_kw_const tok_space)? tok_kw_unsigned tok_space tok_kw_long
+	| (tok_kw_const tok_space)? tok_kw_long tok_space tok_kw_long
+	| (tok_kw_const tok_space)? tok_kw_unsigned tok_space tok_kw_int
+	| (tok_kw_const tok_space)? tok_kw_unsigned tok_space tok_kw_short
+	| (tok_kw_const tok_space)? tok_kw_unsigned tok_space tok_kw_char
+	| (tok_kw_const tok_space)? tok_kw_signed tok_space tok_kw_char
+	| (tok_kw_const tok_space)? tok_kw_short
+	| (tok_kw_const tok_space)? tok_kw_int
+	| (tok_kw_const tok_space)? tok_kw_long
+	| (tok_kw_const tok_space)? tok_kw_char
+
+typename_array = (tok_kw_const tok_space)? tok_kw_array tok_space? tok_langle tok_space? typename_any tok_space? tok_comma tok_space? array_size tok_space? tok_rangle
+
+array_size = tok_number | field_ref | tok_kw_null
+
+typename_string = (tok_kw_const tok_space)? tok_kw_string
+
+typename_rpc = (tok_kw_const tok_space)? tok_kw_rpc tok_space tok_ident
+
+typename_proj = (tok_kw_const tok_space)? tok_kw_projection tok_space tok_ident
+
+rpc_def = tok_kw_rpc tok_space tok_ident tok_space? tok_lbrace (tok_space? rpc_item_list)? tok_space? tok_rbrace
+
+rpc_item_list = rpc_item (tok_space? rpc_item)*
+
+rpc_item = proj_def
+# | signature
+
+# signature = 

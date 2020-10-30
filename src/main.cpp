@@ -1,5 +1,5 @@
-#include "../parser/ast.h"
-#include "../parser/parser.h"
+#include "./ast/ast.h"
+#include "./parser/parser.h"
 
 #include <gsl/gsl>
 
@@ -21,6 +21,14 @@ namespace idlc {
         }
     }
 }
+
+/*
+	NOTE: will be moving to a clang-like "sema" AST builder, since the memoized semantics of PEG grammars makes it
+	impossible to correctly manage the lifetimes of produced nodes within the parser.
+
+	The parser will incrementally do work against the builder, discarding it implicitly unless explicitly committed
+	to the tree.
+*/
 
 /*
 	There's not really a need for AST re-writing as of yet, the resolution tasks can be done in-place,

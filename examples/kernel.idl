@@ -1,26 +1,10 @@
 module netdev {
     header <bar_punk\foo.h>;
-    rpc alloc_netdev_mqs {
-        projection <struct foo> proj {
-            unsigned long long a;
-            short b;
-            rpc alloc_netdev_mqs c;
-            projection global_proj [out, bind(callee)]* d;
-        }
-
-        signature projection global_proj [out] (
-            projection proj [bind(callee)]* foo,
-            projection global_proj * bar,
-            array<string [in]*, this->foo->a> dyn_array,
-            array<string [in]*, null> terminated_array,
-            array<string [in]*, 10 > sized_array
-        );
-    }
 
     projection <union bar, this> global_proj {
         unsigned long a;
         short b;
         rpc alloc_netdev_mqs c;
-        string [bind(callee)]* d;
+        const string [bind(callee)] * const [in] d;
     }
 }

@@ -7,22 +7,21 @@ set(
 
 project(lcds)
 
-find_package(Python2)
 find_package(Microsoft.GSL CONFIG REQUIRED)
 find_package(absl CONFIG REQUIRED)
 
 add_custom_command(
-	OUTPUT ${PROJECT_SOURCE_DIR}/parser/parser.cpp ${PROJECT_SOURCE_DIR}/parser/parser.h
-	COMMAND ${Python2_EXECUTABLE} ${PROJECT_SOURCE_DIR}/parser/vembyr-1.1/peg.py --save=${PROJECT_SOURCE_DIR}/parser/parser.h --h ${PROJECT_SOURCE_DIR}/parser/idl.peg
-	COMMAND ${Python2_EXECUTABLE} ${PROJECT_SOURCE_DIR}/parser/vembyr-1.1/peg.py --save=${PROJECT_SOURCE_DIR}/parser/parser.cpp --cpp ${PROJECT_SOURCE_DIR}/parser/idl.peg
-	MAIN_DEPENDENCY parser/idl.peg
+	OUTPUT ${PROJECT_SOURCE_DIR}/src/parser/parser.cpp ${PROJECT_SOURCE_DIR}/src/parser/parser.h
+	COMMAND python2 ${PROJECT_SOURCE_DIR}/src/parser/vembyr-1.1/peg.py --save=${PROJECT_SOURCE_DIR}/src/parser/parser.h --h ${PROJECT_SOURCE_DIR}/src/parser/idl.peg
+	COMMAND python2 ${PROJECT_SOURCE_DIR}/src/parser/vembyr-1.1/peg.py --save=${PROJECT_SOURCE_DIR}/src/parser/parser.cpp --cpp ${PROJECT_SOURCE_DIR}/src/parser/idl.peg
+	MAIN_DEPENDENCY ${PROJECT_SOURCE_DIR}/src/parser/idl.peg
 )
 
 add_executable(
 	idlc
-	"parser/parser.cpp"
-	"parser/string_heap.cpp"
-	"frontend/main.cpp"
+	"src/parser/parser.cpp"
+	"src/parser/string_heap.cpp"
+	"src/main.cpp"
 )
 
 set_property(TARGET idlc PROPERTY CXX_STANDARD 17)
