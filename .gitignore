@@ -11,10 +11,9 @@ dump.txt
 notes.txt
 
 #parser generated files
-parser/peg_peg.py
-parser/parser.cpp
-parser/parser.h
-include/lcd_idl.h
+src/parser/peg_peg.py
+src/parser/parser.cpp
+src/parser/parser.h
 
 #editor configs
 .vscode/

@@ -38,7 +38,7 @@ tok_kw_bind = "bind"
 tok_kw_caller = "caller"
 tok_kw_callee = "callee"
 tok_ident = lex_keyword <predicate ok> {{ ok = false; }} | lex_ident_start lex_ident_rest*
-tok_space = lex_whitespace+ | lex_comment
+tok_space = lex_blank+
 tok_arrow = "->"
 tok_langle = "<"
 tok_rangle = ">"
@@ -57,6 +57,7 @@ tok_number = [0123456789]+
 
 lex_string_tail = <ascii 34> | [\n\r] <predicate ok> {{ ok = false; }} | . lex_string_tail
 lex_path_tail = ">" | . lex_path_tail
+lex_blank = lex_whitespace+ | lex_comment
 lex_whitespace = [ \t\n\r]
 lex_line_comment_tail = "\n" | . lex_line_comment_tail
 lex_line_comment = "//" lex_line_comment_tail
@@ -143,20 +144,22 @@ proj_field_list = proj_field (tok_space? proj_field)*
 
 proj_field = var_decl tok_space? tok_semi
 
-# NOTE: we assume type_spec has the correct whitespace attached
-# TOOD: parse types
+var_decl = typename tok_space? tok_ident
 
-typename_ptr = typename_any_no_ptr (tok_space? val_attrs)? ((tok_space? ptr_attrs)? tok_space? tok_star (tok_space? tok_kw_const)?)*
+# FIXME: type name parsing is buggy: remember, it is much easier to manipulate the AST in a series of passes than it is
+# to maintain a parser that is. . . less than organized.
 
 val_attr = tok_kw_in | tok_kw_out
 
 rpc_side_spec = tok_kw_caller | tok_kw_callee
 
+rpc_side_paren_expr = tok_lpar tok_space? rpc_side_spec tok_space? tok_rpar
+
 ptr_attr = tok_kw_in
 	| tok_kw_out
-	| tok_kw_alloc (tok_space? tok_lpar tok_space? rpc_side_spec tok_space? tok_rpar)?
-	| tok_kw_dealloc (tok_space? tok_lpar tok_space? rpc_side_spec tok_space? tok_rpar)?
-	| tok_kw_bind (tok_space? tok_lpar tok_space? rpc_side_spec tok_space? tok_rpar)?
+	| tok_kw_alloc (tok_space? rpc_side_paren_expr)?
+	| tok_kw_dealloc (tok_space? rpc_side_paren_expr)?
+	| tok_kw_bind (tok_space? rpc_side_paren_expr)?
 
 val_attrs = tok_lbrack tok_space? val_attr_list tok_space? tok_rbrack
 
@@ -166,55 +169,47 @@ val_attr_list = val_attr (tok_space? tok_comma tok_space? val_attr)*
 
 ptr_attr_list = ptr_attr (tok_space? tok_comma tok_space? ptr_attr)*
 
-var_decl = typename_string tok_space tok_ident
-	| typename_arith tok_space tok_ident
-	| typename_rpc tok_space tok_ident
-	| typename_proj tok_space tok_ident
-	| typename_array tok_space? tok_ident
-	| typename_ptr tok_space? tok_ident
-
-typename_any_no_ptr = typename_arith (tok_space? val_attrs)?
-	| typename_array (tok_space? val_attrs)?
-	| typename_string (tok_space? val_attrs)?
-	| typename_rpc (tok_space? val_attrs)?
-	| typename_proj (tok_space? val_attrs)?
-
-typename_any = typename_arith (tok_space? val_attrs)?
-	| typename_array (tok_space? val_attrs)?
-	| typename_string (tok_space? val_attrs)?
-	| typename_rpc (tok_space? val_attrs)?
-	| typename_proj (tok_space? val_attrs)?
-	| typename_ptr (tok_space? val_attrs)?
-
 # HACK: we sort these alternates by length to get the parser to greedy-match them
+# NOTE: we don't need type spacing rules for parsing since that parse will just fail in contexts where it's needed
+# We'd only need if we were generating it, and even then we'd just pessimistically insert spaces anyways
 
-typename_arith = (tok_kw_const tok_space)? tok_kw_unsigned tok_space tok_kw_long tok_space tok_kw_long
-	| (tok_kw_const tok_space)? tok_kw_unsigned tok_space tok_kw_long
-	| (tok_kw_const tok_space)? tok_kw_long tok_space tok_kw_long
-	| (tok_kw_const tok_space)? tok_kw_unsigned tok_space tok_kw_int
-	| (tok_kw_const tok_space)? tok_kw_unsigned tok_space tok_kw_short
-	| (tok_kw_const tok_space)? tok_kw_unsigned tok_space tok_kw_char
-	| (tok_kw_const tok_space)? tok_kw_signed tok_space tok_kw_char
-	| (tok_kw_const tok_space)? tok_kw_short
-	| (tok_kw_const tok_space)? tok_kw_int
-	| (tok_kw_const tok_space)? tok_kw_long
-	| (tok_kw_const tok_space)? tok_kw_char
+typename_arith = tok_kw_unsigned tok_space tok_kw_long tok_space tok_kw_long
+	| tok_kw_unsigned tok_space tok_kw_long
+	| tok_kw_long tok_space tok_kw_long
+	| tok_kw_unsigned tok_space tok_kw_int
+	| tok_kw_unsigned tok_space tok_kw_short
+	| tok_kw_unsigned tok_space tok_kw_char
+	| tok_kw_signed tok_space tok_kw_char
+	| tok_kw_short
+	| tok_kw_int
+	| tok_kw_long
+	| tok_kw_char
 
-typename_array = (tok_kw_const tok_space)? tok_kw_array tok_space? tok_langle tok_space? typename_any tok_space? tok_comma tok_space? array_size tok_space? tok_rangle
+# Do note that there is very little difference between const array<int, 10> and array<const int, 10>.
+typename_array = tok_kw_array tok_space? tok_langle tok_space? typename tok_space? tok_comma tok_space? array_size tok_space? tok_rangle
 
 array_size = tok_number | field_ref | tok_kw_null
 
-typename_string = (tok_kw_const tok_space)? tok_kw_string
+# Literally just an alias for 
+typename_string = tok_kw_string
 
-typename_rpc = (tok_kw_const tok_space)? tok_kw_rpc tok_space tok_ident
+typename_rpc = tok_kw_rpc tok_space tok_ident
 
-typename_proj = (tok_kw_const tok_space)? tok_kw_projection tok_space tok_ident
+typename_proj = tok_kw_projection tok_space tok_ident
+
+# These are types free of const or pointers
+typename_stem = typename_array | typename_string | typename_rpc | typename_proj | typename_arith
+
+indirection = (ptr_attrs tok_space?)? tok_star (tok_space? tok_kw_const)?
+
+typename = (tok_kw_const tok_space)? typename_stem (tok_space? indirection)* (tok_space? val_attrs)?
 
 rpc_def = tok_kw_rpc tok_space tok_ident tok_space? tok_lbrace (tok_space? rpc_item_list)? tok_space? tok_rbrace
 
 rpc_item_list = rpc_item (tok_space? rpc_item)*
 
-rpc_item = proj_def
-# | signature
+rpc_item = proj_def | signature
 
-# signature = 
+signature = tok_kw_signature tok_space? typename tok_space? tok_lpar (tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_semi
+
+argument_list = var_decl (tok_space? tok_comma tok_space? var_decl)*

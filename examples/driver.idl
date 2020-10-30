@@ -1,26 +1,5 @@
 include <kernel.idl>;
 
-/*
-    rpc alloc_netdev_mqs {
-        projection <struct foo> proj {
-            unsigned long long a;
-            short b;
-            rpc alloc_netdev_mqs c;
-            projection global_proj [out, bind(callee)]* d;
-        }
-
-        // foo
-
-        signature projection global_proj [out] (
-            projection proj [bind(callee)]* foo,
-            projection global_proj * bar,
-            array<string [in]*, this->foo->a> dyn_array,
-            array<string [in]* [in], null> terminated_array,
-            array<string [in]*, 10> sized_array
-        );
-    }
-*/
-
 driver nullnet {
     import foo;
     import bar;
