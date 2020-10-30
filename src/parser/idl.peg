@@ -1,4 +1,4 @@
-start-symbol: file
+start-symbol: parse_file
 
 include: {{
 	#include "../ast/ast.h"
@@ -53,7 +53,15 @@ tok_semi = ";"
 tok_comma = ","
 tok_path = "<" lex_path_tail
 tok_string = <ascii 34> lex_string_tail
-tok_number = [0123456789]+
+tok_number = digits:[0123456789]+ {{ 
+	std::uint64_t n {};
+	for (const auto& d : digits.getValues()) {
+		n *= 10;
+		n += reinterpret_cast<std::uint64_t>(d.getValue());
+	}
+
+	value = reinterpret_cast<void*>(n);
+}}
 
 lex_string_tail = <ascii 34> | [\n\r] <predicate ok> {{ ok = false; }} | . lex_string_tail
 lex_path_tail = ">" | . lex_path_tail
@@ -99,15 +107,21 @@ lex_keyword = tok_kw_const
 
 # PARSER
 
-file = driver_file | module_file
+parse_file = ctx:{{
+	value = std::make_unique<idlc::stack_memory>().release();
+}} node_file(ctx) {{
+	value = ctx.getValue();
+}}
 
-driver_file = (tok_space? include_list)? tok_space? driver_def (tok_space? include_list)? tok_space? <eof>
+node_file(ctx) = node_driver_file(ctx) | module_file
 
-include_list = include_stmt (tok_space? include_stmt)*
+node_driver_file(ctx) = (tok_space? node_include_list)? tok_space? node_driver_def (tok_space? node_include_list)? tok_space? <eof>
 
-include_stmt = tok_kw_include tok_space? tok_path tok_space? tok_semi
+node_include_list = node_include_stmt (tok_space? node_include_stmt)*
 
-driver_def = tok_kw_driver tok_space tok_ident tok_space? tok_lbrace (tok_space? import_list)? tok_space? tok_rbrace
+node_include_stmt = tok_kw_include tok_space? tok_path tok_space? tok_semi
+
+node_driver_def = tok_kw_driver tok_space tok_ident tok_space? tok_lbrace (tok_space? import_list)? tok_space? tok_rbrace
 
 import_list = import_stmt (tok_space? import_stmt)*
 
