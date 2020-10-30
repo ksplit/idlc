@@ -16,7 +16,6 @@ tok_kw_driver = "driver"
 tok_kw_module = "module"
 tok_kw_header = "header"
 tok_kw_import = "import"
-tok_kw_signature = "signature"
 tok_kw_struct = "struct"
 tok_kw_union = "union"
 tok_kw_char = "char"
@@ -68,27 +67,26 @@ lex_comment = lex_line_comment | lex_block_comment
 lex_ident_start = [_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]
 lex_ident_rest = [01234567890] | lex_ident_start
 
-lex_keyword = tok_kw_const 
-	| tok_kw_string 
-	| tok_kw_projection 
-	| tok_kw_rpc 
-	| tok_kw_driver 
-	| tok_kw_module 
-	| tok_kw_header 
-	| tok_kw_import 
-	| tok_kw_signature 
-	| tok_kw_struct 
-	| tok_kw_union 
-	| tok_kw_char 
-	| tok_kw_short 
-	| tok_kw_int 
-	| tok_kw_long 
-	| tok_kw_signed 
-	| tok_kw_unsigned 
-	| tok_kw_void 
-	| tok_kw_include 
-	| tok_kw_array 
-	| tok_kw_null 
+lex_keyword = tok_kw_const
+	| tok_kw_string
+	| tok_kw_projection
+	| tok_kw_rpc
+	| tok_kw_driver
+	| tok_kw_module
+	| tok_kw_header
+	| tok_kw_import
+	| tok_kw_struct
+	| tok_kw_union
+	| tok_kw_char
+	| tok_kw_short
+	| tok_kw_int
+	| tok_kw_long
+	| tok_kw_signed
+	| tok_kw_unsigned
+	| tok_kw_void
+	| tok_kw_include
+	| tok_kw_array
+	| tok_kw_null
 	| tok_kw_this
 	| tok_kw_in
 	| tok_kw_out
@@ -192,7 +190,7 @@ typename_array = tok_kw_array tok_space? tok_langle tok_space? typename tok_spac
 
 array_size = tok_number | field_ref | tok_kw_null
 
-# Literally just an alias for 
+# Literally just an alias for
 typename_string = tok_kw_string
 
 typename_rpc = tok_kw_rpc tok_space tok_ident
@@ -210,12 +208,8 @@ indirection = (ptr_attrs tok_space?)? tok_star (tok_space? tok_kw_const)?
 
 typename = (tok_kw_const tok_space)? typename_stem (tok_space? indirection)* (tok_space? val_attrs)?
 
-rpc_def = tok_kw_rpc tok_space tok_ident tok_space? tok_lbrace (tok_space? rpc_item_list)? tok_space? tok_rbrace
+rpc_def = tok_kw_rpc tok_space? typename tok_space? tok_ident tok_space? tok_lpar (tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace (tok_space? proj_def_list)? tok_space? tok_rbrace
 
-rpc_item_list = rpc_item (tok_space? rpc_item)*
-
-rpc_item = proj_def | signature
-
-signature = tok_kw_signature tok_space? typename tok_space? tok_lpar (tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_semi
+proj_def_list = proj_def (tok_space? proj_def)*
 
 argument_list = var_decl (tok_space? tok_comma tok_space? var_decl)*
