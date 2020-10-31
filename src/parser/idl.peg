@@ -1,8 +1,45 @@
-start-symbol: parse_file
+start-symbol: file
 
 include: {{
-	#include "../ast/ast.h"
+	#include <any>
+	#include <memory>
+	#include <type_traits>
+	#include <iostream>
+
+	#include <gsl/gsl>
+
+	#include "string_heap.h"
 }}
+
+code: {{
+	std::vector<std::any> parser_objs {};
+	idlc::string_heap idents {};
+
+	template<typename type>
+	type to_int(const Value& v)
+	{
+		// FIXME: I know, precision bug
+		static_assert(std::is_arithmetic_v<type>);
+		return gsl::narrow<type>(reinterpret_cast<std::uintptr_t>(v.getValue()));
+	}
+
+	template<typename type>
+	auto share(type&& v)
+	{
+		const auto ptr = std::make_shared<std::decay_t<type>>(v);
+		parser_objs.emplace_back(ptr);
+		return reinterpret_cast<const void*>(parser_objs.size() - 1);
+	}
+
+	template<typename type>
+	auto get_shared(std::size_t id)
+	{
+		return std::any_cast<std::shared_ptr<type>>(gsl::at(parser_objs, id));
+	}
+}}
+
+# Our design is simple: we keep a parser-global vector of shared_ptrs to every node we ever build, ensuring that cached
+# nodes live long enough
 
 rules:
 
@@ -37,7 +74,18 @@ tok_kw_bind = "bind"
 tok_kw_caller = "caller"
 tok_kw_callee = "callee"
 tok_kw_any_of = "any_of"
-tok_ident = lex_keyword <predicate ok> {{ ok = false; }} | lex_ident_start lex_ident_rest*
+tok_ident = lex_ident_start rest:lex_ident_rest* {{
+	std::string ident {};
+	ident += to_int<char>($1);
+	for (const auto& c : rest.getValues()) {
+		ident += to_int<char>(c);
+	}
+
+	std::cout << ident.c_str() << "\n";
+
+	value = idents.intern(ident);
+}}
+
 tok_space = lex_blank+
 tok_arrow = "->"
 tok_langle = "<"
@@ -51,77 +99,35 @@ tok_rpar = ")"
 tok_star = "*"
 tok_semi = ";"
 tok_comma = ","
-tok_path = "<" lex_path_tail
-tok_string = <ascii 34> lex_string_tail
-tok_number = digits:[0123456789]+ {{ 
-	std::uint64_t n {};
-	for (const auto& d : digits.getValues()) {
-		n *= 10;
-		n += reinterpret_cast<std::uint64_t>(d.getValue());
-	}
+tok_path = "<" lex_path_char+ ">" {{ value = $2; }}
+tok_string = <ascii 34> lex_string_char* <ascii 34> {{ value = $2; }}
+tok_number = [0123456789]+
 
-	value = reinterpret_cast<void*>(n);
-}}
-
-lex_string_tail = <ascii 34> | [\n\r] <predicate ok> {{ ok = false; }} | . lex_string_tail
-lex_path_tail = ">" | . lex_path_tail
-lex_blank = lex_whitespace+ | lex_comment
+lex_path_char = [ !\"#$%&\'()*+,-./0123456789:;<=?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz{|}~] | <ascii 93>
+lex_string_char = [ !#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz{|}~] | <ascii 93>
+lex_block_comment_char = [ !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz{|}~] | lex_whitespace | <ascii 93>
+lex_line_comment_char = [ !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz{|}~] | [ \t] | <ascii 93>
 lex_whitespace = [ \t\n\r]
-lex_line_comment_tail = "\n" | . lex_line_comment_tail
-lex_line_comment = "//" lex_line_comment_tail
-lex_block_comment = "/*" lex_block_comment_tail
-lex_block_comment_tail = "*/" | . lex_block_comment_tail
+
+lex_line_comment = "//" lex_line_comment_char* "\n"
+lex_block_comment = "/*" lex_block_comment_char* "*/"
 lex_comment = lex_line_comment | lex_block_comment
+lex_blank = lex_whitespace+ | lex_comment
+
 lex_ident_start = [_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]
 lex_ident_rest = [01234567890] | lex_ident_start
 
-lex_keyword = tok_kw_const
-	| tok_kw_string
-	| tok_kw_projection
-	| tok_kw_rpc
-	| tok_kw_driver
-	| tok_kw_module
-	| tok_kw_header
-	| tok_kw_import
-	| tok_kw_struct
-	| tok_kw_union
-	| tok_kw_char
-	| tok_kw_short
-	| tok_kw_int
-	| tok_kw_long
-	| tok_kw_signed
-	| tok_kw_unsigned
-	| tok_kw_void
-	| tok_kw_include
-	| tok_kw_array
-	| tok_kw_null
-	| tok_kw_this
-	| tok_kw_in
-	| tok_kw_out
-	| tok_kw_alloc
-	| tok_kw_dealloc
-	| tok_kw_bind
-	| tok_kw_caller
-	| tok_kw_callee
-	| tok_kw_any_of
-
 # PARSER
 
-parse_file = ctx:{{
-	value = std::make_unique<idlc::stack_memory>().release();
-}} node_file(ctx) {{
-	value = ctx.getValue();
-}}
+file = driver_file | module_file
 
-node_file(ctx) = node_driver_file(ctx) | module_file
+driver_file = (tok_space? include_list)? tok_space? driver_def (tok_space? include_list)? tok_space? <eof>
 
-node_driver_file(ctx) = (tok_space? node_include_list)? tok_space? node_driver_def (tok_space? node_include_list)? tok_space? <eof>
+include_list = include_stmt (tok_space? include_stmt)*
 
-node_include_list = node_include_stmt (tok_space? node_include_stmt)*
+include_stmt = tok_kw_include tok_space? tok_path tok_space? tok_semi
 
-node_include_stmt = tok_kw_include tok_space? tok_path tok_space? tok_semi
-
-node_driver_def = tok_kw_driver tok_space tok_ident tok_space? tok_lbrace (tok_space? import_list)? tok_space? tok_rbrace
+driver_def = tok_kw_driver tok_space tok_ident tok_space? tok_lbrace (tok_space? import_list)? tok_space? tok_rbrace
 
 import_list = import_stmt (tok_space? import_stmt)*
 
@@ -148,7 +154,7 @@ proj_struct_type = tok_kw_struct tok_space tok_ident
 
 proj_union_type = tok_kw_union tok_space tok_ident tok_space? tok_comma tok_space? field_ref
 
-field_ref = field_rel_ref | field_abs_ref
+field_ref = field_abs_ref | field_rel_ref
 
 field_rel_ref = tok_ident (tok_arrow tok_ident)*
 
@@ -159,9 +165,6 @@ proj_field_list = proj_field (tok_space? proj_field)*
 proj_field = var_decl tok_space? tok_semi
 
 var_decl = typename tok_space? tok_ident
-
-# FIXME: type name parsing is buggy: remember, it is much easier to manipulate the AST in a series of passes than it is
-# to maintain a parser that is. . . less than organized.
 
 val_attr = tok_kw_in | tok_kw_out
 
@@ -202,9 +205,9 @@ typename_arith = tok_kw_unsigned tok_space tok_kw_long tok_space tok_kw_long
 # Do note that there is very little difference between const array<int, 10> and array<const int, 10>.
 typename_array = tok_kw_array tok_space? tok_langle tok_space? typename tok_space? tok_comma tok_space? array_size tok_space? tok_rangle
 
-array_size = tok_number | field_ref | tok_kw_null
+array_size = tok_number | tok_kw_null | field_ref
 
-# Literally just an alias for
+# Literally just an alias for array<char, null>
 typename_string = tok_kw_string
 
 typename_rpc = tok_kw_rpc tok_space tok_ident
