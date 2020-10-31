@@ -1,5 +1,5 @@
 module netdev {
-    header <bar_punk\foo.h>;
+    header "bar_punk\foo.h";
 
     projection <union bar, this> global_proj {
         unsigned long a;

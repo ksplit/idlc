@@ -1,33 +1,11 @@
-#include "./parser/parser.h"
-
-#include <gsl/gsl>
-
 #include <string>
 #include <iostream>
 
-namespace idlc {
-    namespace {
-        bool parse_driver(gsl::czstring<> path)
-        {
-            try {
-                Parser::parse(std::string {path});
-                return true;
-            }
-            catch (const Parser::ParseException& e) {
-				std::cout << e.getReason() << std::endl;
-                return false;
-            }
-        }
-    }
-}
+#include <gsl/gsl>
 
-/*
-	NOTE: will be moving to a clang-like "sema" AST builder, since the memoized semantics of PEG grammars makes it
-	impossible to correctly manage the lifetimes of produced nodes within the parser.
+#include "./parser/idl_parse.h"
 
-	The parser will incrementally do work against the builder, discarding it implicitly unless explicitly committed
-	to the tree.
-*/
+// NOTE: we keep the identifier heap around for basically the entire life of the compiler
 
 /*
 	There's not really a need for AST re-writing as of yet, the resolution tasks can be done in-place,
@@ -72,7 +50,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    const auto driver_idl = idlc::parse_driver(gsl::at(args, 1));
+    const auto driver_idl = idlc::parser::parse_file(gsl::at(args, 1));
     if (!driver_idl) {
         return 1;
     }

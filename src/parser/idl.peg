@@ -9,11 +9,12 @@ include: {{
 	#include <gsl/gsl>
 
 	#include "string_heap.h"
+	#include "ast.h"
+	#include "parse_globals.h"
 }}
 
 code: {{
-	std::vector<std::any> parser_objs {};
-	idlc::string_heap idents {};
+	using namespace idlc::parser;
 
 	template<typename type>
 	type to_int(const Value& v)
@@ -21,6 +22,12 @@ code: {{
 		// FIXME: I know, precision bug
 		static_assert(std::is_arithmetic_v<type>);
 		return gsl::narrow<type>(reinterpret_cast<std::uintptr_t>(v.getValue()));
+	}
+
+	template<typename type>
+	type to_ptr(const Value& v)
+	{
+		return static_cast<type>(const_cast<void*>(v.getValue()));
 	}
 
 	template<typename type>
@@ -32,8 +39,13 @@ code: {{
 	}
 
 	template<typename type>
-	auto get_shared(std::size_t id)
+	std::shared_ptr<type> get_shared(const Value& v)
 	{
+		if (!v.getValue()) {
+			return nullptr;
+		}
+
+		const auto id = to_int<std::size_t>(v);
 		return std::any_cast<std::shared_ptr<type>>(gsl::at(parser_objs, id));
 	}
 }}
@@ -74,17 +86,6 @@ tok_kw_bind = "bind"
 tok_kw_caller = "caller"
 tok_kw_callee = "callee"
 tok_kw_any_of = "any_of"
-tok_ident = lex_ident_start rest:lex_ident_rest* {{
-	std::string ident {};
-	ident += to_int<char>($1);
-	for (const auto& c : rest.getValues()) {
-		ident += to_int<char>(c);
-	}
-
-	std::cout << ident.c_str() << "\n";
-
-	value = idents.intern(ident);
-}}
 
 tok_space = lex_blank+
 tok_arrow = "->"
@@ -99,9 +100,41 @@ tok_rpar = ")"
 tok_star = "*"
 tok_semi = ";"
 tok_comma = ","
-tok_path = "<" lex_path_char+ ">" {{ value = $2; }}
-tok_string = <ascii 34> lex_string_char* <ascii 34> {{ value = $2; }}
-tok_number = [0123456789]+
+
+tok_path = "<" chars:lex_path_char+ ">" {{
+	std::string path {};
+	for (const auto& c : chars.getValues())
+		path += to_int<char>(c);
+
+	value = idents.intern(path);
+}}
+
+tok_string = <ascii 34> chars:lex_string_char* <ascii 34> {{
+	std::string path {};
+	for (const auto& c : chars.getValues())
+		path += to_int<char>(c);
+
+	value = idents.intern(path);
+}}
+
+tok_number = digits:[0123456789]+ {{
+	std::uint64_t n {};
+	for (const auto& d : digits.getValues()) {
+		n *= 10;
+		n += to_int<char>(d) - '0';
+	}
+
+	value = reinterpret_cast<void*>(n);
+}}
+
+tok_ident = lex_ident_start rest:lex_ident_rest* {{
+	std::string ident {};
+	ident += to_int<char>($1);
+	for (const auto& c : rest.getValues())
+		ident += to_int<char>(c);
+
+	value = idents.intern(ident);
+}}
 
 lex_path_char = [ !\"#$%&\'()*+,-./0123456789:;<=?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz{|}~] | <ascii 93>
 lex_string_char = [ !#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz{|}~] | <ascii 93>
@@ -119,19 +152,48 @@ lex_ident_rest = [01234567890] | lex_ident_start
 
 # PARSER
 
-file = driver_file | module_file
+file = dfile:driver_file {{ value = share(file {get_shared<driver_file>(dfile)}); }} | module_file
 
-driver_file = (tok_space? include_list)? tok_space? driver_def (tok_space? include_list)? tok_space? <eof>
+driver_file = former:(tok_space? include_list)? tok_space? driver:driver_def latter:(tok_space? include_list)? tok_space? <eof> {{
+	const auto former_ptr = get_shared<std::vector<gsl::czstring<>>>(former);
+	const gsl::not_null driver_ptr {get_shared<driver_def>(driver)};
+	const auto latter_ptr = get_shared<std::vector<gsl::czstring<>>>(latter);
+	value = share(driver_file {former_ptr, driver_ptr, latter_ptr});
+}}
 
-include_list = include_stmt (tok_space? include_stmt)*
+include_list = first:include_stmt next:(tok_space? include_stmt)* {{
+	const auto& next_vals = next.getValues();
+	std::vector<gsl::czstring<>> paths {};
+	paths.reserve(1 + next_vals.size());
+	paths.emplace_back(to_ptr<gsl::czstring<>>(first));
+	for (const auto& p : next_vals)
+		paths.emplace_back(to_ptr<gsl::czstring<>>(p));
 
-include_stmt = tok_kw_include tok_space? tok_path tok_space? tok_semi
+	value = share(std::move(paths));
+}}
 
-driver_def = tok_kw_driver tok_space tok_ident tok_space? tok_lbrace (tok_space? import_list)? tok_space? tok_rbrace
+include_stmt = tok_kw_include tok_space? path:tok_path tok_space? tok_semi {{
+	value = path;
+}}
 
-import_list = import_stmt (tok_space? import_stmt)*
+driver_def = tok_kw_driver tok_space name:tok_ident tok_space? tok_lbrace imports:(tok_space? import_list)? tok_space? tok_rbrace {{
+	const auto name_val = to_ptr<gsl::czstring<>>(name);	
+	const auto imports_ptr = get_shared<std::vector<gsl::czstring<>>>(imports);
+	value = share(driver_def {name_val, imports_ptr});
+}}
 
-import_stmt = tok_kw_import tok_space tok_ident tok_space? tok_semi
+import_list = first:import_stmt next:(tok_space? import_stmt)* {{
+	const auto& next_vals = next.getValues();
+	std::vector<gsl::czstring<>> idents {};
+	idents.reserve(1 + next_vals.size());
+	idents.emplace_back(to_ptr<gsl::czstring<>>(first));
+	for (const auto& id : next_vals)
+		idents.emplace_back(to_ptr<gsl::czstring<>>(id));
+
+	value = share(std::move(idents));
+}}
+
+import_stmt = tok_kw_import tok_space ident:tok_ident tok_space? tok_semi {{ value = ident; }}
 
 module_file = tok_space? module_list tok_space? <eof>
 

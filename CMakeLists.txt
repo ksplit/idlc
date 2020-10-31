@@ -21,6 +21,7 @@ add_executable(
 	idlc
 	"src/parser/parser.cpp"
 	"src/parser/string_heap.cpp"
+	"src/parser/parse_globals.cpp"
 	"src/main.cpp"
 )
 
