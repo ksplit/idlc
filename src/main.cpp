@@ -1,5 +1,6 @@
 #include <string>
 #include <iostream>
+#include <variant>
 
 #include <gsl/gsl>
 
@@ -55,5 +56,6 @@ int main(int argc, char** argv)
         return 1;
     }
 
+	const auto& file = *driver_idl;
 	std::cout << "File was parsed correctly" << std::endl;
 }

@@ -11,7 +11,7 @@
 #include "parse_globals.h"
 	
 namespace idlc::parser {
-	inline std::optional<gsl::not_null<std::shared_ptr<file>>> parse_file(gsl::czstring<> path)
+	inline std::shared_ptr<file> parse_file(gsl::czstring<> path)
 	{
 		try {
 			const auto raw = Parser::parse(std::string {path});
@@ -21,11 +21,15 @@ namespace idlc::parser {
 			// Now that we have the tree root we can GC all the unused nodes
 			parser_objs.clear();
 
-			return std::make_optional(ref);
+			return ref;
 		}
 		catch (const Parser::ParseException& e) {
 			std::cout << e.getReason() << std::endl;
-			return std::nullopt;
+			return nullptr;
+		}
+		catch (const std::exception& e) {
+			std::cout << e.what() << std::endl;
+			return nullptr;
 		}
 	}
 }

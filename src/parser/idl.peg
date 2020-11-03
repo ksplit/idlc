@@ -68,6 +68,7 @@ tok_kw_import = "import"
 tok_kw_struct = "struct"
 tok_kw_union = "union"
 tok_kw_char = "char"
+tok_kw_bool = "bool"
 tok_kw_short = "short"
 tok_kw_int = "int"
 tok_kw_long = "long"
@@ -226,7 +227,7 @@ proj_field_list = proj_field (tok_space? proj_field)*
 
 proj_field = var_decl tok_space? tok_semi
 
-var_decl = typename tok_space? tok_ident
+var_decl = tyname tok_space? tok_ident
 
 val_attr = tok_kw_in | tok_kw_out
 
@@ -252,42 +253,62 @@ ptr_attr_list = ptr_attr (tok_space? tok_comma tok_space? ptr_attr)*
 # NOTE: we don't need type spacing rules for parsing since that parse will just fail in contexts where it's needed
 # We'd only need if we were generating it, and even then we'd just pessimistically insert spaces anyways
 
-typename_arith = tok_kw_unsigned tok_space tok_kw_long tok_space tok_kw_long
-	| tok_kw_unsigned tok_space tok_kw_long
-	| tok_kw_long tok_space tok_kw_long
-	| tok_kw_unsigned tok_space tok_kw_int
-	| tok_kw_unsigned tok_space tok_kw_short
-	| tok_kw_unsigned tok_space tok_kw_char
-	| tok_kw_signed tok_space tok_kw_char
-	| tok_kw_short
-	| tok_kw_int
-	| tok_kw_long
-	| tok_kw_char
+tyname_arith = tok_kw_unsigned tok_space tok_kw_long tok_space tok_kw_long {{ 
+	value = reinterpret_cast<void*>(tyname_arith::ty_ullong);
+}} | tok_kw_unsigned tok_space tok_kw_long {{
+	value = reinterpret_cast<void*>(tyname_arith::ty_ulong);
+}} | tok_kw_long tok_space tok_kw_long {{
+	value = reinterpret_cast<void*>(tyname_arith::ty_llong);
+}} | tok_kw_unsigned tok_space tok_kw_int {{
+	value = reinterpret_cast<void*>(tyname_arith::ty_uint);
+}} | tok_kw_unsigned tok_space tok_kw_short {{
+	value = reinterpret_cast<void*>(tyname_arith::ty_ushort);
+}} | tok_kw_unsigned tok_space tok_kw_char {{
+	value = reinterpret_cast<void*>(tyname_arith::ty_uchar);
+}} | tok_kw_signed tok_space tok_kw_char {{
+	value = reinterpret_cast<void*>(tyname_arith::ty_schar);
+}} | tok_kw_short {{
+	value = reinterpret_cast<void*>(tyname_arith::ty_short);
+}} | tok_kw_int {{
+	value = reinterpret_cast<void*>(tyname_arith::ty_int);
+}} | tok_kw_long {{
+	value = reinterpret_cast<void*>(tyname_arith::ty_long);
+}} | tok_kw_char {{
+	value = reinterpret_cast<void*>(tyname_arith::ty_char);
+}} | tok_kw_bool {{
+	value = reinterpret_cast<void*>(tyname_arith::ty_bool);
+}}
 
 # Do note that there is very little difference between const array<int, 10> and array<const int, 10>.
-typename_array = tok_kw_array tok_space? tok_langle tok_space? typename tok_space? tok_comma tok_space? array_size tok_space? tok_rangle
+tyname_array = tok_kw_array tok_space? tok_langle tok_space? tyname tok_space? tok_comma tok_space? array_size tok_space? tok_rangle
 
-array_size = tok_number | tok_kw_null | field_ref
+array_size = n:tok_number {{
+	value = n;
+}} | tok_kw_null {{
+	value = share(array_size {null_array_size {} });
+}} | field_ref
 
 # Literally just an alias for array<char, null>
-typename_string = tok_kw_string
+tyname_string = tok_kw_string
 
-typename_rpc = tok_kw_rpc tok_space tok_ident
+tyname_rpc = tok_kw_rpc tok_space name:tok_ident {{ value = share(tyname_rpc {to_ptr<gsl::czstring<>>(name)}); }}
 
-typename_proj = tok_kw_projection tok_space tok_ident
+tyname_proj = tok_kw_projection tok_space name:tok_ident {{ 
+	value = share(tyname_proj {to_ptr<gsl::czstring<>>(name)});
+}}
 
-typename_any_of = tok_kw_any_of tok_space? tok_langle tok_space? field_ref tok_space? tok_comma tok_space? type_list tok_space? tok_rangle
+tyname_any_of = tok_kw_any_of tok_space? tok_langle tok_space? field_ref tok_space? tok_comma tok_space? type_list tok_space? tok_rangle
 
-type_list = typename (tok_space? tok_comma tok_space? typename)*
+type_list = tyname (tok_space? tok_comma tok_space? tyname)*
 
 # These are types free of const or pointers
-typename_stem = typename_array | typename_string | typename_rpc | typename_proj | typename_arith | typename_any_of
+tyname_stem = tyname_array | tyname_string | tyname_rpc | tyname_proj | tyname_arith | tyname_any_of
 
 indirection = (ptr_attrs tok_space?)? tok_star (tok_space? tok_kw_const)?
 
-typename = (tok_kw_const tok_space)? typename_stem (tok_space? indirection)* (tok_space? val_attrs)?
+tyname = (tok_kw_const tok_space)? tyname_stem (tok_space? indirection)* (tok_space? val_attrs)?
 
-rpc_def = tok_kw_rpc tok_space? typename tok_space? tok_ident tok_space? tok_lpar (tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace (tok_space? proj_def_list)? tok_space? tok_rbrace
+rpc_def = tok_kw_rpc tok_space? tyname tok_space? tok_ident tok_space? tok_lpar (tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace (tok_space? proj_def_list)? tok_space? tok_rbrace
 
 proj_def_list = proj_def (tok_space? proj_def)*
 
