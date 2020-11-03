@@ -8,6 +8,8 @@
 #include <gsl/gsl>
 
 namespace idlc::parser {
+	// TODO: wrap the "node-like" vectors?
+
 	template<typename type>
 	using node_ptr = std::shared_ptr<type>;
 	
@@ -16,17 +18,31 @@ namespace idlc::parser {
 
 	struct driver_def;
 	struct driver_file;
+	
 	enum class tyname_arith;
 	struct tyname_rpc;
 	struct tyname_proj;
 	struct tyname_array;
 	struct tyname_any_of_ptr;
+	struct tyname_string;
 	struct tyname;
-	struct field_ref;
-	struct null_array_size;
+	
+	struct field_rel_ref;
+	struct field_abs_ref;
+
+	struct null_array_size; // Doesn't exist in parse rules
 	
 	using file = std::variant<node_ref<driver_file>>;
+	using field_ref = std::variant<node_ref<field_abs_ref>, node_ref<field_rel_ref>>;
 	using array_size = std::variant<unsigned, null_array_size, node_ref<field_ref>>;
+	using tyname_stem = std::variant<
+		tyname_arith,
+		tyname_string,
+		node_ref<tyname_rpc>,
+		node_ref<tyname_proj>,
+		node_ref<tyname_array>,
+		node_ref<tyname_any_of_ptr>
+	>;
 
 	struct driver_def {
 		gsl::czstring<> name;
@@ -69,11 +85,27 @@ namespace idlc::parser {
 
 	struct tyname_any_of_ptr {
 		node_ref<field_ref> discrim;
-		std::vector<node_ref<tyname>> types;
+		node_ref<std::vector<node_ref<tyname>>> types;
 	};
 
 	// Marker, subject to removal if I have a better way of representing it in-tree
 	struct null_array_size {};
+
+	struct field_abs_ref {
+		node_ref<field_rel_ref> link;
+	};
+
+	struct field_rel_ref {
+		std::vector<gsl::czstring<>> links;
+	};
+
+	// Another marker
+	// NOTE: since these don't actually exist in any meaningful sense, their own parse rules don't produce them
+	struct tyname_string {};
+
+	struct tyname {
+		node_ref<tyname_stem> stem;
+	};
 }
 
 #endif

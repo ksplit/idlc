@@ -20,7 +20,7 @@ code: {{
 	type to_int(const Value& v)
 	{
 		// FIXME: I know, precision bug
-		static_assert(std::is_arithmetic_v<type>);
+		static_assert(std::is_arithmetic_v<type> || std::is_enum_v<type>);
 		return gsl::narrow<type>(reinterpret_cast<std::uintptr_t>(v.getValue()));
 	}
 
@@ -217,11 +217,26 @@ proj_struct_type = tok_kw_struct tok_space tok_ident
 
 proj_union_type = tok_kw_union tok_space tok_ident tok_space? tok_comma tok_space? field_ref
 
-field_ref = field_abs_ref | field_rel_ref
+field_ref = aref:field_abs_ref {{
+	value = share(field_ref {get_shared<field_abs_ref>(aref)});
+}} | rref:field_rel_ref {{
+	value = share(field_ref {get_shared<field_rel_ref>(rref)});
+}}
 
-field_rel_ref = tok_ident (tok_arrow tok_ident)*
+field_rel_ref = head:tok_ident rest:(tok_arrow tok_ident)* {{
+	const auto rest_vals = rest.getValues();
+	field_rel_ref ref {};
+	ref.links.reserve(1 + rest_vals.size());
+	ref.links.push_back(to_ptr<gsl::czstring<>>(head));
+	for (const auto& val : rest_vals)
+		ref.links.push_back(to_ptr<gsl::czstring<>>(val));
+	
+	value = share(std::move(ref));
+}}
 
-field_abs_ref = tok_kw_this (tok_arrow field_rel_ref)?
+field_abs_ref = tok_kw_this tok_arrow link:field_rel_ref {{
+	value = share(field_abs_ref {get_shared<field_rel_ref>(link)});
+}}
 
 proj_field_list = proj_field (tok_space? proj_field)*
 
@@ -280,13 +295,17 @@ tyname_arith = tok_kw_unsigned tok_space tok_kw_long tok_space tok_kw_long {{
 }}
 
 # Do note that there is very little difference between const array<int, 10> and array<const int, 10>.
-tyname_array = tok_kw_array tok_space? tok_langle tok_space? tyname tok_space? tok_comma tok_space? array_size tok_space? tok_rangle
+tyname_array = tok_kw_array tok_space? tok_langle tok_space? type:tyname tok_space? tok_comma tok_space? size:array_size tok_space? tok_rangle {{
+	value = share(tyname_array {get_shared<tyname>(type), get_shared<array_size>(size)});
+}}
 
 array_size = n:tok_number {{
-	value = n;
+	value = share(array_size {to_int<unsigned>(n)});
 }} | tok_kw_null {{
 	value = share(array_size {null_array_size {} });
-}} | field_ref
+}} | ref:field_ref {{
+	value = share(array_size {get_shared<field_ref>(ref)}); // TODO
+}}
 
 # Literally just an alias for array<char, null>
 tyname_string = tok_kw_string
@@ -297,16 +316,42 @@ tyname_proj = tok_kw_projection tok_space name:tok_ident {{
 	value = share(tyname_proj {to_ptr<gsl::czstring<>>(name)});
 }}
 
-tyname_any_of = tok_kw_any_of tok_space? tok_langle tok_space? field_ref tok_space? tok_comma tok_space? type_list tok_space? tok_rangle
+tyname_any_of = tok_kw_any_of tok_space? tok_langle tok_space? ref:field_ref tok_space? tok_comma tok_space? types:type_list tok_space? tok_rangle {{
+	value = share(tyname_any_of_ptr {get_shared<field_ref>(ref), get_shared<std::vector<node_ref<tyname>>>(types)});
+}}
 
-type_list = tyname (tok_space? tok_comma tok_space? tyname)*
+type_list = head:tyname rest:(tok_space? tok_comma tok_space? tyname)* {{
+	const auto rvals = rest.getValues();
+	std::vector<node_ref<tyname>> types {};
+	types.reserve(rvals.size() + 1);
+	types.push_back(get_shared<tyname>(head));
+	for (const auto& type : rvals)
+		types.push_back(get_shared<tyname>(type));
+
+	value = share(std::move(types));
+}}
 
 # These are types free of const or pointers
-tyname_stem = tyname_array | tyname_string | tyname_rpc | tyname_proj | tyname_arith | tyname_any_of
+tyname_stem = arr:tyname_array {{
+	value = share(tyname_stem {get_shared<tyname_array>(arr)});
+}} | str:tyname_string {{
+	value = share(tyname_stem {tyname_string {} });
+}} | rpc:tyname_rpc {{
+	value = share(tyname_stem {get_shared<tyname_rpc>(rpc)});
+}} | proj:tyname_proj {{
+	value = share(tyname_stem {get_shared<tyname_proj>(proj)});
+}} | arith:tyname_arith {{
+	value = share(tyname_stem {to_int<tyname_arith>(arr)});
+}} | any:tyname_any_of {{
+	value = share(tyname_stem {get_shared<tyname_any_of_ptr>(any)});
+}}
 
 indirection = (ptr_attrs tok_space?)? tok_star (tok_space? tok_kw_const)?
 
-tyname = (tok_kw_const tok_space)? tyname_stem (tok_space? indirection)* (tok_space? val_attrs)?
+# TODO: attributes
+tyname = (tok_kw_const tok_space)? stem:tyname_stem (tok_space? indirection)* (tok_space? val_attrs)? {{
+	value = share(tyname {get_shared<tyname_stem>(stem)});
+}}
 
 rpc_def = tok_kw_rpc tok_space? tyname tok_space? tok_ident tok_space? tok_lpar (tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace (tok_space? proj_def_list)? tok_space? tok_rbrace
 
