@@ -18,7 +18,6 @@ namespace idlc::parser {
 
 	struct driver_def;
 	struct driver_file;
-	
 	enum class tyname_arith;
 	struct tyname_rpc;
 	struct tyname_proj;

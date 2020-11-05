@@ -137,6 +137,7 @@ tok_ident = lex_ident_start rest:lex_ident_rest* {{
 	value = idents.intern(ident);
 }}
 
+# TODO: clean this up
 lex_path_char = [ !\"#$%&\'()*+,-./0123456789:;<=?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz{|}~] | <ascii 93>
 lex_string_char = [ !#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz{|}~] | <ascii 93>
 lex_block_comment_char = [ !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz{|}~] | lex_whitespace | <ascii 93>
@@ -178,7 +179,7 @@ include_stmt = tok_kw_include tok_space? path:tok_path tok_space? tok_semi {{
 }}
 
 driver_def = tok_kw_driver tok_space name:tok_ident tok_space? tok_lbrace imports:(tok_space? import_list)? tok_space? tok_rbrace {{
-	const auto name_val = to_ptr<gsl::czstring<>>(name);	
+	const auto name_val = to_ptr<gsl::czstring<>>(name);
 	const auto imports_ptr = get_shared<std::vector<gsl::czstring<>>>(imports);
 	value = share(driver_def {name_val, imports_ptr});
 }}
@@ -230,7 +231,7 @@ field_rel_ref = head:tok_ident rest:(tok_arrow tok_ident)* {{
 	ref.links.push_back(to_ptr<gsl::czstring<>>(head));
 	for (const auto& val : rest_vals)
 		ref.links.push_back(to_ptr<gsl::czstring<>>(val));
-	
+
 	value = share(std::move(ref));
 }}
 
@@ -268,7 +269,7 @@ ptr_attr_list = ptr_attr (tok_space? tok_comma tok_space? ptr_attr)*
 # NOTE: we don't need type spacing rules for parsing since that parse will just fail in contexts where it's needed
 # We'd only need if we were generating it, and even then we'd just pessimistically insert spaces anyways
 
-tyname_arith = tok_kw_unsigned tok_space tok_kw_long tok_space tok_kw_long {{ 
+tyname_arith = tok_kw_unsigned tok_space tok_kw_long tok_space tok_kw_long {{
 	value = reinterpret_cast<void*>(tyname_arith::ty_ullong);
 }} | tok_kw_unsigned tok_space tok_kw_long {{
 	value = reinterpret_cast<void*>(tyname_arith::ty_ulong);
@@ -310,9 +311,11 @@ array_size = n:tok_number {{
 # Literally just an alias for array<char, null>
 tyname_string = tok_kw_string
 
-tyname_rpc = tok_kw_rpc tok_space name:tok_ident {{ value = share(tyname_rpc {to_ptr<gsl::czstring<>>(name)}); }}
+tyname_rpc = tok_kw_rpc tok_space name:tok_ident {{
+	value = share(tyname_rpc {to_ptr<gsl::czstring<>>(name)});
+}}
 
-tyname_proj = tok_kw_projection tok_space name:tok_ident {{ 
+tyname_proj = tok_kw_projection tok_space name:tok_ident {{
 	value = share(tyname_proj {to_ptr<gsl::czstring<>>(name)});
 }}
 
