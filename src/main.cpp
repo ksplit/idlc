@@ -5,6 +5,7 @@
 #include <gsl/gsl>
 
 #include "./parser/idl_parse.h"
+#include "./marshal/tree.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 

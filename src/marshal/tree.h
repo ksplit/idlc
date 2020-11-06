@@ -1,6 +1,10 @@
 #ifndef _LCDS_IDL_MARSHAL_TREE_H_
 #define _LCDS_IDL_MARSHAL_TREE_H_
 
+#include <variant>
+
+#include "../parser/ast.h"
+
 namespace idlc::marshal {
 	/*
 		Every "block" has an extent and a layout. For example, the block for a union projection
@@ -30,7 +34,50 @@ namespace idlc::marshal {
 		declared types, and wrap them in a switch-statement that dispatches off of a similar reolver-field-resolver
 		pattern. Note that although union projections have a dynamically-selected layout, any_of_ptr has a dynamically
 		selected layout and type (and thus extent).
+	
+		Layouts are variants in this tree, with primitive layout enum (for int, uint, etc.), or composite layouts
+		(mostly like vectors of fields).
 	*/
+
+	using prim = parser::tyname_arith;
+	struct struct_layout;
+	struct union_layout;
+	struct dyn_ptr;
+	struct ptr;
+	using layout = std::variant<prim, struct_layout, union_layout, dyn_ptr, ptr>;
+
+	struct struct_layout {
+		std::vector<std::pair<gsl::czstring<>, layout>> fields;
+	};
+
+	struct union_layout {
+		gsl::czstring<> discriminator; // simplifying assumption: either an immediate sibling field or a func arg
+		std::vector<layout> layouts;
+	};
+
+	// TODO: class this and give operators
+	enum ptr_tags {
+		ptag_alloc_caller = 0b1,
+		ptag_alloc_callee = 0b10,
+		ptag_dealloc_caller = 0b100,
+		ptag_dealloc_callee = 0b1000,
+		ptag_bind_caller = 0b10000,
+		ptag_bind_callee = 0b100000,
+		ptag_is_bind = 0b110000,
+		ptag_is_dealloc = 0b1100,
+		ptag_is_alloc = 0b11
+	};
+
+	struct dyn_ptr {
+		ptr_tags tags;
+		gsl::czstring<> discriminator;
+		std::vector<layout> layouts;
+	};
+
+	struct ptr {
+		ptr_tags tags;
+		std::unique_ptr<layout> layout;
+	};
 }
 
 #endif
