@@ -154,7 +154,11 @@ lex_ident_rest = [01234567890] | lex_ident_start
 
 # PARSER
 
-file = dfile:driver_file {{ value = share(file {get_shared<driver_file>(dfile)}); }} | module_file
+file = dfile:driver_file {{
+	value = share(file {get_shared<driver_file>(dfile)});
+}} | mfile:module_file {{
+	value = share(file {get_shared<std::vector<node_ref<module_def>>>(mfile)});
+}}
 
 driver_file = former:(tok_space? include_list)? tok_space? driver:driver_def latter:(tok_space? include_list)? tok_space? <eof> {{
 	const auto former_ptr = get_shared<std::vector<gsl::czstring<>>>(former);
@@ -197,22 +201,63 @@ import_list = first:import_stmt next:(tok_space? import_stmt)* {{
 
 import_stmt = tok_kw_import tok_space ident:tok_ident tok_space? tok_semi {{ value = ident; }}
 
-module_file = tok_space? module_list tok_space? <eof>
+module_file = tok_space? list:module_list tok_space? <eof> {{
+	value = list;
+}}
 
-module_list = module_def (tok_space? module_def)*
+module_list = first:module_def rest:(tok_space? module_def)* {{
+	std::vector<node_ref<module_def>> list {};
+	const auto& rvals = rest.getValues();
+	list.reserve(rvals.size() + 1);
+	list.emplace_back(get_shared<module_def>(first));
+	for (const auto& item : rvals)
+		list.emplace_back(get_shared<module_def>(item));
 
-module_def = tok_kw_module tok_space tok_ident tok_space? tok_lbrace (tok_space? module_item_list)? tok_space? tok_rbrace
+	value = share(std::move(list));
+}}
 
-module_item_list = module_item (tok_space? module_item)*
+module_def = tok_kw_module tok_space name:tok_ident tok_space? tok_lbrace items:(tok_space? module_item_list)? tok_space? tok_rbrace {{
+	value = share(module_def {
+		to_ptr<gsl::czstring<>>(name),
+		get_shared<std::vector<node_ref<module_item>>>(items)
+	});
+}}
 
-module_item = header_stmt | proj_def | rpc_def
+module_item_list = first:module_item rest:(tok_space? module_item)* {{
+	std::vector<node_ref<module_item>> list {};
+	const auto& rvals = rest.getValues();
+	list.reserve(rvals.size() + 1);
+	list.emplace_back(get_shared<module_item>(first));
+	for (const auto& item : rvals)
+		list.emplace_back(get_shared<module_item>(item));
+
+	value = share(std::move(list));
+}}
+
+module_item = header_stmt {{
+	value = share(module_item {header_stmt {} });
+}} | proj:proj_def {{
+	value = share(module_item {get_shared<proj_def>(proj)});
+}} | rpc:rpc_def {{
+	value = share(module_item {get_shared<rpc_def>(rpc)});
+}}
 
 header_stmt = tok_kw_header tok_space? tok_path tok_space? tok_semi
 	| tok_kw_header tok_space? tok_string tok_space? tok_semi
 
-proj_def = tok_kw_projection tok_space? tok_langle tok_space? proj_type tok_space? tok_rangle tok_space? name:tok_ident tok_space? tok_lbrace items:(tok_space? proj_field_list)? tok_space? tok_rbrace
+proj_def = tok_kw_projection tok_space? tok_langle tok_space? type:proj_type tok_space? tok_rangle tok_space? name:tok_ident tok_space? tok_lbrace items:(tok_space? proj_field_list)? tok_space? tok_rbrace {{
+	value = share(proj_def {
+		get_shared<proj_type>(type),
+		to_ptr<gsl::czstring<>>(name),
+		get_shared<std::vector<node_ref<var_decl>>>(items)
+	});
+}}
 
-proj_type = tok_kw_struct tok_space tok_ident | tok_kw_union tok_space tok_ident
+proj_type = tok_kw_struct tok_space name:tok_ident {{
+	value = share(proj_type {proj_type_kind::kw_struct, to_ptr<gsl::czstring<>>(name)});
+}} | tok_kw_union tok_space name:tok_ident {{
+	value = share(proj_type {proj_type_kind::kw_union, to_ptr<gsl::czstring<>>(name)});
+}} 
 
 field_ref = aref:field_abs_ref {{
 	value = share(field_ref {get_shared<field_abs_ref>(aref)});
@@ -340,7 +385,7 @@ tyname_array = tok_kw_array tok_space? tok_langle tok_space? type:tyname tok_spa
 array_size = n:tok_number {{
 	value = share(array_size {to_int<unsigned>(n)});
 }} | tok_kw_null {{
-	value = share(array_size {null_array_size {} });
+	value = share(array_size {tok_kw_null {} });
 }} | ref:field_ref {{
 	value = share(array_size {get_shared<field_ref>(ref)}); // TODO
 }}
@@ -395,15 +440,39 @@ tyname = is_c:(tok_kw_const tok_space)? stem:tyname_stem indirs:(tok_space? indi
 	auto& ivals = indirs.getValues();
 	std::vector<node_ref<indirection>> a {};
 	a.reserve(ivals.size());
-	for (const auto& indir : ivals) {
+	for (const auto& indir : ivals)
 		a.push_back(get_shared<indirection>(indir));
-	}
 
 	value = share(tyname {is_c.getValue(), get_shared<tyname_stem>(stem), std::move(a), to_int<tags>(val_tags)});
 }}
 
-rpc_def = tok_kw_rpc tok_space? tyname tok_space? tok_ident tok_space? tok_lpar (tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace (tok_space? proj_def_list)? tok_space? tok_rbrace
+rpc_def = tok_kw_rpc tok_space? ret_t:tyname tok_space? name:tok_ident tok_space? tok_lpar args:(tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace projs:(tok_space? proj_def_list)? tok_space? tok_rbrace {{
+	value = share(rpc_def {
+		get_shared<tyname>(ret_t),
+		to_ptr<gsl::czstring<>>(name),
+		get_shared<std::vector<node_ref<var_decl>>>(args),
+		get_shared<std::vector<node_ref<proj_def>>>(projs)
+	});
+}}
 
-proj_def_list = proj_def (tok_space? proj_def)*
+proj_def_list = first:proj_def rest:(tok_space? proj_def)* {{
+	std::vector<node_ref<proj_def>> list {};
+	const auto& rvals = rest.getValues();
+	list.reserve(rvals.size() + 1);
+	list.emplace_back(get_shared<proj_def>(first));
+	for (const auto& item : rvals)
+		list.emplace_back(get_shared<proj_def>(item));
 
-argument_list = var_decl (tok_space? tok_comma tok_space? var_decl)*
+	value = share(std::move(list));
+}}
+
+argument_list = first:var_decl rest:(tok_space? tok_comma tok_space? var_decl)* {{
+	std::vector<node_ref<var_decl>> list {};
+	const auto& rvals = rest.getValues();
+	list.reserve(rvals.size() + 1);
+	list.emplace_back(get_shared<var_decl>(first));
+	for (const auto& item : rvals)
+		list.emplace_back(get_shared<var_decl>(item));
+
+	value = share(std::move(list));
+}}

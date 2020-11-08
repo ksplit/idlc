@@ -16,6 +16,7 @@ namespace idlc::parser {
 	template<typename type>
 	using node_ref = gsl::not_null<node_ptr<type>>;
 
+	struct module_def;
 	struct driver_def;
 	struct driver_file;
 	enum class tyname_arith;
@@ -29,11 +30,11 @@ namespace idlc::parser {
 	struct field_rel_ref;
 	struct field_abs_ref;
 
-	struct null_array_size; // Doesn't exist in parse rules, used as marker (represents tok_kw_null)
+	struct tok_kw_null; // Doesn't exist in parse rules, used as marker (represents tok_kw_null)
 	
-	using file = std::variant<node_ref<driver_file>>;
+	using file = std::variant<node_ref<driver_file>, node_ref<std::vector<node_ref<module_def>>>>;
 	using field_ref = std::variant<node_ref<field_abs_ref>, node_ref<field_rel_ref>>;
-	using array_size = std::variant<unsigned, null_array_size, node_ref<field_ref>>;
+	using array_size = std::variant<unsigned, tok_kw_null, node_ref<field_ref>>;
 	using tyname_stem = std::variant<
 		tyname_arith,
 		tyname_string,
@@ -111,7 +112,7 @@ namespace idlc::parser {
 	};
 
 	// Marker, subject to removal if I have a better way of representing it in-tree
-	struct null_array_size {};
+	struct tok_kw_null {};
 
 	struct field_abs_ref {
 		node_ref<field_rel_ref> link;
@@ -126,7 +127,7 @@ namespace idlc::parser {
 	struct tyname_string {};
 
 	struct indirection {
-		tags attrs; // Contectually, both ptr and value attrs
+		tags attrs; // Contextually, both ptr and value attrs
 		bool is_const;
 	};
 
@@ -140,6 +141,39 @@ namespace idlc::parser {
 	struct var_decl {
 		node_ref<tyname> type;
 		gsl::czstring<> name;
+	};
+
+	enum class proj_type_kind {
+		kw_struct,
+		kw_union
+	};
+
+	struct proj_type {
+		proj_type_kind kind;
+		gsl::czstring<> name;
+	};
+
+	struct proj_def {
+		node_ref<proj_type> type;
+		gsl::czstring<> name;
+		node_ptr<std::vector<node_ref<var_decl>>> fields;
+	};
+
+	struct rpc_def {
+		node_ref<tyname> ret_type;
+		gsl::czstring<> name;
+		node_ref<std::vector<node_ref<var_decl>>> arguments;
+		node_ref<std::vector<node_ref<proj_def>>> projections;
+	};
+
+	// TODO: impl
+	struct header_stmt {};
+
+	using module_item = std::variant<header_stmt, node_ref<proj_def>, node_ref<rpc_def>>;
+
+	struct module_def {
+		gsl::czstring<> name;
+		node_ptr<std::vector<node_ref<module_item>>> items;
 	};
 }
 
