@@ -68,7 +68,7 @@ namespace idlc::parser {
 
 	struct driver_def {
 		gsl::czstring<> name;
-		std::shared_ptr<std::vector<gsl::czstring<>>> imports;
+		node_ptr<std::vector<gsl::czstring<>>> imports;
 	};
 
 	struct driver_file {
