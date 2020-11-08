@@ -27,10 +27,10 @@ namespace idlc::parser {
 			std::cout << e.getReason() << std::endl;
 			return nullptr;
 		}
-		catch (const std::exception& e) {
-			std::cout << e.what() << std::endl;
-			return nullptr;
-		}
+		// catch (const std::exception& e) {
+		// 	std::cout << e.what() << std::endl;
+		// 	return nullptr;
+		// }
 	}
 }
 

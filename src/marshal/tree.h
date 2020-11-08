@@ -37,9 +37,13 @@ namespace idlc::marshal {
 	
 		Layouts are variants in this tree, with primitive layout enum (for int, uint, etc.), or composite layouts
 		(mostly like vectors of fields).
+
+		Every union-typed field has its own discriminator potentially, so we are forced to make the distinction
+		dyn_layout and an actual layout. dyn_layouts refer to their discriminating field (probably by name)
 	*/
 
 	using prim = parser::tyname_arith;
+	using parser::tags;
 	struct struct_layout;
 	struct union_layout;
 	struct dyn_ptr;
@@ -55,27 +59,14 @@ namespace idlc::marshal {
 		std::vector<layout> layouts;
 	};
 
-	// TODO: class this and give operators
-	enum ptr_tags {
-		ptag_alloc_caller = 0b1,
-		ptag_alloc_callee = 0b10,
-		ptag_dealloc_caller = 0b100,
-		ptag_dealloc_callee = 0b1000,
-		ptag_bind_caller = 0b10000,
-		ptag_bind_callee = 0b100000,
-		ptag_is_bind = 0b110000,
-		ptag_is_dealloc = 0b1100,
-		ptag_is_alloc = 0b11
-	};
-
 	struct dyn_ptr {
-		ptr_tags tags;
+		tags tags;
 		gsl::czstring<> discriminator;
 		std::vector<layout> layouts;
 	};
 
 	struct ptr {
-		ptr_tags tags;
+		tags tags;
 		std::unique_ptr<layout> layout;
 	};
 }

@@ -210,13 +210,9 @@ module_item = header_stmt | proj_def | rpc_def
 header_stmt = tok_kw_header tok_space? tok_path tok_space? tok_semi
 	| tok_kw_header tok_space? tok_string tok_space? tok_semi
 
-proj_def = tok_kw_projection tok_space? tok_langle tok_space? proj_type tok_space? tok_rangle tok_space? tok_ident tok_space? tok_lbrace (tok_space? proj_field_list)? tok_space? tok_rbrace
+proj_def = tok_kw_projection tok_space? tok_langle tok_space? proj_type tok_space? tok_rangle tok_space? name:tok_ident tok_space? tok_lbrace items:(tok_space? proj_field_list)? tok_space? tok_rbrace
 
-proj_type = proj_struct_type | proj_union_type
-
-proj_struct_type = tok_kw_struct tok_space tok_ident
-
-proj_union_type = tok_kw_union tok_space tok_ident tok_space? tok_comma tok_space? field_ref
+proj_type = tok_kw_struct tok_space tok_ident | tok_kw_union tok_space tok_ident
 
 field_ref = aref:field_abs_ref {{
 	value = share(field_ref {get_shared<field_abs_ref>(aref)});
@@ -239,31 +235,72 @@ field_abs_ref = tok_kw_this tok_arrow link:field_rel_ref {{
 	value = share(field_abs_ref {get_shared<field_rel_ref>(link)});
 }}
 
-proj_field_list = proj_field (tok_space? proj_field)*
+proj_field_list = first:proj_field rest:(tok_space? proj_field)* {{
+	std::vector<node_ref<var_decl>> list {};
+	const auto& rest_vals = rest.getValues();
+	list.reserve(1 + rest_vals.size());
+	list.emplace_back(get_shared<var_decl>(first));
+	for (const auto& item : rest_vals) {
+		list.emplace_back(get_shared<var_decl>(item));
+	}
 
-proj_field = var_decl tok_space? tok_semi
+	value = share(std::move(list));
+}}
 
-var_decl = tyname tok_space? tok_ident
+proj_field = decl:var_decl tok_space? tok_semi {{ value = decl.getValue(); }}
 
-val_attr = tok_kw_in | tok_kw_out
+var_decl = ty:tyname tok_space? name:tok_ident {{
+	value = share(var_decl {get_shared<tyname>(ty), to_ptr<gsl::czstring<>>(name)});
+}}
 
-rpc_side_spec = tok_kw_caller | tok_kw_callee
+val_attr = tok_kw_in {{ value = reinterpret_cast<void*>(tags::in); }}
+	| tok_kw_out {{ value = reinterpret_cast<void*>(tags::out); }}
 
-rpc_side_paren_expr = tok_lpar tok_space? rpc_side_spec tok_space? tok_rpar
+ptr_attr = tok_kw_in {{ value = reinterpret_cast<void*>(tags::in); }}
+	| tok_kw_out {{ value = reinterpret_cast<void*>(tags::out); }}
+	| tok_kw_alloc tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
+		value = reinterpret_cast<void*>(tags::alloc_caller);
+	}}
+	| tok_kw_alloc tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
+		value = reinterpret_cast<void*>(tags::alloc_callee);
+	}}
+	| tok_kw_dealloc tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
+		value = reinterpret_cast<void*>(tags::dealloc_caller);
+	}}
+	| tok_kw_dealloc tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
+		value = reinterpret_cast<void*>(tags::dealloc_callee);
+	}}
+	| tok_kw_bind tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
+		value = reinterpret_cast<void*>(tags::bind_caller);
+	}}
+	| tok_kw_bind tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
+		value = reinterpret_cast<void*>(tags::bind_callee);
+	}}
+	| tok_kw_alloc {{ value = reinterpret_cast<void*>(tags::is_alloc); }}
+	| tok_kw_dealloc {{ value = reinterpret_cast<void*>(tags::is_dealloc); }}
+	| tok_kw_bind {{ value = reinterpret_cast<void*>(tags::is_bind); }}
 
-ptr_attr = tok_kw_in
-	| tok_kw_out
-	| tok_kw_alloc (tok_space? rpc_side_paren_expr)?
-	| tok_kw_dealloc (tok_space? rpc_side_paren_expr)?
-	| tok_kw_bind (tok_space? rpc_side_paren_expr)?
+val_attrs = tok_lbrack tok_space? list:val_attr_list tok_space? tok_rbrack {{ value = list; }}
 
-val_attrs = tok_lbrack tok_space? val_attr_list tok_space? tok_rbrack
+ptr_attrs = tok_lbrack tok_space? list:ptr_attr_list tok_space? tok_rbrack {{ value = list; }}
 
-ptr_attrs = tok_lbrack tok_space? ptr_attr_list tok_space? tok_rbrack
+val_attr_list = first:val_attr rest:(tok_space? tok_comma tok_space? val_attr)* {{
+	auto f = to_int<tags>(first);
+	for (const auto r : rest.getValues()) {
+		f |= to_int<tags>(r);
+	}
 
-val_attr_list = val_attr (tok_space? tok_comma tok_space? val_attr)*
+	value = reinterpret_cast<void*>(f);
+}}
 
-ptr_attr_list = ptr_attr (tok_space? tok_comma tok_space? ptr_attr)*
+ptr_attr_list = first:ptr_attr rest:(tok_space? tok_comma tok_space? ptr_attr)* {{
+	auto f = to_int<tags>(first);
+	for (const auto r : rest.getValues()) {
+		f |= to_int<tags>(r);
+	}
+
+	value = reinterpret_cast<void*>(f);
+}}
 
 # HACK: we sort these alternates by length to get the parser to greedy-match them
 # NOTE: we don't need type spacing rules for parsing since that parse will just fail in contexts where it's needed
@@ -338,7 +375,7 @@ type_list = head:tyname rest:(tok_space? tok_comma tok_space? tyname)* {{
 tyname_stem = arr:tyname_array {{
 	value = share(tyname_stem {get_shared<tyname_array>(arr)});
 }} | str:tyname_string {{
-	value = share(tyname_stem {tyname_string {} });
+	value = share(tyname_stem {tyname_string {} }); // yes, this is a tag
 }} | rpc:tyname_rpc {{
 	value = share(tyname_stem {get_shared<tyname_rpc>(rpc)});
 }} | proj:tyname_proj {{
@@ -349,11 +386,20 @@ tyname_stem = arr:tyname_array {{
 	value = share(tyname_stem {get_shared<tyname_any_of_ptr>(any)});
 }}
 
-indirection = (ptr_attrs tok_space?)? tok_star (tok_space? tok_kw_const)?
+indirection = attrs:(ptr_attrs tok_space?)? tok_star is_c:(tok_space? tok_kw_const)? {{
+	value = share(indirection {to_int<tags>(attrs), is_c.getValue()});
+}}
 
 # TODO: attributes
-tyname = (tok_kw_const tok_space)? stem:tyname_stem (tok_space? indirection)* (tok_space? val_attrs)? {{
-	value = share(tyname {get_shared<tyname_stem>(stem)});
+tyname = is_c:(tok_kw_const tok_space)? stem:tyname_stem indirs:(tok_space? indirection)* val_tags:(tok_space? val_attrs)? {{
+	auto& ivals = indirs.getValues();
+	std::vector<node_ref<indirection>> a {};
+	a.reserve(ivals.size());
+	for (const auto& indir : ivals) {
+		a.push_back(get_shared<indirection>(indir));
+	}
+
+	value = share(tyname {is_c.getValue(), get_shared<tyname_stem>(stem), std::move(a), to_int<tags>(val_tags)});
 }}
 
 rpc_def = tok_kw_rpc tok_space? tyname tok_space? tok_ident tok_space? tok_lpar (tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace (tok_space? proj_def_list)? tok_space? tok_rbrace

@@ -1,7 +1,7 @@
 module netdev {
     header "bar_punk\foo.h";
 
-    projection <union bar, this> global_proj {
+    projection <union bar> global_proj {
         unsigned long a;
         short b;
         rpc alloc_netdev_mqs c;
@@ -14,7 +14,7 @@ module netdev {
         projection proj [bind(callee)]* foo,
         projection global_proj * bar,
         array<string [in]*, this->foo->a> dyn_array,
-        array<string [in]* [in], null> terminated_array,
+        array<string [in, alloc(callee)]* [in], null> terminated_array,
         array<string [in]*, 10> sized_array
     ) {
         projection <struct foo> proj {
