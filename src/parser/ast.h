@@ -26,6 +26,9 @@ namespace idlc::parser {
 	struct tyname_any_of_ptr;
 	struct tyname_string;
 	struct tyname;
+
+	struct naked_proj_decl;
+	struct var_decl;
 	
 	struct field_rel_ref;
 	struct field_abs_ref;
@@ -35,6 +38,7 @@ namespace idlc::parser {
 	using file = std::variant<node_ref<driver_file>, node_ref<std::vector<node_ref<module_def>>>>;
 	using field_ref = std::variant<node_ref<field_abs_ref>, node_ref<field_rel_ref>>;
 	using array_size = std::variant<unsigned, tok_kw_null, node_ref<field_ref>>;
+	using proj_field = std::variant<node_ref<var_decl>, node_ref<naked_proj_decl>>;
 	using tyname_stem = std::variant<
 		tyname_arith,
 		tyname_string,
@@ -143,33 +147,49 @@ namespace idlc::parser {
 		gsl::czstring<> name;
 	};
 
-	enum class proj_type_kind {
-		kw_struct,
-		kw_union
-	};
-
-	struct proj_type {
-		proj_type_kind kind;
+	struct naked_proj_decl {
+		node_ptr<std::vector<node_ref<proj_field>>> fields;
 		gsl::czstring<> name;
 	};
 
-	struct proj_def {
-		node_ref<proj_type> type;
+	struct union_proj_def {
 		gsl::czstring<> name;
-		node_ptr<std::vector<node_ref<var_decl>>> fields;
+		gsl::czstring<> type;
+		node_ptr<std::vector<node_ref<proj_field>>> fields;
 	};
+
+	struct struct_proj_def {
+		gsl::czstring<> name;
+		gsl::czstring<> type;
+		node_ptr<std::vector<node_ref<proj_field>>> fields;
+	};
+
+	using rpc_item = std::variant<node_ref<union_proj_def>, node_ref<struct_proj_def>>;
 
 	struct rpc_def {
-		node_ref<tyname> ret_type;
+		node_ptr<tyname> ret_type; // null type is used for <void>
 		gsl::czstring<> name;
-		node_ref<std::vector<node_ref<var_decl>>> arguments;
-		node_ref<std::vector<node_ref<proj_def>>> projections;
+		node_ptr<std::vector<node_ref<var_decl>>> arguments;
+		node_ptr<std::vector<node_ref<rpc_item>>> items;
+	};
+
+	struct rpc_ptr_def {
+		node_ptr<tyname> ret_type; // null type is used for <void>
+		gsl::czstring<> name;
+		node_ptr<std::vector<node_ref<var_decl>>> arguments;
+		node_ptr<std::vector<node_ref<rpc_item>>> items;
 	};
 
 	// TODO: impl
 	struct header_stmt {};
 
-	using module_item = std::variant<header_stmt, node_ref<proj_def>, node_ref<rpc_def>>;
+	using module_item = std::variant<
+		header_stmt,
+		node_ref<union_proj_def>,
+		node_ref<struct_proj_def>,
+		node_ref<rpc_def>,
+		node_ref<rpc_ptr_def>
+	>;
 
 	struct module_def {
 		gsl::czstring<> name;

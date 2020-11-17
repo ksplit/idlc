@@ -55,7 +55,7 @@ namespace idlc::marshal {
 	};
 
 	struct union_layout {
-		gsl::czstring<> discriminator; // simplifying assumption: either an immediate sibling field or a func arg
+		gsl::czstring<> discriminator; // this is the name of the "initial field" which marks the union type
 		std::vector<layout> layouts;
 	};
 

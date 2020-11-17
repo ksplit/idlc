@@ -2,12 +2,21 @@ module netdev {
     header "bar_punk\foo.h";
 
     projection <union bar> global_proj {
-        unsigned long a;
         short b;
-        rpc alloc_netdev_mqs c;
-        const string [in, alloc] * const [in, out] d;
-        array<const projection global_proj [in, alloc] * const [in, bind] * [in], null> e;
-        any_of<this->a, projection global_proj, int, short>* g;
+
+        projection {
+            short b;
+            rpc_ptr foo bar;
+            unsigned long a;
+        } field1;
+
+        projection {
+            short b;
+            rpc_ptr foo c;
+            const string [in, alloc] * const [in, out] d;
+            array<const projection global_proj [in, alloc] * const [in, bind] * [in], null> e;
+            any_of<this->a, projection global_proj, int, short>* g;
+        } field2;
     }
 
     rpc projection global_proj [out] alloc_netdev_mqs(
@@ -20,8 +29,10 @@ module netdev {
         projection <struct foo> proj {
             unsigned long long a;
             short b;
-            rpc alloc_netdev_mqs c;
+            rpc_ptr callback c;
             projection global_proj [out, bind(callee)]* d;
         }
     }
+
+    rpc_ptr void callback() {}
 }
