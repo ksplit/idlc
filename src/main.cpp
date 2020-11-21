@@ -60,4 +60,7 @@ int main(int argc, char** argv)
 
 	const auto& file = *driver_idl;
 	std::cout << "File was parsed correctly" << std::endl;
+
+	idlc::parser::null_walk walk {};
+	walk.traverse_file(file);
 }
