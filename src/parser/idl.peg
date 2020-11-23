@@ -269,26 +269,26 @@ union_proj_def = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_union
 	});
 }}
 
-field_ref = aref:field_abs_ref {{
-	value = share(field_ref {get_shared<field_abs_ref>(aref)});
-}} | rref:field_rel_ref {{
-	value = share(field_ref {get_shared<field_rel_ref>(rref)});
-}}
-
-field_rel_ref = head:tok_ident rest:(tok_arrow tok_ident)* {{
-	const auto rest_vals = rest.getValues();
-	field_rel_ref ref {};
-	ref.links.reserve(1 + rest_vals.size());
-	ref.links.push_back(to_ptr<gsl::czstring<>>(head));
-	for (const auto& val : rest_vals)
-		ref.links.push_back(to_ptr<gsl::czstring<>>(val));
-
-	value = share(std::move(ref));
-}}
-
-field_abs_ref = tok_kw_this tok_arrow link:field_rel_ref {{
-	value = share(field_abs_ref {get_shared<field_rel_ref>(link)});
-}}
+# field_ref = aref:field_abs_ref {{
+# 	value = share(field_ref {get_shared<field_abs_ref>(aref)});
+# }} | rref:field_rel_ref {{
+# 	value = share(field_ref {get_shared<field_rel_ref>(rref)});
+# }}
+# 
+# field_rel_ref = head:tok_ident rest:(tok_arrow tok_ident)* {{
+# 	const auto rest_vals = rest.getValues();
+# 	field_rel_ref ref {};
+# 	ref.links.reserve(1 + rest_vals.size());
+# 	ref.links.push_back(to_ptr<gsl::czstring<>>(head));
+# 	for (const auto& val : rest_vals)
+# 		ref.links.push_back(to_ptr<gsl::czstring<>>(val));
+# 
+# 	value = share(std::move(ref));
+# }}
+# 
+# field_abs_ref = tok_kw_this tok_arrow link:field_rel_ref {{
+# 	value = share(field_abs_ref {get_shared<field_rel_ref>(link)});
+# }}
 
 proj_field_list = first:proj_field rest:(tok_space? proj_field)* {{
 	std::vector<node_ref<proj_field>> list {};
@@ -409,8 +409,8 @@ array_size = n:tok_number {{
 	value = share(array_size {to_int<unsigned>(n)});
 }} | tok_kw_null {{
 	value = share(array_size {tok_kw_null {} });
-}} | ref:field_ref {{
-	value = share(array_size {get_shared<field_ref>(ref)}); // TODO
+}} | ref:tok_ident {{
+	value = share(array_size {to_ptr<gsl::czstring<>>(ref)});
 }}
 
 # Literally just an alias for array<char, null>
@@ -424,8 +424,8 @@ tyname_proj = tok_kw_projection tok_space name:tok_ident {{
 	value = share(tyname_proj {to_ptr<gsl::czstring<>>(name)});
 }}
 
-tyname_any_of = tok_kw_any_of tok_space? tok_langle tok_space? ref:field_ref tok_space? tok_comma tok_space? types:type_list tok_space? tok_rangle {{
-	value = share(tyname_any_of_ptr {get_shared<field_ref>(ref), get_shared<std::vector<node_ref<tyname>>>(types)});
+tyname_any_of = tok_kw_any_of tok_space? tok_langle tok_space? ref:tok_ident tok_space? tok_comma tok_space? types:type_list tok_space? tok_rangle {{
+	value = share(tyname_any_of_ptr {to_ptr<gsl::czstring<>>(ref), get_shared<std::vector<node_ref<tyname>>>(types)});
 }}
 
 type_list = head:tyname rest:(tok_space? tok_comma tok_space? tyname)* {{
@@ -504,6 +504,8 @@ rpc_item = ud:union_proj_def {{
 	value = share(rpc_item {get_shared<union_proj_def>(ud)});
 }} | sd:struct_proj_def {{
 	value = share(rpc_item {get_shared<struct_proj_def>(sd)});
+}} | rptr:rpc_ptr_def {{
+	value = share(rpc_item {get_shared<rpc_ptr_def>(rptr)});
 }}
 
 argument_list = first:var_decl rest:(tok_space? tok_comma tok_space? var_decl)* {{

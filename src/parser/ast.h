@@ -30,14 +30,14 @@ namespace idlc::parser {
 	struct naked_proj_decl;
 	struct var_decl;
 	
-	struct field_rel_ref;
-	struct field_abs_ref;
+	// struct field_rel_ref;
+	// struct field_abs_ref;
 
 	struct tok_kw_null; // Doesn't exist in parse rules, used as marker (represents tok_kw_null)
 	
 	using file = std::variant<node_ref<driver_file>, node_ref<std::vector<node_ref<module_def>>>>;
-	using field_ref = std::variant<node_ref<field_abs_ref>, node_ref<field_rel_ref>>;
-	using array_size = std::variant<unsigned, tok_kw_null, node_ref<field_ref>>;
+	// using field_ref = std::variant<node_ref<field_abs_ref>, node_ref<field_rel_ref>>;
+	using array_size = std::variant<unsigned, tok_kw_null, gsl::czstring<>>;
 	using proj_field = std::variant<node_ref<var_decl>, node_ref<naked_proj_decl>>;
 	using tyname_stem = std::variant<
 		tyname_arith,
@@ -111,20 +111,20 @@ namespace idlc::parser {
 	};
 
 	struct tyname_any_of_ptr {
-		node_ref<field_ref> discrim;
+		gsl::czstring<> discrim;
 		node_ref<std::vector<node_ref<tyname>>> types;
 	};
 
 	// Marker, subject to removal if I have a better way of representing it in-tree
 	struct tok_kw_null {};
 
-	struct field_abs_ref {
-		node_ref<field_rel_ref> link;
-	};
+	// struct field_abs_ref {
+	// 	node_ref<field_rel_ref> link;
+	// };
 
-	struct field_rel_ref {
-		std::vector<gsl::czstring<>> links;
-	};
+	// struct field_rel_ref {
+	// 	std::vector<gsl::czstring<>> links;
+	// };
 
 	// Another marker
 	// NOTE: since these don't actually exist in any meaningful sense, their own parse rules don't produce them
@@ -164,7 +164,9 @@ namespace idlc::parser {
 		node_ptr<std::vector<node_ref<proj_field>>> fields;
 	};
 
-	using rpc_item = std::variant<node_ref<union_proj_def>, node_ref<struct_proj_def>>;
+	struct rpc_ptr_def;
+
+	using rpc_item = std::variant<node_ref<union_proj_def>, node_ref<struct_proj_def>, node_ref<rpc_ptr_def>>;
 
 	struct rpc_def {
 		node_ptr<tyname> ret_type; // null type is used for <void>

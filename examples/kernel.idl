@@ -15,14 +15,14 @@ module netdev {
             rpc_ptr foo c;
             const string [in, alloc] * const [in, out] d;
             array<const projection global_proj [in, alloc] * const [in, bind] * [in], null> e;
-            any_of<this->a, projection global_proj, int, short>* g;
+            any_of<b, projection global_proj, int, short>* g;
         } field2;
     }
 
     rpc projection global_proj [out] alloc_netdev_mqs(
         projection proj [bind(callee)]* foo,
         projection global_proj * bar,
-        array<string [in]*, this->foo->a> dyn_array,
+        array<string [in]*, a> dyn_array,
         array<string [in, alloc(callee)]* [in], null> terminated_array,
         array<string [in]*, 10> sized_array
     ) {
@@ -32,6 +32,8 @@ module netdev {
             rpc_ptr callback c;
             projection global_proj [out, bind(callee)]* d;
         }
+
+        rpc_ptr void callback() {}
     }
 
     rpc_ptr void callback() {}

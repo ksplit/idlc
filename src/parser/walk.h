@@ -105,11 +105,50 @@ namespace idlc::parser {
 
 		bool traverse_rpc_def(const rpc_def& node)
 		{
+			if (node.ret_type) {
+				if (!self().traverse_tyname(*node.ret_type))
+					return false;
+			}
+
+			if (node.arguments) {
+				for (const auto& item : *node.arguments) {
+					if (!self().traverse_var_decl(*item))
+						return false;
+				}
+			}
+
+			if (node.items) {
+				for (const auto& item : *node.items) {
+					if (!self().traverse_rpc_item(*item))
+						return false;
+				}
+			}
+
 			return true;
 		}
 
+		// FIXME: code duplication between rpc_ptr and rpc
 		bool traverse_rpc_ptr_def(const rpc_ptr_def& node)
 		{
+			if (node.ret_type) {
+				if (!self().traverse_tyname(*node.ret_type))
+					return false;
+			}
+
+			if (node.arguments) {
+				for (const auto& item : *node.arguments) {
+					if (!self().traverse_var_decl(*item))
+						return false;
+				}
+			}
+
+			if (node.items) {
+				for (const auto& item : *node.items) {
+					if (!self().traverse_rpc_item(*item))
+						return false;
+				}
+			}
+
 			return true;
 		}
 
@@ -165,6 +204,10 @@ namespace idlc::parser {
 					return self().traverse_tyname_array(*subnode);
 				else if constexpr (std::is_same_v<type, node_ref<tyname_any_of_ptr>>)
 					return self().traverse_tyname_any_of(*subnode);
+				else if constexpr (std::is_same_v<type, tyname_string>)
+					return true;
+				else if constexpr (std::is_same_v<type, tyname_arith>)
+					return true;
 				else
 					assert(false);
 			};
@@ -174,31 +217,65 @@ namespace idlc::parser {
 
 		bool traverse_tyname_any_of(const tyname_any_of_ptr& node)
 		{
-			// TODO
+			for (const auto& item : *node.types) {
+				if (!self().traverse_tyname(*item))
+					return false;
+			}
+			
 			return true;
 		}
 
 		bool traverse_tyname_array(const tyname_array& node)
 		{
-			// TODO
+			if (!self().traverse_tyname(*node.element))
+				return false;
+
+			return self().traverse_array_size(*node.size);
+		}
+
+		bool traverse_array_size(const array_size& node)
+		{
+			// this is a variant but it has no node_refs in it
 			return true;
 		}
 
 		bool traverse_tyname_proj(const tyname_proj& node)
 		{
-			// TODO
 			return true;
 		}
 
 		bool traverse_tyname_rpc(const tyname_rpc& node)
 		{
-			// TODO
 			return true;
 		}
 
 		bool traverse_naked_proj_decl(const naked_proj_decl& node)
 		{
+			if (node.fields) {
+				for (const auto& item : *node.fields) {
+					if (!self().traverse_proj_field(*item))
+						return false;
+				}
+			}
+
 			return true;
+		}
+
+		bool traverse_rpc_item(const rpc_item& node)
+		{
+			const auto visit = [this](auto&& subnode) -> bool {
+				using type = std::decay_t<decltype(subnode)>;
+				if constexpr (std::is_same_v<type, node_ref<union_proj_def>>)
+					return self().traverse_union_proj_def(*subnode);
+				else if constexpr (std::is_same_v<type, node_ref<struct_proj_def>>)
+					return self().traverse_struct_proj_def(*subnode);
+				else if constexpr (std::is_same_v<type, node_ref<rpc_ptr_def>>)
+					return self().traverse_rpc_ptr_def(*subnode);
+				else
+					assert(false);
+			};
+
+			return std::visit(visit, node);
 		}
 
 	private:
