@@ -7,6 +7,7 @@
 #include "./parser/idl_parse.h"
 #include "./parser/walk.h"
 #include "./marshal/tree.h"
+#include "resolution.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 
@@ -61,6 +62,34 @@ int main(int argc, char** argv)
 	const auto& file = *driver_idl;
 	std::cout << "File was parsed correctly" << std::endl;
 
-	idlc::parser::null_walk walk {};
-	walk.traverse_file(file);
+	idlc::scopes_pass scope_walk {};
+	idlc::names_pass walk {scope_walk.type_scopes_, scope_walk.val_scopes_};
+	traverse_file(scope_walk, file);
+	traverse_file(walk, file);
+
+	for (const auto& [key, scope] : scope_walk.type_scopes_) {
+		std::cout << "Type Scope for node " << key << ":\n";
+		std::cout << "\tStructs:\n";
+		for (const auto& [key, node] : scope->structs)
+			std::cout << "\t\t" << key << " (" << node << ")\n";
+
+		std::cout << "\tUnions:\n";
+		for (const auto& [key, node] : scope->unions)
+			std::cout << "\t\t" << key << " (" << node << ")\n";
+
+		std::cout << "\tRPC pointers:\n";
+		for (const auto& [key, node] : scope->rpcs)
+			std::cout << "\t\t" << key << " (" << node << ")\n";
+	}
+
+	for (const auto& [key, scope] : scope_walk.val_scopes_) {
+		std::cout << "Value Scope for node " << key << ":\n";
+		std::cout << "\tNaked decls:\n";
+		for (const auto& [key, node] : scope->naked)
+			std::cout << "\t\t" << key << " (" << node << ")\n";
+
+		std::cout << "\tVar decls:\n";
+		for (const auto& [key, node] : scope->vars)
+			std::cout << "\t\t" << key << " (" << node << ")\n";
+	}
 }
