@@ -7,6 +7,7 @@
 #include "./parser/idl_parse.h"
 #include "./parser/walk.h"
 #include "./marshal/tree.h"
+#include "./marshal/tree_build.h"
 #include "resolution.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
@@ -44,6 +45,27 @@
 	Each block is per-projection, and RPC-scoped projections will get names correspondingly prepended with the RPC name
 
 	Follow the valgrind conventions on efficiency, preferably
+
+	NOTE: front-end passes are irrelevant rn, work on:
+	- annotation defaulting pass
+	- pass-graph building
+	- marshal IR
+	- 6 IR generation passes (!!)
+	- code generation
+
+	Package as much as possible into helper functions, this greatly simplifies code generation
+	- you can package bind / alloc / dealloc into helpers
+
+	Vikram notes:
+	- initial pass recording IDs and types of every object in the graph
+	- serialize to flattened array of registers, pointers replaced by IDs
+	- unrealistic to build right now
+	- focus on subset of features
+		- static arrays
+		- pointers (non-cyclic?)
+		- unions
+		- structs
+		- minimum viable: focus on nullnet, waiting on vikram to generate IDL
 */
 
 int main(int argc, char** argv)
@@ -66,6 +88,9 @@ int main(int argc, char** argv)
 	idlc::names_pass walk {scope_walk.type_scopes_, scope_walk.val_scopes_};
 	traverse_file(scope_walk, file);
 	traverse_file(walk, file);
+	
+	idlc::marshal::passgraph_builder pg_walk {};
+	idlc::parser::traverse_file(pg_walk, file);
 
 	for (const auto& [key, scope] : scope_walk.type_scopes_) {
 		std::cout << "Type Scope for node " << key << ":\n";

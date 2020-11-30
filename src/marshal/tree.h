@@ -48,14 +48,49 @@ namespace idlc::marshal {
 	struct union_layout;
 	struct dyn_ptr;
 	struct ptr;
-	using layout = std::variant<prim, struct_layout, union_layout, dyn_ptr, ptr>;
+	struct array_layout;
+	struct dyn_array_layout;
+	struct null_array_layout;
+	struct rpc_ptr_layout;
+	using layout = std::variant<
+		prim,
+		std::unique_ptr<rpc_ptr_layout>,
+		std::unique_ptr<struct_layout>,
+		std::unique_ptr<union_layout>,
+		std::unique_ptr<dyn_ptr>,
+		std::unique_ptr<ptr>,
+		std::unique_ptr<array_layout>,
+		std::unique_ptr<dyn_array_layout>,
+		std::unique_ptr<null_array_layout>
+	>;
+
+	struct rpc_ptr_layout {
+		gsl::czstring<> name;
+	};
 
 	struct struct_layout {
 		std::vector<std::pair<gsl::czstring<>, layout>> fields;
 	};
 
+	struct array_layout {
+		unsigned size;
+		std::unique_ptr<layout> elem;
+	};
+
+	struct dyn_array_layout {
+		gsl::czstring<> length;
+		std::unique_ptr<layout> elem;
+	};
+
+	// FIXME: inefficient to have this as a pointer wrapper, is it needed?
+	// Note that this will require some IR support for a recursive is_null call
+	// Generate is_null methods as needed, similar to the recursive visits
+	struct null_array_layout {
+		std::unique_ptr<layout> elem;
+	};
+
 	struct union_layout {
-		gsl::czstring<> discriminator; // this is the name of the "initial field" which marks the union type
+		gsl::czstring<> discriminator; // this is the name of the union member which marks the union type
 		std::vector<layout> layouts;
 	};
 
