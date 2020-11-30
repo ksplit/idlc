@@ -8,6 +8,8 @@
 #include <gsl/gsl>
 
 namespace idlc::marshal {
+	class field_pass;
+
 	// NOTE: this is shallow
 	// FIXME: why is it shallow?
 	// NOTE: shallowness allows us to assign to each layout output exactly once
@@ -17,75 +19,20 @@ namespace idlc::marshal {
 		{
 		}
 
-		bool visit_tyname_rpc(const ast::tyname_rpc& node)
-		{
-			std::cout << "[Passgraph] Adding layout for rpc pointer\n";
-			out_ = std::make_unique<pgraph::rpc_ptr_layout>(pgraph::rpc_ptr_layout {node.name});
-			return true;
-		}
+		bool visit_tyname_rpc(const ast::tyname_rpc& node);
 
 		// Handles both string markers and primitives
-		bool visit_tyname_stem(const ast::tyname_stem& node)
+		bool visit_tyname_stem(const ast::tyname_stem& node);
+		bool visit_tyname_array(const ast::tyname_array& node);
+
+	private:
+		pgraph::layout& out_;
+	};
+
+	class field_pass : public ast::ast_walk<field_pass> {
+	public:
+		field_pass(pgraph::field& out) : out_ {out}
 		{
-			const auto visit = [this, &node](auto&& inner)
-			{
-				using type = std::decay_t<decltype(inner)>;
-				if constexpr (std::is_same_v<type, ast::tyname_string>) {
-					std::cout << "[Passgraph] Adding layout for string value (NOT A POINTER)\n";
-					// NOTE: strings are just null-terminated arrays of char
-					// passgraph makes no distinction
-					out_ = std::make_unique<pgraph::null_array_layout>(pgraph::null_array_layout {
-						std::make_unique<pgraph::layout>(pgraph::prim::ty_char)
-					});
-				}
-				else if constexpr (std::is_same_v<type, ast::tyname_arith>) {
-					std::cout << "[Passgraph] Adding layout for arithmetic type\n";
-					out_ = inner;
-				}
-				else {
-					// Delegate
-					ast::traverse_tyname_stem(*this, node);
-				}
-			};
-
-			std::visit(visit, node);
-
-			return true;
-		}
-
-		bool visit_tyname_array(const ast::tyname_array& node)
-		{
-			pgraph::layout elem {};
-			type_layout_pass lpass {elem};
-			ast::traverse_tyname(lpass, *node.element);
-			const auto visit = [this, &elem](auto&& inner)
-			{
-				using type = std::decay_t<decltype(inner)>;
-				if constexpr (std::is_same_v<type, unsigned>) {
-					std::cout << "[Passgraph] Adding const-sized array layout\n";
-					out_ = std::make_unique<pgraph::array_layout>(pgraph::array_layout {
-						inner,
-						std::make_unique<pgraph::layout>(std::move(elem))
-					});
-				}
-				else if constexpr (std::is_same_v<type, ast::tok_kw_null>) {
-					std::cout << "[Passgraph] Adding null-terminated array layout\n";
-					out_ = std::make_unique<pgraph::null_array_layout>(pgraph::null_array_layout {
-						std::make_unique<pgraph::layout>(std::move(elem))
-					});
-				}
-				else if constexpr (std::is_same_v<type, gsl::czstring<>>) {
-					std::cout << "[Passgraph] Adding variable-size array layout\n";
-					out_ = std::make_unique<pgraph::dyn_array_layout>(pgraph::dyn_array_layout {
-						inner,
-						std::make_unique<pgraph::layout>(std::move(elem))
-					});
-				}
-			};
-
-			std::visit(visit, *node.size);
-
-			return true;
 		}
 
 		bool visit_tyname(const ast::tyname& node)
@@ -97,18 +44,24 @@ namespace idlc::marshal {
 			for (const auto& star : node.indirs) {
 				std::cout << "[Passgraph] Applying indirection\n";
 				root_layout = std::make_unique<pgraph::ptr>(pgraph::ptr {
-					star->attrs,
-					std::make_unique<pgraph::layout>(std::move(root_layout))
+					star->attrs & pgraph::tags::is_ptr,
+					std::make_unique<pgraph::field>(pgraph::field {
+						std::make_unique<pgraph::layout>(std::move(root_layout)),
+						star->attrs & pgraph::tags::is_val
+					})
 				});
 			}
 
-			out_ = std::move(root_layout);
+			out_ = pgraph::field {
+				std::make_unique<pgraph::layout>(std::move(root_layout)),
+				node.attrs & pgraph::tags::is_val // TODO: this is a no-op in sane trees
+			};
 
 			return true;
 		}
 
 	private:
-		pgraph::layout& out_;
+		pgraph::field& out_;
 	};
 
 	class passgraph_pass : public ast::ast_walk<passgraph_pass> {
@@ -132,8 +85,8 @@ namespace idlc::marshal {
 		{
 			if (node.arguments) {
 				for (const auto& arg : *node.arguments) {
-					pgraph::layout arg_layout {};
-					ast::traverse_var_decl<type_layout_pass>(arg_layout, *arg);
+					pgraph::field arg_layout {};
+					ast::traverse_var_decl<field_pass>(arg_layout, *arg);
 					std::cout << "[Passgraph] Building for argument '" << arg->name << "' of '" << node.name << "'\n";
 				}
 			}
@@ -151,8 +104,8 @@ namespace idlc::marshal {
 		{
 			if (node.arguments) {
 				for (const auto& arg : *node.arguments) {
-					pgraph::layout arg_layout {};
-					ast::traverse_var_decl<type_layout_pass>(arg_layout, *arg);
+					pgraph::field arg_layout {};
+					ast::traverse_var_decl<field_pass>(arg_layout, *arg);
 					std::cout << "[Passgraph] Building for argument '" << arg->name << "' of '" << node.name << "'\n";
 				}
 			}
@@ -169,6 +122,13 @@ namespace idlc::marshal {
 	private:
 		const sema::trib_map& types_;
 		std::vector<const sema::types_rib*> ribs_ {};
+	};
+
+	// Build a table of projections with their type scope-chains
+	// Type layout pass will first search for their projection by name within their local chain of scopes
+	// Then use this table in a nested pass to discover the layout of the projection
+	class ptable_pass : public ast::ast_walk<ptable_pass> {
+
 	};
 }
 

@@ -28,6 +28,7 @@ namespace idlc::ast {
 	struct tyname;
 
 	struct naked_proj_decl;
+	struct naked_uni_proj_decl;
 	struct var_decl;
 	
 	// struct field_rel_ref;
@@ -38,7 +39,7 @@ namespace idlc::ast {
 	using file = std::variant<node_ref<driver_file>, node_ref<std::vector<node_ref<module_def>>>>;
 	// using field_ref = std::variant<node_ref<field_abs_ref>, node_ref<field_rel_ref>>;
 	using array_size = std::variant<unsigned, tok_kw_null, gsl::czstring<>>;
-	using proj_field = std::variant<node_ref<var_decl>, node_ref<naked_proj_decl>>;
+	using proj_field = std::variant<node_ref<var_decl>, node_ref<naked_proj_decl>, node_ref<naked_uni_proj_decl>>;
 	using tyname_stem = std::variant<
 		tyname_arith,
 		tyname_string,
@@ -61,6 +62,8 @@ namespace idlc::ast {
 		is_bind			= 0b100110000,
 		is_dealloc		= 0b100001100,
 		is_alloc		= 0b100000011,
+		is_ptr			= is_bind | is_dealloc | is_alloc,
+		is_val			= out | in,
 		is_set			= 0b100000000
 	};
 
@@ -69,6 +72,12 @@ namespace idlc::ast {
 		val |= static_cast<std::uintptr_t>(b);
 		a = static_cast<tags>(val);
 		return a;
+	}
+
+	inline auto operator&(tags a, tags b) {
+		auto val = static_cast<std::uintptr_t>(a);
+		val &= static_cast<std::uintptr_t>(b);
+		return static_cast<tags>(val);
 	}
 
 	struct driver_def {
@@ -148,6 +157,11 @@ namespace idlc::ast {
 	};
 
 	struct naked_proj_decl {
+		node_ptr<std::vector<node_ref<proj_field>>> fields;
+		gsl::czstring<> name;
+	};
+
+	struct naked_uni_proj_decl {
 		node_ptr<std::vector<node_ref<proj_field>>> fields;
 		gsl::czstring<> name;
 	};

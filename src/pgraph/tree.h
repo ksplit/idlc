@@ -52,6 +52,7 @@ namespace idlc::pgraph {
 	struct dyn_array_layout;
 	struct null_array_layout;
 	struct rpc_ptr_layout;
+	struct field;
 	using layout = std::variant<
 		prim,
 		std::unique_ptr<rpc_ptr_layout>,
@@ -64,45 +65,50 @@ namespace idlc::pgraph {
 		std::unique_ptr<null_array_layout>
 	>;
 
+	struct field {
+		std::unique_ptr<layout> layout;
+		tags tags; // Value tags
+	};
+
 	struct rpc_ptr_layout {
 		gsl::czstring<> name;
 	};
 
 	struct struct_layout {
-		std::vector<std::pair<gsl::czstring<>, layout>> fields;
+		std::vector<std::pair<gsl::czstring<>, field>> fields;
 	};
 
 	struct array_layout {
 		unsigned size;
-		std::unique_ptr<layout> elem;
+		std::unique_ptr<field> elem;
 	};
 
 	struct dyn_array_layout {
 		gsl::czstring<> length;
-		std::unique_ptr<layout> elem;
+		std::unique_ptr<field> elem;
 	};
 
 	// FIXME: inefficient to have this as a pointer wrapper, is it needed?
 	// Note that this will require some IR support for a recursive is_null call
 	// Generate is_null methods as needed, similar to the recursive visits
 	struct null_array_layout {
-		std::unique_ptr<layout> elem;
+		std::unique_ptr<field> elem;
 	};
 
 	struct union_layout {
 		gsl::czstring<> discriminator; // this is the name of the union member which marks the union type
-		std::vector<layout> layouts;
+		std::vector<field> layouts;
 	};
 
 	struct dyn_ptr {
-		tags tags;
+		tags tags; // Pointer tags, consider strong-typing these
 		gsl::czstring<> discriminator;
-		std::vector<layout> layouts;
+		std::vector<field> layouts;
 	};
 
 	struct ptr {
-		tags tags;
-		std::unique_ptr<layout> layout;
+		tags tags; // Pointer tags, consider strong-typing these
+		std::unique_ptr<field> layout;
 	};
 }
 

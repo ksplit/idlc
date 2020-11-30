@@ -4,13 +4,13 @@ module netdev {
     projection <union bar> global_proj {
         short b;
 
-        projection {
+        projection <struct> {
             short b;
             rpc_ptr foo bar;
             unsigned long a;
         } field1;
 
-        projection {
+        projection <union> {
             short b;
             rpc_ptr foo c;
             const string [in, alloc] * const [in, out] d;

@@ -1,0 +1,475 @@
+module kernel {
+	rpc void netif_carrier_on( projection net_device  *dev ) {
+		projection < struct net_device > dev {
+ 			projection net_device_ops *dev_netdev_ops;
+		};
+	}
+
+	rpc void netif_carrier_off( projection net_device  *dev ) {
+		projection < struct net_device > dev {
+ 		};
+	}
+
+	rpc void free_percpu(  ) {
+	}
+
+	rpc u32 register_netdevice( projection net_device  *dev ) {
+		projection < struct net_device > dev {
+ 			u64 [out] features;
+			u64 [out] hw_features;
+			u64 [out] hw_enc_features;
+			projection net_device_ops *dev_netdev_ops;
+			projection ethtool_ops *dev_ethtool_ops;
+			u32  flags;
+			u32  priv_flags;
+			u8  addr_assign_type;
+			u8*  dev_addr;
+		projection rtnl_link_ops *dev_rtnl_link_ops;
+		};
+	}
+
+	rpc void consume_skb( projection sk_buff  *skb ) {
+		projection < struct sk_buff > skb {
+ 			u32  len;
+		};
+	}
+
+	rpc projection ret_net_device*[alloc(caller)] alloc_netdev_mqs( u32 sizeof_priv, u8 [string] *name, u8 name_assign_type, rpc void  (*setup)(projection struct net_device_setup* dev), u32 txqs, u32 rxqs ) {
+		projection < struct net_device > ret_net_device {
+ 			u64  features;
+			u64  hw_features;
+			u64  hw_enc_features;
+			projection net_device_ops *ret_net_device_netdev_ops;
+			projection ethtool_ops[alloc(caller)][out] *ret_net_device_ethtool_ops;
+			u32  flags;
+			u32 [alloc(caller)][out] priv_flags;
+			u8  addr_assign_type;
+			u8*  dev_addr;
+		projection rtnl_link_ops *ret_net_device_rtnl_link_ops;
+		};
+	}
+
+	rpc void free_netdev( projection net_device  *dev ) {
+		projection < struct net_device > dev {
+ 			u64  features;
+			u64  hw_features;
+			u64  hw_enc_features;
+			projection net_device_ops *dev_netdev_ops;
+			projection ethtool_ops *dev_ethtool_ops;
+			u32  flags;
+			u32  priv_flags;
+			u8  addr_assign_type;
+			u8*  dev_addr;
+		projection rtnl_link_ops *dev_rtnl_link_ops;
+		};
+	}
+
+	rpc void rtnl_lock(  ) {
+	}
+
+	rpc void rtnl_unlock(  ) {
+	}
+
+	rpc void rtnl_link_unregister( projection rtnl_link_ops  *ops ) {
+	}
+
+	rpc void __rtnl_link_unregister( projection rtnl_link_ops  *ops ) {
+	}
+
+	rpc u32 __rtnl_link_register( projection rtnl_link_ops  *ops ) {
+	}
+
+	rpc void* __alloc_percpu_gfp( u64 size, u64 align, u32 gfp ) {
+	}
+
+	rpc void ether_setup( projection net_device  *dev ) {
+		projection < struct net_device > dev {
+ 			u32 [out] flags;
+			u32 [out] priv_flags;
+		};
+	}
+
+	rpc u32 eth_validate_addr( projection net_device  *dev ) {
+		projection < struct net_device > dev {
+ 			u8*  dev_addr;
+		};
+	}
+
+	rpc u32 eth_mac_addr( projection net_device  *dev, projection sockaddr  *p ) {
+		projection < struct net_device > dev {
+ 			u32  priv_flags;
+			u8*  dev_addr;
+		};
+		projection < struct sockaddr > p {
+ 		};
+	}
+
+	rpc u32 dummy_init_module(  ) {
+	}
+
+	rpc void setup( projection net_device  *dev ) {
+		projection < struct net_device > dev {
+ 			u64 [out] features;
+			u64 [out] hw_features;
+			u64 [out] hw_enc_features;
+			projection net_device_ops[out] *dev_netdev_ops;
+			projection ethtool_ops[out] *dev_ethtool_ops;
+			projection header_ops *dev_header_ops;
+			u32 [out] flags;
+			u32 [out] priv_flags;
+			u32  mtu;
+			u16  type;
+			u16  hard_header_len;
+			u8  addr_assign_type;
+			u8  addr_len;
+			u8*  dev_addr;
+			array<u8, 32>  broadcast;
+			u64  tx_queue_len;
+		};
+	}
+
+	rpc void get_drvinfo( projection net_device  *dev, projection ethtool_drvinfo  *info ) {
+		projection < struct net_device > dev {
+ 		};
+		projection < struct ethtool_drvinfo > info {
+ 			array<u8, 32>  driver;
+			array<u8, 32>  version;
+		};
+	}
+
+	rpc u32 ndo_init( projection net_device  *dev ) {
+		projection < struct net_device > dev {
+ 			void* [out] ml_priv;
+			projection pcpu_lstats[out] *dev_lstats;
+			projection pcpu_sw_netstats[out] *dev_tstats;
+			projection pcpu_dstats[out] *dev_dstats;
+			projection pcpu_vstats[out] *dev_vstats;
+		};
+		projection < struct pcpu_lstats > dev_lstats {
+ 		};
+		projection < struct pcpu_sw_netstats > dev_tstats {
+ 		};
+		projection < struct pcpu_dstats > dev_dstats {
+ 		};
+		projection < struct pcpu_vstats > dev_vstats {
+ 		};
+	}
+
+	rpc void ndo_uninit( projection net_device  *dev ) {
+		projection < struct net_device > dev {
+ 			void*  ml_priv;
+			projection pcpu_lstats *dev_lstats;
+			projection pcpu_sw_netstats *dev_tstats;
+			projection pcpu_dstats *dev_dstats;
+			projection pcpu_vstats *dev_vstats;
+		};
+		projection < struct pcpu_lstats > dev_lstats {
+ 		};
+		projection < struct pcpu_sw_netstats > dev_tstats {
+ 		};
+		projection < struct pcpu_dstats > dev_dstats {
+ 		};
+		projection < struct pcpu_vstats > dev_vstats {
+ 		};
+	}
+
+	rpc enum netdev_tx ndo_start_xmit( projection sk_buff  *skb, projection net_device  *dev ) {
+		projection < struct sk_buff > skb {
+ 			projection sk_buff *next;
+			projection sk_buff *prev;
+			projection rbnode {
+				u64  __rb_parent_color;
+				projection rb_node *skb_rb_right;
+				projection rb_node *skb_rb_left;
+			};
+			projection sock *skb_sk;
+			projection net_device *skb_dev;
+			array<u8, 48>  cb;
+			u64  _skb_refdst;
+			u32  len;
+			u32  data_len;
+			u16  mac_len;
+			u16  hdr_len;
+			u16  queue_mapping;
+			u8  cloned;
+			u8  nohdr;
+			u8  fclone;
+			u8  peeked;
+			u8  head_frag;
+			u8  xmit_more;
+			u8  private;
+			array<u32, var_len>  headers_start;
+			array<u8, var_len>  __pkt_type_offset;
+			u8  pkt_type;
+			u8  pfmemalloc;
+			u8  ignore_df;
+			u8  nfctinfo;
+			u8  nf_trace;
+			u8  ip_summed;
+			u8  ooo_okay;
+			u8  l4_hash;
+			u8  sw_hash;
+			u8  wifi_acked_valid;
+			u8  wifi_acked;
+			u8  no_fcs;
+			u8  encapsulation;
+			u8  encap_hdr_csum;
+			u8  csum_valid;
+			u8  csum_complete_sw;
+			u8  csum_level;
+			u8  csum_bad;
+			u8  ipvs_property;
+			u8  inner_protocol_type;
+			u8  remcsum_offload;
+			u8  chain_skb;
+			u32  csum;
+			u16  csum_start;
+			u32  priority;
+			u32  skb_iif;
+			u32  hash;
+			u16  vlan_proto;
+			u16  vlan_tci;
+			u32  napi_id;
+			u32  sender_cpu;
+			u32  mark;
+			u32  reserved_tailroom;
+			u16  inner_protocol;
+			u8  inner_ipproto;
+			u16  inner_transport_header;
+			u16  inner_network_header;
+			u16  inner_mac_header;
+			u16  protocol;
+			u16  transport_header;
+			u16  network_header;
+			u16  mac_header;
+			array<u32, var_len>  headers_end;
+			u32  tail;
+			u32  end;
+			u8*  head;
+			u8*  data;
+			u32  truesize;
+			projection <struct> {
+				u32  counter;
+			} users;
+		};
+		projection < struct sk_buff > skb_next {
+ 		};
+		projection < struct sk_buff > skb_prev {
+ 		};
+		projection < struct rb_node > skb_rb_right {
+ 		};
+		projection < struct sock > skb_sk {
+ 		};
+		projection < struct net_device > skb_dev {
+ 			array<u8, 16>  name;
+			u8*  ifalias;
+			u64  mem_end;
+			u64  mem_start;
+			u64  base_addr;
+			u32  irq;
+			u64  state;
+			u64  features;
+			u64  hw_features;
+			u64  wanted_features;
+			u64  vlan_features;
+			u64  hw_enc_features;
+			u64  mpls_features;
+			u64  gso_partial_features;
+			u32  ifindex;
+			u32  group;
+			projection net_device_ops *skb_netdev_ops;
+			projection ethtool_ops *skb_ethtool_ops;
+			projection header_ops *skb_header_ops;
+			u32  flags;
+			u32  priv_flags;
+			u16  gflags;
+			u16  padded;
+			u8  operstate;
+			u8  link_mode;
+			u8  if_port;
+			u8  dma;
+			u32  mtu;
+			u16  type;
+			u16  hard_header_len;
+			u16  needed_headroom;
+			u16  needed_tailroom;
+			array<u8, 32>  perm_addr;
+			u8  addr_assign_type;
+			u8  addr_len;
+			u16  neigh_priv_len;
+			u16  dev_id;
+			u16  dev_port;
+			u8  name_assign_type;
+			bool  uc_promisc;
+			projection kset *skb_queues_kset;
+			u32  promiscuity;
+			u32  allmulti;
+			void*  atalk_ptr;
+			projection in_device *skb_ip_ptr;
+			projection dn_dev *skb_dn_ptr;
+			projection inet6_dev *skb_ip6_ptr;
+			void*  ax25_ptr;
+			projection wireless_dev *skb_ieee80211_ptr;
+			projection wpan_dev *skb_ieee802154_ptr;
+			u64  last_rx;
+			u8*  dev_addr;
+			projection netdev_rx_queue *skb__rx;
+			u32  num_rx_queues;
+			u32  real_num_rx_queues;
+			u64  gro_flush_timeout;
+			void*  rx_handler_data;
+			projection netdev_queue *skb_ingress_queue;
+			array<u8, 32>  broadcast;
+			projection cpu_rmap *skb_rx_cpu_rmap;
+			projection netdev_queue *skb__tx;
+			u32  num_tx_queues;
+			u32  real_num_tx_queues;
+			projection Qdisc *skb_qdisc;
+			u64  tx_queue_len;
+			u32  watchdog_timeo;
+			projection xps_dev_maps *skb_xps_maps;
+			u32*  pcpu_refcnt;
+			enum  reg_state;
+			bool  dismantle;
+			enum  rtnl_link_state;
+		projection garp_port *skb_garp_port;
+		projection mrp_port *skb_mrp_port;
+		array<const struct attribute_group, 4>*  sysfs_groups;
+		projection attribute_group *skb_sysfs_rx_queue_group;
+		projection rtnl_link_ops *skb_rtnl_link_ops;
+		u32  gso_max_size;
+		u16  gso_max_segs;
+		u8  num_tc;
+		array<struct netdev_tc_txq, 16>  tc_to_txq;
+		array<u8, var_len>  prio_tc_map;
+		projection phy_device *skb_phydev;
+		projection lock_class_key *skb_qdisc_tx_busylock;
+		projection lock_class_key *skb_qdisc_running_key;
+		bool  proto_down;
+		};
+		projection < struct kset > skb_queues_kset {
+ 		};
+		projection < struct in_device > skb_ip_ptr {
+ 		};
+		projection < struct dn_dev > skb_dn_ptr {
+ 		};
+		projection < struct inet6_dev > skb_ip6_ptr {
+ 		};
+		projection < struct wireless_dev > skb_ieee80211_ptr {
+ 		};
+		projection < struct wpan_dev > skb_ieee802154_ptr {
+ 		};
+		projection < struct netdev_rx_queue > skb__rx {
+ 		};
+		projection < struct netdev_queue > skb_ingress_queue {
+ 		};
+		projection < struct cpu_rmap > skb_rx_cpu_rmap {
+ 		};
+		projection < struct netdev_queue > skb__tx {
+ 		};
+		projection < struct Qdisc > skb_qdisc {
+ 		};
+		projection < struct xps_dev_maps > skb_xps_maps {
+ 		};
+		projection < struct garp_port > skb_net_device {
+ 		};
+		projection < struct mrp_port > skb_net_device {
+ 		};
+		projection < struct attribute_group > skb_sysfs_rx_queue_group {
+ 		};
+		projection < struct phy_device > skb_phydev {
+ 		};
+		projection < struct lock_class_key > skb_qdisc_tx_busylock {
+ 		};
+		projection < struct lock_class_key > skb_qdisc_running_key {
+ 		};
+		projection < struct net_device > dev {
+ 			void*  ml_priv;
+			projection pcpu_lstats *dev_lstats;
+			projection pcpu_sw_netstats *dev_tstats;
+			projection pcpu_dstats *dev_dstats;
+			projection pcpu_vstats *dev_vstats;
+		};
+		projection < struct pcpu_lstats > dev_lstats {
+ 		};
+		projection < struct pcpu_sw_netstats > dev_tstats {
+ 		};
+		projection < struct pcpu_dstats > dev_dstats {
+ 		};
+		projection < struct pcpu_vstats > dev_vstats {
+ 		};
+	}
+
+	rpc void ndo_set_rx_mode( projection net_device  *dev ) {
+		projection < struct net_device > dev {
+ 		};
+	}
+
+	rpc projection ret_rtnl_link_stats64* ndo_get_stats64( projection net_device  *dev, projection rtnl_link_stats64  *stats ) {
+		projection < struct net_device > dev {
+ 			void*  ml_priv;
+			projection pcpu_lstats *dev_lstats;
+			projection pcpu_sw_netstats *dev_tstats;
+			projection pcpu_dstats *dev_dstats;
+			projection pcpu_vstats *dev_vstats;
+		};
+		projection < struct pcpu_lstats > dev_lstats {
+ 		};
+		projection < struct pcpu_sw_netstats > dev_tstats {
+ 		};
+		projection < struct pcpu_dstats > dev_dstats {
+ 		};
+		projection < struct pcpu_vstats > dev_vstats {
+ 		};
+		projection < struct rtnl_link_stats64 > stats {
+ 			u64 [out] tx_packets;
+			u64 [out] tx_bytes;
+		};
+		projection < struct rtnl_link_stats64 > ret_rtnl_link_stats64 {
+ 		};
+	}
+
+	rpc u32 ndo_change_carrier( projection net_device  *dev, bool new_carrier ) {
+		projection < struct net_device > dev {
+ 			u64  state;
+			projection net_device_ops *dev_netdev_ops;
+			u32  watchdog_timeo;
+			u32*  pcpu_refcnt;
+			enum  reg_state;
+		};
+	}
+
+	rpc u32 validate( projection nlattr  **tb, projection nlattr  **data ) {
+		projection < struct nlattr > tb {
+ 		};
+		projection < struct nlattr > data {
+ 		};
+	}
+
+	rpc void dummy_cleanup_module(  ) {
+	}
+
+
+		projection < struct net_device_ops > dev_netdev_ops {
+ 			rpc u32 (*ndo_init)(projection struct net_device_ndo_init* dev);
+			rpc void  (*ndo_uninit)(projection struct net_device_ndo_uninit* dev);
+			rpc enum netdev_tx (*ndo_start_xmit)(projection struct sk_buff_ndo_start_xmit* skb, projection struct net_device_ndo_start_xmit* dev);
+			rpc void  (*ndo_set_rx_mode)(projection struct net_device_ndo_set_rx_mode* dev);
+			rpc struct rtnl_link_stats64* (*ndo_get_stats64)(projection struct net_device_ndo_get_stats64* dev, projection struct rtnl_link_stats64_ndo_get_stats64* stats);
+			rpc u32 (*ndo_change_carrier)(projection struct net_device_ndo_change_carrier* dev, bool new_carrier);
+		};
+
+		projection < struct ethtool_ops > dev_ethtool_ops {
+ 			rpc void  (*get_drvinfo)(projection struct net_device_get_drvinfo* dev, projection struct ethtool_drvinfo_get_drvinfo* info);
+		};
+
+		projection < struct rtnl_link_ops > dev_rtnl_link_ops {
+ 			rpc void  (*setup)(projection struct net_device_setup* dev);
+			rpc u32 (*validate)(struct nlattr** tb, struct nlattr** data);
+		};
+
+		projection < struct header_ops > dev_header_ops {
+ 			rpc bool (*validate)(const u8* tb, u32);
+		};
+
+}
