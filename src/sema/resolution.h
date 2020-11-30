@@ -18,10 +18,13 @@ namespace idlc::sema {
 		std::map<gsl::czstring<>, const ast::var_decl*> vars {};
 	};
 
+	using trib_map = std::map<const void*, types_rib*>;
+	using vrib_map = std::map<const void*, values_rib*>;
+
 	class scopes_pass : public ast::ast_walk<scopes_pass> {
 	public:
-		std::map<const void*, types_rib*> type_scopes_;
-		std::map<const void*, values_rib*> val_scopes_;
+		trib_map type_scopes_;
+		vrib_map val_scopes_;
 		
 		bool visit_module_def(const ast::module_def& node)
 		{
