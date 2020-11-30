@@ -3,9 +3,9 @@
 
 #include <variant>
 
-#include "../parser/ast.h"
+#include "../ast/ast.h"
 
-namespace idlc::marshal {
+namespace idlc::pgraph {
 	/*
 		Every "block" has an extent and a layout. For example, the block for a union projection
 		has an extent equal to that of its largest element, but a layout that is determined at runtime.
@@ -42,8 +42,8 @@ namespace idlc::marshal {
 		dyn_layout and an actual layout. dyn_layouts refer to their discriminating field (probably by name)
 	*/
 
-	using prim = parser::tyname_arith;
-	using parser::tags;
+	using prim = ast::tyname_arith;
+	using ast::tags;
 	struct struct_layout;
 	struct union_layout;
 	struct dyn_ptr;

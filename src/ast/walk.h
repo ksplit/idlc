@@ -7,9 +7,9 @@
 
 #include "ast.h"
 
-namespace idlc::parser {
+namespace idlc::ast {
 	template<typename walk>
-	bool traverse_file(walk& self, const file& node)
+	bool traverse_file(walk&& self, const file& node)
 	{
 		const auto visit = [&self](auto&& subnode) -> bool
 		{
@@ -34,7 +34,7 @@ namespace idlc::parser {
 	}
 
 	template<typename walk>
-	bool traverse_module_def(walk& self, const module_def& node)
+	bool traverse_module_def(walk&& self, const module_def& node)
 	{
 		if (node.items) {
 			for (const auto& item : *node.items) {
@@ -47,19 +47,19 @@ namespace idlc::parser {
 	}
 
 	template<typename walk>
-	bool traverse_driver_file(walk& self, const driver_file& node)
+	bool traverse_driver_file(walk&& self, const driver_file& node)
 	{
 		return self.visit_driver_def(*node.driver);
 	}
 
 	template<typename walk>
-	bool traverse_driver_def(walk& self, const driver_def& node)
+	bool traverse_driver_def(walk&& self, const driver_def& node)
 	{
 		return true;
 	}
 
 	template<typename walk>
-	bool traverse_module_item(walk& self, const module_item& node)
+	bool traverse_module_item(walk&& self, const module_item& node)
 	{
 		const auto visit = [&self](auto&& subnode) -> bool
 		{
@@ -82,7 +82,7 @@ namespace idlc::parser {
 	}
 
 	template<typename walk>
-	bool traverse_union_proj_def(walk& self, const union_proj_def& node)
+	bool traverse_union_proj_def(walk&& self, const union_proj_def& node)
 	{
 		if (node.fields) {
 			for (const auto& item : *node.fields) {
@@ -97,7 +97,7 @@ namespace idlc::parser {
 	// FIXME: code duplication between struct / union projection defs
 
 	template<typename walk>
-	bool traverse_struct_proj_def(walk& self, const struct_proj_def& node)
+	bool traverse_struct_proj_def(walk&& self, const struct_proj_def& node)
 	{
 		if (node.fields) {
 			for (const auto& item : *node.fields) {
@@ -110,7 +110,7 @@ namespace idlc::parser {
 	}
 
 	template<typename walk>
-	bool traverse_rpc_def(walk& self, const rpc_def& node)
+	bool traverse_rpc_def(walk&& self, const rpc_def& node)
 	{
 		if (node.ret_type) {
 			if (!self.visit_tyname(*node.ret_type))
@@ -136,7 +136,7 @@ namespace idlc::parser {
 
 	// FIXME: code duplication between rpc_ptr and rpc
 	template<typename walk>
-	bool traverse_rpc_ptr_def(walk& self, const rpc_ptr_def& node)
+	bool traverse_rpc_ptr_def(walk&& self, const rpc_ptr_def& node)
 	{
 		if (node.ret_type) {
 			if (!self.visit_tyname(*node.ret_type))
@@ -161,7 +161,7 @@ namespace idlc::parser {
 	}
 
 	template<typename walk>
-	bool traverse_proj_field(walk& self, const proj_field& node)
+	bool traverse_proj_field(walk&& self, const proj_field& node)
 	{
 		const auto visit = [&self](auto&& subnode) -> bool
 		{
@@ -178,13 +178,13 @@ namespace idlc::parser {
 	}
 
 	template<typename walk>
-	bool traverse_var_decl(walk& self, const var_decl& node)
+	bool traverse_var_decl(walk&& self, const var_decl& node)
 	{
 		return self.visit_tyname(*node.type);
 	}
 
 	template<typename walk>
-	bool traverse_tyname(walk& self, const tyname& node)
+	bool traverse_tyname(walk&& self, const tyname& node)
 	{
 		if (!self.visit_tyname_stem(*node.stem))
 			return false;
@@ -198,13 +198,13 @@ namespace idlc::parser {
 	}
 
 	template<typename walk>
-	bool traverse_indirection(walk& self, const indirection& node)
+	bool traverse_indirection(walk&& self, const indirection& node)
 	{
 		return true;
 	}
 
 	template<typename walk>
-	bool traverse_tyname_stem(walk& self, const tyname_stem& node)
+	bool traverse_tyname_stem(walk&& self, const tyname_stem& node)
 	{
 		const auto visit = [&self](auto&& subnode) -> bool
 		{
@@ -229,7 +229,7 @@ namespace idlc::parser {
 	}
 
 	template<typename walk>
-	bool traverse_tyname_any_of(walk& self, const tyname_any_of_ptr& node)
+	bool traverse_tyname_any_of(walk&& self, const tyname_any_of_ptr& node)
 	{
 		for (const auto& item : *node.types) {
 			if (!self.visit_tyname(*item))
@@ -240,7 +240,7 @@ namespace idlc::parser {
 	}
 
 	template<typename walk>
-	bool traverse_tyname_array(walk& self, const tyname_array& node)
+	bool traverse_tyname_array(walk&& self, const tyname_array& node)
 	{
 		if (!self.visit_tyname(*node.element))
 			return false;
@@ -249,26 +249,26 @@ namespace idlc::parser {
 	}
 
 	template<typename walk>
-	bool traverse_array_size(walk& self, const array_size& node)
+	bool traverse_array_size(walk&& self, const array_size& node)
 	{
 		// this is a variant but it has no node_refs in it
 		return true;
 	}
 
 	template<typename walk>
-	bool traverse_tyname_proj(walk& self, const tyname_proj& node)
+	bool traverse_tyname_proj(walk&& self, const tyname_proj& node)
 	{
 		return true;
 	}
 
 	template<typename walk>
-	bool traverse_tyname_rpc(walk& self, const tyname_rpc& node)
+	bool traverse_tyname_rpc(walk&& self, const tyname_rpc& node)
 	{
 		return true;
 	}
 
 	template<typename walk>
-	bool traverse_naked_proj_decl(walk& self, const naked_proj_decl& node)
+	bool traverse_naked_proj_decl(walk&& self, const naked_proj_decl& node)
 	{
 		if (node.fields) {
 			for (const auto& item : *node.fields) {
@@ -281,7 +281,7 @@ namespace idlc::parser {
 	}
 
 	template<typename walk>
-	bool traverse_rpc_item(walk& self, const rpc_item& node)
+	bool traverse_rpc_item(walk&& self, const rpc_item& node)
 	{
 		const auto visit = [&self](auto&& subnode) -> bool {
 			using type = std::decay_t<decltype(subnode)>;
@@ -303,147 +303,126 @@ namespace idlc::parser {
 	public:
 		bool visit_file(const file& node)
 		{
-			std::cout << "file" << std::endl;
 			traverse_file(self(), node);
 			return true;
 		}
 
 		bool visit_module_def(const module_def& node)
 		{
-			std::cout << "module_def" << std::endl;
 			traverse_module_def(self(), node);
 			return true;
 		}
 
 		bool visit_driver_file(const driver_file& node)
 		{
-			std::cout << "driver_file" << std::endl;
 			traverse_driver_file(self(), node);
 			return true;
 		}
 
 		bool visit_driver_def(const driver_def& node)
 		{
-			std::cout << "driver_def" << std::endl;
 			traverse_driver_def(self(), node);
 			return true;
 		}
 
 		bool visit_module_item(const module_item& node)
 		{
-			std::cout << "module_item" << std::endl;
 			traverse_module_item(self(), node);
 			return true;
 		}
 
 		bool visit_union_proj_def(const union_proj_def& node)
 		{
-			std::cout << "union_proj_def" << std::endl;
 			traverse_union_proj_def(self(), node);
 			return true;
 		}
 
 		bool visit_struct_proj_def(const struct_proj_def& node)
 		{
-			std::cout << "struct_proj_def" << std::endl;
 			traverse_struct_proj_def(self(), node);
 			return true;
 		}
 
 		bool visit_rpc_def(const rpc_def& node)
 		{
-			std::cout << "rpc_def" << std::endl;
 			traverse_rpc_def(self(), node);
 			return true;
 		}
 
 		bool visit_rpc_ptr_def(const rpc_ptr_def& node)
 		{
-			std::cout << "rpc_ptr_def" << std::endl;
 			traverse_rpc_ptr_def(self(), node);
 			return true;
 		}
 
 		bool visit_proj_field(const proj_field& node)
 		{
-			std::cout << "proj_field" << std::endl;
 			traverse_proj_field(self(), node);
 			return true;
 		}
 
 		bool visit_var_decl(const var_decl& node)
 		{
-			std::cout << "var_decl" << std::endl;
 			traverse_var_decl(self(), node);
 			return true;
 		}
 
 		bool visit_tyname(const tyname& node)
 		{
-			std::cout << "tyname" << std::endl;
 			traverse_tyname(self(), node);
 			return true;
 		}
 
 		bool visit_indirection(const indirection& node)
 		{
-			std::cout << "indirection" << std::endl;
 			traverse_indirection(self(), node);
 			return true;
 		}
 
 		bool visit_tyname_stem(const tyname_stem& node)
 		{
-			std::cout << "tyname_stem" << std::endl;
 			traverse_tyname_stem(self(), node);
 			return true;
 		}
 
 		bool visit_tyname_any_of(const tyname_any_of_ptr& node)
 		{
-			std::cout << "tyname_any_of" << std::endl;
 			traverse_tyname_any_of(self(), node);
 			return true;
 		}
 
 		bool visit_tyname_array(const tyname_array& node)
 		{
-			std::cout << "tyname_array" << std::endl;
 			traverse_tyname_array(self(), node);
 			return true;
 		}
 
 		bool visit_array_size(const array_size& node)
 		{
-			std::cout << "array_size" << std::endl;
 			traverse_array_size(self(), node);
 			return true;
 		}
 
 		bool visit_tyname_proj(const tyname_proj& node)
 		{
-			std::cout << "tyname_proj" << std::endl;
 			traverse_tyname_proj(self(), node);
 			return true;
 		}
 
 		bool visit_tyname_rpc(const tyname_rpc& node)
 		{
-			std::cout << "tyname_rpc" << std::endl;
 			traverse_tyname_rpc(self(), node);
 			return true;
 		}
 
 		bool visit_naked_proj_decl(const naked_proj_decl& node)
 		{
-			std::cout << "naked_proj_decl" << std::endl;
 			traverse_naked_proj_decl(self(), node);
 			return true;
 		}
 
 		bool visit_rpc_item(const rpc_item& node)
 		{
-			std::cout << "rpc_item" << std::endl;
 			traverse_rpc_item(self(), node);
 			return true;
 		}
@@ -456,7 +435,153 @@ namespace idlc::parser {
 	};
 
 	class null_walk : public ast_walk<null_walk> {
+	public:
+		bool visit_file(const file& node)
+		{
+			std::cout << "[Nullwalk] file" << std::endl;
+			traverse_file(*this, node);
+			return true;
+		}
 
+		bool visit_module_def(const module_def& node)
+		{
+			std::cout << "[Nullwalk] module_def" << std::endl;
+			traverse_module_def(*this, node);
+			return true;
+		}
+
+		bool visit_driver_file(const driver_file& node)
+		{
+			std::cout << "[Nullwalk] driver_file" << std::endl;
+			traverse_driver_file(*this, node);
+			return true;
+		}
+
+		bool visit_driver_def(const driver_def& node)
+		{
+			std::cout << "[Nullwalk] driver_def" << std::endl;
+			traverse_driver_def(*this, node);
+			return true;
+		}
+
+		bool visit_module_item(const module_item& node)
+		{
+			std::cout << "[Nullwalk] module_item" << std::endl;
+			traverse_module_item(*this, node);
+			return true;
+		}
+
+		bool visit_union_proj_def(const union_proj_def& node)
+		{
+			std::cout << "[Nullwalk] union_proj_def" << std::endl;
+			traverse_union_proj_def(*this, node);
+			return true;
+		}
+
+		bool visit_struct_proj_def(const struct_proj_def& node)
+		{
+			std::cout << "[Nullwalk] struct_proj_def" << std::endl;
+			traverse_struct_proj_def(*this, node);
+			return true;
+		}
+
+		bool visit_rpc_def(const rpc_def& node)
+		{
+			std::cout << "[Nullwalk] rpc_def" << std::endl;
+			traverse_rpc_def(*this, node);
+			return true;
+		}
+
+		bool visit_rpc_ptr_def(const rpc_ptr_def& node)
+		{
+			std::cout << "[Nullwalk] rpc_ptr_def" << std::endl;
+			traverse_rpc_ptr_def(*this, node);
+			return true;
+		}
+
+		bool visit_proj_field(const proj_field& node)
+		{
+			std::cout << "[Nullwalk] proj_field" << std::endl;
+			traverse_proj_field(*this, node);
+			return true;
+		}
+
+		bool visit_var_decl(const var_decl& node)
+		{
+			std::cout << "[Nullwalk] var_decl" << std::endl;
+			traverse_var_decl(*this, node);
+			return true;
+		}
+
+		bool visit_tyname(const tyname& node)
+		{
+			std::cout << "[Nullwalk] tyname" << std::endl;
+			traverse_tyname(*this, node);
+			return true;
+		}
+
+		bool visit_indirection(const indirection& node)
+		{
+			std::cout << "[Nullwalk] indirection" << std::endl;
+			traverse_indirection(*this, node);
+			return true;
+		}
+
+		bool visit_tyname_stem(const tyname_stem& node)
+		{
+			std::cout << "[Nullwalk] tyname_stem" << std::endl;
+			traverse_tyname_stem(*this, node);
+			return true;
+		}
+
+		bool visit_tyname_any_of(const tyname_any_of_ptr& node)
+		{
+			std::cout << "[Nullwalk] tyname_any_of" << std::endl;
+			traverse_tyname_any_of(*this, node);
+			return true;
+		}
+
+		bool visit_tyname_array(const tyname_array& node)
+		{
+			std::cout << "[Nullwalk] tyname_array" << std::endl;
+			traverse_tyname_array(*this, node);
+			return true;
+		}
+
+		bool visit_array_size(const array_size& node)
+		{
+			std::cout << "[Nullwalk] array_size" << std::endl;
+			traverse_array_size(*this, node);
+			return true;
+		}
+
+		bool visit_tyname_proj(const tyname_proj& node)
+		{
+			std::cout << "[Nullwalk] tyname_proj" << std::endl;
+			traverse_tyname_proj(*this, node);
+			return true;
+		}
+
+		bool visit_tyname_rpc(const tyname_rpc& node)
+		{
+			std::cout << "[Nullwalk] tyname_rpc" << std::endl;
+			traverse_tyname_rpc(*this, node);
+			return true;
+		}
+
+		bool visit_naked_proj_decl(const naked_proj_decl& node)
+		{
+			std::cout << "[Nullwalk] naked_proj_decl" << std::endl;
+			traverse_naked_proj_decl(*this, node);
+			return true;
+		}
+
+		bool visit_rpc_item(const rpc_item& node)
+		{
+			std::cout << "[Nullwalk] rpc_item" << std::endl;
+			traverse_rpc_item(*this, node);
+			return true;
+		}
 	};
 }
 

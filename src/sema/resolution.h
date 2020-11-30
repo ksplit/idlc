@@ -1,85 +1,85 @@
 #ifndef _LCDS_IDL_RESOLUTION_H_
 #define _LCDS_IDL_RESOLUTION_H_
 
-#include "parser/walk.h"
+#include "../ast/walk.h"
 
 #include <map>
 #include <list>
 
-namespace idlc {
+namespace idlc::sema {
 	struct types_rib {
-		std::map<gsl::czstring<>, const parser::rpc_ptr_def*> rpcs {};
-		std::map<gsl::czstring<>, const parser::struct_proj_def*> structs {};
-		std::map<gsl::czstring<>, const parser::union_proj_def*> unions {};
+		std::map<gsl::czstring<>, const ast::rpc_ptr_def*> rpcs {};
+		std::map<gsl::czstring<>, const ast::struct_proj_def*> structs {};
+		std::map<gsl::czstring<>, const ast::union_proj_def*> unions {};
 	};
 
 	struct values_rib {
-		std::map<gsl::czstring<>, const parser::naked_proj_decl*> naked {};
-		std::map<gsl::czstring<>, const parser::var_decl*> vars {};
+		std::map<gsl::czstring<>, const ast::naked_proj_decl*> naked {};
+		std::map<gsl::czstring<>, const ast::var_decl*> vars {};
 	};
 
-	class scopes_pass : public parser::ast_walk<scopes_pass> {
+	class scopes_pass : public ast::ast_walk<scopes_pass> {
 	public:
 		std::map<const void*, types_rib*> type_scopes_;
 		std::map<const void*, values_rib*> val_scopes_;
 		
-		bool visit_module_def(const parser::module_def& node)
+		bool visit_module_def(const ast::module_def& node)
 		{
 			types_.push_back({}); // TODO: inefficient?
 			// TODO: If we ever do node memoization, using their address won't work
 			type_scopes_[&node] = &types_.back();
-			std::cout << "Creating type scope for module def \"" << node.name << "\"" << std::endl;
-			return parser::traverse_module_def(*this, node);
+			std::cout << "[Scopes] Creating type scope for module def \"" << node.name << "\"" << std::endl;
+			return ast::traverse_module_def(*this, node);
 		}
 
-		bool visit_rpc_def(const parser::rpc_def& node)
+		bool visit_rpc_def(const ast::rpc_def& node)
 		{
 			types_.push_back({}); // TODO: inefficient?
 			type_scopes_[&node] = &types_.back();
-			std::cout << "Creating type scope for rpc def \"" << node.name << "\"" << std::endl;
+			std::cout << "[Scopes] Creating type scope for rpc def \"" << node.name << "\"" << std::endl;
 
 			values_.push_back({});
 			val_scopes_[&node] = &values_.back();
-			std::cout << "Creating value scope for rpc def \"" << node.name << "\"" << std::endl;
+			std::cout << "[Scopes] Creating value scope for rpc def \"" << node.name << "\"" << std::endl;
 			
-			return parser::traverse_rpc_def(*this, node);
+			return ast::traverse_rpc_def(*this, node);
 		}
 
-		bool visit_rpc_ptr_def(const parser::rpc_ptr_def& node)
+		bool visit_rpc_ptr_def(const ast::rpc_ptr_def& node)
 		{
 			types_.push_back({}); // TODO: inefficient?
 			type_scopes_[&node] = &types_.back();
-			std::cout << "Creating type scope for rpc pointer def \"" << node.name << "\"" << std::endl;
+			std::cout << "[Scopes] Creating type scope for rpc pointer def \"" << node.name << "\"" << std::endl;
 
 			values_.push_back({});
 			val_scopes_[&node] = &values_.back();
-			std::cout << "Creating value scope for rpc pointer def \"" << node.name << "\"" << std::endl;
+			std::cout << "[Scopes] Creating value scope for rpc pointer def \"" << node.name << "\"" << std::endl;
 
-			return parser::traverse_rpc_ptr_def(*this, node);
+			return ast::traverse_rpc_ptr_def(*this, node);
 		}
 
-		bool visit_naked_proj_decl(const parser::naked_proj_decl& node)
+		bool visit_naked_proj_decl(const ast::naked_proj_decl& node)
 		{
 			values_.push_back({});
 			val_scopes_[&node] = &values_.back();
-			std::cout << "Creating value scope for naked decl \"" << node.name << "\"" << std::endl;
-			return parser::traverse_naked_proj_decl(*this, node);
+			std::cout << "[Scopes] Creating value scope for naked decl \"" << node.name << "\"" << std::endl;
+			return ast::traverse_naked_proj_decl(*this, node);
 		}
 
-		bool visit_struct_proj_def(const parser::struct_proj_def& node)
+		bool visit_struct_proj_def(const ast::struct_proj_def& node)
 		{
 			values_.push_back({});
 			val_scopes_[&node] = &values_.back();
-			std::cout << "Creating value scope for struct def \"" << node.name << "\"" << std::endl;
-			return parser::traverse_struct_proj_def(*this, node);
+			std::cout << "[Scopes] Creating value scope for struct def \"" << node.name << "\"" << std::endl;
+			return ast::traverse_struct_proj_def(*this, node);
 		}
 
-		bool visit_union_proj_def(const parser::union_proj_def& node)
+		bool visit_union_proj_def(const ast::union_proj_def& node)
 		{
 			values_.push_back({});
 			val_scopes_[&node] = &values_.back();
-			std::cout << "Creating value scope for union def \"" << node.name << "\"" << std::endl;
-			return parser::traverse_union_proj_def(*this, node);
+			std::cout << "[Scopes] Creating value scope for union def \"" << node.name << "\"" << std::endl;
+			return ast::traverse_union_proj_def(*this, node);
 		}
 
 	private:
@@ -89,7 +89,7 @@ namespace idlc {
 		std::list<values_rib> values_;
 	};
 
-	class names_pass : public parser::ast_walk<names_pass> {
+	class names_pass : public ast::ast_walk<names_pass> {
 	public:
 		names_pass(std::map<const void*, types_rib*>& tscopes, std::map<const void*, values_rib*>& vscopes) :
 			tscopes_ {tscopes},
@@ -99,7 +99,7 @@ namespace idlc {
 		{
 		}
 
-		bool visit_module_def(const parser::module_def& node)
+		bool visit_module_def(const ast::module_def& node)
 		{
 			const auto old = types_;
 			types_ = tscopes_[&node];
@@ -110,7 +110,7 @@ namespace idlc {
 			return true;
 		}
 
-		bool visit_rpc_def(const parser::rpc_def& node)
+		bool visit_rpc_def(const ast::rpc_def& node)
 		{
 			const auto t_old = types_;
 			types_ = tscopes_[&node];
@@ -126,14 +126,14 @@ namespace idlc {
 			return true;
 		}
 
-		bool visit_struct_proj_def(const parser::struct_proj_def& node)
+		bool visit_struct_proj_def(const ast::struct_proj_def& node)
 		{
 			types_->structs[node.name] = &node;
 
 			const auto v_old = values_;
 			values_ = vscopes_[&node];
 
-			std::cout << "Inserted struct projection \"" << node.name << "\"" << std::endl;
+			std::cout << "[Scopes] Inserted struct projection \"" << node.name << "\"" << std::endl;
 
 			if (!traverse_struct_proj_def(*this, node))
 				return false;
@@ -143,14 +143,14 @@ namespace idlc {
 			return true;
 		}
 
-		bool visit_union_proj_def(const parser::union_proj_def& node)
+		bool visit_union_proj_def(const ast::union_proj_def& node)
 		{
 			types_->unions[node.name] = &node;
 
 			const auto v_old = values_;
 			values_ = vscopes_[&node];
 
-			std::cout << "Inserted union projection \"" << node.name << "\"" << std::endl;
+			std::cout << "[Scopes] Inserted union projection \"" << node.name << "\"" << std::endl;
 
 			if (!traverse_union_proj_def(*this, node))
 				return false;
@@ -160,10 +160,10 @@ namespace idlc {
 			return true;
 		}
 
-		bool visit_rpc_ptr_def(const parser::rpc_ptr_def& node)
+		bool visit_rpc_ptr_def(const ast::rpc_ptr_def& node)
 		{
 			types_->rpcs[node.name] = &node;
-			std::cout << "Inserted rpc pointer \"" << node.name << "\"" << std::endl;
+			std::cout << "[Scopes] Inserted rpc pointer \"" << node.name << "\"" << std::endl;
 
 			const auto t_old = types_;
 			types_ = tscopes_[&node];
@@ -179,10 +179,10 @@ namespace idlc {
 			return true;
 		}
 
-		bool visit_naked_proj_decl(const parser::naked_proj_decl& node)
+		bool visit_naked_proj_decl(const ast::naked_proj_decl& node)
 		{
 			values_->naked[node.name] = &node;
-			std::cout << "Inserted naked projection declaration \"" << node.name << "\"" << std::endl;
+			std::cout << "[Scopes] Inserted naked projection declaration \"" << node.name << "\"" << std::endl;
 			
 			const auto v_old = values_;
 			values_ = vscopes_[&node];
@@ -195,10 +195,10 @@ namespace idlc {
 			return true;
 		}
 
-		bool visit_var_decl(const parser::var_decl& node)
+		bool visit_var_decl(const ast::var_decl& node)
 		{
 			values_->vars[node.name] = &node;
-			std::cout << "Inserted var declaration \"" << node.name << "\"" << std::endl;
+			std::cout << "[Scopes] Inserted var declaration \"" << node.name << "\"" << std::endl;
 			return traverse_var_decl(*this, node);
 		}
 

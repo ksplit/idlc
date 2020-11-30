@@ -4,11 +4,11 @@
 
 #include <gsl/gsl>
 
-#include "./parser/idl_parse.h"
-#include "./parser/walk.h"
-#include "./marshal/tree.h"
-#include "./marshal/tree_build.h"
-#include "resolution.h"
+#include "parser/idl_parse.h"
+#include "ast/walk.h"
+#include "pgraph/tree.h"
+#include "marshal/build_pgraph.h"
+#include "sema/resolution.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 
@@ -68,6 +68,35 @@
 		- minimum viable: focus on nullnet, waiting on vikram to generate IDL
 */
 
+namespace idlc {
+	namespace {
+		void dump_scopes(std::map<const void*, sema::types_rib*> type_scopes)
+		{
+			for (const auto& [key, scope] : type_scopes) {
+				std::cout << "[Scopes]\tType Scope for node " << key << ":\n";
+				std::cout << "[Scopes]\t\tStructs:\n";
+				for (const auto& [key, node] : scope->structs)
+					std::cout << "[Scopes]\t\t\t" << key << " (" << node << ")\n";
+
+				std::cout << "[Scopes]\t\tUnions:\n";
+				for (const auto& [key, node] : scope->unions)
+					std::cout << "[Scopes]\t\t\t" << key << " (" << node << ")\n";
+
+				std::cout << "[Scopes]\t\tRPC pointers:\n";
+				for (const auto& [key, node] : scope->rpcs)
+					std::cout << "[Scopes]\t\t\t" << key << " (" << node << ")\n";
+			}
+		}
+	}
+}
+
+namespace idlc {
+	using namespace parser;
+	using namespace marshal;
+	using namespace sema;
+	using namespace ast;
+}
+
 int main(int argc, char** argv)
 {
     const gsl::span<gsl::zstring<>> args {argv, gsl::narrow<std::size_t>(argc)};
@@ -76,7 +105,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    const auto driver_idl = idlc::parser::parse_file(gsl::at(args, 1));
+    const auto driver_idl = idlc::parse_file(gsl::at(args, 1));
     if (!driver_idl) {
         return 1;
     }
@@ -84,37 +113,15 @@ int main(int argc, char** argv)
 	const auto& file = *driver_idl;
 	std::cout << "File was parsed correctly" << std::endl;
 
+	idlc::null_walk nwalk {};
+	idlc::traverse_file(nwalk, file);
+
 	idlc::scopes_pass scope_walk {};
 	idlc::names_pass walk {scope_walk.type_scopes_, scope_walk.val_scopes_};
-	traverse_file(scope_walk, file);
-	traverse_file(walk, file);
+	idlc::traverse_file(scope_walk, file);
+	idlc::traverse_file(walk, file);
+	idlc::dump_scopes(scope_walk.type_scopes_);
 	
-	idlc::marshal::passgraph_builder pg_walk {};
-	idlc::parser::traverse_file(pg_walk, file);
-
-	for (const auto& [key, scope] : scope_walk.type_scopes_) {
-		std::cout << "Type Scope for node " << key << ":\n";
-		std::cout << "\tStructs:\n";
-		for (const auto& [key, node] : scope->structs)
-			std::cout << "\t\t" << key << " (" << node << ")\n";
-
-		std::cout << "\tUnions:\n";
-		for (const auto& [key, node] : scope->unions)
-			std::cout << "\t\t" << key << " (" << node << ")\n";
-
-		std::cout << "\tRPC pointers:\n";
-		for (const auto& [key, node] : scope->rpcs)
-			std::cout << "\t\t" << key << " (" << node << ")\n";
-	}
-
-	for (const auto& [key, scope] : scope_walk.val_scopes_) {
-		std::cout << "Value Scope for node " << key << ":\n";
-		std::cout << "\tNaked decls:\n";
-		for (const auto& [key, node] : scope->naked)
-			std::cout << "\t\t" << key << " (" << node << ")\n";
-
-		std::cout << "\tVar decls:\n";
-		for (const auto& [key, node] : scope->vars)
-			std::cout << "\t\t" << key << " (" << node << ")\n";
-	}
+	idlc::passgraph_pass pg_walk {};
+	idlc::traverse_file(pg_walk, file);
 }

@@ -9,12 +9,13 @@ include: {{
 	#include <gsl/gsl>
 
 	#include "string_heap.h"
-	#include "ast.h"
+	#include "../ast/ast.h"
 	#include "parse_globals.h"
 }}
 
 code: {{
 	using namespace idlc::parser;
+	using namespace idlc::ast;
 
 	template<typename type>
 	type to_int(const Value& v)

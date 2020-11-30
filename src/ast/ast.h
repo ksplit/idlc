@@ -7,7 +7,7 @@
 
 #include <gsl/gsl>
 
-namespace idlc::parser {
+namespace idlc::ast {
 	// TODO: wrap the "node-like" vectors?
 
 	template<typename type>
