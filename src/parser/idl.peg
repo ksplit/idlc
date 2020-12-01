@@ -384,26 +384,22 @@ ptr_attr_list = first:ptr_attr rest:(tok_space? tok_comma tok_space? ptr_attr)* 
 # NOTE: we don't need type spacing rules for parsing since that parse will just fail in contexts where it's needed
 # We'd only need if we were generating it, and even then we'd just pessimistically insert spaces anyways
 
-tyname_arith = tok_kw_unsigned tok_space tok_kw_long tok_space tok_kw_long {{
+tyname_arith = "u64" {{
 	value = reinterpret_cast<void*>(tyname_arith::ty_ullong);
-}} | tok_kw_unsigned tok_space tok_kw_long {{
-	value = reinterpret_cast<void*>(tyname_arith::ty_ulong);
-}} | tok_kw_long tok_space tok_kw_long {{
+}} | "s64" {{
 	value = reinterpret_cast<void*>(tyname_arith::ty_llong);
-}} | tok_kw_unsigned tok_space tok_kw_int {{
+}} | "u32" {{
 	value = reinterpret_cast<void*>(tyname_arith::ty_uint);
-}} | tok_kw_unsigned tok_space tok_kw_short {{
+}} | "u16" {{
 	value = reinterpret_cast<void*>(tyname_arith::ty_ushort);
-}} | tok_kw_unsigned tok_space tok_kw_char {{
+}} | "u8" {{
 	value = reinterpret_cast<void*>(tyname_arith::ty_uchar);
-}} | tok_kw_signed tok_space tok_kw_char {{
+}} | "s8" {{
 	value = reinterpret_cast<void*>(tyname_arith::ty_schar);
-}} | tok_kw_short {{
+}} | "s16" {{
 	value = reinterpret_cast<void*>(tyname_arith::ty_short);
-}} | tok_kw_int {{
+}} | "s32" {{
 	value = reinterpret_cast<void*>(tyname_arith::ty_int);
-}} | tok_kw_long {{
-	value = reinterpret_cast<void*>(tyname_arith::ty_long);
 }} | tok_kw_char {{
 	value = reinterpret_cast<void*>(tyname_arith::ty_char);
 }} | tok_kw_bool {{
