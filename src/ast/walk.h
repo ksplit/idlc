@@ -8,6 +8,16 @@
 #include "ast.h"
 
 namespace idlc::ast {
+	/*
+		Walk deficiencies:
+		- Subtree walks have no protection (can have field_walk walk over mutiple fields, for instance)
+		- Walk system is perhaps *too* general
+		- Easy to forget that explicit traversals are needed *but* this makes complicated walks simpler to write
+		- Clang- vs syn- style AST walks
+	*/
+
+	// NOTE: traverse_* DO NOT visit the node given to them, only subnodes
+
 	template<typename walk>
 	bool traverse_file(walk&& self, const file& node)
 	{

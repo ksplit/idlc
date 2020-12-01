@@ -5,6 +5,9 @@
 #include "../sema/resolution.h"
 #include "../pgraph/tree.h"
 
+#include <map>
+#include <stack>
+
 #include <gsl/gsl>
 
 namespace idlc::marshal {
@@ -24,6 +27,7 @@ namespace idlc::marshal {
 		// Handles both string markers and primitives
 		bool visit_tyname_stem(const ast::tyname_stem& node);
 		bool visit_tyname_array(const ast::tyname_array& node);
+		bool visit_tyname_proj(const ast::tyname_proj& node);
 
 	private:
 		pgraph::layout& out_;
@@ -40,7 +44,7 @@ namespace idlc::marshal {
 			// FIXME: const-ness information lost in-tree
 
 			pgraph::layout root_layout {};
-			ast::traverse_tyname(type_layout_pass {root_layout}, node);
+			type_layout_pass {root_layout}.visit_tyname_stem(*node.stem); // certainly weird when you look at it, but valid
 			for (const auto& star : node.indirs) {
 				std::cout << "[Passgraph] Applying indirection\n";
 				root_layout = std::make_unique<pgraph::ptr>(pgraph::ptr {
@@ -72,7 +76,7 @@ namespace idlc::marshal {
 
 		bool visit_module_def(const ast::module_def& node)
 		{
-			ribs_.emplace_back(types_.at(&node));
+			ribs_.push_back(types_.at(&node));
 			if (!ast::traverse_module_def(*this, node))
 				return false;
 
@@ -91,7 +95,7 @@ namespace idlc::marshal {
 				}
 			}
 
-			ribs_.emplace_back(types_.at(&node));
+			ribs_.push_back(types_.at(&node));
 			if (!ast::traverse_rpc_def(*this, node))
 				return false;
 
@@ -110,7 +114,7 @@ namespace idlc::marshal {
 				}
 			}
 
-			ribs_.emplace_back(types_.at(&node));
+			ribs_.push_back(types_.at(&node));
 			if (!ast::traverse_rpc_ptr_def(*this, node))
 				return false;
 
@@ -128,8 +132,77 @@ namespace idlc::marshal {
 	// Type layout pass will first search for their projection by name within their local chain of scopes
 	// Then use this table in a nested pass to discover the layout of the projection
 	class ptable_pass : public ast::ast_walk<ptable_pass> {
+	public:
+		ptable_pass(const sema::trib_map& types) : types_ {types}
+		{
+		}
 
+		bool visit_module_def(const ast::module_def& node)
+		{
+			ribs_.push_back(types_.at(&node));
+			if (!ast::traverse_module_def(*this, node))
+				return false;
+
+			ribs_.pop_back();
+
+			return true;
+		}
+
+		bool visit_rpc_def(const ast::rpc_def& node)
+		{
+			ribs_.push_back(types_.at(&node));
+			if (!ast::traverse_rpc_def(*this, node))
+				return false;
+
+			ribs_.pop_back();
+
+			return true;
+		}
+
+		bool visit_rpc_ptr_def(const ast::rpc_ptr_def& node)
+		{
+			ribs_.push_back(types_.at(&node));
+			if (!ast::traverse_rpc_ptr_def(*this, node))
+				return false;
+
+			ribs_.pop_back();
+
+			return true;
+		}
+
+		// End traversal in these
+
+		bool visit_struct_proj_def(const ast::struct_proj_def& node)
+		{
+			schain_map_[&node] = ribs_; // FIXME: cost of copy here?
+			return true;
+		}
+
+		bool visit_union_proj_def(const ast::union_proj_def& node)
+		{
+			schain_map_[&node] = ribs_; // FIXME: cost of copy here?
+			return true;
+		}
+
+		const auto& get_scope_chains()
+		{
+			return schain_map_;
+		}
+
+	private:
+		// A bucket hashmap with nested dequeues? The humanity! Get around to fixing this
+		// FIXME: poor choice of type
+		std::map<const void*, std::vector<const sema::types_rib*>> schain_map_ {};
+		const sema::trib_map& types_;
+		std::vector<const sema::types_rib*> ribs_ {};
 	};
+
+	inline auto produce_scopes_map(const ast::file& node, const sema::trib_map& types)
+	{
+		ptable_pass pass {types};
+		pass.visit_file(node);
+		return pass.get_scope_chains();
+	}
 }
 
 #endif

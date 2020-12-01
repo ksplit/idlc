@@ -122,6 +122,25 @@ int main(int argc, char** argv)
 	idlc::traverse_file(walk, file);
 	idlc::dump_scopes(scope_walk.type_scopes_);
 	
+	const auto scope_chains = idlc::produce_scopes_map(file, scope_walk.type_scopes_);
+	for (const auto& [key, value] : scope_chains) {
+		std::cout << "[Scopechains]\t" << key << "\n";
+		for (const auto& scope : value) {
+			std::cout << "[Scopechains]\t\t" << scope << "\n";
+			std::cout << "[Scopechains]\t\t\tStructs:\n";
+			for (const auto& [key, node] : scope->structs)
+				std::cout << "[Scopechains]\t\t\t\t" << key << " (" << node << ")\n";
+
+			std::cout << "[Scopechains]\t\t\tUnions:\n";
+			for (const auto& [key, node] : scope->unions)
+				std::cout << "[Scopechains]\t\t\t\t" << key << " (" << node << ")\n";
+
+			std::cout << "[Scopechains]\t\t\tRPC pointers:\n";
+			for (const auto& [key, node] : scope->rpcs)
+				std::cout << "[Scopechains]\t\t\t\t" << key << " (" << node << ")\n";
+		}
+	}
+
 	idlc::passgraph_pass pg_walk {scope_walk.type_scopes_};
 	idlc::traverse_file(pg_walk, file);
 }

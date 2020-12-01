@@ -80,3 +80,14 @@ bool idlc::marshal::type_layout_pass::visit_tyname_rpc(const ast::tyname_rpc& no
 	out_ = pgraph::layout {std::move(rpc_layout)};
 	return true;
 }
+
+bool idlc::marshal::type_layout_pass::visit_tyname_proj(const ast::tyname_proj& node)
+{
+	// Logically, we wish to locate the proj definition by name in our given scope chain
+	// (note that since this pass is assumed to be used on only one type at a time, we need only concern ourselves with
+	// a single scope chain). Given this, we look up its scope chain and start building its layout information
+	// (not field), before memoizing it
+
+	// TODO: mapping of projection definitions to scope chains
+	return true;
+}

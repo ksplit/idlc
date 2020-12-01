@@ -40,6 +40,10 @@ namespace idlc::pgraph {
 
 		Every union-typed field has its own discriminator potentially, so we are forced to make the distinction
 		dyn_layout and an actual layout. dyn_layouts refer to their discriminating field (probably by name)
+
+		Note the distinction between fields and layouts
+		Fields (regions of memory) have layouts, but may be tagged with value annotations (in / out)
+		A layout captures a tree-like structure of fields, with their annotations embedded
 	*/
 
 	using prim = ast::tyname_arith;
@@ -97,13 +101,13 @@ namespace idlc::pgraph {
 
 	struct union_layout {
 		gsl::czstring<> discriminator; // this is the name of the union member which marks the union type
-		std::vector<field> layouts;
+		std::vector<std::pair<gsl::czstring<>, field>> members;
 	};
 
 	struct dyn_ptr {
 		tags tags; // Pointer tags, consider strong-typing these
 		gsl::czstring<> discriminator;
-		std::vector<field> layouts;
+		std::vector<layout> layouts;
 	};
 
 	struct ptr {
