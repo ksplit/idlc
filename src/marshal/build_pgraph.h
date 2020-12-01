@@ -13,12 +13,39 @@
 namespace idlc::marshal {
 	class field_pass;
 
+	// TODO: Misuse of std::variant?
+	inline std::variant<const ast::union_proj_def*, const ast::struct_proj_def*, std::nullptr_t> find_type(
+		const std::vector<const sema::types_rib*>& scope_chain,
+		gsl::czstring<> name
+	)
+	{
+		auto first = scope_chain.crbegin();
+		auto last = scope_chain.crend();
+		for (; first != last; ++first) {
+			std::cout << "[Res] Searching scope " << &*first << "\n";
+
+			const auto structs = (*first)->structs;
+			const auto unions = (*first)->unions;
+			const auto str_def = structs.find(name);
+			if (str_def != structs.end())
+				return str_def->second;
+
+			const auto uni_def = unions.find(name);
+			if (uni_def != unions.end())
+				return uni_def->second;
+		}
+
+		return nullptr;
+	}
+
 	// NOTE: this is shallow
 	// FIXME: why is it shallow?
 	// NOTE: shallowness allows us to assign to each layout output exactly once
 	class type_layout_pass : public ast::ast_walk<type_layout_pass> {
 	public:
-		type_layout_pass(pgraph::layout& out) : out_ {out}
+		type_layout_pass(const std::vector<const sema::types_rib*>& schain, pgraph::layout& out) :
+			schain_ {schain},
+			out_ {out}
 		{
 		}
 
@@ -30,12 +57,15 @@ namespace idlc::marshal {
 		bool visit_tyname_proj(const ast::tyname_proj& node);
 
 	private:
+		const std::vector<const sema::types_rib*>& schain_;
 		pgraph::layout& out_;
 	};
 
 	class field_pass : public ast::ast_walk<field_pass> {
 	public:
-		field_pass(pgraph::field& out) : out_ {out}
+		field_pass(const std::vector<const sema::types_rib*>& schain, pgraph::field& out) :
+			schain_ {schain},
+			out_ {out}
 		{
 		}
 
@@ -44,7 +74,7 @@ namespace idlc::marshal {
 			// FIXME: const-ness information lost in-tree
 
 			pgraph::layout root_layout {};
-			type_layout_pass {root_layout}.visit_tyname_stem(*node.stem); // certainly weird when you look at it, but valid
+			type_layout_pass {schain_, root_layout}.visit_tyname_stem(*node.stem); // certainly weird when you look at it, but valid
 			for (const auto& star : node.indirs) {
 				std::cout << "[Passgraph] Applying indirection\n";
 				root_layout = std::make_unique<pgraph::ptr>(pgraph::ptr {
@@ -65,6 +95,7 @@ namespace idlc::marshal {
 		}
 
 	private:
+		const std::vector<const sema::types_rib*>& schain_;
 		pgraph::field& out_;
 	};
 
@@ -87,15 +118,18 @@ namespace idlc::marshal {
 
 		bool visit_rpc_def(const ast::rpc_def& node)
 		{
+			ribs_.push_back(types_.at(&node));
+
+			std::cout << "[Passgraph] RPC " << node.name << "\n";
+			
 			if (node.arguments) {
 				for (const auto& arg : *node.arguments) {
-					pgraph::field arg_layout {};
-					ast::traverse_var_decl<field_pass>(arg_layout, *arg);
 					std::cout << "[Passgraph] Building for argument '" << arg->name << "' of '" << node.name << "'\n";
+					pgraph::field arg_layout {};
+					field_pass {ribs_, arg_layout}.visit_var_decl(*arg);
 				}
 			}
 
-			ribs_.push_back(types_.at(&node));
 			if (!ast::traverse_rpc_def(*this, node))
 				return false;
 
@@ -106,15 +140,18 @@ namespace idlc::marshal {
 
 		bool visit_rpc_ptr_def(const ast::rpc_ptr_def& node)
 		{
+			ribs_.push_back(types_.at(&node));
+			
+			std::cout << "[Passgraph] RPC ptr " << node.name << "\n";
+
 			if (node.arguments) {
 				for (const auto& arg : *node.arguments) {
-					pgraph::field arg_layout {};
-					ast::traverse_var_decl<field_pass>(arg_layout, *arg);
 					std::cout << "[Passgraph] Building for argument '" << arg->name << "' of '" << node.name << "'\n";
+					pgraph::field arg_layout {};
+					field_pass {ribs_, arg_layout}.visit_var_decl(*arg);
 				}
 			}
 
-			ribs_.push_back(types_.at(&node));
 			if (!ast::traverse_rpc_ptr_def(*this, node))
 				return false;
 

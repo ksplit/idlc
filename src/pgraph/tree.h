@@ -107,13 +107,41 @@ namespace idlc::pgraph {
 	struct dyn_ptr {
 		tags tags; // Pointer tags, consider strong-typing these
 		gsl::czstring<> discriminator;
-		std::vector<layout> layouts;
+		std::vector<field> layouts;
 	};
 
 	struct ptr {
 		tags tags; // Pointer tags, consider strong-typing these
 		std::unique_ptr<field> layout;
 	};
+
+	enum class rpc_kind {
+		direct,
+		indirect
+	};
+
+	// pgraph construction delivers an array of these
+	// These will be associated with a family of identifiers (RPC IDs, impl names, callee names, trampolines, etc.)
+	// and for indirect nodes, will be associated with an fptr typedef (somehow??)
+	// TODO: above
+	struct rpc_node {
+		rpc_kind kind;
+		field ret;
+		std::vector<std::pair<gsl::czstring<>, field>> args;
+	};
+
+	// Marshaling will need to somehow build up type strings for arbitrary field layouts
+	// Ironically, this is easier to do as a walk over the AST, since the IDL is already similar to C in this regard,
+	// so every layout may store a reference to the AST node it was built from
+
+	// TODO: get_type_left_string(pnode) support for any field node, which computes the C-like declarator for any
+	// portion of the pgraph (notably stopping at rpc pointer fields and projection fields)
+	// NOTE: fairly certain it's impossible to create declarators for anonymous unions / structs (marshalling must never
+	// request these)
+	// TODO: get_typedef_for_rpc(node) produces the typedef statement of a particular rpc node
+	// TODO: how to deal with arrays? array<const char, /* anything */> maps to const char* for the pointer type,
+	// and can't be cast from a register
+	// NOTE: get_field_ptr_type(node) vs get_reg_cast_type(node)
 }
 
 #endif

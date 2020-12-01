@@ -33,7 +33,10 @@ module netdev {
             projection global_proj [out, bind(callee)]* d;
         }
 
-        rpc_ptr void callback() {}
+        // TODO: RPC pointers must be name-mangled! They're scoped!
+        rpc_ptr void callback(projection foo *a, projection global_proj* b, projection proj* c) {
+            projection <struct foo> foo {}
+        }
     }
 
     rpc_ptr void callback() {}

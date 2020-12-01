@@ -3,6 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <type_traits>
+#include <variant>
 
 #include "../ast/ast.h"
 #include "../ast/walk.h"
@@ -10,7 +11,7 @@
 bool idlc::marshal::type_layout_pass::visit_tyname_array(const ast::tyname_array& node)
 {
 	pgraph::field elem {};
-	field_pass lpass {elem};
+	field_pass lpass {schain_, elem};
 	lpass.visit_tyname(*node.element);
 	const auto visit = [this, &elem](auto&& inner)
 	{
@@ -88,6 +89,20 @@ bool idlc::marshal::type_layout_pass::visit_tyname_proj(const ast::tyname_proj& 
 	// a single scope chain). Given this, we look up its scope chain and start building its layout information
 	// (not field), before memoizing it
 
-	// TODO: mapping of projection definitions to scope chains
+	const auto def = find_type(schain_, node.name);
+	const auto str = std::get_if<const ast::struct_proj_def*>(&def);
+	if (str) {
+		std::cout << "[Res] Located struct projection " << (*str)->name << "\n";
+		return true;
+	}
+
+	const auto uni = std::get_if<const ast::union_proj_def*>(&def);
+	if (uni) {
+		std::cout << "[Res] Located union projection " << (*uni)->name << "\n";
+		return true;
+	}
+
+	std::cout << "[Res] Did not resolve " << node.name << "\n";
+
 	return true;
 }
