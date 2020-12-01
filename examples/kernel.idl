@@ -2,7 +2,7 @@ module netdev {
     header "bar_punk\foo.h";
 
     projection <union bar> global_proj {
-        short b;
+        short b; // First union field is always the discrim
 
         projection <struct> {
             short b;
@@ -10,7 +10,7 @@ module netdev {
             unsigned long a;
         } field1;
 
-        projection <union> {
+        projection <struct> {
             short b;
             rpc_ptr foo c;
             const string [in, alloc] * const [in, out] d;

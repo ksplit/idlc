@@ -11,6 +11,8 @@
 #include <gsl/gsl>
 
 namespace idlc::marshal {
+	using ptable = std::map<const void*, std::vector<const sema::types_rib*>>;
+	
 	class field_pass;
 
 	// TODO: Misuse of std::variant?
@@ -43,7 +45,8 @@ namespace idlc::marshal {
 	// NOTE: shallowness allows us to assign to each layout output exactly once
 	class type_layout_pass : public ast::ast_walk<type_layout_pass> {
 	public:
-		type_layout_pass(const std::vector<const sema::types_rib*>& schain, pgraph::layout& out) :
+		type_layout_pass(const ptable& ptable, const std::vector<const sema::types_rib*>& schain, pgraph::layout& out) :
+			ptable_ {ptable},
 			schain_ {schain},
 			out_ {out}
 		{
@@ -57,13 +60,15 @@ namespace idlc::marshal {
 		bool visit_tyname_proj(const ast::tyname_proj& node);
 
 	private:
+		const ptable& ptable_;
 		const std::vector<const sema::types_rib*>& schain_;
 		pgraph::layout& out_;
 	};
 
 	class field_pass : public ast::ast_walk<field_pass> {
 	public:
-		field_pass(const std::vector<const sema::types_rib*>& schain, pgraph::field& out) :
+		field_pass(const ptable& ptable, const std::vector<const sema::types_rib*>& schain, pgraph::field& out) :
+			ptable_ {ptable},
 			schain_ {schain},
 			out_ {out}
 		{
@@ -74,7 +79,7 @@ namespace idlc::marshal {
 			// FIXME: const-ness information lost in-tree
 
 			pgraph::layout root_layout {};
-			type_layout_pass {schain_, root_layout}.visit_tyname_stem(*node.stem); // certainly weird when you look at it, but valid
+			type_layout_pass {ptable_, schain_, root_layout}.visit_tyname_stem(*node.stem); // certainly weird when you look at it, but valid
 			for (const auto& star : node.indirs) {
 				std::cout << "[Passgraph] Applying indirection\n";
 				root_layout = std::make_unique<pgraph::ptr>(pgraph::ptr {
@@ -95,13 +100,17 @@ namespace idlc::marshal {
 		}
 
 	private:
+		const ptable& ptable_;
 		const std::vector<const sema::types_rib*>& schain_;
 		pgraph::field& out_;
 	};
 
 	class passgraph_pass : public ast::ast_walk<passgraph_pass> {
 	public:
-		passgraph_pass(const sema::trib_map& types) : types_ {types}, ribs_ {}
+		passgraph_pass(const ptable& ptable, const sema::trib_map& types) :
+			ptable_ {ptable},
+			types_ {types},
+			ribs_ {}
 		{
 		}
 
@@ -126,7 +135,7 @@ namespace idlc::marshal {
 				for (const auto& arg : *node.arguments) {
 					std::cout << "[Passgraph] Building for argument '" << arg->name << "' of '" << node.name << "'\n";
 					pgraph::field arg_layout {};
-					field_pass {ribs_, arg_layout}.visit_var_decl(*arg);
+					field_pass {ptable_, ribs_, arg_layout}.visit_var_decl(*arg);
 				}
 			}
 
@@ -148,7 +157,7 @@ namespace idlc::marshal {
 				for (const auto& arg : *node.arguments) {
 					std::cout << "[Passgraph] Building for argument '" << arg->name << "' of '" << node.name << "'\n";
 					pgraph::field arg_layout {};
-					field_pass {ribs_, arg_layout}.visit_var_decl(*arg);
+					field_pass {ptable_, ribs_, arg_layout}.visit_var_decl(*arg);
 				}
 			}
 
@@ -161,6 +170,7 @@ namespace idlc::marshal {
 		}
 
 	private:
+		const ptable& ptable_;
 		const sema::trib_map& types_;
 		std::vector<const sema::types_rib*> ribs_ {};
 	};
@@ -229,7 +239,7 @@ namespace idlc::marshal {
 	private:
 		// A bucket hashmap with nested dequeues? The humanity! Get around to fixing this
 		// FIXME: poor choice of type
-		std::map<const void*, std::vector<const sema::types_rib*>> schain_map_ {};
+		ptable schain_map_ {};
 		const sema::trib_map& types_;
 		std::vector<const sema::types_rib*> ribs_ {};
 	};

@@ -141,6 +141,6 @@ int main(int argc, char** argv)
 		}
 	}
 
-	idlc::passgraph_pass pg_walk {scope_walk.type_scopes_};
+	idlc::passgraph_pass pg_walk {scope_chains, scope_walk.type_scopes_};
 	idlc::traverse_file(pg_walk, file);
 }

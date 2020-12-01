@@ -11,7 +11,7 @@
 bool idlc::marshal::type_layout_pass::visit_tyname_array(const ast::tyname_array& node)
 {
 	pgraph::field elem {};
-	field_pass lpass {schain_, elem};
+	field_pass lpass {ptable_, schain_, elem};
 	lpass.visit_tyname(*node.element);
 	const auto visit = [this, &elem](auto&& inner)
 	{
@@ -82,6 +82,26 @@ bool idlc::marshal::type_layout_pass::visit_tyname_rpc(const ast::tyname_rpc& no
 	return true;
 }
 
+// TODO: move me
+namespace idlc::marshal {
+	// TODO: must this be a walk?
+	class proj_layout_pass : public ast::ast_walk<proj_layout_pass> {
+	public:
+		proj_layout_pass(const ptable& ptable) :
+			ptable_ {ptable}
+		{
+		}
+
+		bool visit_union_proj_def(const ast::union_proj_def& node)
+		{
+			return true;
+		}
+
+	private:
+		const ptable& ptable_;
+	};
+}
+
 bool idlc::marshal::type_layout_pass::visit_tyname_proj(const ast::tyname_proj& node)
 {
 	// Logically, we wish to locate the proj definition by name in our given scope chain
@@ -92,13 +112,19 @@ bool idlc::marshal::type_layout_pass::visit_tyname_proj(const ast::tyname_proj& 
 	const auto def = find_type(schain_, node.name);
 	const auto str = std::get_if<const ast::struct_proj_def*>(&def);
 	if (str) {
-		std::cout << "[Res] Located struct projection " << (*str)->name << "\n";
+		const auto& node = **str; // FIXME: this may not need to be a double indirection
+		std::cout << "[Res] Located struct projection " << node.name << "\n";
+		proj_layout_pass pass {ptable_};
+		pass.visit_struct_proj_def(node);
 		return true;
 	}
 
 	const auto uni = std::get_if<const ast::union_proj_def*>(&def);
 	if (uni) {
-		std::cout << "[Res] Located union projection " << (*uni)->name << "\n";
+		const auto& node = **uni;
+		std::cout << "[Res] Located union projection " << node.name << "\n";
+		proj_layout_pass pass {ptable_};
+		pass.visit_union_proj_def(node);
 		return true;
 	}
 
