@@ -6,6 +6,8 @@
 #include <map>
 #include <list>
 
+// TODO: create a walk that other walks can subclass that provides the immediately enclosing scope
+
 namespace idlc::sema {
 	struct types_rib {
 		std::map<gsl::czstring<>, const ast::rpc_ptr_def*> rpcs {};

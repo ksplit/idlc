@@ -24,7 +24,7 @@ namespace idlc::marshal {
 		auto first = scope_chain.crbegin();
 		auto last = scope_chain.crend();
 		for (; first != last; ++first) {
-			std::cout << "[Res] Searching scope " << &*first << "\n";
+			std::cout << "[Res] Searching scope " << *first << "\n";
 
 			const auto structs = (*first)->structs;
 			const auto unions = (*first)->unions;

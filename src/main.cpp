@@ -141,6 +141,13 @@ int main(int argc, char** argv)
 		}
 	}
 
+	/*
+		We must consider that during semantic analysis of the AST, we are constructing a file-wide table
+		that maps any projection node to an array of scopes that contain it, outside in. These scope chains
+		are cached for them, but for rpc pointers, they are built dynamically. It would be nice to fold all the scope
+		chain logic into one place
+	*/
+
 	idlc::passgraph_pass pg_walk {scope_chains, scope_walk.type_scopes_};
 	idlc::traverse_file(pg_walk, file);
 }

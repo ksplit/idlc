@@ -6,6 +6,8 @@
 #include "../ast/ast.h"
 
 namespace idlc::pgraph {
+	// TODO: give all of these constructors so that make_unique can deal with them better
+
 	/*
 		Every "block" has an extent and a layout. For example, the block for a union projection
 		has an extent equal to that of its largest element, but a layout that is determined at runtime.

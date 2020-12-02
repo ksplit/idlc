@@ -8,32 +8,44 @@
 #include "../ast/ast.h"
 #include "../ast/walk.h"
 
+// TODO: move me please
+namespace idlc::marshal {
+	pgraph::field build_field(
+		const ast::tyname& node,
+		const ptable& idl_ptable,
+		const std::vector<const sema::types_rib*>& schain
+	)
+	{
+		pgraph::field elem {};
+		field_pass lpass {idl_ptable, schain, elem};
+		lpass.visit_tyname(node);
+		return elem;
+	}
+}
+
 bool idlc::marshal::type_layout_pass::visit_tyname_array(const ast::tyname_array& node)
 {
-	pgraph::field elem {};
-	field_pass lpass {ptable_, schain_, elem};
-	lpass.visit_tyname(*node.element);
-	const auto visit = [this, &elem](auto&& inner)
+	const auto visit = [this, &node](auto&& inner)
 	{
 		using type = std::decay_t<decltype(inner)>;
 		if constexpr (std::is_same_v<type, unsigned>) {
 			std::cout << "[Passgraph] Adding const-sized array layout\n";
 			out_ = std::make_unique<pgraph::array_layout>(pgraph::array_layout {
 				inner,
-				std::make_unique<pgraph::field>(std::move(elem))
+				std::make_unique<pgraph::field>(build_field(*node.element, ptable_, schain_))
 			});
 		}
 		else if constexpr (std::is_same_v<type, ast::tok_kw_null>) {
 			std::cout << "[Passgraph] Adding null-terminated array layout\n";
 			out_ = std::make_unique<pgraph::null_array_layout>(pgraph::null_array_layout {
-				std::make_unique<pgraph::field>(std::move(elem))
+				std::make_unique<pgraph::field>(build_field(*node.element, ptable_, schain_))
 			});
 		}
 		else if constexpr (std::is_same_v<type, gsl::czstring<>>) {
 			std::cout << "[Passgraph] Adding variable-size array layout\n";
 			out_ = std::make_unique<pgraph::dyn_array_layout>(pgraph::dyn_array_layout {
 				inner,
-				std::make_unique<pgraph::field>(std::move(elem))
+				std::make_unique<pgraph::field>(build_field(*node.element, ptable_, schain_))
 			});
 		}
 	};
