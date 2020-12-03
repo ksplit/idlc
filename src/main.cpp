@@ -5,10 +5,7 @@
 #include <gsl/gsl>
 
 #include "parser/idl_parse.h"
-#include "ast/walk.h"
-#include "pgraph/tree.h"
-#include "marshal/build_pgraph.h"
-#include "sema/resolution.h"
+#include "sema/nodedb.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 
@@ -66,36 +63,12 @@
 		- unions
 		- structs
 		- minimum viable: focus on nullnet, waiting on vikram to generate IDL
+
+	NOTE: Currently we work at the scale of a single file. All modules within a file are treated as implicitly imported.
+	TODO: Support merging ASTs via import / use keywords.
 */
 
-namespace idlc {
-	namespace {
-		void dump_scopes(std::map<const void*, sema::types_rib*> type_scopes)
-		{
-			for (const auto& [key, scope] : type_scopes) {
-				std::cout << "[Scopes]\tType Scope for node " << key << ":\n";
-				std::cout << "[Scopes]\t\tStructs:\n";
-				for (const auto& [key, node] : scope->structs)
-					std::cout << "[Scopes]\t\t\t" << key << " (" << node << ")\n";
-
-				std::cout << "[Scopes]\t\tUnions:\n";
-				for (const auto& [key, node] : scope->unions)
-					std::cout << "[Scopes]\t\t\t" << key << " (" << node << ")\n";
-
-				std::cout << "[Scopes]\t\tRPC pointers:\n";
-				for (const auto& [key, node] : scope->rpcs)
-					std::cout << "[Scopes]\t\t\t" << key << " (" << node << ")\n";
-			}
-		}
-	}
-}
-
-namespace idlc {
-	using namespace parser;
-	using namespace marshal;
-	using namespace sema;
-	using namespace ast;
-}
+using namespace idlc;
 
 int main(int argc, char** argv)
 {
@@ -105,49 +78,13 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    const auto driver_idl = idlc::parse_file(gsl::at(args, 1));
-    if (!driver_idl) {
+    const auto driver_idl = parser::parse_file(gsl::at(args, 1));
+    if (!driver_idl)
         return 1;
-    }
 
 	const auto& file = *driver_idl;
-	std::cout << "File was parsed correctly" << std::endl;
+	std::cout << "[parse] File was parsed correctly" << std::endl;
 
-	idlc::null_walk nwalk {};
-	idlc::traverse_file(nwalk, file);
-
-	idlc::scopes_pass scope_walk {};
-	idlc::names_pass walk {scope_walk.type_scopes_, scope_walk.val_scopes_};
-	idlc::traverse_file(scope_walk, file);
-	idlc::traverse_file(walk, file);
-	idlc::dump_scopes(scope_walk.type_scopes_);
-	
-	const auto scope_chains = idlc::produce_scopes_map(file, scope_walk.type_scopes_);
-	for (const auto& [key, value] : scope_chains) {
-		std::cout << "[Scopechains]\t" << key << "\n";
-		for (const auto& scope : value) {
-			std::cout << "[Scopechains]\t\t" << scope << "\n";
-			std::cout << "[Scopechains]\t\t\tStructs:\n";
-			for (const auto& [key, node] : scope->structs)
-				std::cout << "[Scopechains]\t\t\t\t" << key << " (" << node << ")\n";
-
-			std::cout << "[Scopechains]\t\t\tUnions:\n";
-			for (const auto& [key, node] : scope->unions)
-				std::cout << "[Scopechains]\t\t\t\t" << key << " (" << node << ")\n";
-
-			std::cout << "[Scopechains]\t\t\tRPC pointers:\n";
-			for (const auto& [key, node] : scope->rpcs)
-				std::cout << "[Scopechains]\t\t\t\t" << key << " (" << node << ")\n";
-		}
-	}
-
-	/*
-		We must consider that during semantic analysis of the AST, we are constructing a file-wide table
-		that maps any projection node to an array of scopes that contain it, outside in. These scope chains
-		are cached for them, but for rpc pointers, they are built dynamically. It would be nice to fold all the scope
-		chain logic into one place
-	*/
-
-	idlc::passgraph_pass pg_walk {scope_chains, scope_walk.type_scopes_};
-	idlc::traverse_file(pg_walk, file);
+	const auto types_db = sema::build_types_db(file);
+	sema::dump(types_db);
 }

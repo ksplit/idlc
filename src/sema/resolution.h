@@ -7,6 +7,27 @@
 #include <list>
 
 // TODO: create a walk that other walks can subclass that provides the immediately enclosing scope
+/*
+	Essentially, we want to create a standard mechanism via which any walk can have access to scope-chain information
+	for a node on demand
+
+	A lot of things can be done quite conveniently with parent pointers
+	Since walks walk the whole tree or stop at some point along the walk, it's best to compute parents for all nodes
+	at once
+
+	An even more useful thing might be a node database that allows us to associate any node with its parent, type,
+	and data from a particular node ID.
+
+	Rustc inspires me with query-based compilation.
+
+	scope_chain(node) would return a list of scopes that enclose a particular node
+	If it has not been computed, it does so by walking up the parent pointers and querying scope(node)
+	on each. scope(node) returns nothing if the node has no associated scope, but fills the scope with a subtree
+	walk if needed.
+
+	NOTE: it is trivial to do computation over a subtree, but parent pointers can not be computed for a subtree only
+	in any useful sense, so we compute all the node db data in one pass.
+*/
 
 namespace idlc::sema {
 	struct types_rib {
