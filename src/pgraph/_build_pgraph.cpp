@@ -8,6 +8,7 @@
 #include "../ast/ast.h"
 #include "../ast/walk.h"
 
+// TODO: rewrite me to use find_type()
 // TODO: move me please
 namespace idlc::marshal {
 	pgraph::field build_field(

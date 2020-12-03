@@ -6,9 +6,10 @@
 #include <list>
 #include <functional>
 
+#include <gsl/gsl>
+
 #include "../ast/ast.h"
 #include "../ast/walk.h"
-
 #include "resolution.h"
 
 namespace idlc::sema {

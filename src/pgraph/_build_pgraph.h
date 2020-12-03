@@ -1,5 +1,5 @@
-#ifndef _LCDS_IDL_MARSHAL_TREE_BUILD_H_
-#define _LCDS_IDL_MARSHAL_TREE_BUILD_H_
+#ifndef _LCDS_IDL_PGRAPH_TREE_BUILD_H_
+#define _LCDS_IDL_PGRAPH_TREE_BUILD_H_
 
 #include "../ast/walk.h"
 #include "../sema/resolution.h"
@@ -10,35 +10,8 @@
 
 #include <gsl/gsl>
 
-namespace idlc::marshal {
-	using ptable = std::map<const void*, std::vector<const sema::types_rib*>>;
-	
+namespace idlc::marshal {	
 	class field_pass;
-
-	// TODO: Misuse of std::variant?
-	inline std::variant<const ast::union_proj_def*, const ast::struct_proj_def*, std::nullptr_t> find_type(
-		const std::vector<const sema::types_rib*>& scope_chain,
-		gsl::czstring<> name
-	)
-	{
-		auto first = scope_chain.crbegin();
-		auto last = scope_chain.crend();
-		for (; first != last; ++first) {
-			std::cout << "[Res] Searching scope " << *first << "\n";
-
-			const auto structs = (*first)->structs;
-			const auto unions = (*first)->unions;
-			const auto str_def = structs.find(name);
-			if (str_def != structs.end())
-				return str_def->second;
-
-			const auto uni_def = unions.find(name);
-			if (uni_def != unions.end())
-				return uni_def->second;
-		}
-
-		return nullptr;
-	}
 
 	// NOTE: this is shallow
 	// FIXME: why is it shallow?

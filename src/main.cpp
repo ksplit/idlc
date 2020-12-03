@@ -6,6 +6,8 @@
 
 #include "parser/idl_parse.h"
 #include "sema/nodedb.h"
+#include "pgraph/tree.h"
+#include "pgraph/construction.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 
@@ -87,4 +89,6 @@ int main(int argc, char** argv)
 
 	const auto types_db = sema::build_types_db(file);
 	sema::dump(types_db);
+
+	const auto rpc_table = pgraph::build_rpc_table(file, types_db);
 }

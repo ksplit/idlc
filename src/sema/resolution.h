@@ -36,18 +36,19 @@ namespace idlc::sema {
 		std::map<gsl::czstring<>, const ast::union_proj_def*> unions {};
 	};
 
-	struct values_rib {
+	struct _values_rib {
 		std::map<gsl::czstring<>, const ast::naked_proj_decl*> naked {};
 		std::map<gsl::czstring<>, const ast::var_decl*> vars {};
 	};
 
 	using trib_map = std::map<const void*, types_rib*>;
-	using vrib_map = std::map<const void*, values_rib*>;
+	using _vrib_map = std::map<const void*, _values_rib*>;
 
-	class scopes_pass : public ast::ast_walk<scopes_pass> {
+	// NOTE: unused
+	class _scopes_pass : public ast::ast_walk<_scopes_pass> {
 	public:
 		trib_map type_scopes_;
-		vrib_map val_scopes_;
+		_vrib_map val_scopes_;
 		
 		bool visit_module_def(const ast::module_def& node)
 		{
@@ -112,12 +113,13 @@ namespace idlc::sema {
 		// To avoid pointer invalidation
 		// The primary output of this (admttedly inefficient) pass is a map of node pointers to corresponding scopes
 		std::list<types_rib> types_;
-		std::list<values_rib> values_;
+		std::list<_values_rib> values_;
 	};
 
-	class names_pass : public ast::ast_walk<names_pass> {
+	// NOTE: unused
+	class _names_pass : public ast::ast_walk<_names_pass> {
 	public:
-		names_pass(std::map<const void*, types_rib*>& tscopes, std::map<const void*, values_rib*>& vscopes) :
+		_names_pass(std::map<const void*, types_rib*>& tscopes, std::map<const void*, _values_rib*>& vscopes) :
 			tscopes_ {tscopes},
 			vscopes_ {vscopes},
 			types_ {},
@@ -230,9 +232,9 @@ namespace idlc::sema {
 
 	private:
 		std::map<const void*, types_rib*>& tscopes_;
-		std::map<const void*, values_rib*>& vscopes_;
+		std::map<const void*, _values_rib*>& vscopes_;
 		types_rib* types_ {};
-		values_rib* values_ {};
+		_values_rib* values_ {};
 	};
 }
 

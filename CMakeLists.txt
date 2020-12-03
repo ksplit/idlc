@@ -23,6 +23,7 @@ add_executable(
 	"src/parser/string_heap.cpp"
 	"src/parser/parse_globals.cpp"
 	"src/sema/nodedb.cpp"
+	"src/pgraph/construction.cpp"
 	"src/main.cpp"
 )
 

@@ -3,7 +3,10 @@
 
 #include <variant>
 
+#include <gsl/gsl>
+
 #include "../ast/ast.h"
+#include "../sema/nodedb.h"
 
 namespace idlc::pgraph {
 	// TODO: give all of these constructors so that make_unique can deal with them better
@@ -48,8 +51,12 @@ namespace idlc::pgraph {
 		A layout captures a tree-like structure of fields, with their annotations embedded
 	*/
 
+	// TODO: add constructors for everything here, important for make_unique ergonomics
+
+	// TODO: reconsider these aliases / rebinds, are these really the same types?
 	using prim = ast::tyname_arith;
 	using ast::tags;
+
 	struct struct_layout;
 	struct union_layout;
 	struct dyn_ptr;
@@ -59,6 +66,8 @@ namespace idlc::pgraph {
 	struct null_array_layout;
 	struct rpc_ptr_layout;
 	struct field;
+
+	// Conceptually, a layout describes how the bytes of a field are to be marshaled
 	using layout = std::variant<
 		prim,
 		std::unique_ptr<rpc_ptr_layout>,
@@ -71,13 +80,22 @@ namespace idlc::pgraph {
 		std::unique_ptr<null_array_layout>
 	>;
 
+	// Conceptually, a region of memory with marshaling attributes and a "layout"
 	struct field {
 		std::unique_ptr<layout> layout;
 		tags tags; // Value tags
+
+		field() = default;
+
+		field(decltype(layout) layout, enum tags tags) :
+			layout {std::move(layout)},
+			tags {tags}
+		{}
 	};
 
 	struct rpc_ptr_layout {
-		gsl::czstring<> name;
+		// TODO: entirely possible to use some other ID that is not tied to the AST
+		sema::node_id ptr_def; // ID of the original rpc_ptr node, to allow for lookups of related information
 	};
 
 	struct struct_layout {
@@ -110,11 +128,22 @@ namespace idlc::pgraph {
 		tags tags; // Pointer tags, consider strong-typing these
 		gsl::czstring<> discriminator;
 		std::vector<field> layouts;
+
+		dyn_ptr(enum tags tags, gsl::czstring<> discriminator, std::vector<field>&& layouts) :
+			tags {tags},
+			discriminator {discriminator},
+			layouts {std::move(layouts)}
+		{}
 	};
 
 	struct ptr {
 		tags tags; // Pointer tags, consider strong-typing these
 		std::unique_ptr<field> layout;
+
+		ptr(enum tags tags, std::unique_ptr<field> layout) :
+			tags {tags},
+			layout {std::move(layout)}
+		{}
 	};
 
 	enum class rpc_kind {
@@ -128,8 +157,17 @@ namespace idlc::pgraph {
 	// TODO: above
 	struct rpc_node {
 		rpc_kind kind;
+		gsl::czstring<> name;
 		field ret;
 		std::vector<std::pair<gsl::czstring<>, field>> args;
+
+		// TODO: should args be an rvalue ref?
+		rpc_node(rpc_kind kind, gsl::czstring<> name, field ret, std::vector<std::pair<gsl::czstring<>, field>> args) :
+			kind {kind},
+			name {name},
+			ret {std::move(ret)},
+			args {std::move(args)}
+		{}
 	};
 
 	// Marshaling will need to somehow build up type strings for arbitrary field layouts
