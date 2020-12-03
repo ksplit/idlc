@@ -42,7 +42,7 @@ namespace idlc::sema {
 		Type scope database
 	*******************************************************************************************************************/
 
-	using type_scope_chain = std::vector<decltype(std::cref(std::declval<types_rib&>()))>;
+	using type_scope_chain = std::vector<gsl::not_null<const types_rib*>>;
 	using type_scope_chain_table = std::map<node_id, type_scope_chain>;
 
 	struct type_scope_db {
@@ -51,6 +51,15 @@ namespace idlc::sema {
 	};
 
 	type_scope_db build_types_db(const ast::file&);
+	
+	using proj_ref = std::variant<
+		std::nullptr_t,
+		gsl::not_null<const ast::struct_proj_def*>,
+		gsl::not_null<const ast::union_proj_def*>
+	>;
+
+	proj_ref find_type(const type_scope_db& db, node_id node, gsl::czstring<> name);
+
 	void dump(const type_scope_db& db);
 }
 

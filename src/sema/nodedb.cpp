@@ -24,7 +24,7 @@ namespace idlc::sema {
 
 				auto& new_scope = *db_.scopes.emplace_back(std::make_unique<types_rib>());
 				cur_scope_ = &new_scope;
-				cur_chain_.push_back(new_scope);
+				cur_chain_.push_back(&new_scope);
 				if (!ast::traverse_rpc_def(*this, node))
 					return false;
 
@@ -40,7 +40,7 @@ namespace idlc::sema {
 
 				auto& new_scope = *db_.scopes.emplace_back(std::make_unique<types_rib>());
 				cur_scope_ = &new_scope;
-				cur_chain_.push_back(new_scope);
+				cur_chain_.push_back(&new_scope);
 				if (!ast::traverse_rpc_ptr_def(*this, node))
 					return false;
 
@@ -53,7 +53,7 @@ namespace idlc::sema {
 			{
 				auto& new_scope = *db_.scopes.emplace_back(std::make_unique<types_rib>());
 				cur_scope_ = &new_scope;
-				cur_chain_.push_back(new_scope);
+				cur_chain_.push_back(&new_scope);
 				if (!ast::traverse_module_def(*this, node))
 					return false;
 
@@ -104,6 +104,32 @@ type_scope_db idlc::sema::build_types_db(const ast::file& file)
 	const auto success = walk.visit_file(file);
 	assert(success);
 	return new_db;
+}
+
+proj_ref idlc::sema::find_type(const type_scope_db& db, node_id node, gsl::czstring<> name)
+{
+	const auto& scope_chain = db.scope_chains.at(node);
+	
+	using namespace std;
+	auto iter = rbegin(scope_chain);
+	const auto end = rend(scope_chain);
+	for (; iter != end; ++iter) {
+		const auto& scope = *iter;
+		std::cout << "[find_type] Searching scope " << scope << "\n";
+		const auto str_iter = scope->structs.find(name);
+		if (str_iter != scope->structs.end()) {
+			std::cout << "[find_type] Found struct def " << str_iter->second << "\n";
+			return str_iter->second;
+		}
+
+		const auto uni_iter = scope->unions.find(name);
+		if (uni_iter != scope->unions.end()) {
+			std::cout << "[find_type] Found union def " << uni_iter->second << "\n";
+			return uni_iter->second;
+		}
+	}
+
+	return nullptr;
 }
 
 void idlc::sema::dump(const type_scope_db& db)
