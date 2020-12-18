@@ -20,11 +20,13 @@ namespace idlc::sema {
 
 			bool visit_rpc_def(const ast::rpc_def& node)
 			{
-				db_.scope_chains[&node] = cur_chain_;
 
 				auto& new_scope = *db_.scopes.emplace_back(std::make_unique<types_rib>());
 				cur_scope_ = &new_scope;
 				cur_chain_.push_back(&new_scope);
+
+				// Need to ensure the produced scope chain includes the RPC's attached scope
+				db_.scope_chains[&node] = cur_chain_;
 				if (!ast::traverse_rpc_def(*this, node))
 					return false;
 
@@ -36,11 +38,12 @@ namespace idlc::sema {
 			bool visit_rpc_ptr_def(const ast::rpc_ptr_def& node)
 			{
 				cur_scope_->rpcs[node.name] = &node;
-				db_.scope_chains[&node] = cur_chain_;
 
 				auto& new_scope = *db_.scopes.emplace_back(std::make_unique<types_rib>());
 				cur_scope_ = &new_scope;
 				cur_chain_.push_back(&new_scope);
+				
+				db_.scope_chains[&node] = cur_chain_;
 				if (!ast::traverse_rpc_ptr_def(*this, node))
 					return false;
 
@@ -106,10 +109,8 @@ type_scope_db idlc::sema::build_types_db(const ast::file& file)
 	return new_db;
 }
 
-proj_ref idlc::sema::find_type(const type_scope_db& db, node_id node, gsl::czstring<> name)
-{
-	const auto& scope_chain = db.scope_chains.at(node);
-	
+proj_ref idlc::sema::find_type(const type_scope_chain& scope_chain, gsl::czstring<> name)
+{	
 	using namespace std;
 	auto iter = rbegin(scope_chain);
 	const auto end = rend(scope_chain);

@@ -117,6 +117,8 @@ namespace idlc::pgraph {
 	// Generate is_null methods as needed, similar to the recursive visits
 	struct null_array_layout {
 		std::unique_ptr<field> elem;
+
+		null_array_layout(decltype(elem) elem) : elem {std::move(elem)} {}
 	};
 
 	struct union_layout {
@@ -158,11 +160,16 @@ namespace idlc::pgraph {
 	struct rpc_node {
 		rpc_kind kind;
 		gsl::czstring<> name;
-		field ret;
+		std::optional<field> ret;
 		std::vector<std::pair<gsl::czstring<>, field>> args;
 
 		// TODO: should args be an rvalue ref?
-		rpc_node(rpc_kind kind, gsl::czstring<> name, field ret, std::vector<std::pair<gsl::czstring<>, field>> args) :
+		rpc_node(
+			rpc_kind kind,
+			gsl::czstring<> name,
+			std::optional<field> ret,
+			std::vector<std::pair<gsl::czstring<>, field>> args
+		) :
 			kind {kind},
 			name {name},
 			ret {std::move(ret)},

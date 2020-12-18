@@ -64,7 +64,8 @@ namespace idlc::ast {
 		is_alloc		= 0b100000011,
 		is_ptr			= is_bind | is_dealloc | is_alloc,
 		is_val			= out | in,
-		is_set			= 0b100000000
+		is_set			= 0b100000000,
+		use_default		= 0b000000000, // will not set the is_set flag, thus ensuring it will be defaulted
 	};
 
 	inline auto& operator|=(tags& a, tags b) {

@@ -460,7 +460,7 @@ tyname_stem = arr:tyname_array {{
 	value = share(tyname_stem {get_shared<tyname_any_of_ptr>(any)});
 }}
 
-indirection = attrs:(ptr_attrs tok_space?)? tok_star is_c:(tok_space? tok_kw_const)? {{
+indirection = attrs:(val:ptr_attrs tok_space? {{ value = val; }})? tok_star is_c:(tok_space? tok_kw_const)? {{
 	value = share(indirection {to_int<tags>(attrs), is_c.getValue()});
 }}
 

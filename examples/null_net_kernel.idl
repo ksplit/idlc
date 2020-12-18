@@ -1,5 +1,7 @@
+// FIXME: how _exactly_ does nullnet use the dev_addr field?
+
 module kernel {
-    rpc void netif_carrier_on( projection dev  *dev ) {
+    rpc void netif_carrier_on( projection dev *dev ) {
         projection < struct net_device > dev {
             projection _global_netdev_ops *netdev_ops;
         }
@@ -35,7 +37,14 @@ module kernel {
         }
     }
 
-    rpc projection ret_net_device [alloc(caller)]* alloc_netdev_mqs( u32 sizeof_priv, const string *name, u8 name_assign_type, rpc_ptr setup setup, u32 txqs, u32 rxqs ) {
+    rpc projection ret_net_device [alloc(caller)]* alloc_netdev_mqs(
+        u32 sizeof_priv,
+        const string *name,
+        u8 name_assign_type,
+        rpc_ptr setup setup,
+        u32 txqs,
+        u32 rxqs
+    ) {
         projection < struct net_device > ret_net_device {
             u64  features;
             u64  hw_features;
@@ -97,6 +106,7 @@ module kernel {
         }
     }
 
+    // FIXME: p is actually a void*
     rpc u32 eth_mac_addr( projection dev  *dev, projection p  *p ) {
         projection < struct net_device > dev {
             u32  priv_flags;

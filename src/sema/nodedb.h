@@ -59,7 +59,7 @@ namespace idlc::sema {
 		gsl::not_null<const ast::union_proj_def*>
 	>;
 
-	proj_ref find_type(const type_scope_db& db, node_id node, gsl::czstring<> name);
+	proj_ref find_type(const type_scope_chain& scope_chain, gsl::czstring<> name);
 
 	void dump(const type_scope_db& db);
 }
