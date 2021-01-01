@@ -64,7 +64,7 @@ namespace idlc::pgraph {
 					return build_layout(*item, types, scope_chain);
 				}
 				else {
-					std::cout << "[warning] Didn't know how to build this layout\n";
+					std::cout << "[debug] Didn't know how to build this layout\n";
 					return {};
 				}
 			};
