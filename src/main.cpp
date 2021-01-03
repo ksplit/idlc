@@ -68,6 +68,8 @@
 
 	NOTE: Currently we work at the scale of a single file. All modules within a file are treated as implicitly imported.
 	TODO: Support merging ASTs via import / use keywords.
+
+	Roslyn red-green trees may be useful in some places
 */
 
 using namespace idlc;

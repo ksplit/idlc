@@ -23,13 +23,61 @@ namespace idlc::pgraph {
 		private:
 		};
 
-		layout build_layout(
+		layout build_array_layout(
 			const ast::tyname_array& node,
 			const sema::type_scope_db& types,
 			const sema::type_scope_chain& scope_chain
 		)
 		{
 			// TODO: Finish me
+			std::cout << "[debug] Noted, but did not construct an array layout\n";
+			return {};
+		}
+
+		layout build_arith_layout(
+			ast::tyname_arith item,
+			const sema::type_scope_db& types,
+			const sema::type_scope_chain& scope_chain
+		)
+		{
+			std::cout << "[build_layout] Built a primitive type layout\n";
+			return item;
+		}
+
+		layout build_string_layout(
+			const sema::type_scope_db& types,
+			const sema::type_scope_chain& scope_chain
+		)
+		{
+			std::cout << "[build_layout] Built a char string layout\n";
+			return std::make_unique<null_array_layout>(
+				std::make_unique<field>(
+					std::make_unique<layout>(prim::ty_char),
+					tags::use_default
+				)
+			);
+		}
+
+		// What is needed here is a state object in which to look up the pgraphs of each projection by node ID
+		// I immediately think of folding it into the same logical object as the type_scope_db
+		layout build_proj_layout(
+			const ast::tyname_proj& item,
+			const sema::type_scope_db& types,
+			const sema::type_scope_chain& scope_chain
+		)
+		{
+			// NOTE: To be able to share work, reduce the graph size in memory, and just in general preserve the
+			// semantics of how projections are lazy-defined, not "templates," we should employ memoization here 
+			const auto proj_def = sema::find_type(scope_chain, item.name);
+			std::cout << "[debug] Noted and located, but did not construct a projection layout\n";
+			// TODO: finish me
+			return {};
+		}
+
+		// TODO: will not be needed
+		layout report_unknown_layout()
+		{
+			std::cout << "[debug] Didn't know how to build this layout\n";
 			return {};
 		}
 
@@ -42,31 +90,16 @@ namespace idlc::pgraph {
 			const auto visit = [&types, &scope_chain](auto&& item) -> layout
 			{
 				using type = std::decay_t<decltype(item)>;
-				if constexpr (std::is_same_v<type, ast::tyname_arith>) {
-					std::cout << "[build_layout] Built a primitive type layout\n";
-					return item;
-				}
-				else if constexpr (std::is_same_v<type, ast::tyname_string>) {
-					std::cout << "[build_layout] Built a char string layout\n";
-					return std::make_unique<null_array_layout>(
-						std::make_unique<field>(
-							std::make_unique<layout>(prim::ty_char),
-							tags::use_default
-						)
-					);
-				}
-				else if constexpr (std::is_same_v<type, ast::node_ref<ast::tyname_proj>>) {
-					const auto proj_def = sema::find_type(scope_chain, item->name);
-					// TODO: finish this
-					return {};
-				}
-				else if constexpr (std::is_same_v<type, ast::node_ref<ast::tyname_array>>) {
-					return build_layout(*item, types, scope_chain);
-				}
-				else {
-					std::cout << "[debug] Didn't know how to build this layout\n";
-					return {};
-				}
+				if constexpr (std::is_same_v<type, ast::tyname_arith>)
+					return build_arith_layout(item, types, scope_chain);
+				else if constexpr (std::is_same_v<type, ast::tyname_string>)
+					return build_string_layout(types, scope_chain);
+				else if constexpr (std::is_same_v<type, ast::node_ref<ast::tyname_proj>>)
+					return build_proj_layout(*item, types, scope_chain);
+				else if constexpr (std::is_same_v<type, ast::node_ref<ast::tyname_array>>)
+					return build_array_layout(*item, types, scope_chain);
+				else
+					return report_unknown_layout();
 			};
 
 			return std::visit(visit, node);
@@ -114,10 +147,17 @@ namespace idlc::pgraph {
 		// Not a constructor, rpc_node has no invariants
 		rpc_node build_rpc_node(
 			rpc_kind kind,
+			
+			// The parameter group here is do to the need to capture the "in-common" information of the RPC nodes,
+			// both direct and indirect. Note that I've left notes elsewhere about merging these node types
+			// to avoid the code duplication and allow these and the previous parameter to just be folded together
+			// For now, though, nothing else in pgraph construction cares about it, so it's in the backlog
+			// TODO: decided on the above considerations
 			gsl::czstring<> name,
 			const ast::tyname* ret_type,
-			// Since "no arguments" is encoded as this vector being absent
+			// A pointer, since "no arguments" is encoded as this vector being absent
 			const std::vector<ast::node_ref<ast::var_decl>>* args,
+			
 			const sema::type_scope_db& types,
 			const sema::type_scope_chain& scope_chain
 		)
