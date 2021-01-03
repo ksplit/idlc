@@ -32,8 +32,7 @@
 namespace idlc::sema {
 	struct types_rib {
 		std::map<gsl::czstring<>, const ast::rpc_def*> rpcs {};
-		std::map<gsl::czstring<>, const ast::struct_proj_def*> structs {};
-		std::map<gsl::czstring<>, const ast::union_proj_def*> unions {};
+		std::map<gsl::czstring<>, const ast::proj_def*> projections {};
 	};
 
 	struct _values_rib {
@@ -80,20 +79,12 @@ namespace idlc::sema {
 			return ast::traverse_naked_proj_decl(*this, node);
 		}
 
-		bool visit_struct_proj_def(const ast::struct_proj_def& node)
+		bool visit_proj_def(const ast::proj_def& node)
 		{
 			values_.push_back({});
 			val_scopes_[&node] = &values_.back();
 			std::cout << "[Scopes] Creating value scope for struct def \"" << node.name << "\"" << std::endl;
-			return ast::traverse_struct_proj_def(*this, node);
-		}
-
-		bool visit_union_proj_def(const ast::union_proj_def& node)
-		{
-			values_.push_back({});
-			val_scopes_[&node] = &values_.back();
-			std::cout << "[Scopes] Creating value scope for union def \"" << node.name << "\"" << std::endl;
-			return ast::traverse_union_proj_def(*this, node);
+			return ast::traverse_proj_def(*this, node);
 		}
 
 	private:
@@ -146,33 +137,16 @@ namespace idlc::sema {
 			return true;
 		}
 
-		bool visit_struct_proj_def(const ast::struct_proj_def& node)
+		bool visit_proj_def(const ast::proj_def& node)
 		{
-			types_->structs[node.name] = &node;
+			types_->projections[node.name] = &node;
 
 			const auto v_old = values_;
 			values_ = vscopes_[&node];
 
 			std::cout << "[Scopes] Inserted struct projection \"" << node.name << "\"" << std::endl;
 
-			if (!traverse_struct_proj_def(*this, node))
-				return false;
-
-			values_ = v_old;
-
-			return true;
-		}
-
-		bool visit_union_proj_def(const ast::union_proj_def& node)
-		{
-			types_->unions[node.name] = &node;
-
-			const auto v_old = values_;
-			values_ = vscopes_[&node];
-
-			std::cout << "[Scopes] Inserted union projection \"" << node.name << "\"" << std::endl;
-
-			if (!traverse_union_proj_def(*this, node))
+			if (!traverse_proj_def(*this, node))
 				return false;
 
 			values_ = v_old;

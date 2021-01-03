@@ -76,10 +76,8 @@ namespace idlc::ast {
 			using type = std::decay_t<decltype(subnode)>;
 			if constexpr (std::is_same_v<type, header_stmt>)
 				return true; // TODO
-			else if constexpr (std::is_same_v<type, node_ref<union_proj_def>>)
-				return self.visit_union_proj_def(*subnode);
-			else if constexpr (std::is_same_v<type, node_ref<struct_proj_def>>)
-				return self.visit_struct_proj_def(*subnode);
+			else if constexpr (std::is_same_v<type, node_ref<proj_def>>)
+				return self.visit_proj_def(*subnode);
 			else if constexpr (std::is_same_v<type, node_ref<rpc_def>>)
 				return self.visit_rpc_def(*subnode);
 			else
@@ -90,22 +88,7 @@ namespace idlc::ast {
 	}
 
 	template<typename walk>
-	bool traverse_union_proj_def(walk&& self, const union_proj_def& node)
-	{
-		if (node.fields) {
-			for (const auto& item : *node.fields) {
-				if (!self.visit_proj_field(*item))
-					return false;
-			}
-		}
-
-		return true;
-	}
-
-	// FIXME: code duplication between struct / union projection defs
-
-	template<typename walk>
-	bool traverse_struct_proj_def(walk&& self, const struct_proj_def& node)
+	bool traverse_proj_def(walk&& self, const proj_def& node)
 	{
 		if (node.fields) {
 			for (const auto& item : *node.fields) {
@@ -282,10 +265,8 @@ namespace idlc::ast {
 	{
 		const auto visit = [&self](auto&& subnode) -> bool {
 			using type = std::decay_t<decltype(subnode)>;
-			if constexpr (std::is_same_v<type, node_ref<union_proj_def>>)
-				return self.visit_union_proj_def(*subnode);
-			else if constexpr (std::is_same_v<type, node_ref<struct_proj_def>>)
-				return self.visit_struct_proj_def(*subnode);
+			if constexpr (std::is_same_v<type, node_ref<proj_def>>)
+				return self.visit_proj_def(*subnode);
 			else
 				assert(false);
 		};
@@ -326,15 +307,9 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_union_proj_def(const union_proj_def& node)
+		bool visit_proj_def(const proj_def& node)
 		{
-			traverse_union_proj_def(self(), node);
-			return true;
-		}
-
-		bool visit_struct_proj_def(const struct_proj_def& node)
-		{
-			traverse_struct_proj_def(self(), node);
+			traverse_proj_def(self(), node);
 			return true;
 		}
 
@@ -466,17 +441,10 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_union_proj_def(const union_proj_def& node)
+		bool visit_proj_def(const proj_def& node)
 		{
 			std::cout << "[Nullwalk] union_proj_def" << std::endl;
-			traverse_union_proj_def(*this, node);
-			return true;
-		}
-
-		bool visit_struct_proj_def(const struct_proj_def& node)
-		{
-			std::cout << "[Nullwalk] struct_proj_def" << std::endl;
-			traverse_struct_proj_def(*this, node);
+			traverse_proj_def(*this, node);
 			return true;
 		}
 

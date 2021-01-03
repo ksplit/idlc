@@ -242,9 +242,9 @@ module_item_list = first:module_item rest:(tok_space? module_item)* {{
 module_item = header_stmt {{
 	value = share(module_item {header_stmt {} }); // TODO
 }} | ud:union_proj_def {{
-	value = share(module_item {get_shared<union_proj_def>(ud)});
+	value = share(module_item {get_shared<proj_def>(ud)});
 }} | sd:struct_proj_def {{
-	value = share(module_item {get_shared<struct_proj_def>(sd)});
+	value = share(module_item {get_shared<proj_def>(sd)});
 }} | rpc:rpc_def {{
 	value = share(module_item {get_shared<rpc_def>(rpc)});
 }} | rpc_ptr:rpc_ptr_def {{
@@ -255,18 +255,20 @@ header_stmt = tok_kw_header tok_space? tok_path tok_space? tok_semi
 	| tok_kw_header tok_space? tok_string tok_space? tok_semi
 
 struct_proj_def = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_struct tok_space? type:tok_ident tok_space? tok_rangle tok_space? name:tok_ident tok_space? tok_lbrace items:(tok_space? proj_field_list)? tok_space? tok_rbrace {{
-	value = share(struct_proj_def {
+	value = share(proj_def {
 		to_ptr<gsl::czstring<>>(name),
 		to_ptr<gsl::czstring<>>(type),
-		get_shared<std::vector<node_ref<proj_field>>>(items)
+		get_shared<std::vector<node_ref<proj_field>>>(items),
+		proj_def_kind::struct_kind
 	});
 }}
 
 union_proj_def = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_union tok_space? type:tok_ident tok_space? tok_rangle tok_space? name:tok_ident tok_space? tok_lbrace items:(tok_space? proj_field_list)? tok_space? tok_rbrace {{
-	value = share(union_proj_def {
+	value = share(proj_def {
 		to_ptr<gsl::czstring<>>(name),
 		to_ptr<gsl::czstring<>>(type),
-		get_shared<std::vector<node_ref<proj_field>>>(items)
+		get_shared<std::vector<node_ref<proj_field>>>(items),
+		proj_def_kind::union_kind
 	});
 }}
 
@@ -509,9 +511,9 @@ rpc_item_list = first:rpc_item rest:(tok_space? rpc_item)* {{
 }}
 
 rpc_item = ud:union_proj_def {{
-	value = share(rpc_item {get_shared<union_proj_def>(ud)});
+	value = share(rpc_item {get_shared<proj_def>(ud)});
 }} | sd:struct_proj_def {{
-	value = share(rpc_item {get_shared<struct_proj_def>(sd)});
+	value = share(rpc_item {get_shared<proj_def>(sd)});
 }} | rptr:rpc_ptr_def {{
 	value = share(rpc_item {get_shared<rpc_def>(rptr)});
 }}

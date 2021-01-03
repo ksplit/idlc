@@ -28,7 +28,7 @@ namespace idlc::ast {
 	struct tyname;
 
 	struct naked_proj_decl;
-	struct naked_uni_proj_decl;
+	struct naked_uni_proj_decl; // TODO: remove me
 	struct var_decl;
 	
 	struct rpc_def;
@@ -169,19 +169,31 @@ namespace idlc::ast {
 		gsl::czstring<> name;
 	};
 
-	struct union_proj_def {
+	enum proj_def_kind {
+		struct_kind,
+		union_kind
+	};
+
+	struct proj_def {
 		gsl::czstring<> name;
 		gsl::czstring<> type;
 		node_ptr<std::vector<node_ref<proj_field>>> fields;
+		proj_def_kind kind;
+
+		proj_def(
+			gsl::czstring<> name,
+			gsl::czstring<> type,
+			node_ptr<std::vector<node_ref<proj_field>>> fields,
+			proj_def_kind kind
+		) :
+			name {name},
+			type {type},
+			fields {fields},
+			kind {kind}
+		{}
 	};
 
-	struct struct_proj_def {
-		gsl::czstring<> name;
-		gsl::czstring<> type;
-		node_ptr<std::vector<node_ref<proj_field>>> fields;
-	};
-
-	using rpc_item = std::variant<node_ref<union_proj_def>, node_ref<struct_proj_def>, node_ref<rpc_def>>;
+	using rpc_item = std::variant<node_ref<proj_def>, node_ref<rpc_def>>;
 
 	enum rpc_def_kind {
 		direct,
@@ -215,8 +227,7 @@ namespace idlc::ast {
 
 	using module_item = std::variant<
 		header_stmt,
-		node_ref<union_proj_def>,
-		node_ref<struct_proj_def>,
+		node_ref<proj_def>,
 		node_ref<rpc_def>
 	>;
 

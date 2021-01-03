@@ -52,14 +52,8 @@ namespace idlc::sema {
 	};
 
 	type_scope_db build_types_db(const ast::file&);
-	
-	using proj_ref = std::variant<
-		std::nullptr_t,
-		gsl::not_null<const ast::struct_proj_def*>,
-		gsl::not_null<const ast::union_proj_def*>
-	>;
 
-	proj_ref find_type(const type_scope_chain& scope_chain, gsl::czstring<> name);
+	const ast::proj_def* find_type(const type_scope_chain& scope_chain, gsl::czstring<> name);
 
 	void dump(const type_scope_db& db);
 }

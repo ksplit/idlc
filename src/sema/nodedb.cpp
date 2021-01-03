@@ -48,18 +48,11 @@ namespace idlc::sema {
 				return true;
 			}
 
-			bool visit_struct_proj_def(const ast::struct_proj_def& node)
+			bool visit_proj_def(const ast::proj_def& node)
 			{
 				db_.scope_chains[&node] = cur_chain_;
-				cur_scope_->structs[node.name] = &node;
-				return ast::traverse_struct_proj_def(*this, node);
-			}
-
-			bool visit_union_proj_def(const ast::union_proj_def& node)
-			{
-				db_.scope_chains[&node] = cur_chain_;
-				cur_scope_->unions[node.name] = &node;
-				return ast::traverse_union_proj_def(*this, node);
+				cur_scope_->projections[node.name] = &node;
+				return ast::traverse_proj_def(*this, node);
 			}
 
 		private:
@@ -74,11 +67,8 @@ namespace idlc::sema {
 			for (const auto& [name, node] : rib.rpcs)
 				std::cout << "[type_scope_db]\t\tRPC ptr (" << name << ", " << node << ")\n";
 
-			for (const auto& [name, node] : rib.structs)
-				std::cout << "[type_scope_db]\t\tStruct proj (" << name << ", " << node << ")\n";
-
-			for (const auto& [name, node] : rib.unions)
-				std::cout << "[type_scope_db]\t\tUnion proj (" << name << ", " << node << ")\n";
+			for (const auto& [name, node] : rib.projections)
+				std::cout << "[type_scope_db]\t\tProj (" << name << ", " << node << ")\n";
 		}
 	}
 }
@@ -92,7 +82,7 @@ type_scope_db idlc::sema::build_types_db(const ast::file& file)
 	return new_db;
 }
 
-proj_ref idlc::sema::find_type(const type_scope_chain& scope_chain, gsl::czstring<> name)
+const ast::proj_def* idlc::sema::find_type(const type_scope_chain& scope_chain, gsl::czstring<> name)
 {	
 	using namespace std;
 	auto iter = rbegin(scope_chain);
@@ -100,16 +90,10 @@ proj_ref idlc::sema::find_type(const type_scope_chain& scope_chain, gsl::czstrin
 	for (; iter != end; ++iter) {
 		const auto& scope = *iter;
 		std::cout << "[find_type] Searching scope " << scope << "\n";
-		const auto str_iter = scope->structs.find(name);
-		if (str_iter != scope->structs.end()) {
-			std::cout << "[find_type] Found struct def " << str_iter->second << "\n";
-			return str_iter->second;
-		}
-
-		const auto uni_iter = scope->unions.find(name);
-		if (uni_iter != scope->unions.end()) {
-			std::cout << "[find_type] Found union def " << uni_iter->second << "\n";
-			return uni_iter->second;
+		const auto iter = scope->projections.find(name);
+		if (iter != scope->projections.end()) {
+			std::cout << "[find_type] Found proj def " << iter->second << "\n";
+			return iter->second;
 		}
 	}
 
