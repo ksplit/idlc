@@ -311,8 +311,6 @@ proj_field = vf:var_field {{
 	value = share(proj_field {get_shared<var_decl>(vf)});
 }} | npd:naked_proj_decl {{
 	value = share(proj_field {get_shared<naked_proj_decl>(npd)});
-}} | nupd:naked_uni_proj_decl {{
-	value = share(proj_field {get_shared<naked_uni_proj_decl>(nupd)});
 }}
 
 var_decl = ty:tyname tok_space? name:tok_ident {{
@@ -321,13 +319,6 @@ var_decl = ty:tyname tok_space? name:tok_ident {{
 
 naked_proj_decl = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_struct tok_space? tok_rangle tok_space? tok_lbrace fields:(tok_space? proj_field_list)? tok_space? tok_rbrace tok_space? name:tok_ident tok_space? tok_semi {{
 	value = share(naked_proj_decl {
-		get_shared<std::vector<node_ref<proj_field>>>(fields),
-		to_ptr<gsl::czstring<>>(name)
-	});
-}}
-
-naked_uni_proj_decl = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_union tok_space? tok_rangle tok_space? tok_lbrace fields:(tok_space? proj_field_list)? tok_space? tok_rbrace tok_space? name:tok_ident tok_space? tok_semi {{
-	value = share(naked_uni_proj_decl {
 		get_shared<std::vector<node_ref<proj_field>>>(fields),
 		to_ptr<gsl::czstring<>>(name)
 	});

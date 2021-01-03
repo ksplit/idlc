@@ -135,8 +135,6 @@ namespace idlc::ast {
 				return self.visit_var_decl(*subnode);
 			else if constexpr (std::is_same_v<type, node_ref<naked_proj_decl>>)
 				return self.visit_naked_proj_decl(*subnode);
-			else if constexpr (std::is_same_v<type, node_ref<naked_uni_proj_decl>>)
-				return self.visit_naked_uni_proj_decl(*subnode);
 			else
 				assert(false);
 		};
@@ -236,19 +234,6 @@ namespace idlc::ast {
 
 	template<typename walk>
 	bool traverse_naked_proj_decl(walk&& self, const naked_proj_decl& node)
-	{
-		if (node.fields) {
-			for (const auto& item : *node.fields) {
-				if (!self.visit_proj_field(*item))
-					return false;
-			}
-		}
-
-		return true;
-	}
-
-	template<typename walk>
-	bool traverse_naked_uni_proj_decl(walk&& self, const naked_uni_proj_decl& node)
 	{
 		if (node.fields) {
 			for (const auto& item : *node.fields) {
@@ -382,12 +367,6 @@ namespace idlc::ast {
 		bool visit_naked_proj_decl(const naked_proj_decl& node)
 		{
 			traverse_naked_proj_decl(self(), node);
-			return true;
-		}
-
-		bool visit_naked_uni_proj_decl(const naked_uni_proj_decl& node)
-		{
-			traverse_naked_uni_proj_decl(self(), node);
 			return true;
 		}
 
@@ -529,13 +508,6 @@ namespace idlc::ast {
 		{
 			std::cout << "[Nullwalk] naked_proj_decl" << std::endl;
 			traverse_naked_proj_decl(*this, node);
-			return true;
-		}
-
-		bool visit_naked_uni_proj_decl(const naked_uni_proj_decl& node)
-		{
-			std::cout << "[Nullwalk] naked_uni_proj_decl" << std::endl;
-			traverse_naked_uni_proj_decl(*this, node);
 			return true;
 		}
 

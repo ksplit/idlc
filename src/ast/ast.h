@@ -28,7 +28,6 @@ namespace idlc::ast {
 	struct tyname;
 
 	struct naked_proj_decl;
-	struct naked_uni_proj_decl; // TODO: remove me
 	struct var_decl;
 	
 	struct rpc_def;
@@ -41,7 +40,7 @@ namespace idlc::ast {
 	using file = std::variant<node_ref<driver_file>, node_ref<std::vector<node_ref<module_def>>>>;
 	// using field_ref = std::variant<node_ref<field_abs_ref>, node_ref<field_rel_ref>>;
 	using array_size = std::variant<unsigned, tok_kw_null, gsl::czstring<>>;
-	using proj_field = std::variant<node_ref<var_decl>, node_ref<naked_proj_decl>, node_ref<naked_uni_proj_decl>>;
+	using proj_field = std::variant<node_ref<var_decl>, node_ref<naked_proj_decl>>;
 	using tyname_stem = std::variant<
 		tyname_arith,
 		tyname_string,
@@ -160,11 +159,6 @@ namespace idlc::ast {
 	};
 
 	struct naked_proj_decl {
-		node_ptr<std::vector<node_ref<proj_field>>> fields;
-		gsl::czstring<> name;
-	};
-
-	struct naked_uni_proj_decl {
 		node_ptr<std::vector<node_ref<proj_field>>> fields;
 		gsl::czstring<> name;
 	};
