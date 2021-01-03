@@ -171,9 +171,9 @@ namespace idlc::pgraph {
 		}
 
 		// We have no interest in walking into rpc_defs directly
-		class direct_rpc_walk : public ast::ast_walk<direct_rpc_walk> {
+		class rpc_walk : public ast::ast_walk<rpc_walk> {
 		public:
-			direct_rpc_walk(std::vector<rpc_node>& table, const sema::type_scope_db& types) :
+			rpc_walk(std::vector<rpc_node>& table, const sema::type_scope_db& types) :
 				table_ {table},
 				types_ {types}
 			{}
@@ -199,35 +199,6 @@ namespace idlc::pgraph {
 			std::vector<rpc_node>& table_;
 			const sema::type_scope_db& types_;
 		};
-
-		class indirect_rpc_walk : public ast::ast_walk<indirect_rpc_walk> {
-		public:
-			indirect_rpc_walk(std::vector<rpc_node>& table, const sema::type_scope_db& types) :
-				table_ {table},
-				types_ {types}
-			{}
-
-			bool visit_rpc_ptr_def(const ast::rpc_ptr_def& node)
-			{
-				const auto scope_chain = types_.scope_chains.at(&node);
-
-				std::cout << "[construction] Building indirect RPC node " << node.name << "\n";
-				table_.emplace_back(build_rpc_node(
-					rpc_kind::indirect,
-					node.name,
-					node.ret_type.get(),
-					node.arguments.get(),
-					types_,
-					scope_chain
-				));
-
-				return true;
-			}
-
-		private:
-			std::vector<rpc_node>& table_;
-			const sema::type_scope_db& types_;
-		};
 	}
 }
 
@@ -235,13 +206,8 @@ namespace idlc::pgraph {
 rpc_tables pgraph::build_rpc_table(const ast::file& file, const sema::type_scope_db& types)
 {
 	rpc_tables tables {};
-	direct_rpc_walk dir_walk {tables.direct, types};
-	const auto dir_success = dir_walk.visit_file(file);
+	rpc_walk walk {tables.direct, types};
+	const auto dir_success = walk.visit_file(file);
 	assert(dir_success);
-	
-	indirect_rpc_walk indir_walk {tables.direct, types};
-	const auto indir_success = indir_walk.visit_file(file);
-	assert(indir_success);
-
 	return tables;
 }

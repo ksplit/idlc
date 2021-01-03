@@ -31,6 +31,8 @@ namespace idlc::ast {
 	struct naked_uni_proj_decl;
 	struct var_decl;
 	
+	struct rpc_def;
+	
 	// struct field_rel_ref;
 	// struct field_abs_ref;
 
@@ -49,7 +51,7 @@ namespace idlc::ast {
 		node_ref<tyname_any_of_ptr>
 	>;
 
-	// TODO: class this and give operators
+	// TODO: clean this up?
 	enum class tags {
 		alloc_caller	= 0b100000001,
 		alloc_callee	= 0b100000010,
@@ -179,22 +181,33 @@ namespace idlc::ast {
 		node_ptr<std::vector<node_ref<proj_field>>> fields;
 	};
 
-	struct rpc_ptr_def;
+	using rpc_item = std::variant<node_ref<union_proj_def>, node_ref<struct_proj_def>, node_ref<rpc_def>>;
 
-	using rpc_item = std::variant<node_ref<union_proj_def>, node_ref<struct_proj_def>, node_ref<rpc_ptr_def>>;
+	enum rpc_def_kind {
+		direct,
+		indirect
+	};
 
 	struct rpc_def {
 		node_ptr<tyname> ret_type; // null type is used for <void>
 		gsl::czstring<> name;
 		node_ptr<std::vector<node_ref<var_decl>>> arguments;
 		node_ptr<std::vector<node_ref<rpc_item>>> items;
-	};
+		rpc_def_kind kind;
 
-	struct rpc_ptr_def {
-		node_ptr<tyname> ret_type; // null type is used for <void>
-		gsl::czstring<> name;
-		node_ptr<std::vector<node_ref<var_decl>>> arguments;
-		node_ptr<std::vector<node_ref<rpc_item>>> items;
+		rpc_def(
+			node_ptr<tyname> ret_type,
+			gsl::czstring<> name,
+			node_ptr<std::vector<node_ref<var_decl>>> arguments,
+			node_ptr<std::vector<node_ref<rpc_item>>> items,
+			rpc_def_kind kind
+		) :
+			ret_type {ret_type},
+			name {name},
+			arguments {arguments},
+			items {items},
+			kind {kind}
+		{}
 	};
 
 	// TODO: impl
@@ -204,8 +217,7 @@ namespace idlc::ast {
 		header_stmt,
 		node_ref<union_proj_def>,
 		node_ref<struct_proj_def>,
-		node_ref<rpc_def>,
-		node_ref<rpc_ptr_def>
+		node_ref<rpc_def>
 	>;
 
 	struct module_def {

@@ -35,23 +35,6 @@ namespace idlc::sema {
 				return true;
 			}
 
-			bool visit_rpc_ptr_def(const ast::rpc_ptr_def& node)
-			{
-				cur_scope_->rpcs[node.name] = &node;
-
-				auto& new_scope = *db_.scopes.emplace_back(std::make_unique<types_rib>());
-				cur_scope_ = &new_scope;
-				cur_chain_.push_back(&new_scope);
-				
-				db_.scope_chains[&node] = cur_chain_;
-				if (!ast::traverse_rpc_ptr_def(*this, node))
-					return false;
-
-				cur_chain_.pop_back();
-
-				return true;
-			}
-
 			bool visit_module_def(const ast::module_def& node)
 			{
 				auto& new_scope = *db_.scopes.emplace_back(std::make_unique<types_rib>());

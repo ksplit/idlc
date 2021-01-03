@@ -82,8 +82,6 @@ namespace idlc::ast {
 				return self.visit_struct_proj_def(*subnode);
 			else if constexpr (std::is_same_v<type, node_ref<rpc_def>>)
 				return self.visit_rpc_def(*subnode);
-			else if constexpr (std::is_same_v<type, node_ref<rpc_ptr_def>>)
-				return self.visit_rpc_ptr_def(*subnode);
 			else
 				assert(false);
 		};
@@ -121,32 +119,6 @@ namespace idlc::ast {
 
 	template<typename walk>
 	bool traverse_rpc_def(walk&& self, const rpc_def& node)
-	{
-		if (node.ret_type) {
-			if (!self.visit_tyname(*node.ret_type))
-				return false;
-		}
-
-		if (node.arguments) {
-			for (const auto& item : *node.arguments) {
-				if (!self.visit_var_decl(*item))
-					return false;
-			}
-		}
-
-		if (node.items) {
-			for (const auto& item : *node.items) {
-				if (!self.visit_rpc_item(*item))
-					return false;
-			}
-		}
-
-		return true;
-	}
-
-	// FIXME: code duplication between rpc_ptr and rpc
-	template<typename walk>
-	bool traverse_rpc_ptr_def(walk&& self, const rpc_ptr_def& node)
 	{
 		if (node.ret_type) {
 			if (!self.visit_tyname(*node.ret_type))
@@ -314,8 +286,6 @@ namespace idlc::ast {
 				return self.visit_union_proj_def(*subnode);
 			else if constexpr (std::is_same_v<type, node_ref<struct_proj_def>>)
 				return self.visit_struct_proj_def(*subnode);
-			else if constexpr (std::is_same_v<type, node_ref<rpc_ptr_def>>)
-				return self.visit_rpc_ptr_def(*subnode);
 			else
 				assert(false);
 		};
@@ -371,12 +341,6 @@ namespace idlc::ast {
 		bool visit_rpc_def(const rpc_def& node)
 		{
 			traverse_rpc_def(self(), node);
-			return true;
-		}
-
-		bool visit_rpc_ptr_def(const rpc_ptr_def& node)
-		{
-			traverse_rpc_ptr_def(self(), node);
 			return true;
 		}
 
@@ -520,13 +484,6 @@ namespace idlc::ast {
 		{
 			std::cout << "[Nullwalk] rpc_def" << std::endl;
 			traverse_rpc_def(*this, node);
-			return true;
-		}
-
-		bool visit_rpc_ptr_def(const rpc_ptr_def& node)
-		{
-			std::cout << "[Nullwalk] rpc_ptr_def" << std::endl;
-			traverse_rpc_ptr_def(*this, node);
 			return true;
 		}
 

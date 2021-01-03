@@ -31,7 +31,7 @@
 
 namespace idlc::sema {
 	struct types_rib {
-		std::map<gsl::czstring<>, const ast::rpc_ptr_def*> rpcs {};
+		std::map<gsl::czstring<>, const ast::rpc_def*> rpcs {};
 		std::map<gsl::czstring<>, const ast::struct_proj_def*> structs {};
 		std::map<gsl::czstring<>, const ast::union_proj_def*> unions {};
 	};
@@ -70,19 +70,6 @@ namespace idlc::sema {
 			std::cout << "[Scopes] Creating value scope for rpc def \"" << node.name << "\"" << std::endl;
 			
 			return ast::traverse_rpc_def(*this, node);
-		}
-
-		bool visit_rpc_ptr_def(const ast::rpc_ptr_def& node)
-		{
-			types_.push_back({}); // TODO: inefficient?
-			type_scopes_[&node] = &types_.back();
-			std::cout << "[Scopes] Creating type scope for rpc pointer def \"" << node.name << "\"" << std::endl;
-
-			values_.push_back({});
-			val_scopes_[&node] = &values_.back();
-			std::cout << "[Scopes] Creating value scope for rpc pointer def \"" << node.name << "\"" << std::endl;
-
-			return ast::traverse_rpc_ptr_def(*this, node);
 		}
 
 		bool visit_naked_proj_decl(const ast::naked_proj_decl& node)
@@ -140,6 +127,11 @@ namespace idlc::sema {
 
 		bool visit_rpc_def(const ast::rpc_def& node)
 		{
+			if (node.kind == ast::rpc_def_kind::indirect) {
+				types_->rpcs[node.name] = &node;
+				std::cout << "[Scopes] Inserted rpc pointer \"" << node.name << "\"" << std::endl;
+			}
+
 			const auto t_old = types_;
 			types_ = tscopes_[&node];
 			const auto v_old = values_;
@@ -183,25 +175,6 @@ namespace idlc::sema {
 			if (!traverse_union_proj_def(*this, node))
 				return false;
 
-			values_ = v_old;
-
-			return true;
-		}
-
-		bool visit_rpc_ptr_def(const ast::rpc_ptr_def& node)
-		{
-			types_->rpcs[node.name] = &node;
-			std::cout << "[Scopes] Inserted rpc pointer \"" << node.name << "\"" << std::endl;
-
-			const auto t_old = types_;
-			types_ = tscopes_[&node];
-			const auto v_old = values_;
-			values_ = vscopes_[&node];
-			
-			if (!traverse_rpc_ptr_def(*this, node))
-				return false;
-
-			types_ = t_old;
 			values_ = v_old;
 
 			return true;

@@ -248,7 +248,7 @@ module_item = header_stmt {{
 }} | rpc:rpc_def {{
 	value = share(module_item {get_shared<rpc_def>(rpc)});
 }} | rpc_ptr:rpc_ptr_def {{
-	value = share(module_item {get_shared<rpc_ptr_def>(rpc_ptr)});
+	value = share(module_item {get_shared<rpc_def>(rpc_ptr)});
 }}
 
 header_stmt = tok_kw_header tok_space? tok_path tok_space? tok_semi
@@ -482,16 +482,18 @@ rpc_def = tok_kw_rpc tok_space? ret_t:ret_type tok_space? name:tok_ident tok_spa
 		get_shared<tyname>(ret_t),
 		to_ptr<gsl::czstring<>>(name),
 		get_shared<std::vector<node_ref<var_decl>>>(args),
-		get_shared<std::vector<node_ref<rpc_item>>>(projs)
+		get_shared<std::vector<node_ref<rpc_item>>>(projs),
+		rpc_def_kind::direct
 	});
 }}
 
 rpc_ptr_def = tok_kw_rpc_ptr tok_space? ret_t:ret_type tok_space? name:tok_ident tok_space? tok_lpar args:(tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace projs:(tok_space? rpc_item_list)? tok_space? tok_rbrace {{
-	value = share(rpc_ptr_def {
+	value = share(rpc_def {
 		get_shared<tyname>(ret_t),
 		to_ptr<gsl::czstring<>>(name),
 		get_shared<std::vector<node_ref<var_decl>>>(args),
-		get_shared<std::vector<node_ref<rpc_item>>>(projs)
+		get_shared<std::vector<node_ref<rpc_item>>>(projs),
+		rpc_def_kind::indirect
 	});
 }}
 
@@ -511,7 +513,7 @@ rpc_item = ud:union_proj_def {{
 }} | sd:struct_proj_def {{
 	value = share(rpc_item {get_shared<struct_proj_def>(sd)});
 }} | rptr:rpc_ptr_def {{
-	value = share(rpc_item {get_shared<rpc_ptr_def>(rptr)});
+	value = share(rpc_item {get_shared<rpc_def>(rptr)});
 }}
 
 argument_list = first:var_decl rest:(tok_space? tok_comma tok_space? var_decl)* {{
