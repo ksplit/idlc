@@ -16,6 +16,15 @@ namespace idlc::ast {
 	template<typename type>
 	using node_ref = gsl::not_null<node_ptr<type>>;
 
+	template<typename type>
+	using ptr_vec = std::vector<node_ptr<type>>;
+
+	template<typename type>
+	using ref_vec = std::vector<node_ref<type>>;
+
+	using ident = gsl::czstring<>;
+	using ident_vec = std::vector<ident>;
+
 	struct module_def;
 	struct driver_def;
 	struct driver_file;
@@ -35,11 +44,12 @@ namespace idlc::ast {
 	// struct field_rel_ref;
 	// struct field_abs_ref;
 
-	struct tok_kw_null; // Doesn't exist in parse rules, used as marker (represents tok_kw_null)
+	// TODO: can this be removed?
+	struct tok_kw_null {}; // Doesn't exist in parse rules, used as marker (represents tok_kw_null)
 	
 	using file = std::variant<node_ref<driver_file>, node_ref<std::vector<node_ref<module_def>>>>;
 	// using field_ref = std::variant<node_ref<field_abs_ref>, node_ref<field_rel_ref>>;
-	using array_size = std::variant<unsigned, tok_kw_null, gsl::czstring<>>;
+	using array_size = std::variant<unsigned, tok_kw_null, ident>;
 	using proj_field = std::variant<node_ref<var_decl>, node_ref<naked_proj_decl>>;
 	using tyname_stem = std::variant<
 		tyname_arith,
@@ -83,14 +93,28 @@ namespace idlc::ast {
 	}
 
 	struct driver_def {
-		gsl::czstring<> name;
-		node_ptr<std::vector<gsl::czstring<>>> imports;
+		ident name;
+		node_ptr<ident_vec> imports;
+
+		driver_def(ident name, node_ptr<ident_vec> imports) :
+			name {name},
+			imports {imports}
+		{}
 	};
 
 	struct driver_file {
-		node_ptr<std::vector<gsl::czstring<>>> former;
+		node_ptr<ident_vec> former;
 		node_ref<driver_def> driver;
-		node_ptr<std::vector<gsl::czstring<>>> latter;
+		node_ptr<ident_vec> latter;
+
+		driver_file(node_ptr<ident_vec> former,
+			node_ref<driver_def> driver,
+			node_ptr<ident_vec> latter
+		) :
+			former {former},
+			driver {driver},
+			latter {latter}
+		{}
 	};
 
 	enum class tyname_arith {
@@ -109,32 +133,50 @@ namespace idlc::ast {
 	};
 
 	struct tyname_proj {
-		gsl::czstring<> name;
+		ident name;
+
+		tyname_proj(ident name) :
+			name {name}
+		{}
 	};
 
 	struct tyname_rpc {
-		gsl::czstring<> name;
+		ident name;
+
+		tyname_rpc(ident name) :
+			name {name}
+		{}
 	};
 
 	struct tyname_array {
 		node_ref<tyname> element;
 		node_ref<array_size> size;
+
+		tyname_array(node_ref<tyname> element, node_ref<array_size> size) :
+			element {element},
+			size {size}
+		{}
 	};
 
 	struct tyname_any_of_ptr {
-		gsl::czstring<> discrim;
-		node_ref<std::vector<node_ref<tyname>>> types;
-	};
+		ident discrim;
+		node_ref<ref_vec<tyname>> types;
 
-	// Marker, subject to removal if I have a better way of representing it in-tree
-	struct tok_kw_null {};
+		tyname_any_of_ptr(
+			ident discrim,
+			node_ref<ref_vec<tyname>> types
+		) :
+			discrim {discrim},
+			types {types}
+		{}
+	};
 
 	// struct field_abs_ref {
 	// 	node_ref<field_rel_ref> link;
 	// };
 
 	// struct field_rel_ref {
-	// 	std::vector<gsl::czstring<>> links;
+	// 	idents links;
 	// };
 
 	// Another marker
@@ -144,23 +186,51 @@ namespace idlc::ast {
 	struct indirection {
 		tags attrs; // Contextually, both ptr and value attrs
 		bool is_const;
+
+		indirection(tags attrs, bool is_const) :
+			attrs {attrs},
+			is_const {is_const}
+		{}
 	};
 
+	// FIXME: field order
 	struct tyname {
 		bool is_const;
 		node_ref<tyname_stem> stem;
 		std::vector<node_ref<indirection>> indirs;
 		tags attrs; // Will only ever have value attrs in it
+
+		tyname(
+			bool is_const,
+			node_ref<tyname_stem> stem,
+			std::vector<node_ref<indirection>> indirs,
+			tags attrs
+		) :
+			is_const {is_const},
+			stem {stem},
+			indirs {indirs},
+			attrs {attrs}
+		{}
 	};
 
 	struct var_decl {
 		node_ref<tyname> type;
-		gsl::czstring<> name;
+		ident name;
+
+		var_decl(node_ref<tyname> type, ident name) :
+			type {type},
+			name {name}
+		{}
 	};
 
 	struct naked_proj_decl {
 		node_ptr<std::vector<node_ref<proj_field>>> fields;
-		gsl::czstring<> name;
+		ident name;
+
+		naked_proj_decl(node_ptr<std::vector<node_ref<proj_field>>> fields, ident name) :
+			fields {fields},
+			name {name}
+		{}
 	};
 
 	enum proj_def_kind {
@@ -169,14 +239,14 @@ namespace idlc::ast {
 	};
 
 	struct proj_def {
-		gsl::czstring<> name;
-		gsl::czstring<> type;
+		ident name;
+		ident type;
 		node_ptr<std::vector<node_ref<proj_field>>> fields;
 		proj_def_kind kind;
 
 		proj_def(
-			gsl::czstring<> name,
-			gsl::czstring<> type,
+			ident name,
+			ident type,
 			node_ptr<std::vector<node_ref<proj_field>>> fields,
 			proj_def_kind kind
 		) :
@@ -196,14 +266,14 @@ namespace idlc::ast {
 
 	struct rpc_def {
 		node_ptr<tyname> ret_type; // null type is used for <void>
-		gsl::czstring<> name;
+		ident name;
 		node_ptr<std::vector<node_ref<var_decl>>> arguments;
 		node_ptr<std::vector<node_ref<rpc_item>>> items;
 		rpc_def_kind kind;
 
 		rpc_def(
 			node_ptr<tyname> ret_type,
-			gsl::czstring<> name,
+			ident name,
 			node_ptr<std::vector<node_ref<var_decl>>> arguments,
 			node_ptr<std::vector<node_ref<rpc_item>>> items,
 			rpc_def_kind kind
@@ -226,8 +296,13 @@ namespace idlc::ast {
 	>;
 
 	struct module_def {
-		gsl::czstring<> name;
+		ident name;
 		node_ptr<std::vector<node_ref<module_item>>> items;
+
+		module_def(ident name, node_ptr<std::vector<node_ref<module_item>>> items) :
+			name {name},
+			items {items}
+		{}
 	};
 }
 
