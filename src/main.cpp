@@ -70,7 +70,22 @@
 	Roslyn red-green trees may be useful in some places
 */
 
-using namespace idlc;
+namespace idlc {
+	namespace {
+		constexpr auto enable_nullwalk = false;
+
+		void dump_tree(const idlc::ast::file& root)
+		{
+			if constexpr (enable_nullwalk) {
+				ast::null_walk walk {};
+				walk.visit_file(root);
+			}
+		}
+	}
+}
+
+// TODO: we could store projection pgraphs in-tree, would avoid having to engineer a separate DB,
+// could possibly help with any future extension efforts
 
 int main(int argc, char** argv)
 {
@@ -80,15 +95,11 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    const auto driver_idl = parser::parse_file(gsl::at(args, 1));
+    const auto driver_idl = idlc::parser::parse_file(gsl::at(args, 1));
     if (!driver_idl)
         return 1;
 
 	const auto& file = *driver_idl;
 	std::cout << "[parse] File was parsed correctly" << std::endl;
-	// TODO: we could store projection pgraphs in-tree, would avoid having to engineer a separate DB,
-	// could possibly help with any future extension efforts
-
-	ast::null_walk walk {};
-	walk.visit_file(file);
+	idlc::dump_tree(file);
 }
