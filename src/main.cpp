@@ -5,9 +5,6 @@
 #include <gsl/gsl>
 
 #include "parser/idl_parse.h"
-#include "sema/nodedb.h"
-#include "pgraph/tree.h"
-#include "pgraph/construction.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 
@@ -88,11 +85,6 @@ int main(int argc, char** argv)
 
 	const auto& file = *driver_idl;
 	std::cout << "[parse] File was parsed correctly" << std::endl;
-
-	const auto types_db = sema::build_types_db(file);
-	sema::dump(types_db);
-
-	const auto rpc_table = pgraph::build_rpc_table(file, types_db);
 	// TODO: we could store projection pgraphs in-tree, would avoid having to engineer a separate DB,
 	// could possibly help with any future extension efforts
 }
