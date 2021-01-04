@@ -5,6 +5,7 @@
 #include <gsl/gsl>
 
 #include "parser/idl_parse.h"
+#include "ast/walk.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 
@@ -87,4 +88,7 @@ int main(int argc, char** argv)
 	std::cout << "[parse] File was parsed correctly" << std::endl;
 	// TODO: we could store projection pgraphs in-tree, would avoid having to engineer a separate DB,
 	// could possibly help with any future extension efforts
+
+	ast::null_walk walk {};
+	walk.visit_file(file);
 }

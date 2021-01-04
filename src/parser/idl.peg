@@ -311,8 +311,8 @@ proj_field = vf:var_field {{
 	value = share(proj_field {get_shared<naked_proj_decl>(npd)});
 }}
 
-var_decl = ty:tyname tok_space? name:tok_ident {{
-	value = share(var_decl {get_shared<tyname>(ty), to_ptr<ident>(name)});
+var_decl = ty:type_spec tok_space? name:tok_ident {{
+	value = share(var_decl {get_shared<type_spec>(ty), to_ptr<ident>(name)});
 }}
 
 naked_proj_decl = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_struct tok_space? tok_rangle tok_space? tok_lbrace fields:(tok_space? proj_field_list)? tok_space? tok_rbrace tok_space? name:tok_ident tok_space? tok_semi {{
@@ -322,50 +322,50 @@ naked_proj_decl = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_stru
 	});
 }}
 
-val_attr = tok_kw_in {{ value = reinterpret_cast<void*>(tags::in); }}
-	| tok_kw_out {{ value = reinterpret_cast<void*>(tags::out); }}
+val_attr = tok_kw_in {{ value = reinterpret_cast<void*>(annotation::in); }}
+	| tok_kw_out {{ value = reinterpret_cast<void*>(annotation::out); }}
 
-ptr_attr = tok_kw_in {{ value = reinterpret_cast<void*>(tags::in); }}
-	| tok_kw_out {{ value = reinterpret_cast<void*>(tags::out); }}
+ptr_attr = tok_kw_in {{ value = reinterpret_cast<void*>(annotation::in); }}
+	| tok_kw_out {{ value = reinterpret_cast<void*>(annotation::out); }}
 	| tok_kw_alloc tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = reinterpret_cast<void*>(tags::alloc_caller);
+		value = reinterpret_cast<void*>(annotation::alloc_caller);
 	}}
 	| tok_kw_alloc tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = reinterpret_cast<void*>(tags::alloc_callee);
+		value = reinterpret_cast<void*>(annotation::alloc_callee);
 	}}
 	| tok_kw_dealloc tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = reinterpret_cast<void*>(tags::dealloc_caller);
+		value = reinterpret_cast<void*>(annotation::dealloc_caller);
 	}}
 	| tok_kw_dealloc tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = reinterpret_cast<void*>(tags::dealloc_callee);
+		value = reinterpret_cast<void*>(annotation::dealloc_callee);
 	}}
 	| tok_kw_bind tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = reinterpret_cast<void*>(tags::bind_caller);
+		value = reinterpret_cast<void*>(annotation::bind_caller);
 	}}
 	| tok_kw_bind tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = reinterpret_cast<void*>(tags::bind_callee);
+		value = reinterpret_cast<void*>(annotation::bind_callee);
 	}}
-	| tok_kw_alloc {{ value = reinterpret_cast<void*>(tags::is_alloc); }}
-	| tok_kw_dealloc {{ value = reinterpret_cast<void*>(tags::is_dealloc); }}
-	| tok_kw_bind {{ value = reinterpret_cast<void*>(tags::is_bind); }}
+	| tok_kw_alloc {{ value = reinterpret_cast<void*>(annotation::is_alloc); }}
+	| tok_kw_dealloc {{ value = reinterpret_cast<void*>(annotation::is_dealloc); }}
+	| tok_kw_bind {{ value = reinterpret_cast<void*>(annotation::is_bind); }}
 
 val_attrs = tok_lbrack tok_space? list:val_attr_list tok_space? tok_rbrack {{ value = list; }}
 
 ptr_attrs = tok_lbrack tok_space? list:ptr_attr_list tok_space? tok_rbrack {{ value = list; }}
 
 val_attr_list = first:val_attr rest:(tok_space? tok_comma tok_space? val_attr)* {{
-	auto f = to_int<tags>(first);
+	auto f = to_int<annotation>(first);
 	for (const auto r : rest.getValues()) {
-		f |= to_int<tags>(r);
+		f |= to_int<annotation>(r);
 	}
 
 	value = reinterpret_cast<void*>(f);
 }}
 
 ptr_attr_list = first:ptr_attr rest:(tok_space? tok_comma tok_space? ptr_attr)* {{
-	auto f = to_int<tags>(first);
+	auto f = to_int<annotation>(first);
 	for (const auto r : rest.getValues()) {
-		f |= to_int<tags>(r);
+		f |= to_int<annotation>(r);
 	}
 
 	value = reinterpret_cast<void*>(f);
@@ -374,31 +374,31 @@ ptr_attr_list = first:ptr_attr rest:(tok_space? tok_comma tok_space? ptr_attr)* 
 # NOTE: we don't need type spacing rules for parsing since that parse will just fail in contexts where it's needed
 # We'd only need if we were generating it, and even then we'd just pessimistically insert spaces anyways
 
-tyname_arith = "u64" {{
-	value = reinterpret_cast<void*>(tyname_arith::ty_ullong);
+type_primitive = "u64" {{
+	value = reinterpret_cast<void*>(type_primitive::ty_ullong);
 }} | "s64" {{
-	value = reinterpret_cast<void*>(tyname_arith::ty_llong);
+	value = reinterpret_cast<void*>(type_primitive::ty_llong);
 }} | "u32" {{
-	value = reinterpret_cast<void*>(tyname_arith::ty_uint);
+	value = reinterpret_cast<void*>(type_primitive::ty_uint);
 }} | "u16" {{
-	value = reinterpret_cast<void*>(tyname_arith::ty_ushort);
+	value = reinterpret_cast<void*>(type_primitive::ty_ushort);
 }} | "u8" {{
-	value = reinterpret_cast<void*>(tyname_arith::ty_uchar);
+	value = reinterpret_cast<void*>(type_primitive::ty_uchar);
 }} | "s8" {{
-	value = reinterpret_cast<void*>(tyname_arith::ty_schar);
+	value = reinterpret_cast<void*>(type_primitive::ty_schar);
 }} | "s16" {{
-	value = reinterpret_cast<void*>(tyname_arith::ty_short);
+	value = reinterpret_cast<void*>(type_primitive::ty_short);
 }} | "s32" {{
-	value = reinterpret_cast<void*>(tyname_arith::ty_int);
+	value = reinterpret_cast<void*>(type_primitive::ty_int);
 }} | tok_kw_char {{
-	value = reinterpret_cast<void*>(tyname_arith::ty_char);
+	value = reinterpret_cast<void*>(type_primitive::ty_char);
 }} | tok_kw_bool {{
-	value = reinterpret_cast<void*>(tyname_arith::ty_bool);
+	value = reinterpret_cast<void*>(type_primitive::ty_bool);
 }}
 
 # Do note that there is very little difference between const array<int, 10> and array<const int, 10>.
-tyname_array = tok_kw_array tok_space? tok_langle tok_space? type:tyname tok_space? tok_comma tok_space? size:array_size tok_space? tok_rangle {{
-	value = share(tyname_array {get_shared<tyname>(type), get_shared<array_size>(size)});
+type_array = tok_kw_array tok_space? tok_langle tok_space? type:type_spec tok_space? tok_comma tok_space? size:array_size tok_space? tok_rangle {{
+	value = share(type_array {get_shared<type_spec>(type), get_shared<array_size>(size)});
 }}
 
 array_size = n:tok_number {{
@@ -410,66 +410,66 @@ array_size = n:tok_number {{
 }}
 
 # Literally just an alias for array<char, null>
-tyname_string = tok_kw_string
+type_string = tok_kw_string
 
-tyname_rpc = tok_kw_rpc_ptr tok_space name:tok_ident {{
-	value = share(tyname_rpc {to_ptr<ident>(name)});
+type_rpc = tok_kw_rpc_ptr tok_space name:tok_ident {{
+	value = share(type_rpc {to_ptr<ident>(name)});
 }}
 
-tyname_proj = tok_kw_projection tok_space name:tok_ident {{
-	value = share(tyname_proj {to_ptr<ident>(name)});
+type_proj = tok_kw_projection tok_space name:tok_ident {{
+	value = share(type_proj {to_ptr<ident>(name)});
 }}
 
-tyname_any_of = tok_kw_any_of tok_space? tok_langle tok_space? ref:tok_ident tok_space? tok_comma tok_space? types:type_list tok_space? tok_rangle {{
-	value = share(tyname_any_of_ptr {to_ptr<ident>(ref), get_shared<ref_vec<tyname>>(types)});
+type_any_of = tok_kw_any_of tok_space? tok_langle tok_space? ref:tok_ident tok_space? tok_comma tok_space? types:type_list tok_space? tok_rangle {{
+	value = share(type_any_of {to_ptr<ident>(ref), get_shared<ref_vec<type_spec>>(types)});
 }}
 
-type_list = head:tyname rest:(tok_space? tok_comma tok_space? tyname)* {{
+type_list = head:type_spec rest:(tok_space? tok_comma tok_space? type_spec)* {{
 	const auto rvals = rest.getValues();
-	ref_vec<tyname> types {};
+	ref_vec<type_spec> types {};
 	types.reserve(rvals.size() + 1);
-	types.push_back(get_shared<tyname>(head));
+	types.push_back(get_shared<type_spec>(head));
 	for (const auto& type : rvals)
-		types.push_back(get_shared<tyname>(type));
+		types.push_back(get_shared<type_spec>(type));
 
 	value = share(std::move(types));
 }}
 
 # These are types free of const or pointers
-tyname_stem = arr:tyname_array {{
-	value = share(tyname_stem {get_shared<tyname_array>(arr)});
-}} | str:tyname_string {{
-	value = share(tyname_stem {tyname_string {} }); // yes, this is a tag
-}} | rpc:tyname_rpc {{
-	value = share(tyname_stem {get_shared<tyname_rpc>(rpc)});
-}} | proj:tyname_proj {{
-	value = share(tyname_stem {get_shared<tyname_proj>(proj)});
-}} | arith:tyname_arith {{
-	value = share(tyname_stem {to_int<tyname_arith>(arr)});
-}} | any:tyname_any_of {{
-	value = share(tyname_stem {get_shared<tyname_any_of_ptr>(any)});
+type_stem = arr:type_array {{
+	value = share(type_stem {get_shared<type_array>(arr)});
+}} | str:type_string {{
+	value = share(type_stem {type_string {} }); // yes, this is a tag
+}} | rpc:type_rpc {{
+	value = share(type_stem {get_shared<type_rpc>(rpc)});
+}} | proj:type_proj {{
+	value = share(type_stem {get_shared<type_proj>(proj)});
+}} | arith:type_primitive {{
+	value = share(type_stem {to_int<type_primitive>(arr)});
+}} | any:type_any_of {{
+	value = share(type_stem {get_shared<type_any_of>(any)});
 }}
 
 indirection = attrs:(val:ptr_attrs tok_space? {{ value = val; }})? tok_star is_c:(tok_space? tok_kw_const)? {{
-	value = share(indirection {to_int<tags>(attrs), is_c.getValue()});
+	value = share(indirection {to_int<annotation>(attrs), is_c.getValue()});
 }}
 
 # TODO: attributes
-tyname = is_c:(tok_kw_const tok_space)? stem:tyname_stem indirs:(tok_space? indirection)* val_tags:(tok_space? val_attrs)? {{
+type_spec = is_c:(tok_kw_const tok_space)? stem:type_stem indirs:(tok_space? indirection)* val_annotation:(tok_space? val_attrs)? {{
 	auto& ivals = indirs.getValues();
 	ref_vec<indirection> a {};
 	a.reserve(ivals.size());
 	for (const auto& indir : ivals)
 		a.push_back(get_shared<indirection>(indir));
 
-	value = share(tyname {is_c.getValue(), get_shared<tyname_stem>(stem), std::move(a), to_int<tags>(val_tags)});
+	value = share(type_spec {is_c.getValue(), get_shared<type_stem>(stem), std::move(a), to_int<annotation>(val_annotation)});
 }}
 
-ret_type = tyname | tok_kw_void {{ // TODO: explicit? }}
+ret_type = type_spec | tok_kw_void {{ // TODO: explicit? }}
 
 rpc_def = tok_kw_rpc tok_space? ret_t:ret_type tok_space? name:tok_ident tok_space? tok_lpar args:(tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace projs:(tok_space? rpc_item_list)? tok_space? tok_rbrace {{
 	value = share(rpc_def {
-		get_shared<tyname>(ret_t),
+		get_shared<type_spec>(ret_t),
 		to_ptr<ident>(name),
 		get_shared<ref_vec<var_decl>>(args),
 		get_shared<ref_vec<rpc_item>>(projs),
@@ -479,7 +479,7 @@ rpc_def = tok_kw_rpc tok_space? ret_t:ret_type tok_space? name:tok_ident tok_spa
 
 rpc_ptr_def = tok_kw_rpc_ptr tok_space? ret_t:ret_type tok_space? name:tok_ident tok_space? tok_lpar args:(tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace projs:(tok_space? rpc_item_list)? tok_space? tok_rbrace {{
 	value = share(rpc_def {
-		get_shared<tyname>(ret_t),
+		get_shared<type_spec>(ret_t),
 		to_ptr<ident>(name),
 		get_shared<ref_vec<var_decl>>(args),
 		get_shared<ref_vec<rpc_item>>(projs),

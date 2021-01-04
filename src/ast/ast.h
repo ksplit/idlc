@@ -8,8 +8,6 @@
 #include <gsl/gsl>
 
 namespace idlc::ast {
-	// TODO: wrap the "node-like" vectors?
-
 	template<typename type>
 	using node_ptr = std::shared_ptr<type>;
 	
@@ -28,13 +26,13 @@ namespace idlc::ast {
 	struct module_def;
 	struct driver_def;
 	struct driver_file;
-	enum class tyname_arith;
-	struct tyname_rpc;
-	struct tyname_proj;
-	struct tyname_array;
-	struct tyname_any_of_ptr;
-	struct tyname_string;
-	struct tyname;
+	enum class type_primitive;
+	struct type_rpc;
+	struct type_proj;
+	struct type_array;
+	struct type_any_of;
+	struct type_string;
+	struct type_spec;
 
 	struct naked_proj_decl;
 	struct var_decl;
@@ -47,21 +45,21 @@ namespace idlc::ast {
 	// TODO: can this be removed?
 	struct tok_kw_null {}; // Doesn't exist in parse rules, used as marker (represents tok_kw_null)
 	
-	using file = std::variant<node_ref<driver_file>, node_ref<std::vector<node_ref<module_def>>>>;
+	using file = std::variant<node_ref<driver_file>, node_ref<ref_vec<module_def>>>;
 	// using field_ref = std::variant<node_ref<field_abs_ref>, node_ref<field_rel_ref>>;
 	using array_size = std::variant<unsigned, tok_kw_null, ident>;
 	using proj_field = std::variant<node_ref<var_decl>, node_ref<naked_proj_decl>>;
-	using tyname_stem = std::variant<
-		tyname_arith,
-		tyname_string,
-		node_ref<tyname_rpc>,
-		node_ref<tyname_proj>,
-		node_ref<tyname_array>,
-		node_ref<tyname_any_of_ptr>
+	using type_stem = std::variant<
+		type_primitive,
+		type_string,
+		node_ref<type_rpc>,
+		node_ref<type_proj>,
+		node_ref<type_array>,
+		node_ref<type_any_of>
 	>;
 
 	// TODO: clean this up?
-	enum class tags {
+	enum class annotation {
 		alloc_caller	= 0b100000001,
 		alloc_callee	= 0b100000010,
 		dealloc_caller	= 0b100000100,
@@ -79,17 +77,17 @@ namespace idlc::ast {
 		use_default		= 0b000000000, // will not set the is_set flag, thus ensuring it will be defaulted
 	};
 
-	inline auto& operator|=(tags& a, tags b) {
+	inline auto& operator|=(annotation& a, annotation b) {
 		auto val = static_cast<std::uintptr_t>(a);
 		val |= static_cast<std::uintptr_t>(b);
-		a = static_cast<tags>(val);
+		a = static_cast<annotation>(val);
 		return a;
 	}
 
-	inline auto operator&(tags a, tags b) {
+	inline auto operator&(annotation a, annotation b) {
 		auto val = static_cast<std::uintptr_t>(a);
 		val &= static_cast<std::uintptr_t>(b);
-		return static_cast<tags>(val);
+		return static_cast<annotation>(val);
 	}
 
 	struct driver_def {
@@ -117,7 +115,7 @@ namespace idlc::ast {
 		{}
 	};
 
-	enum class tyname_arith {
+	enum class type_primitive {
 		ty_bool,
 		ty_char,
 		ty_schar,
@@ -132,39 +130,39 @@ namespace idlc::ast {
 		ty_ullong
 	};
 
-	struct tyname_proj {
+	struct type_proj {
 		ident name;
 
-		tyname_proj(ident name) :
+		type_proj(ident name) :
 			name {name}
 		{}
 	};
 
-	struct tyname_rpc {
+	struct type_rpc {
 		ident name;
 
-		tyname_rpc(ident name) :
+		type_rpc(ident name) :
 			name {name}
 		{}
 	};
 
-	struct tyname_array {
-		node_ref<tyname> element;
+	struct type_array {
+		node_ref<type_spec> element;
 		node_ref<array_size> size;
 
-		tyname_array(node_ref<tyname> element, node_ref<array_size> size) :
+		type_array(node_ref<type_spec> element, node_ref<array_size> size) :
 			element {element},
 			size {size}
 		{}
 	};
 
-	struct tyname_any_of_ptr {
+	struct type_any_of {
 		ident discrim;
-		node_ref<ref_vec<tyname>> types;
+		node_ref<ref_vec<type_spec>> types;
 
-		tyname_any_of_ptr(
+		type_any_of(
 			ident discrim,
-			node_ref<ref_vec<tyname>> types
+			node_ref<ref_vec<type_spec>> types
 		) :
 			discrim {discrim},
 			types {types}
@@ -181,30 +179,30 @@ namespace idlc::ast {
 
 	// Another marker
 	// NOTE: since these don't actually exist in any meaningful sense, their own parse rules don't produce them
-	struct tyname_string {};
+	struct type_string {};
 
 	struct indirection {
-		tags attrs; // Contextually, both ptr and value attrs
+		annotation attrs; // Contextually, both ptr and value attrs
 		bool is_const;
 
-		indirection(tags attrs, bool is_const) :
+		indirection(annotation attrs, bool is_const) :
 			attrs {attrs},
 			is_const {is_const}
 		{}
 	};
 
 	// FIXME: field order
-	struct tyname {
+	struct type_spec {
 		bool is_const;
-		node_ref<tyname_stem> stem;
-		std::vector<node_ref<indirection>> indirs;
-		tags attrs; // Will only ever have value attrs in it
+		node_ref<type_stem> stem;
+		ref_vec<indirection> indirs;
+		annotation attrs; // Will only ever have value attrs in it
 
-		tyname(
+		type_spec(
 			bool is_const,
-			node_ref<tyname_stem> stem,
-			std::vector<node_ref<indirection>> indirs,
-			tags attrs
+			node_ref<type_stem> stem,
+			ref_vec<indirection> indirs,
+			annotation attrs
 		) :
 			is_const {is_const},
 			stem {stem},
@@ -214,20 +212,20 @@ namespace idlc::ast {
 	};
 
 	struct var_decl {
-		node_ref<tyname> type;
+		node_ref<type_spec> type;
 		ident name;
 
-		var_decl(node_ref<tyname> type, ident name) :
+		var_decl(node_ref<type_spec> type, ident name) :
 			type {type},
 			name {name}
 		{}
 	};
 
 	struct naked_proj_decl {
-		node_ptr<std::vector<node_ref<proj_field>>> fields;
+		node_ptr<ref_vec<proj_field>> fields;
 		ident name;
 
-		naked_proj_decl(node_ptr<std::vector<node_ref<proj_field>>> fields, ident name) :
+		naked_proj_decl(node_ptr<ref_vec<proj_field>> fields, ident name) :
 			fields {fields},
 			name {name}
 		{}
@@ -241,13 +239,13 @@ namespace idlc::ast {
 	struct proj_def {
 		ident name;
 		ident type;
-		node_ptr<std::vector<node_ref<proj_field>>> fields;
+		node_ptr<ref_vec<proj_field>> fields;
 		proj_def_kind kind;
 
 		proj_def(
 			ident name,
 			ident type,
-			node_ptr<std::vector<node_ref<proj_field>>> fields,
+			node_ptr<ref_vec<proj_field>> fields,
 			proj_def_kind kind
 		) :
 			name {name},
@@ -265,17 +263,17 @@ namespace idlc::ast {
 	};
 
 	struct rpc_def {
-		node_ptr<tyname> ret_type; // null type is used for <void>
+		node_ptr<type_spec> ret_type; // null type is used for <void>
 		ident name;
-		node_ptr<std::vector<node_ref<var_decl>>> arguments;
-		node_ptr<std::vector<node_ref<rpc_item>>> items;
+		node_ptr<ref_vec<var_decl>> arguments;
+		node_ptr<ref_vec<rpc_item>> items;
 		rpc_def_kind kind;
 
 		rpc_def(
-			node_ptr<tyname> ret_type,
+			node_ptr<type_spec> ret_type,
 			ident name,
-			node_ptr<std::vector<node_ref<var_decl>>> arguments,
-			node_ptr<std::vector<node_ref<rpc_item>>> items,
+			node_ptr<ref_vec<var_decl>> arguments,
+			node_ptr<ref_vec<rpc_item>> items,
 			rpc_def_kind kind
 		) :
 			ret_type {ret_type},
@@ -297,9 +295,9 @@ namespace idlc::ast {
 
 	struct module_def {
 		ident name;
-		node_ptr<std::vector<node_ref<module_item>>> items;
+		node_ptr<ref_vec<module_item>> items;
 
-		module_def(ident name, node_ptr<std::vector<node_ref<module_item>>> items) :
+		module_def(ident name, node_ptr<ref_vec<module_item>> items) :
 			name {name},
 			items {items}
 		{}
