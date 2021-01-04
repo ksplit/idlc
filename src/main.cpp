@@ -93,4 +93,6 @@ int main(int argc, char** argv)
 	sema::dump(types_db);
 
 	const auto rpc_table = pgraph::build_rpc_table(file, types_db);
+	// TODO: we could store projection pgraphs in-tree, would avoid having to engineer a separate DB,
+	// could possibly help with any future extension efforts
 }

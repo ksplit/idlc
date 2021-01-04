@@ -105,6 +105,11 @@ namespace idlc::pgraph {
 	struct array_layout {
 		unsigned size;
 		std::unique_ptr<field> elem;
+
+		array_layout(unsigned size, std::unique_ptr<field> elem) :
+			size {size},
+			elem {std::move(elem)}
+		{}
 	};
 
 	struct dyn_array_layout {

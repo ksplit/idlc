@@ -373,7 +373,6 @@ ptr_attr_list = first:ptr_attr rest:(tok_space? tok_comma tok_space? ptr_attr)* 
 	value = reinterpret_cast<void*>(f);
 }}
 
-# HACK: we sort these alternates by length to get the parser to greedy-match them
 # NOTE: we don't need type spacing rules for parsing since that parse will just fail in contexts where it's needed
 # We'd only need if we were generating it, and even then we'd just pessimistically insert spaces anyways
 

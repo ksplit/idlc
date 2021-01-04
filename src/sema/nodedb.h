@@ -41,13 +41,14 @@ namespace idlc::sema {
 
 	/*******************************************************************************************************************
 		Type scope database
+		This is very quickly becoming a kind of symbol table
 	*******************************************************************************************************************/
 
 	using type_scope_chain = std::vector<gsl::not_null<const types_rib*>>;
 	using type_scope_chain_table = std::map<node_id, type_scope_chain>;
 
 	struct type_scope_db {
-		std::list<std::unique_ptr<types_rib>> scopes;
+		std::list<std::unique_ptr<types_rib>> scopes; // NOTE: is a list because we don't actually need to traverse it
 		type_scope_chain_table scope_chains;
 	};
 

@@ -16,12 +16,13 @@ using namespace idlc::pgraph;
 
 namespace idlc::pgraph {
 	namespace {
-		class build_field_pass : public ast::ast_walk<build_field_pass> {
-		public:
+		// NOTE: to what extent the type_scope_db argument is actually needed here is unclear
 
-
-		private:
-		};
+		field build_field(
+			const ast::tyname& node,
+			const sema::type_scope_db& types,
+			const sema::type_scope_chain& scope_chain
+		);
 
 		layout build_array_layout(
 			const ast::tyname_array& node,
@@ -31,6 +32,7 @@ namespace idlc::pgraph {
 		{
 			// TODO: Finish me
 			std::cout << "[debug] Noted, but did not construct an array layout\n";
+			// array_layout layout {0, std::make_unique<field>(build_field(*node.element, types, scope_chain))};
 			return {};
 		}
 
@@ -71,6 +73,7 @@ namespace idlc::pgraph {
 			const auto proj_def = sema::find_type(scope_chain, item.name);
 			std::cout << "[debug] Noted and located, but did not construct a projection layout\n";
 			// TODO: finish me
+			
 			return {};
 		}
 
