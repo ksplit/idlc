@@ -1,11 +1,14 @@
-#ifndef _LCDS_IDL_PARSER_AST_H_
-#define _LCDS_IDL_PARSER_AST_H_
+#ifndef IDLC_AST_AST_H_
+#define IDLC_AST_AST_H_
 
 #include <memory>
 #include <vector>
 #include <variant>
 
 #include <gsl/gsl>
+
+#include "../parser/string_heap.h"
+#include "../sema/scope.h"
 
 namespace idlc::ast {
 	template<typename type>
@@ -20,7 +23,6 @@ namespace idlc::ast {
 	template<typename type>
 	using ref_vec = std::vector<node_ref<type>>;
 
-	using ident = gsl::czstring<>;
 	using ident_vec = std::vector<ident>;
 
 	struct module_def;
@@ -269,6 +271,8 @@ namespace idlc::ast {
 		const node_ptr<ref_vec<rpc_item>> items;
 		const rpc_def_kind kind;
 
+		sema::scope scope;
+
 		rpc_def(
 			node_ptr<type_spec> ret_type,
 			ident name,
@@ -297,11 +301,17 @@ namespace idlc::ast {
 		const ident name;
 		const node_ptr<ref_vec<module_item>> items;
 
+		sema::scope scope;
+
 		module_def(ident name, node_ptr<ref_vec<module_item>> items) :
 			name {name},
 			items {items}
 		{}
 	};
+
+	/*
+		Nodes that have scopes: module_defs, rpc_defs, proj_defs
+	*/
 }
 
 #endif

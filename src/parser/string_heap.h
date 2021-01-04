@@ -10,6 +10,8 @@
 #include <memory>
 
 namespace idlc {
+	using ident = gsl::czstring<>;
+
 	class string_heap {
 	public:
 		string_heap() noexcept
@@ -20,7 +22,7 @@ namespace idlc {
 		string_heap(string_heap&) = delete;
 		string_heap* operator=(string_heap&) = delete;
 
-		gsl::czstring<> intern(absl::string_view string);
+		ident intern(absl::string_view string);
 
 	private:
 		static constexpr std::size_t block_size {1024}; // TODO: Tune

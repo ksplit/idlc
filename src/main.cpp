@@ -6,6 +6,7 @@
 
 #include "parser/idl_parse.h"
 #include "ast/walk.h"
+#include "sema/scope_walk.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 
@@ -74,7 +75,7 @@ namespace idlc {
 	namespace {
 		constexpr auto enable_nullwalk = false;
 
-		void dump_tree(const idlc::ast::file& root)
+		void dump_tree(idlc::ast::file& root)
 		{
 			if constexpr (enable_nullwalk) {
 				ast::null_walk walk {};
@@ -86,6 +87,9 @@ namespace idlc {
 
 // TODO: we could store projection pgraphs in-tree, would avoid having to engineer a separate DB,
 // could possibly help with any future extension efforts
+
+// Note that Roslyn appears to render the AST completely immutable, forcing node properties to be stored
+// by association (hash table, red node, etc.)
 
 int main(int argc, char** argv)
 {
@@ -99,7 +103,10 @@ int main(int argc, char** argv)
     if (!driver_idl)
         return 1;
 
-	const auto& file = *driver_idl;
+	auto& file = *driver_idl;
 	std::cout << "[parse] File was parsed correctly" << std::endl;
 	idlc::dump_tree(file);
+
+	idlc::sema::symbol_walk walk {};
+	walk.visit_file(file);
 }

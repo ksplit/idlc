@@ -19,13 +19,13 @@ namespace idlc::ast {
 	// NOTE: traverse* DO NOT visit the node given to them, only subnodes
 
 	template<typename walk>
-	bool traverse(walk&& self, const file& node)
+	bool traverse(walk&& self, file& node)
 	{
 		const auto visit = [&self](auto&& subnode) -> bool
 		{
 			using type = std::decay_t<decltype(subnode)>;
 			if constexpr (std::is_same_v<type, node_ref<std::vector<node_ref<module_def>>>>) {
-				for (const auto& def : *subnode) {
+				for (auto& def : *subnode) {
 					if (!self.visit_module_def(*def))
 						return false;
 				}
@@ -44,7 +44,7 @@ namespace idlc::ast {
 	}
 
 	template<typename walk>
-	bool traverse(walk&& self, const module_def& node)
+	bool traverse(walk&& self, module_def& node)
 	{
 		if (node.items) {
 			for (const auto& item : *node.items) {
@@ -262,115 +262,115 @@ namespace idlc::ast {
 	template<typename derived>
 	class ast_walk {
 	public:
-		bool visit_file(const file& node)
+		bool visit_file(file& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_module_def(const module_def& node)
+		bool visit_module_def(module_def& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_driver_file(const driver_file& node)
+		bool visit_driver_file(driver_file& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_driver_def(const driver_def& node)
+		bool visit_driver_def(driver_def& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_module_item(const module_item& node)
+		bool visit_module_item(module_item& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_proj_def(const proj_def& node)
+		bool visit_proj_def(proj_def& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_rpc_def(const rpc_def& node)
+		bool visit_rpc_def(rpc_def& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_proj_field(const proj_field& node)
+		bool visit_proj_field(proj_field& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_var_decl(const var_decl& node)
+		bool visit_var_decl(var_decl& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_type_spec(const type_spec& node)
+		bool visit_type_spec(type_spec& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_indirection(const indirection& node)
+		bool visit_indirection(indirection& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_type_stem(const type_stem& node)
+		bool visit_type_stem(type_stem& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_type_any_of(const type_any_of& node)
+		bool visit_type_any_of(type_any_of& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_type_array(const type_array& node)
+		bool visit_type_array(type_array& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_array_size(const array_size& node)
+		bool visit_array_size(array_size& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_type_proj(const type_proj& node)
+		bool visit_type_proj(type_proj& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_type_rpc(const type_rpc& node)
+		bool visit_type_rpc(type_rpc& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_naked_proj_decl(const naked_proj_decl& node)
+		bool visit_naked_proj_decl(naked_proj_decl& node)
 		{
 			traverse(self(), node);
 			return true;
 		}
 
-		bool visit_rpc_item(const rpc_item& node)
+		bool visit_rpc_item(rpc_item& node)
 		{
 			traverse(self(), node);
 			return true;
@@ -393,7 +393,7 @@ namespace idlc::ast {
 
 	class null_walk : public ast_walk<null_walk> {
 	public:
-		bool visit_file(const file& node)
+		bool visit_file(file& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "file" << std::endl;
 			++level_;
@@ -402,7 +402,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_module_def(const module_def& node)
+		bool visit_module_def(module_def& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "module_def" << std::endl;
 			++level_;
@@ -411,7 +411,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_driver_file(const driver_file& node)
+		bool visit_driver_file(driver_file& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "driver_file" << std::endl;
 			++level_;
@@ -420,7 +420,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_driver_def(const driver_def& node)
+		bool visit_driver_def(driver_def& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "driver_def" << std::endl;
 			++level_;
@@ -429,7 +429,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_module_item(const module_item& node)
+		bool visit_module_item(module_item& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "module_item" << std::endl;
 			++level_;
@@ -438,7 +438,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_proj_def(const proj_def& node)
+		bool visit_proj_def(proj_def& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "union_proj_def" << std::endl;
 			++level_;
@@ -447,7 +447,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_rpc_def(const rpc_def& node)
+		bool visit_rpc_def(rpc_def& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "rpc_def" << std::endl;
 			++level_;
@@ -456,7 +456,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_proj_field(const proj_field& node)
+		bool visit_proj_field(proj_field& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "proj_field" << std::endl;
 			++level_;
@@ -465,7 +465,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_var_decl(const var_decl& node)
+		bool visit_var_decl(var_decl& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "var_decl" << std::endl;
 			++level_;
@@ -474,7 +474,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_type_spec(const type_spec& node)
+		bool visit_type_spec(type_spec& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "type_spec" << std::endl;
 			++level_;
@@ -483,7 +483,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_indirection(const indirection& node)
+		bool visit_indirection(indirection& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "indirection" << std::endl;
 			++level_;
@@ -492,7 +492,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_type_stem(const type_stem& node)
+		bool visit_type_stem(type_stem& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "type_stem" << std::endl;
 			++level_;
@@ -501,7 +501,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_type_any_of(const type_any_of& node)
+		bool visit_type_any_of(type_any_of& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "type_any_of" << std::endl;
 			++level_;
@@ -510,7 +510,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_type_array(const type_array& node)
+		bool visit_type_array(type_array& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "type_array" << std::endl;
 			++level_;
@@ -519,7 +519,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_array_size(const array_size& node)
+		bool visit_array_size(array_size& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "array_size" << std::endl;
 			++level_;
@@ -528,7 +528,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_type_proj(const type_proj& node)
+		bool visit_type_proj(type_proj& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "type_proj" << std::endl;
 			++level_;
@@ -537,7 +537,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_type_rpc(const type_rpc& node)
+		bool visit_type_rpc(type_rpc& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "type_rpc" << std::endl;
 			++level_;
@@ -546,7 +546,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_naked_proj_decl(const naked_proj_decl& node)
+		bool visit_naked_proj_decl(naked_proj_decl& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "naked_proj_decl" << std::endl;
 			++level_;
@@ -555,7 +555,7 @@ namespace idlc::ast {
 			return true;
 		}
 
-		bool visit_rpc_item(const rpc_item& node)
+		bool visit_rpc_item(rpc_item& node)
 		{
 			tab_over(std::cout << "[nullwalk]  ", level_) << "rpc_item" << std::endl;
 			++level_;
