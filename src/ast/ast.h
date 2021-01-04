@@ -91,8 +91,8 @@ namespace idlc::ast {
 	}
 
 	struct driver_def {
-		ident name;
-		node_ptr<ident_vec> imports;
+		const ident name;
+		const node_ptr<ident_vec> imports;
 
 		driver_def(ident name, node_ptr<ident_vec> imports) :
 			name {name},
@@ -101,9 +101,9 @@ namespace idlc::ast {
 	};
 
 	struct driver_file {
-		node_ptr<ident_vec> former;
-		node_ref<driver_def> driver;
-		node_ptr<ident_vec> latter;
+		const node_ptr<ident_vec> former;
+		const node_ref<driver_def> driver;
+		const node_ptr<ident_vec> latter;
 
 		driver_file(node_ptr<ident_vec> former,
 			node_ref<driver_def> driver,
@@ -131,7 +131,7 @@ namespace idlc::ast {
 	};
 
 	struct type_proj {
-		ident name;
+		const ident name;
 
 		type_proj(ident name) :
 			name {name}
@@ -139,7 +139,7 @@ namespace idlc::ast {
 	};
 
 	struct type_rpc {
-		ident name;
+		const ident name;
 
 		type_rpc(ident name) :
 			name {name}
@@ -147,8 +147,8 @@ namespace idlc::ast {
 	};
 
 	struct type_array {
-		node_ref<type_spec> element;
-		node_ref<array_size> size;
+		const node_ref<type_spec> element;
+		const node_ref<array_size> size;
 
 		type_array(node_ref<type_spec> element, node_ref<array_size> size) :
 			element {element},
@@ -157,8 +157,8 @@ namespace idlc::ast {
 	};
 
 	struct type_any_of {
-		ident discrim;
-		node_ref<ref_vec<type_spec>> types;
+		const ident discrim;
+		const node_ref<ref_vec<type_spec>> types;
 
 		type_any_of(
 			ident discrim,
@@ -182,8 +182,8 @@ namespace idlc::ast {
 	struct type_string {};
 
 	struct indirection {
-		annotation attrs; // Contextually, both ptr and value attrs
-		bool is_const;
+		const annotation attrs; // Contextually, both ptr and value attrs
+		const bool is_const;
 
 		indirection(annotation attrs, bool is_const) :
 			attrs {attrs},
@@ -193,10 +193,10 @@ namespace idlc::ast {
 
 	// FIXME: field order
 	struct type_spec {
-		bool is_const;
-		node_ref<type_stem> stem;
-		ref_vec<indirection> indirs;
-		annotation attrs; // Will only ever have value attrs in it
+		const bool is_const;
+		const node_ref<type_stem> stem;
+		const ref_vec<indirection> indirs;
+		const annotation attrs; // Will only ever have value attrs in it
 
 		type_spec(
 			bool is_const,
@@ -212,8 +212,8 @@ namespace idlc::ast {
 	};
 
 	struct var_decl {
-		node_ref<type_spec> type;
-		ident name;
+		const node_ref<type_spec> type;
+		const ident name;
 
 		var_decl(node_ref<type_spec> type, ident name) :
 			type {type},
@@ -222,8 +222,8 @@ namespace idlc::ast {
 	};
 
 	struct naked_proj_decl {
-		node_ptr<ref_vec<proj_field>> fields;
-		ident name;
+		const node_ptr<ref_vec<proj_field>> fields;
+		const ident name;
 
 		naked_proj_decl(node_ptr<ref_vec<proj_field>> fields, ident name) :
 			fields {fields},
@@ -237,10 +237,10 @@ namespace idlc::ast {
 	};
 
 	struct proj_def {
-		ident name;
-		ident type;
-		node_ptr<ref_vec<proj_field>> fields;
-		proj_def_kind kind;
+		const ident name;
+		const ident type;
+		const node_ptr<ref_vec<proj_field>> fields;
+		const proj_def_kind kind;
 
 		proj_def(
 			ident name,
@@ -263,11 +263,11 @@ namespace idlc::ast {
 	};
 
 	struct rpc_def {
-		node_ptr<type_spec> ret_type; // null type is used for <void>
-		ident name;
-		node_ptr<ref_vec<var_decl>> arguments;
-		node_ptr<ref_vec<rpc_item>> items;
-		rpc_def_kind kind;
+		const node_ptr<type_spec> ret_type; // null type is used for <void>
+		const ident name;
+		const node_ptr<ref_vec<var_decl>> arguments;
+		const node_ptr<ref_vec<rpc_item>> items;
+		const rpc_def_kind kind;
 
 		rpc_def(
 			node_ptr<type_spec> ret_type,
@@ -294,8 +294,8 @@ namespace idlc::ast {
 	>;
 
 	struct module_def {
-		ident name;
-		node_ptr<ref_vec<module_item>> items;
+		const ident name;
+		const node_ptr<ref_vec<module_item>> items;
 
 		module_def(ident name, node_ptr<ref_vec<module_item>> items) :
 			name {name},
