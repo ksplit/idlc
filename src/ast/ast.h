@@ -263,7 +263,8 @@ namespace idlc::ast {
 			name {name},
 			type {type},
 			fields {fields},
-			kind {kind}
+			kind {kind},
+			pgraph {}
 		{}
 	};
 

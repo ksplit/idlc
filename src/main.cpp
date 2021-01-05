@@ -74,7 +74,7 @@
 
 namespace idlc {
 	namespace {
-		constexpr auto enable_nullwalk = true;
+		constexpr auto enable_nullwalk = false;
 
 		void dump_tree(idlc::ast::file& root)
 		{

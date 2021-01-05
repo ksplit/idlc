@@ -42,11 +42,10 @@ namespace idlc::sema {
 					return build_array_type(*item, is_const);
 				}
 				else if constexpr (std::is_same_v<type, ast::node_ref<ast::type_proj>>) {
-					std::cout << "[debug] Stopped at projection type\n";
 					return build_projection(*item);
 				}
 				else if constexpr (std::is_same_v<type, ast::node_ref<ast::type_rpc>>) {
-					std::cout << "[debug] Stopped at RPC type\n";
+					return std::make_unique<rpc_ptr>();
 				}
 			
 				std::cout.flush();
@@ -85,16 +84,70 @@ namespace idlc::sema {
 			return {};
 		}
 
+		auto build_field(ast::proj_field& node)
+		{
+			const auto visit = [](auto&& item) -> std::pair<ident, node_ptr<data_field>>
+			{
+				using type = std::decay_t<decltype(item)>;
+				if constexpr (std::is_same_v<type, ast::node_ref<ast::naked_proj_decl>>) {
+					std::cout << "[debug] Naked projections are not yet implemented\n";
+					std::cout << "[debug] Unknown how to proceed, aborting\n";
+					assert(false);
+				}
+				else if constexpr (std::is_same_v<type, ast::node_ref<ast::var_decl>>) {
+					std::cout << "[pgraph] building var_decl data_field for \"" << item->name << "\"\n";
+					return {item->name, build_data_field(*item->type)};
+				}
+
+				assert(false);
+			};
+
+			return std::visit(visit, node);
+		}
+
 		field_type build_projection(ast::type_proj& node)
 		{
-			// TODO: complete me
-			return make_projection({});
+			auto& def = *node.definition;
+			if (def.pgraph) {
+				std::cout << "[pgraph] re-using cached pgraph for \"" << def.name << "\"\n";
+				return projection_ptr {def.pgraph};
+			}
+			else {
+				if (!def.fields) {
+					std::cout << "[pgraph] generating empty pgraph projection for \"" << def.name << "\"\n";
+					auto pgraph = make_projection({});
+					def.pgraph = pgraph.get();
+					return std::move(pgraph);
+				}
+
+				if (def.kind == ast::proj_def_kind::union_kind) {
+					std::cout << "[debug] Union projections are not yet implemented\n";
+					std::cout << "[debug] Will implement as an empty struct projection \"" << def.name << "\"\n";
+					auto pgraph = make_projection({});
+					def.pgraph = pgraph.get();
+					return std::move(pgraph);
+				}
+
+				const auto& field_nodes = *def.fields;
+				std::vector<std::pair<ident, node_ptr<data_field>>> fields(field_nodes.size());
+				for (const auto& field : field_nodes) {
+					auto pgraph = build_field(*field);
+					std::cout << "[pgraph] completed field \"" << pgraph.first << "\"\n";
+					fields.emplace_back(std::move(pgraph));
+				}
+
+				auto pgraph = make_projection(std::move(fields));
+				def.pgraph = pgraph.get();
+
+				return std::move(pgraph);
+			}
 		}
 	}
 }
 
 idlc::sema::node_ptr<idlc::sema::data_field> idlc::sema::build_data_field(const ast::type_spec& node)
 {
+	// TODO: finish indirection handling
 	auto type = build_stem_type(*node.stem, node.is_const);
 	return std::make_unique<data_field>(std::move(type), ast::annotation::use_default);
 }

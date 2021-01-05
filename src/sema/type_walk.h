@@ -12,6 +12,7 @@ namespace idlc::sema {
 	struct pointer;
 	struct static_void_ptr; // a void* that is "actually" a pointer to some other type
 	struct projection;
+	struct rpc_ptr;
 	class projection_ptr; // because these nodes are shared
 
 	// TODO: share with the AST
@@ -25,6 +26,7 @@ namespace idlc::sema {
 	public:
 		projection_ptr() = default;
 
+		projection_ptr(projection* ptr);
 		projection_ptr(projection_ptr& o);
 		projection_ptr& operator=(projection_ptr& o);
 		~projection_ptr();
@@ -52,9 +54,12 @@ namespace idlc::sema {
 			return ptr_;
 		}
 
-	private:
-		friend auto make_projection(std::vector<std::pair<ident, node_ptr<data_field>>>&& fields);
+		auto get() const
+		{
+			return ptr_;
+		}
 
+	private:
 		projection* ptr_ {};
 	};
 
@@ -64,6 +69,7 @@ namespace idlc::sema {
 		node_ptr<dyn_array>,
 		node_ptr<pointer>,
 		node_ptr<static_void_ptr>,
+		node_ptr<rpc_ptr>,
 		projection_ptr
 	>;
 
@@ -129,8 +135,14 @@ namespace idlc::sema {
 		{}
 	};
 
+	// TODO: implement me, currently a dummy
+	struct rpc_ptr {
+
+	};
+
 	struct projection {
 		std::vector<std::pair<ident, node_ptr<data_field>>> fields;
+		ast::annotation defaulted_with; // record which anotation triggered the default pass, to detect conflicts
 		unsigned refcount; // NOTE: since projection nodes are ultimately shared due to semantics, it becomes necessary
 		// to track their lifetime by refcount. See projection_ptr
 
@@ -140,31 +152,47 @@ namespace idlc::sema {
 	inline projection_ptr::~projection_ptr() 
 	{
 		if (ptr_) {
+			assert(ptr_->refcount > 0);
+
 			if (!--ptr_->refcount)
 				delete ptr_;
 		}
 	}
 
+	inline projection_ptr::projection_ptr(projection* ptr) : ptr_ {ptr}
+	{
+		if (ptr) {
+			assert(ptr_->refcount > 0);
+			++(ptr->refcount);
+		}
+	}
+
 	inline projection_ptr::projection_ptr(projection_ptr& o) : ptr_ {o.ptr_}
 	{
-		if (ptr_)
-			++ptr_->refcount;
+		if (ptr_) {
+			assert(ptr_->refcount > 0);
+			++(ptr_->refcount);
+		}
 	}
 
 	inline projection_ptr& projection_ptr::operator=(projection_ptr& o)
 	{
 		ptr_ = o.ptr_;
-		if (ptr_)
-			++ptr_->refcount;
+		if (ptr_) {
+			assert(ptr_->refcount > 0);
+			++(ptr_->refcount);
+		}
 
 		return *this;
 	}
 
 	inline auto make_projection(std::vector<std::pair<ident, node_ptr<data_field>>>&& fields)
 	{
-		projection_ptr ptr {};
-		ptr.ptr_ = new projection {std::move(fields)};
-		return ptr;
+		const auto ptr = new projection {std::move(fields)};
+		ptr->refcount++;
+		auto ref = projection_ptr {ptr};
+		ptr->refcount--;
+		return ref;
 	}
 
 	// TODO: I recall that any_of was in flux
@@ -196,12 +224,14 @@ namespace idlc::sema {
 	public:
 		bool visit_type_spec(ast::type_spec& node)
 		{
-			build_data_field(node);
+			// the pgraph weak references assume that each of these live at least as long as the AST projection nodes
+			store_.emplace_back(build_data_field(node));
 			return true;
 		}
 
 	private:
 		field_type stem_ {};
+		std::vector<node_ptr<data_field>> store_ {};
 	};
 }
 
