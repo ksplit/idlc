@@ -7,6 +7,7 @@
 #include "parser/idl_parse.h"
 #include "ast/walk.h"
 #include "sema/scope_walk.h"
+#include "sema/types.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 
@@ -73,7 +74,7 @@
 
 namespace idlc {
 	namespace {
-		constexpr auto enable_nullwalk = false;
+		constexpr auto enable_nullwalk = true;
 
 		void dump_tree(idlc::ast::file& root)
 		{
@@ -120,4 +121,7 @@ int main(int argc, char** argv)
 		std::cout << "[debug] Not all names were bound\n";
 		return 1;
 	}
+
+	idlc::sema::type_walk type_walk {};
+	type_walk.visit_file(file);
 }
