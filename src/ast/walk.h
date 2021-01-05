@@ -254,6 +254,8 @@ namespace idlc::ast {
 				return self.visit_proj_def(*subnode);
 			else
 				assert(false);
+
+			return false;
 		};
 
 		return std::visit(visit, node);
@@ -264,116 +266,97 @@ namespace idlc::ast {
 	public:
 		bool visit_file(file& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_module_def(module_def& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_driver_file(driver_file& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_driver_def(driver_def& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_module_item(module_item& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_proj_def(proj_def& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_rpc_def(rpc_def& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_proj_field(proj_field& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_var_decl(var_decl& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_type_spec(type_spec& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_indirection(indirection& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_type_stem(type_stem& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_type_any_of(type_any_of& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_type_array(type_array& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_array_size(array_size& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_type_proj(type_proj& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_type_rpc(type_rpc& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_naked_proj_decl(naked_proj_decl& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 		bool visit_rpc_item(rpc_item& node)
 		{
-			traverse(self(), node);
-			return true;
+			return traverse(self(), node);
 		}
 
 	private:

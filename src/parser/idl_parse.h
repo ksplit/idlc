@@ -18,7 +18,7 @@ namespace idlc::parser {
 			const auto id = reinterpret_cast<std::size_t>(raw);
 			const auto ref = std::any_cast<std::shared_ptr<ast::file>>(gsl::at(parser_objs, id));
 			
-			// Now that we have the tree root we can GC all the unused nodes
+			// Now that we have the tree root we can cull all the unused nodes
 			parser_objs.clear();
 
 			return ref;

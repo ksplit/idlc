@@ -30,7 +30,7 @@ namespace idlc::sema {
 		}
 
 		template<typename type>
-		type* get(ident name)
+		type* get(ident name) const
 		{
 			using namespace std;
 			const auto first = begin(names);

@@ -135,6 +135,8 @@ namespace idlc::ast {
 	struct type_proj {
 		const ident name;
 
+		proj_def* definition;
+
 		type_proj(ident name) :
 			name {name}
 		{}
@@ -142,6 +144,8 @@ namespace idlc::ast {
 
 	struct type_rpc {
 		const ident name;
+
+		rpc_def* definition;
 
 		type_rpc(ident name) :
 			name {name}

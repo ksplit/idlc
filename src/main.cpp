@@ -91,6 +91,8 @@ namespace idlc {
 // Note that Roslyn appears to render the AST completely immutable, forcing node properties to be stored
 // by association (hash table, red node, etc.)
 
+// NOTE: Default to a walk, re-write later as needed (premature optimization, etc.)
+
 int main(int argc, char** argv)
 {
     const gsl::span<gsl::zstring<>> args {argv, gsl::narrow<std::size_t>(argc)};
@@ -108,5 +110,14 @@ int main(int argc, char** argv)
 	idlc::dump_tree(file);
 
 	idlc::sema::symbol_walk walk {};
-	walk.visit_file(file);
+	if (!walk.visit_file(file)) {
+		std::cout << "[debug] symbol_walk failed\n";
+		return 1;
+	}
+
+	idlc::sema::bind_walk bind_walk {};
+	if (!bind_walk.visit_file(file)) {
+		std::cout << "[debug] Not all names were bound\n";
+		return 1;
+	}
 }
