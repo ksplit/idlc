@@ -1,11 +1,8 @@
-#ifndef IDLC_SEMA_TYPES_H
-#define IDLC_SEMA_TYPES_H
+#ifndef IDLC_SEMA_TYPE_WALK_H
+#define IDLC_SEMA_TYPE_WALK_H
 
-#include <memory>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
+#include "../ast/ast.h"
+#include "../ast/walk.h"
 
 namespace idlc::sema {
 	using primitive = ast::type_primitive;
@@ -117,6 +114,20 @@ namespace idlc::sema {
 	*/
 
 	// TODO: introduce the void<> system for "raw" void pointers
+
+	node_ptr<data_field> build_data_field(const ast::type_spec& node);
+
+	class type_walk : public ast::ast_walk<type_walk> {
+	public:
+		bool visit_type_spec(ast::type_spec& node)
+		{
+			build_data_field(node);
+			return true;
+		}
+
+	private:
+		field_type stem_ {};
+	};
 }
 
 #endif

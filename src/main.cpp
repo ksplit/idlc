@@ -7,7 +7,7 @@
 #include "parser/idl_parse.h"
 #include "ast/walk.h"
 #include "sema/scope_walk.h"
-#include "sema/types.h"
+#include "sema/type_walk.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 

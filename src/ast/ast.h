@@ -10,6 +10,10 @@
 #include "../parser/string_heap.h"
 #include "../sema/scope.h"
 
+namespace idlc::sema {
+	struct projection; // TODO: move me
+}
+
 namespace idlc::ast {
 	template<typename type>
 	using node_ptr = std::shared_ptr<type>;
@@ -247,6 +251,8 @@ namespace idlc::ast {
 		const ident type;
 		const node_ptr<ref_vec<proj_field>> fields;
 		const proj_def_kind kind;
+
+		sema::projection* pgraph;
 
 		proj_def(
 			ident name,
