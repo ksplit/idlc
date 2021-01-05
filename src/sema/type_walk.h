@@ -12,18 +12,59 @@ namespace idlc::sema {
 	struct pointer;
 	struct static_void_ptr; // a void* that is "actually" a pointer to some other type
 	struct projection;
+	class projection_ptr; // because these nodes are shared
 
 	// TODO: share with the AST
 	template<typename type>
 	using node_ptr = std::unique_ptr<type>;
+
+	struct data_field;
+
+	// Do not confuse this with thread-safe!
+	class projection_ptr {
+	public:
+		projection_ptr() = default;
+
+		projection_ptr(projection_ptr& o);
+		projection_ptr& operator=(projection_ptr& o);
+		~projection_ptr();
+
+		projection_ptr(projection_ptr&& o) : ptr_ {o.ptr_}
+		{
+			o.ptr_ = nullptr;
+		}
+
+		projection_ptr& operator=(projection_ptr&& o)
+		{
+			ptr_ = o.ptr_;
+			o.ptr_ = nullptr;
+			return *this;
+		}
+
+
+		auto& operator*() const
+		{
+			return *ptr_;
+		}
+
+		auto operator->() const
+		{
+			return ptr_;
+		}
+
+	private:
+		friend auto make_projection(std::vector<std::pair<ident, node_ptr<data_field>>>&& fields);
+
+		projection* ptr_ {};
+	};
 
 	using field_type = std::variant<
 		primitive,
 		node_ptr<null_terminated_array>,
 		node_ptr<dyn_array>,
 		node_ptr<pointer>,
-		node_ptr<projection>,
-		node_ptr<static_void_ptr>
+		node_ptr<static_void_ptr>,
+		projection_ptr
 	>;
 
 	struct data_field {
@@ -90,7 +131,41 @@ namespace idlc::sema {
 
 	struct projection {
 		std::vector<std::pair<ident, node_ptr<data_field>>> fields;
+		unsigned refcount; // NOTE: since projection nodes are ultimately shared due to semantics, it becomes necessary
+		// to track their lifetime by refcount. See projection_ptr
+
+		projection(std::vector<std::pair<ident, node_ptr<data_field>>>&& fields) : fields {std::move(fields)} {}
 	};
+
+	inline projection_ptr::~projection_ptr() 
+	{
+		if (ptr_) {
+			if (!--ptr_->refcount)
+				delete ptr_;
+		}
+	}
+
+	inline projection_ptr::projection_ptr(projection_ptr& o) : ptr_ {o.ptr_}
+	{
+		if (ptr_)
+			++ptr_->refcount;
+	}
+
+	inline projection_ptr& projection_ptr::operator=(projection_ptr& o)
+	{
+		ptr_ = o.ptr_;
+		if (ptr_)
+			++ptr_->refcount;
+
+		return *this;
+	}
+
+	inline auto make_projection(std::vector<std::pair<ident, node_ptr<data_field>>>&& fields)
+	{
+		projection_ptr ptr {};
+		ptr.ptr_ = new projection {std::move(fields)};
+		return ptr;
+	}
 
 	// TODO: I recall that any_of was in flux
 	// void<some_type> was for the static case, which is the one nullnet needs

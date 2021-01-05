@@ -49,6 +49,7 @@ namespace idlc::sema {
 					std::cout << "[debug] Stopped at RPC type\n";
 				}
 			
+				std::cout.flush();
 				assert(false);
 			};
 
@@ -86,8 +87,8 @@ namespace idlc::sema {
 
 		field_type build_projection(ast::type_proj& node)
 		{
-			// NOTE: cannot use unique_ptr if we allow node reuse. Simplest solution is shared_ptr, but I dislike it
-			assert(false);
+			// TODO: complete me
+			return make_projection({});
 		}
 	}
 }
