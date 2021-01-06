@@ -76,6 +76,7 @@ namespace idlc::sema {
 	struct data_field {
 		field_type type;
 		ast::annotation value_annots;
+		// FIXME: add const-ness here, drop from <<pointer>>
 
 		data_field(field_type&& type, ast::annotation value_annots) :
 			type {std::move(type)},
