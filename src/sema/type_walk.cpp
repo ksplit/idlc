@@ -150,9 +150,11 @@ namespace idlc::sema {
 	}
 }
 
-idlc::sema::node_ptr<idlc::sema::data_field> idlc::sema::build_data_field(const ast::type_spec& node)
+idlc::sema::node_ptr<idlc::sema::data_field> idlc::sema::build_data_field(ast::type_spec& node)
 {
 	// TODO: finish indirection handling
 	auto type = build_stem_type(*node.stem, node.is_const);
-	return std::make_unique<data_field>(std::move(type), ast::annotation::use_default);
+	auto field = std::make_unique<data_field>(std::move(type), ast::annotation::use_default);
+	node.pgraph = field.get();
+	return std::move(field);
 }

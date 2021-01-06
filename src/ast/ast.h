@@ -10,8 +10,11 @@
 #include "../parser/string_heap.h"
 #include "../sema/scope.h"
 
+ // TODO: move me
+ // TODO: since AST uses "external types" extensively, re-organize these to avoid vicious circularities
 namespace idlc::sema {
-	struct projection; // TODO: move me
+	struct projection;
+	struct data_field;
 }
 
 namespace idlc::ast {
@@ -207,6 +210,9 @@ namespace idlc::ast {
 		const node_ref<type_stem> stem;
 		const ref_vec<indirection> indirs;
 		const annotation attrs; // Will only ever have value attrs in it
+
+		// TODO: must these be cached?
+		sema::data_field* pgraph; // These are not shared, but cached here
 
 		type_spec(
 			bool is_const,

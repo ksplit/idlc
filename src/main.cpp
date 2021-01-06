@@ -83,6 +83,13 @@ namespace idlc {
 				walk.visit_file(root);
 			}
 		}
+
+		auto create_type_pgraphs(idlc::ast::file& file)
+		{
+			sema::type_walk walk {};
+			walk.visit_file(file);
+			return walk.get_pgraph_owner();
+		}
 	}
 }
 
@@ -122,6 +129,5 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	idlc::sema::type_walk type_walk {};
-	type_walk.visit_file(file);
+	const auto data_fields = idlc::create_type_pgraphs(file);
 }

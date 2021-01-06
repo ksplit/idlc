@@ -15,7 +15,7 @@ namespace idlc::sema {
 		{
 			// Careful to insert into the outer scope
 			scope_->insert(node.name, &node);
-			std::cout << "[scopes] Inserted RPC def \"" << node.name << "\"\n";
+			//std::cout << "[scopes] Inserted RPC def \"" << node.name << "\"\n";
 
 			const auto old = scope_;
 			scope_ = &node.scope;
@@ -42,7 +42,7 @@ namespace idlc::sema {
 		bool visit_proj_def(ast::proj_def& node)
 		{
 			scope_->insert(node.name, &node);
-			std::cout << "[scopes] Inserted proj def \"" << node.name << "\"\n";
+			//std::cout << "[scopes] Inserted proj def \"" << node.name << "\"\n";
 			return true;
 		}
 
@@ -82,7 +82,7 @@ namespace idlc::sema {
 				const auto def = (*iter)->get<ast::proj_def>(node.name);
 				if (def) {
 					node.definition = def;
-					std::cout << "[scope_walk] Resolved projection \"" << node.name << "\"\n";
+					//std::cout << "[scope_walk] Resolved projection \"" << node.name << "\"\n";
 					return ast::traverse(*this, node);
 				}
 			}
@@ -100,7 +100,7 @@ namespace idlc::sema {
 				const auto def = (*iter)->get<ast::rpc_def>(node.name);
 				if (def) {
 					node.definition = def;
-					std::cout << "[scope_walk] Resolved RPC \"" << node.name << "\"\n";
+					//std::cout << "[scope_walk] Resolved RPC \"" << node.name << "\"\n";
 					return ast::traverse(*this, node);
 				}
 			}

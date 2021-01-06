@@ -218,7 +218,7 @@ namespace idlc::sema {
 
 	// TODO: introduce the void<> system for "raw" void pointers
 
-	node_ptr<data_field> build_data_field(const ast::type_spec& node);
+	node_ptr<data_field> build_data_field(ast::type_spec& node);
 
 	class type_walk : public ast::ast_walk<type_walk> {
 	public:
@@ -227,6 +227,11 @@ namespace idlc::sema {
 			// the pgraph weak references assume that each of these live at least as long as the AST projection nodes
 			store_.emplace_back(build_data_field(node));
 			return true;
+		}
+
+		auto get_pgraph_owner()
+		{
+			return std::move(store_);
 		}
 
 	private:
