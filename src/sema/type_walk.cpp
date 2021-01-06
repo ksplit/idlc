@@ -45,6 +45,7 @@ namespace idlc::sema {
 					return build_projection(*item);
 				}
 				else if constexpr (std::is_same_v<type, ast::node_ref<ast::type_rpc>>) {
+					std::cout << "[debug] generating dummy pgraph node for RPC pointer \"" << item->name << "\"\n";
 					return std::make_unique<rpc_ptr>();
 				}
 			
@@ -113,6 +114,9 @@ namespace idlc::sema {
 				return projection_ptr {def.pgraph};
 			}
 			else {
+				std::cout << "[pgraph] generating new pgraph for \""
+					<< def.name << "\" (" << &def << ")\n";
+
 				if (!def.fields) {
 					std::cout << "[pgraph] generating empty pgraph projection for \"" << def.name << "\"\n";
 					auto pgraph = make_projection({});
@@ -136,6 +140,7 @@ namespace idlc::sema {
 					fields.emplace_back(std::move(pgraph));
 				}
 
+				std::cout << "[pgraph] finished, caching new pgraph for \"" << def.name << "\"\n";
 				auto pgraph = make_projection(std::move(fields));
 				def.pgraph = pgraph.get();
 
