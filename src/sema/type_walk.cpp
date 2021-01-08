@@ -8,6 +8,7 @@
 
 #include "../ast/ast.h"
 #include "../ast/walk.h"
+#include "../tag_types.h"
 
 namespace idlc::sema {
 	namespace {

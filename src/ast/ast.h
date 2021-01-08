@@ -10,6 +10,8 @@
 #include "../parser/string_heap.h"
 #include "../sema/scope.h"
 
+#include "../tag_types.h"
+
  // TODO: move me
  // TODO: since AST uses "external types" extensively, re-organize these to avoid vicious circularities
 namespace idlc::sema {
@@ -35,7 +37,6 @@ namespace idlc::ast {
 	struct module_def;
 	struct driver_def;
 	struct driver_file;
-	enum class type_primitive;
 	struct type_rpc;
 	struct type_proj;
 	struct type_array;
@@ -48,6 +49,10 @@ namespace idlc::ast {
 	
 	struct rpc_def;
 	
+	// Re-export these from the AST
+	using idlc::annotation;
+	using idlc::type_primitive;
+
 	// struct field_rel_ref;
 	// struct field_abs_ref;
 
@@ -66,38 +71,6 @@ namespace idlc::ast {
 		node_ref<type_array>,
 		node_ref<type_any_of>
 	>;
-
-	// TODO: clean this up?
-	enum class annotation {
-		alloc_caller	= 0b100000001,
-		alloc_callee	= 0b100000010,
-		dealloc_caller	= 0b100000100,
-		dealloc_callee	= 0b100001000,
-		bind_caller		= 0b100010000,
-		bind_callee		= 0b100100000,
-		in				= 0b101000000,
-		out				= 0b110000000,
-		is_bind			= 0b100110000,
-		is_dealloc		= 0b100001100,
-		is_alloc		= 0b100000011,
-		is_ptr			= is_bind | is_dealloc | is_alloc,
-		is_val			= out | in,
-		is_set			= 0b100000000,
-		use_default		= 0b000000000, // will not set the is_set flag, thus ensuring it will be defaulted
-	};
-
-	inline auto& operator|=(annotation& a, annotation b) {
-		auto val = static_cast<std::uintptr_t>(a);
-		val |= static_cast<std::uintptr_t>(b);
-		a = static_cast<annotation>(val);
-		return a;
-	}
-
-	inline auto operator&(annotation a, annotation b) {
-		auto val = static_cast<std::uintptr_t>(a);
-		val &= static_cast<std::uintptr_t>(b);
-		return static_cast<annotation>(val);
-	}
 
 	struct driver_def {
 		const ident name;
@@ -122,21 +95,6 @@ namespace idlc::ast {
 			driver {driver},
 			latter {latter}
 		{}
-	};
-
-	enum class type_primitive {
-		ty_bool,
-		ty_char,
-		ty_schar,
-		ty_uchar,
-		ty_short,
-		ty_ushort,
-		ty_int,
-		ty_uint,
-		ty_long,
-		ty_ulong,
-		ty_llong,
-		ty_ullong
 	};
 
 	struct type_proj {
