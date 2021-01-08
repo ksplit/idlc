@@ -8,6 +8,7 @@
 #include "ast/walk.h"
 #include "sema/scope_walk.h"
 #include "sema/type_walk.h"
+#include "sema/default_walk.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 
@@ -83,13 +84,6 @@ namespace idlc {
 				walk.visit_file(root);
 			}
 		}
-
-		auto create_type_pgraphs(idlc::ast::file& file)
-		{
-			sema::type_walk walk {};
-			walk.visit_file(file);
-			return walk.get_pgraph_owner();
-		}
 	}
 }
 
@@ -129,5 +123,6 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	const auto data_fields = idlc::create_type_pgraphs(file);
+	const auto data_fields = idlc::sema::generate_pgraphs(file);
+	idlc::sema::default_walk defaulter {};
 }

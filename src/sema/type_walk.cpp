@@ -9,6 +9,7 @@
 #include "../ast/ast.h"
 #include "../ast/walk.h"
 #include "../tag_types.h"
+#include "pgraph.h"
 
 namespace idlc::sema {
 	namespace {
@@ -16,6 +17,7 @@ namespace idlc::sema {
 		field_type build_stem_type(const ast::type_stem& node, bool is_const);
 		field_type build_array_type(const ast::type_array& node, bool is_const);
 		field_type build_projection(ast::type_proj& node);
+		node_ptr<data_field> build_data_field(ast::type_spec& node);
 
 		field_type build_string_type(bool is_const)
 		{
@@ -148,24 +150,53 @@ namespace idlc::sema {
 				return std::move(pgraph);
 			}
 		}
+
+		class type_walk : public ast::ast_walk<type_walk> {
+		public:
+			bool visit_type_spec(ast::type_spec& node)
+			{
+				// the pgraph weak references assume that each of these live at least as long as the AST projection nodes
+				store_.emplace_back(build_data_field(node));
+				return true;
+			}
+
+			auto get_pgraph_owner()
+			{
+				return std::move(store_);
+			}
+
+		private:
+			field_type stem_ {};
+			std::vector<node_ptr<data_field>> store_ {};
+		};
+
+		node_ptr<data_field> build_data_field(ast::type_spec& node)
+		{
+			// TODO: finish indirection handling
+			auto type = build_stem_type(*node.stem, node.is_const);
+			for (const auto& ptr_node : node.indirs) {
+				const auto annots = ptr_node->attrs;
+				const auto ptr_annots = annots & ast::annotation::is_ptr;
+				const auto val_annots = annots & ast::annotation::is_val;
+				auto field = std::make_unique<data_field>(std::move(type), val_annots);
+				type = std::make_unique<pointer>(std::move(field), ptr_annots, ptr_node->is_const);
+			}
+
+			assert((node.attrs & ast::annotation::is_val) == node.attrs);
+			auto field = std::make_unique<data_field>(std::move(type), node.attrs);
+			node.pgraph = field.get();
+
+			return std::move(field);
+		}
 	}
 }
 
-idlc::sema::node_ptr<idlc::sema::data_field> idlc::sema::build_data_field(ast::type_spec& node)
+using namespace idlc::sema;
+
+// The references in the AST are *not* owners, this vector is
+std::vector<node_ptr<data_field>> idlc::sema::generate_pgraphs(idlc::ast::file& file)
 {
-	// TODO: finish indirection handling
-	auto type = build_stem_type(*node.stem, node.is_const);
-	for (const auto& ptr_node : node.indirs) {
-		const auto annots = ptr_node->attrs;
-		const auto ptr_annots = annots & ast::annotation::is_ptr;
-		const auto val_annots = annots & ast::annotation::is_val;
-		auto field = std::make_unique<data_field>(std::move(type), val_annots);
-		type = std::make_unique<pointer>(std::move(field), ptr_annots, ptr_node->is_const);
-	}
-
-	assert((node.attrs & ast::annotation::is_val) == node.attrs);
-	auto field = std::make_unique<data_field>(std::move(type), node.attrs);
-	node.pgraph = field.get();
-
-	return std::move(field);
+	type_walk walk {};
+	walk.visit_file(file);
+	return walk.get_pgraph_owner();
 }
