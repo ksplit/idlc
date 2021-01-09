@@ -1,0 +1,13 @@
+module foo {
+	projection < struct net_device > simp_circ {
+        projection simp_circ *a;
+    }
+
+    projection < struct net_device > circ_a {
+        projection circ_b *a;
+    }
+
+    projection < struct net_device > circ_b {
+        projection circ_a *a;
+    }
+}

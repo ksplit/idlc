@@ -75,7 +75,7 @@
 
 namespace idlc {
 	namespace {
-		constexpr auto enable_nullwalk = false;
+		constexpr auto enable_nullwalk = true;
 
 		void dump_tree(idlc::ast::file& root)
 		{
@@ -94,6 +94,8 @@ namespace idlc {
 // by association (hash table, red node, etc.)
 
 // NOTE: Default to a walk, re-write later as needed (premature optimization, etc.)
+
+// TODO: sort out the somewhat hellish logging situation
 
 int main(int argc, char** argv)
 {
@@ -124,5 +126,12 @@ int main(int argc, char** argv)
 	}
 
 	const auto data_fields = idlc::sema::generate_pgraphs(file);
-	idlc::sema::default_walk defaulter {};
+	for (auto& [name, field]: data_fields) {
+		std::cout << "[debug] For \"" << name << "\":\n";
+		idlc::sema::null_walk pgraph_null {};
+		if (!pgraph_null.visit_data_field(*field)) {
+			std::cout << "[debug] Could not walk a pgraph\n";
+			return 1;
+		}
+	}
 }

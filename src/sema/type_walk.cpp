@@ -6,6 +6,7 @@
 #include <variant>
 #include <vector>
 
+#include "../parser/string_heap.h"
 #include "../ast/ast.h"
 #include "../ast/walk.h"
 #include "../tag_types.h"
@@ -109,11 +110,14 @@ namespace idlc::sema {
 			return std::visit(visit, node);
 		}
 
+		// FIXME: self-referencing projections do not set their own graphs to non-null, we need three-state
+		// TODO: is it necessary to detect if a projection self-references by value?
+		// TODO: brak this up, it's oversized
 		field_type build_projection(ast::type_proj& node)
 		{
 			auto& def = *node.definition;
 			if (def.pgraph) {
-				std::cout << "[pgraph] re-using cached pgraph for \"" << def.name << "\"\n";
+				std::cout << "[pgraph] linking cached pgraph for \"" << def.name << "\"\n";
 				return projection_ptr {def.pgraph};
 			}
 			else {
@@ -122,7 +126,7 @@ namespace idlc::sema {
 
 				if (!def.fields) {
 					std::cout << "[pgraph] generating empty pgraph projection for \"" << def.name << "\"\n";
-					auto pgraph = make_projection({});
+					auto pgraph = make_projection();
 					def.pgraph = pgraph.get();
 					return std::move(pgraph);
 				}
@@ -130,22 +134,27 @@ namespace idlc::sema {
 				if (def.kind == ast::proj_def_kind::union_kind) {
 					std::cout << "[debug] Union projections are not yet implemented\n";
 					std::cout << "[debug] Will implement as an empty struct projection \"" << def.name << "\"\n";
-					auto pgraph = make_projection({});
+					auto pgraph = make_projection();
 					def.pgraph = pgraph.get();
 					return std::move(pgraph);
 				}
 
+				// NOTE: current solution is to allow partially-completed pgraphs to be cached, to mark their existence
+				// I don't like it for immutability reasons, but I can't deal with it right now
+				auto pgraph = make_projection();
+				def.pgraph = pgraph.get();
+				std::cout << "[pgraph] starting (and caching) pgraph for \"" << def.name << "\"\n";
+
 				const auto& field_nodes = *def.fields;
-				std::vector<std::pair<ident, node_ptr<data_field>>> fields(field_nodes.size());
+				auto& fields = pgraph->fields;
+				fields.reserve(field_nodes.size());
 				for (const auto& field : field_nodes) {
 					auto pgraph = build_field(*field);
 					std::cout << "[pgraph] completed field \"" << pgraph.first << "\"\n";
 					fields.emplace_back(std::move(pgraph));
 				}
 
-				std::cout << "[pgraph] finished, caching new pgraph for \"" << def.name << "\"\n";
-				auto pgraph = make_projection(std::move(fields));
-				def.pgraph = pgraph.get();
+				std::cout << "[pgraph] finished \"" << def.name << "\"\n";
 
 				return std::move(pgraph);
 			}
@@ -153,12 +162,21 @@ namespace idlc::sema {
 
 		class type_walk : public ast::ast_walk<type_walk> {
 		public:
-			bool visit_type_spec(ast::type_spec& node)
+			bool visit_var_decl(ast::var_decl& node)
 			{
-				// the pgraph weak references assume that each of these live at least as long as the AST projection nodes
-				store_.emplace_back(build_data_field(node));
-				return true;
+				store_.emplace_back(node.name, build_data_field(*node.type));
+				return true; // NOTE: no need to traverse here, there is nothing of interest in the subtree
 			}
+
+			bool visit_rpc_def(ast::rpc_def& node)
+			{
+				if (node.ret_type)
+					store_.emplace_back(node.name, build_data_field(*node.ret_type));
+
+				return ast::traverse(*this, node);
+			}
+
+			// TODO: support naked projections
 
 			auto get_pgraph_owner()
 			{
@@ -167,7 +185,7 @@ namespace idlc::sema {
 
 		private:
 			field_type stem_ {};
-			std::vector<node_ptr<data_field>> store_ {};
+			std::vector<std::pair<ident, node_ptr<data_field>>> store_ {}; // NOTE: idents are only for debugging
 		};
 
 		node_ptr<data_field> build_data_field(ast::type_spec& node)
@@ -191,10 +209,11 @@ namespace idlc::sema {
 	}
 }
 
+using namespace idlc;
 using namespace idlc::sema;
 
 // The references in the AST are *not* owners, this vector is
-std::vector<node_ptr<data_field>> idlc::sema::generate_pgraphs(idlc::ast::file& file)
+std::vector<std::pair<ident, node_ptr<data_field>>> idlc::sema::generate_pgraphs(idlc::ast::file& file)
 {
 	type_walk walk {};
 	walk.visit_file(file);

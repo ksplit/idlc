@@ -149,8 +149,6 @@ namespace idlc::sema {
 		annotation defaulted_with; // record which anotation triggered the default pass, to detect conflicts
 		unsigned refcount; // NOTE: since projection nodes are ultimately shared due to semantics, it becomes necessary
 		// to track their lifetime by refcount. See projection_ptr
-
-		projection(std::vector<std::pair<ident, node_ptr<data_field>>>&& fields) : fields {std::move(fields)} {}
 	};
 
 	inline projection_ptr::~projection_ptr() 
@@ -190,9 +188,9 @@ namespace idlc::sema {
 		return *this;
 	}
 
-	inline auto make_projection(std::vector<std::pair<ident, node_ptr<data_field>>>&& fields)
+	inline auto make_projection()
 	{
-		const auto ptr = new projection {std::move(fields)};
+		const auto ptr = new projection {};
 		ptr->refcount++;
 		auto ref = projection_ptr {ptr};
 		ptr->refcount--;

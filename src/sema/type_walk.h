@@ -1,6 +1,7 @@
 #ifndef IDLC_SEMA_TYPE_WALK_H
 #define IDLC_SEMA_TYPE_WALK_H
 
+#include "../parser/string_heap.h"
 #include "../ast/ast.h"
 #include "../ast/walk.h"
 
@@ -30,7 +31,7 @@ namespace idlc::sema {
 
 	// TODO: introduce the void<> system for "raw" void pointers
 
-	std::vector<node_ptr<data_field>> generate_pgraphs(idlc::ast::file& file);
+	std::vector<std::pair<ident, node_ptr<data_field>>> generate_pgraphs(idlc::ast::file& file);
 }
 
 #endif
