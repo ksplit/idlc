@@ -110,6 +110,46 @@ namespace idlc::sema {
 			return std::visit(visit, node);
 		}
 
+		auto attach_pgraph(ast::proj_def& def)
+		{
+			auto pgraph = make_projection();
+			def.pgraph = pgraph.get();
+			std::cout << "[pgraph] starting (and caching) pgraph for \"" << def.name << "\"\n";
+			return std::move(pgraph);
+		}
+
+		auto build_union_dummy(ast::proj_def& def)
+		{
+			std::cout << "[debug] Union projections are not yet implemented\n";
+			std::cout << "[debug] Will implement as an empty struct projection \"" << def.name << "\"\n";
+			return attach_pgraph(def);
+		}
+
+		auto build_empty_struct(ast::proj_def& def)
+		{
+			std::cout << "[pgraph] generating empty pgraph projection for \"" << def.name << "\"\n";
+			return attach_pgraph(def);
+		}
+
+		auto build_struct(ast::proj_def& def)
+		{
+			// NOTE: current solution is to allow partially-completed pgraphs to be cached, to mark their existence
+			// I don't like it for immutability reasons, but I can't deal with it right now
+			auto pgraph = attach_pgraph(def);
+			const auto& field_nodes = *def.fields;
+			auto& fields = pgraph->fields;
+			fields.reserve(field_nodes.size());
+			for (const auto& field : field_nodes) {
+				auto pgraph = build_field(*field);
+				std::cout << "[pgraph] completed field \"" << pgraph.first << "\"\n";
+				fields.emplace_back(std::move(pgraph));
+			}
+
+			std::cout << "[pgraph] finished \"" << def.name << "\"\n";
+
+			return std::move(pgraph);
+		}
+
 		// FIXME: self-referencing projections do not set their own graphs to non-null, we need three-state
 		// TODO: is it necessary to detect if a projection self-references by value?
 		// TODO: brak this up, it's oversized
@@ -121,42 +161,13 @@ namespace idlc::sema {
 				return projection_ptr {def.pgraph};
 			}
 			else {
-				std::cout << "[pgraph] generating new pgraph for \""
-					<< def.name << "\" (" << &def << ")\n";
-
-				if (!def.fields) {
-					std::cout << "[pgraph] generating empty pgraph projection for \"" << def.name << "\"\n";
-					auto pgraph = make_projection();
-					def.pgraph = pgraph.get();
-					return std::move(pgraph);
-				}
-
-				if (def.kind == ast::proj_def_kind::union_kind) {
-					std::cout << "[debug] Union projections are not yet implemented\n";
-					std::cout << "[debug] Will implement as an empty struct projection \"" << def.name << "\"\n";
-					auto pgraph = make_projection();
-					def.pgraph = pgraph.get();
-					return std::move(pgraph);
-				}
-
-				// NOTE: current solution is to allow partially-completed pgraphs to be cached, to mark their existence
-				// I don't like it for immutability reasons, but I can't deal with it right now
-				auto pgraph = make_projection();
-				def.pgraph = pgraph.get();
-				std::cout << "[pgraph] starting (and caching) pgraph for \"" << def.name << "\"\n";
-
-				const auto& field_nodes = *def.fields;
-				auto& fields = pgraph->fields;
-				fields.reserve(field_nodes.size());
-				for (const auto& field : field_nodes) {
-					auto pgraph = build_field(*field);
-					std::cout << "[pgraph] completed field \"" << pgraph.first << "\"\n";
-					fields.emplace_back(std::move(pgraph));
-				}
-
-				std::cout << "[pgraph] finished \"" << def.name << "\"\n";
-
-				return std::move(pgraph);
+				std::cout << "[pgraph] generating new pgraph for \"" << def.name << "\" (" << &def << ")\n";
+				if (!def.fields)
+					return build_empty_struct(def);
+				else if (def.kind == ast::proj_def_kind::union_kind)
+					return build_union_dummy(def);
+				else
+					return build_struct(def);
 			}
 		}
 

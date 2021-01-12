@@ -32,14 +32,7 @@ namespace idlc::sema {
 					return true;
 				}
 				else if constexpr (std::is_same_v<type, projection_ptr>) {
-					if (!visited(item.get())) {
-						visited_.emplace_back(item.get());
-						return pass.visit_projection(*item);
-					}
-
-					std::cout << "[debug] short-circuited projection_ptr\n";
-
-					return true;
+					return pass.visit_projection(*item);
 				}
 				else if constexpr (std::is_same_v<type, node_ptr<dyn_array>>) {
 					return pass.visit_dyn_array(*item);
@@ -68,12 +61,19 @@ namespace idlc::sema {
 
 		bool operator()(walk& pass, projection& node)
 		{
-			for (auto& [name, item] : node.fields) {
-				if (!pass.visit_data_field(*item))
-					return false;
+			if (visited(&node)) {
+				std::cout << "[debug] short-circuiting projection\n";
+				return true;
 			}
+			else {
+				visited_.push_back(&node); // NOTE: this must be here, to prevent nested calls from recursing infinitely
+				for (auto& [name, item] : node.fields) {
+					if (!pass.visit_data_field(*item))
+						return false;
+				}
 
-			return true;
+				return true;
+			}
 		}
 
 		bool operator()(walk& pass, dyn_array& node)
@@ -90,14 +90,16 @@ namespace idlc::sema {
 		{
 			return pass.visit_data_field(*node.referent);
 		}
-
-	private:
-		std::vector<projection*> visited_;
-
+		
+		// TODO: currently the *only* outside client of this is the dump walk, not clear if this is useful
+		// more generally
 		bool visited(projection* ptr)
 		{
 			return std::find(visited_.begin(), visited_.end(), ptr) != visited_.end();
 		}
+
+	private:
+		std::vector<projection*> visited_;
 	};
 
 	template<typename derived>
@@ -185,7 +187,11 @@ namespace idlc::sema {
 
 		bool visit_projection(projection& node)
 		{
-			tab_over(std::cout << "[debug]", level_) << "projection\n";
+			if (!traverse.visited(&node))
+				tab_over(std::cout << "[debug]", level_) << "projection\n";
+			else
+				tab_over(std::cout << "[debug]", level_) << "projection (skipped)\n";
+
 			++level_;
 			if (!traverse(*this, node))
 				return false;
