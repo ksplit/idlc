@@ -5,10 +5,6 @@
 
 idl_mod/
 build/
-out/
-CMakeSettings.json
-dump.txt
-notes.txt
 log.txt
 
 #parser generated files
@@ -18,4 +14,3 @@ src/parser/parser.h
 
 #editor configs
 .vscode/
-.vs/

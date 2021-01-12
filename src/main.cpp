@@ -5,7 +5,7 @@
 #include <gsl/gsl>
 
 #include "parser/idl_parse.h"
-#include "ast/walk.h"
+#include "ast/dump_ast.h"
 #include "sema/name_binding.h"
 #include "sema/pgraph_dump.h"
 #include "sema/type_walk.h"
@@ -71,20 +71,6 @@
 		- minimum viable: focus on nullnet, waiting on vikram to generate IDL
 */
 
-namespace idlc {
-	namespace {
-		constexpr auto enable_nullwalk = true;
-
-		void dump_tree(idlc::ast::file& root)
-		{
-			if constexpr (enable_nullwalk) {
-				ast::null_walk walk {};
-				walk.visit_file(root);
-			}
-		}
-	}
-}
-
 // Note that Roslyn appears to render the AST completely immutable, forcing node properties to be stored
 // by association (hash table, red node, etc.)
 
@@ -105,8 +91,7 @@ int main(int argc, char** argv)
 
 	auto& file = *driver_idl;
 	std::cout << "[parse] File was parsed correctly" << std::endl;
-	idlc::dump_tree(file);
-
+	idlc::ast::dump_ast(file);
 	if (!idlc::sema::bind_all(file)) {
 		std::cout << "Error: Not all names were bound\n";
 		return 1;
