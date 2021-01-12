@@ -2,10 +2,12 @@
 #define IDLC_SEMA_PGRAPH
 
 #include <cassert>
+#include <memory>
 #include <utility>
 #include <variant>
 
 #include "../tag_types.h"
+#include "../parser/string_heap.h"
 
 namespace idlc::sema {
 	using primitive = type_primitive;

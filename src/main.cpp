@@ -7,8 +7,8 @@
 #include "parser/idl_parse.h"
 #include "ast/walk.h"
 #include "sema/name_binding.h"
+#include "sema/pgraph_dump.h"
 #include "sema/type_walk.h"
-#include "sema/default_walk.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 // NOTE: Currently we work at the scale of a single file. All modules within a file are treated as implicitly imported.
@@ -115,10 +115,6 @@ int main(int argc, char** argv)
 	const auto data_fields = idlc::sema::generate_pgraphs(file);
 	for (auto& [name, field]: data_fields) {
 		std::cout << "[debug] For \"" << name << "\":\n";
-		idlc::sema::null_walk pgraph_null {};
-		if (!pgraph_null.visit_data_field(*field)) {
-			std::cout << "[debug] Could not walk a pgraph\n";
-			return 1;
-		}
+		idlc::sema::dump_pgraph(*field);
 	}
 }

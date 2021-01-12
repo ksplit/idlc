@@ -24,6 +24,7 @@ add_executable(
 	"src/parser/parse_globals.cpp"
 	"src/sema/type_walk.cpp"
 	"src/sema/name_binding.cpp"
+	"src/sema/pgraph_dump.cpp"
 	"src/main.cpp"
 )
 
