@@ -18,7 +18,6 @@ namespace idlc::sema {
 	struct rpc_ptr;
 	class projection_ptr; // because these nodes are shared
 
-	// TODO: share with the AST
 	template<typename type>
 	using node_ptr = std::unique_ptr<type>;
 

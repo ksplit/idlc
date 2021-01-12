@@ -164,24 +164,24 @@ namespace idlc::ast {
 
 	// FIXME: field order
 	struct type_spec {
-		const bool is_const;
 		const node_ref<type_stem> stem;
 		const ref_vec<indirection> indirs;
 		const annotation attrs; // Will only ever have value attrs in it
+		const bool is_const;
 
 		// TODO: must these be cached?
 		sema::data_field* pgraph; // These are not shared, but cached here
 
 		type_spec(
-			bool is_const,
 			node_ref<type_stem> stem,
 			ref_vec<indirection> indirs,
-			annotation attrs
+			annotation attrs,
+			bool is_const
 		) :
-			is_const {is_const},
 			stem {stem},
 			indirs {indirs},
-			attrs {attrs}
+			attrs {attrs},
+			is_const {is_const}
 		{}
 	};
 

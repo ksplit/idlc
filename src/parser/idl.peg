@@ -463,7 +463,12 @@ type_spec = is_c:(tok_kw_const tok_space)? stem:type_stem indirs:(tok_space? ind
 	for (const auto& indir : ivals)
 		a.push_back(get_shared<indirection>(indir));
 
-	value = share(type_spec {is_c.getValue(), get_shared<type_stem>(stem), std::move(a), to_int<annotation>(val_annotation)});
+	value = share(type_spec {
+		get_shared<type_stem>(stem),
+		std::move(a),
+		to_int<annotation>(val_annotation),
+		is_c.getValue()
+	});
 }}
 
 ret_type = type_spec | tok_kw_void {{ // TODO: explicit? }}

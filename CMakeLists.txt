@@ -23,6 +23,7 @@ add_executable(
 	"src/parser/string_heap.cpp"
 	"src/parser/parse_globals.cpp"
 	"src/sema/type_walk.cpp"
+	"src/sema/name_binding.cpp"
 	"src/main.cpp"
 )
 

@@ -8,6 +8,8 @@
 
 #include "../parser/string_heap.h"
 
+// TODO: consider merging this into the AST module
+
 // TODO: move these
 namespace idlc::ast {
 	struct proj_def;
