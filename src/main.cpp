@@ -9,6 +9,7 @@
 #include "sema/name_binding.h"
 #include "sema/pgraph_dump.h"
 #include "sema/type_walk.h"
+#include "sema/defaults_walk.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 // NOTE: Currently we work at the scale of a single file. All modules within a file are treated as implicitly imported.
@@ -102,4 +103,6 @@ int main(int argc, char** argv)
 		std::cout << "[debug] For \"" << name << "\":\n";
 		idlc::sema::dump_pgraph(*field);
 	}
+
+	idlc::sema::propagate_defaults(file);
 }

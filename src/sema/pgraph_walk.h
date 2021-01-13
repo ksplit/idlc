@@ -84,6 +84,11 @@ namespace idlc::sema {
 		{
 			return pass.visit_data_field(*node.referent);
 		}
+
+		bool operator()(walk& pass, rpc_ptr& node)
+		{
+			return true;
+		}
 		
 		// TODO: currently the *only* outside client of this is the dump walk, not clear if this is useful
 		// more generally

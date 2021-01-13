@@ -1,6 +1,0 @@
-include <kernel.idl>;
-
-driver nullnet {
-    import foo;
-    import bar;
-}

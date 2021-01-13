@@ -7,7 +7,7 @@ module kernel {
         }
     }
 
-    rpc void netif_carrier_off( projection dev  *dev ) {
+    rpc void netif_carrier_off( projection dev *dev ) {
         projection < struct net_device > dev {
         }
     }

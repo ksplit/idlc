@@ -25,17 +25,27 @@ namespace idlc {
 		use_default		= 0b000000000, // will not set the is_set flag, thus ensuring it will be defaulted
 	};
 
-	inline auto& operator|=(annotation& a, annotation b) {
-		auto val = static_cast<std::uintptr_t>(a);
-		val |= static_cast<std::uintptr_t>(b);
-		a = static_cast<annotation>(val);
+	inline auto operator|(annotation a, annotation b)
+	{
+		return static_cast<annotation>(static_cast<std::uintptr_t>(a) | static_cast<std::uintptr_t>(b));
+	}
+
+	inline auto& operator|=(annotation& a, annotation b)
+	{
+		a = a | b;
 		return a;
 	}
 
-	inline auto operator&(annotation a, annotation b) {
+	inline auto operator&(annotation a, annotation b)
+	{
 		auto val = static_cast<std::uintptr_t>(a);
 		val &= static_cast<std::uintptr_t>(b);
 		return static_cast<annotation>(val);
+	}
+
+	inline auto is_clear(annotation a)
+	{
+		return static_cast<std::uintptr_t>(a) == 0;
 	}
 
 	enum class type_primitive {

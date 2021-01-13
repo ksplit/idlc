@@ -26,6 +26,7 @@ add_executable(
 	"src/sema/type_walk.cpp"
 	"src/sema/name_binding.cpp"
 	"src/sema/pgraph_dump.cpp"
+	"src/sema/defaults_walk.cpp"
 	"src/main.cpp"
 )
 
