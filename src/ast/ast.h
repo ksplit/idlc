@@ -12,8 +12,8 @@
 
 #include "../tag_types.h"
 
- // TODO: move me
- // TODO: since AST uses "external types" extensively, re-organize these to avoid vicious circularities
+// TODO: since AST uses "external types" (sema) extensively, re-organize these to avoid vicious circularities
+// TODO: sema is better expressed as the set of walks over the AST, and the different ways of walking it (pgraphs)
 namespace idlc::sema {
 	struct projection;
 	struct data_field;
@@ -169,9 +169,6 @@ namespace idlc::ast {
 		const annotation attrs; // Will only ever have value attrs in it
 		const bool is_const;
 
-		// TODO: must these be cached?
-		sema::data_field* pgraph; // These are not shared, but cached here
-
 		type_spec(
 			node_ref<type_stem> stem,
 			ref_vec<indirection> indirs,
@@ -247,6 +244,7 @@ namespace idlc::ast {
 		const rpc_def_kind kind;
 
 		sema::scope scope;
+		std::vector<sema::data_field*> pgraphs;
 
 		rpc_def(
 			node_ptr<type_spec> ret_type,

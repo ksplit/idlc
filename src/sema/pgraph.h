@@ -150,6 +150,8 @@ namespace idlc::sema {
 		annotation defaulted_with; // record which anotation triggered the default pass, to detect conflicts
 		unsigned refcount; // NOTE: since projection nodes are ultimately shared due to semantics, it becomes necessary
 		// to track their lifetime by refcount. See projection_ptr
+
+		projection() = default;
 	};
 
 	inline projection_ptr::~projection_ptr() 

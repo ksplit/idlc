@@ -1,5 +1,7 @@
 #include "type_walk.h"
 
+#include <cassert>
+#include <exception>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -14,19 +16,18 @@
 
 namespace idlc::sema {
 	namespace {
+		// Remember: field_type is quite slim, only a tag value and a pointer (16 bytes total)
+
 		field_type build_string_type(bool is_const);
 		field_type build_stem_type(const ast::type_stem& node, bool is_const);
 		field_type build_array_type(const ast::type_array& node, bool is_const);
 		field_type build_projection(ast::type_proj& node);
-		node_ptr<data_field> build_data_field(ast::type_spec& node);
+		node_ptr<data_field> build_data_field(const ast::type_spec& node);
 
 		field_type build_string_type(bool is_const)
 		{
 			return std::make_unique<null_terminated_array>(
-				std::make_unique<data_field>(
-					primitive::ty_char,
-					ast::annotation::use_default
-				),
+				std::make_unique<data_field>(primitive::ty_char, ast::annotation::use_default),
 				is_const
 			);
 		}
@@ -52,9 +53,8 @@ namespace idlc::sema {
 					std::cout << "[debug] generating dummy pgraph node for RPC pointer \"" << item->name << "\"\n";
 					return std::make_unique<rpc_ptr>();
 				}
-			
-				std::cout.flush();
-				assert(false);
+
+				std::terminate();
 			};
 
 			return std::visit(visit, node);
@@ -73,7 +73,7 @@ namespace idlc::sema {
 				}
 				else if constexpr (std::is_same_v<type, unsigned>) {
 					std::cout << "[debug] static-sized arrays are not yet implemented\n";
-					assert(false);
+					std::terminate();
 				}
 				else if constexpr (std::is_same_v<type, ident>) {
 					return std::make_unique<dyn_array>(
@@ -83,7 +83,7 @@ namespace idlc::sema {
 					);
 				}
 
-				assert(false);
+				std::terminate();
 			};
 
 			return {};
@@ -97,14 +97,14 @@ namespace idlc::sema {
 				if constexpr (std::is_same_v<type, ast::node_ref<ast::naked_proj_decl>>) {
 					std::cout << "[debug] Naked projections are not yet implemented\n";
 					std::cout << "[debug] Unknown how to proceed, aborting\n";
-					assert(false);
+					std::terminate();
 				}
 				else if constexpr (std::is_same_v<type, ast::node_ref<ast::var_decl>>) {
 					std::cout << "[pgraph] building var_decl data_field for \"" << item->name << "\"\n";
 					return {item->name, build_data_field(*item->type)};
 				}
 
-				assert(false);
+				std::terminate();
 			};
 
 			return std::visit(visit, node);
@@ -173,33 +173,40 @@ namespace idlc::sema {
 
 		class type_walk : public ast::ast_walk<type_walk> {
 		public:
-			bool visit_var_decl(ast::var_decl& node)
-			{
-				store_.emplace_back(node.name, build_data_field(*node.type));
-				return true; // NOTE: no need to traverse here, there is nothing of interest in the subtree
-			}
-
 			bool visit_rpc_def(ast::rpc_def& node)
 			{
 				if (node.ret_type)
-					store_.emplace_back(node.name, build_data_field(*node.ret_type));
+					insert_field(node, *node.ret_type, "<ret-type>");
+
+				if (node.arguments) {
+					for (auto& argument : *node.arguments)
+						insert_field(node, *argument->type, argument->name);
+				}
 
 				return ast::traverse(*this, node);
 			}
 
 			// TODO: support naked projections
 
+			// FIXME: this is probably a hack, thanks to the unclean split between the AST and the assoicated data structures
 			auto get_pgraph_owner()
 			{
 				return std::move(store_);
 			}
 
 		private:
-			field_type stem_ {};
-			std::vector<std::pair<ident, node_ptr<data_field>>> store_ {}; // NOTE: idents are only for debugging
+			std::vector<std::pair<gsl::czstring<>, node_ptr<data_field>>> store_ {}; // NOTE: idents are only for debugging
+
+			// NOTE: the name is not necessarily an ident!!!
+			void insert_field(ast::rpc_def& parent, const ast::type_spec& node, gsl::czstring<> name)
+			{
+				auto pgraph_node = build_data_field(node);
+				parent.pgraphs.emplace_back(pgraph_node.get());
+				store_.emplace_back(name, std::move(pgraph_node));
+			}
 		};
 
-		node_ptr<data_field> build_data_field(ast::type_spec& node)
+		node_ptr<data_field> build_data_field(const ast::type_spec& node)
 		{
 			// TODO: finish indirection handling
 			auto type = build_stem_type(*node.stem, node.is_const);
@@ -213,7 +220,6 @@ namespace idlc::sema {
 
 			assert((node.attrs & ast::annotation::is_val) == node.attrs);
 			auto field = std::make_unique<data_field>(std::move(type), node.attrs);
-			node.pgraph = field.get();
 
 			return std::move(field);
 		}
@@ -227,6 +233,7 @@ using namespace idlc::sema;
 std::vector<std::pair<ident, node_ptr<data_field>>> idlc::sema::generate_pgraphs(idlc::ast::file& file)
 {
 	type_walk walk {};
-	walk.visit_file(file);
+	const auto succeeded = walk.visit_file(file);
+	assert(succeeded);
 	return walk.get_pgraph_owner();
 }

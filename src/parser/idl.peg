@@ -4,7 +4,7 @@ include: {{
 	#include <any>
 	#include <memory>
 	#include <type_traits>
-	#include <iostream>
+	#include <utility>
 
 	#include <gsl/gsl>
 
@@ -35,7 +35,7 @@ code: {{
 	template<typename type>
 	auto share(type&& v)
 	{
-		const auto ptr = std::make_shared<std::decay_t<type>>(v);
+		const auto ptr = std::make_shared<std::decay_t<type>>(std::forward<type>(v));
 		parser_objs.emplace_back(ptr);
 		return reinterpret_cast<const void*>(parser_objs.size() - 1);
 	}

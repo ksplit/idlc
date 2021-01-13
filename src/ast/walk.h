@@ -2,7 +2,6 @@
 #define _LCDS_IDL_PARSER_WALK_H_
 
 #include <type_traits>
-#include <cassert>
 #include <iostream>
 
 #include "ast.h"
@@ -35,9 +34,8 @@ namespace idlc::ast {
 			else if constexpr (std::is_same_v<type, node_ref<driver_file>>) {
 				return self.visit_driver_file(*subnode);
 			}
-			else {
-				assert(false);
-			}
+
+			std::terminate();
 		};			
 
 		return std::visit(visit, node);
@@ -80,8 +78,8 @@ namespace idlc::ast {
 				return self.visit_proj_def(*subnode);
 			else if constexpr (std::is_same_v<type, node_ref<rpc_def>>)
 				return self.visit_rpc_def(*subnode);
-			else
-				assert(false);
+			
+			std::terminate();
 		};
 
 		return std::visit(visit, node);
@@ -135,8 +133,8 @@ namespace idlc::ast {
 				return self.visit_var_decl(*subnode);
 			else if constexpr (std::is_same_v<type, node_ref<naked_proj_decl>>)
 				return self.visit_naked_proj_decl(*subnode);
-			else
-				assert(false);
+			
+			std::terminate();
 		};
 
 		return std::visit(visit, node);
@@ -186,8 +184,8 @@ namespace idlc::ast {
 				return true;
 			else if constexpr (std::is_same_v<type, type_primitive>)
 				return true;
-			else
-				assert(false);
+			
+			std::terminate();
 		};
 
 		return std::visit(visit, node);
@@ -252,10 +250,8 @@ namespace idlc::ast {
 			using type = std::decay_t<decltype(subnode)>;
 			if constexpr (std::is_same_v<type, node_ref<proj_def>>)
 				return self.visit_proj_def(*subnode);
-			else
-				assert(false);
-
-			return false;
+			
+			std::terminate();
 		};
 
 		return std::visit(visit, node);

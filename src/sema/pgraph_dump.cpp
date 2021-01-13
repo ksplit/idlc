@@ -1,5 +1,8 @@
 #include "pgraph_dump.h"
 
+#include <cassert>
+#include <iostream>
+
 #include "pgraph_walk.h"
 #include "pgraph.h"
 #include "../tab_over.h"
@@ -87,6 +90,12 @@ namespace idlc::sema {
 			bool visit_rpc_ptr(rpc_ptr& node)
 			{
 				tab_over(std::cout << "[debug]", level_) << "rpc_ptr\n";
+				return true;
+			}
+
+			bool visit_primitive(primitive node)
+			{
+				tab_over(std::cout << "[debug]", level_) << "primitive\n";
 				return true;
 			}
 

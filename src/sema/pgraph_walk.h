@@ -4,7 +4,6 @@
 #include "pgraph.h"
 
 #include <algorithm>
-#include <cassert>
 #include <iostream>
 #include <type_traits>
 #include <variant>
@@ -23,13 +22,11 @@ namespace idlc::sema {
 
 		bool operator()(walk& pass, field_type& node)
 		{
-			const auto visit = [this, &pass](auto&& item)
+			const auto visit = [this, &pass](auto&& item) -> bool
 			{
 				using type = std::decay_t<decltype(item)>;
 				if constexpr (std::is_same_v<type, primitive>) {
-					// There is nothing to be walked here
-					// TODO: yet?
-					return true;
+					return pass.visit_primitive(item);
 				}
 				else if constexpr (std::is_same_v<type, projection_ptr>) {
 					return pass.visit_projection(*item);
@@ -49,11 +46,8 @@ namespace idlc::sema {
 				else if constexpr (std::is_same_v<type, node_ptr<rpc_ptr>>) {
 					return pass.visit_rpc_ptr(*item);
 				}
-				else {
-					assert(false); // something isn't implemented
-				}
-
-				return false;
+				
+				std::terminate();
 			};
 
 			return std::visit(visit, node);
@@ -138,6 +132,11 @@ namespace idlc::sema {
 		bool visit_rpc_ptr(rpc_ptr& node)
 		{
 			return traverse(self(), node);
+		}
+
+		bool visit_primitive(primitive node)
+		{
+			return true;
 		}
 
 	protected:
