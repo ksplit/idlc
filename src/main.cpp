@@ -104,5 +104,8 @@ int main(int argc, char** argv)
 		idlc::sema::dump_pgraph(*field);
 	}
 
-	idlc::sema::propagate_defaults(file);
+	if (!idlc::sema::propagate_defaults(file)) {
+		std::cout << "Error: Defaults propagation failed\n";
+		return 1;
+	}
 }

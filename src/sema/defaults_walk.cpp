@@ -27,6 +27,8 @@ namespace idlc::sema {
 			std::vector<ast::rpc_def*> defs_ {};
 		};
 
+		bool propagate_defaults(data_field& node, annotation default_with);
+
 		// TODO: implement error checking, currently focused on generating defaults
 		class propagation_walk : public pgraph_walk<propagation_walk> {
 		public:
@@ -38,12 +40,13 @@ namespace idlc::sema {
 			bool visit_data_field(data_field& node)
 			{
 				// The core logic of propagating a top-level value annotation until one is found, and continuing
-				if (!is_clear(node.value_annots & annotation::is_set)) {
-					std::cout << "[debug] Continuing with new annotation default\n";
+				if (!is_clear(node.value_annots & annotation::val_only)) {
+					std::cout << "[debug] Continuing with new value annotation default 0x" << std::hex;
+					std::cout << static_cast<std::uintptr_t>(node.value_annots) << std::dec << "\n";
 					default_with_ = node.value_annots;				
 				}
 				else {
-					std::cout << "[debug] Applying annotation default\n";
+					std::cout << "[debug] Applying value annotation default\n";
 					node.value_annots = default_with_;
 				}
 
@@ -53,7 +56,7 @@ namespace idlc::sema {
 			bool visit_pointer(pointer& node)
 			{
 				if (is_clear(node.pointer_annots & annotation::is_set)) {
-					std::cout << "[debug] Pointer annotation inferred from default\n";
+					std::cout << "[debug] Pointer annotation inferred from value default\n";
 					if (default_with_ == annotation::in)
 						node.pointer_annots = annotation::bind_callee;
 					else if (default_with_ == annotation::out)
@@ -61,19 +64,54 @@ namespace idlc::sema {
 					else if (default_with_ == (annotation::in | annotation::out)) // TODO: does this make sense?
 						node.pointer_annots = (annotation::bind_callee | annotation::bind_caller);
 				}
+				else {
+					std::cout << "[debug] Pointer annotation previously set, ignoring\n";
+				}
 
 				return traverse(*this, node);
 			}
 
 			bool visit_projection(projection& node)
 			{
-				std::cout << "[debug] Struck projection\n";
+				std::cout << "[debug] Struck projection with 0x" << std::hex;
+				std::cout << static_cast<std::uintptr_t>(default_with_) << std::dec << "\n";
+				if (!is_clear(node.defaulted_with & annotation::is_set)) {
+					if (node.defaulted_with != default_with_) {
+						std::cout << "Error: Conflicting annotation in lazy projection\n";
+						std::cout << "[debug] Was 0x" << std::hex;
+						std::cout << static_cast<std::uintptr_t>(node.defaulted_with) << std::dec << "\n";
+						return false;
+					}
+					else {
+						std::cout << "[debug] Skipping previously-processed projection\n";
+						return true;
+					}
+				}
+
+				std::cout << "[debug] Marked projection with 0x" << std::hex;
+				std::cout << static_cast<std::uintptr_t>(default_with_) << std::dec << "\n";
+				node.defaulted_with = default_with_;
+
+				for (auto& [name, field] : node.fields) {
+					std::cout<< "[debug] Propagating for projection field \"" << name << "\"\n";
+					if (!propagate_defaults(*field, default_with_))
+						return false;
+				}
+
+				std::cout << "[debug] Finished projection\n";
+
 				return true; // NOTE: do *not* traverse projection nodes directly
 			}
 
 		private:
 			annotation default_with_ {};
 		};
+
+		bool propagate_defaults(data_field& node, annotation default_with)
+		{
+			propagation_walk ret_walk {default_with};
+			return ret_walk.visit_data_field(node);
+		}
 	
 		auto get_rpcs(ast::file& root)
 		{
@@ -82,16 +120,9 @@ namespace idlc::sema {
 			assert(succeeded);
 			return walk.get();
 		}
-
-		void propagate_defaults(data_field& node, annotation default_with)
-		{
-			propagation_walk ret_walk {default_with};
-			const auto succeeded = ret_walk.visit_data_field(node);
-			assert(succeeded);
-		}
 	}
 
-	void propagate_defaults(ast::file& root)
+	bool propagate_defaults(ast::file& root)
 	{
 		const auto rpcs = get_rpcs(root);
 		for (const auto& rpc : rpcs) {
@@ -99,14 +130,21 @@ namespace idlc::sema {
 			gsl::span<data_field*> pgraphs {rpc->pgraphs};
 			if (rpc->ret_type) {
 				std::cout << "[debug] Processing return type\n";
-				propagate_defaults(*pgraphs[0], annotation::out);
+				if (!propagate_defaults(*pgraphs[0], annotation::out))
+					return false;
+				
 				pgraphs = pgraphs.subspan(1);
 			}
 
 			for (const auto& pgraph : pgraphs) {
 				std::cout << "[debug] Processing argument type\n";
-				propagate_defaults(*pgraph, annotation::in);
+				if (!propagate_defaults(*pgraph, annotation::in))
+					return false;
 			}
+		
+			std::cout << "[debug] Finished RPC\n";
 		}
+
+		return true;
 	}
 }

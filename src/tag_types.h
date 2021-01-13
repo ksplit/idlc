@@ -19,9 +19,11 @@ namespace idlc {
 		is_bind			= 0b100110000,
 		is_dealloc		= 0b100001100,
 		is_alloc		= 0b100000011,
-		is_ptr			= is_bind | is_dealloc | is_alloc,
-		is_val			= out | in,
 		is_set			= 0b100000000,
+		is_ptr			= is_bind | is_dealloc | is_alloc,
+		is_val			= (out | in),
+		ptr_only		= is_ptr & (~is_set),
+		val_only		= is_val & (~is_set),
 		use_default		= 0b000000000, // will not set the is_set flag, thus ensuring it will be defaulted
 	};
 
@@ -38,9 +40,12 @@ namespace idlc {
 
 	inline auto operator&(annotation a, annotation b)
 	{
-		auto val = static_cast<std::uintptr_t>(a);
-		val &= static_cast<std::uintptr_t>(b);
-		return static_cast<annotation>(val);
+		return static_cast<annotation>(static_cast<std::uintptr_t>(a) & static_cast<std::uintptr_t>(b));
+	}
+
+	inline auto operator~(annotation a)
+	{
+		return static_cast<annotation>(~static_cast<std::uintptr_t>(a));
 	}
 
 	inline auto is_clear(annotation a)

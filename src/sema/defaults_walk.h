@@ -4,7 +4,7 @@
 #include "../ast/ast.h"
 
 namespace idlc::sema {
-	void propagate_defaults(ast::file& root);
+	bool propagate_defaults(ast::file& root);
 }
 
 #endif
