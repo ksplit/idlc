@@ -212,6 +212,10 @@ namespace idlc::ast {
 		const node_ptr<ref_vec<proj_field>> fields;
 		const proj_def_kind kind;
 
+		// TODO: remove me! This field is the simplest way to detect that we've hit a cyclic pgraph, which we
+		// don't yet "know" how to generate correctly
+		bool seen_before;
+
 		proj_def(
 			ident name,
 			ident type,
@@ -221,7 +225,8 @@ namespace idlc::ast {
 			name {name},
 			type {type},
 			fields {fields},
-			kind {kind}
+			kind {kind},
+			seen_before {}
 		{}
 	};
 

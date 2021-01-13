@@ -69,17 +69,25 @@
 		- pointers (non-cyclic?)
 		- unions
 		- structs
-		- minimum viable: focus on nullnet, waiting on vikram to generate IDL
+		- minimum viable: focus on nullnet
 */
 
 // Note that Roslyn appears to render the AST completely immutable, forcing node properties to be stored
 // by association (hash table, red node, etc.)
 
 // NOTE: Default to a walk, re-write later as needed (premature optimization, etc.)
+// NOTE: All of these are low-priority, but eventually needed (if it breaks nullnet, it's high-priority)
 // TODO: sort out the somewhat hellish logging situation
+// TODO: sort out const-ness handling (low-priority, work around in mean time)
+// TODO: three annotation sets per projection (in, out, in/out), probably generated pessimistically as soon as the
+// projection is "discovered" (not implemented, currently low-priority, only needed to support self-references)
+// TODO: ownership of these projection instances is shared
 
 int main(int argc, char** argv)
 {
+	// Very much a hack, will continue to be used until I stop mixing iostreams and debug aborts
+	std::set_terminate([] {	std::cout.flush(); });
+
     const gsl::span<gsl::zstring<>> args {argv, gsl::narrow<std::size_t>(argc)};
     if (argc != 2) {
         std::cout << "Usage: idlc <idl-file>" << std::endl;
@@ -91,20 +99,14 @@ int main(int argc, char** argv)
         return 1;
 
 	auto& file = *driver_idl;
-	std::cout << "[parse] File was parsed correctly" << std::endl;
-	idlc::ast::dump_ast(file);
 	if (!idlc::sema::bind_all(file)) {
 		std::cout << "Error: Not all names were bound\n";
 		return 1;
 	}
 
-	const auto data_fields = idlc::sema::generate_pgraphs(file);
-	for (auto& [name, field]: data_fields) {
-		std::cout << "[debug] For \"" << name << "\":\n";
-		idlc::sema::dump_pgraph(*field);
-	}
-
-	if (!idlc::sema::propagate_defaults(file)) {
+	const auto rpcs = idlc::sema::get_rpcs(file);
+	const auto data_fields = idlc::sema::generate_pgraphs(rpcs);
+	if (!idlc::sema::propagate_defaults(rpcs)) {
 		std::cout << "Error: Defaults propagation failed\n";
 		return 1;
 	}

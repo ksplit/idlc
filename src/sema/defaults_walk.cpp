@@ -95,19 +95,18 @@ namespace idlc::sema {
 			propagation_walk ret_walk {default_with};
 			return ret_walk.visit_data_field(node);
 		}
-	
-		auto get_rpcs(ast::file& root)
-		{
-			rpc_collector walk {};
-			const auto succeeded = walk.visit_file(root);
-			assert(succeeded);
-			return walk.get();
-		}
 	}
 
-	bool propagate_defaults(ast::file& root)
+	auto get_rpcs(ast::file& root)
 	{
-		const auto rpcs = get_rpcs(root);
+		rpc_collector walk {};
+		const auto succeeded = walk.visit_file(root);
+		assert(succeeded);
+		return walk.get();
+	}
+
+	bool propagate_defaults(gsl::span<ast::rpc_def* const> rpcs)
+	{
 		for (const auto& rpc : rpcs) {
 			std::cout << "[debug] Propagating for RPC \"" << rpc->name << "\"\n";
 			gsl::span<data_field*> pgraphs {rpc->pgraphs};

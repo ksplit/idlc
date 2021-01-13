@@ -103,10 +103,15 @@ namespace idlc::sema {
 	};
 
 	struct projection {
+		ident real_name;
 		std::vector<std::pair<ident, node_ptr<data_field>>> fields {};
 
-		projection() = default;
-		projection(decltype(fields)&& fields) : fields {std::move(fields)} {}
+		projection(ident real_name) : real_name {real_name} {};
+		
+		projection(ident real_name, decltype(fields)&& fields) :
+			real_name {real_name},
+			fields {std::move(fields)}
+		{}
 	};
 }
 

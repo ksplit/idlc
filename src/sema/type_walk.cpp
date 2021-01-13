@@ -50,7 +50,7 @@ namespace idlc::sema {
 					return build_projection(*item);
 				}
 				else if constexpr (std::is_same_v<type, ast::node_ref<ast::type_rpc>>) {
-					std::cout << "[debug] generating dummy pgraph node for RPC pointer \"" << item->name << "\"\n";
+					// std::cout << "[debug] generating dummy pgraph node for RPC pointer \"" << item->name << "\"\n";
 					return std::make_unique<rpc_ptr>();
 				}
 
@@ -100,7 +100,7 @@ namespace idlc::sema {
 					std::terminate();
 				}
 				else if constexpr (std::is_same_v<type, ast::node_ref<ast::var_decl>>) {
-					std::cout << "[pgraph] building var_decl data_field for \"" << item->name << "\"\n";
+					// std::cout << "[pgraph] building var_decl data_field for \"" << item->name << "\"\n";
 					return {item->name, build_data_field(*item->type)};
 				}
 
@@ -114,13 +114,13 @@ namespace idlc::sema {
 		{
 			std::cout << "[debug] Union projections are not yet implemented\n";
 			std::cout << "[debug] Will implement as an empty struct projection \"" << def.name << "\"\n";
-			return std::make_unique<projection>();
+			return std::make_unique<projection>(def.type);
 		}
 
 		auto build_empty_struct(ast::proj_def& def)
 		{
-			std::cout << "[pgraph] generating empty pgraph projection for \"" << def.name << "\"\n";
-			return std::make_unique<projection>();
+			// std::cout << "[pgraph] generating empty pgraph projection for \"" << def.name << "\"\n";
+			return std::make_unique<projection>(def.type);
 		}
 
 		auto build_struct(ast::proj_def& def)
@@ -130,13 +130,13 @@ namespace idlc::sema {
 			fields.reserve(field_nodes.size());
 			for (const auto& field : field_nodes) {
 				auto pgraph = build_field(*field);
-				std::cout << "[pgraph] completed field \"" << pgraph.first << "\"\n";
+				// std::cout << "[pgraph] completed field \"" << pgraph.first << "\"\n";
 				fields.emplace_back(std::move(pgraph));
 			}
 
-			std::cout << "[pgraph] finished \"" << def.name << "\"\n";
+			// std::cout << "[pgraph] finished \"" << def.name << "\"\n";
 
-			return std::make_unique<projection>(std::move(fields));
+			return std::make_unique<projection>(def.type, std::move(fields));
 		}
 
 		// FIXME: self-referencing projections do not set their own graphs to non-null, we need three-state
@@ -145,13 +145,25 @@ namespace idlc::sema {
 		field_type build_projection(ast::type_proj& node)
 		{
 			auto& def = *node.definition;
-			std::cout << "[pgraph] generating new pgraph for \"" << def.name << "\" (" << &def << ")\n";
-			if (!def.fields)
-				return build_empty_struct(def);
-			else if (def.kind == ast::proj_def_kind::union_kind)
-				return build_union_dummy(def);
-			else
-				return build_struct(def);
+			if (def.seen_before) {
+				std::cout << "[debug] Self-referential projections are not yet supported\n";
+				std::terminate();
+			}
+			
+			// std::cout << "[pgraph] generating new pgraph for \"" << def.name << "\" (" << &def << ")\n";
+			def.seen_before = true;
+			auto pgraph_node = [&def] {
+				if (!def.fields)
+					return build_empty_struct(def);
+				else if (def.kind == ast::proj_def_kind::union_kind)
+					return build_union_dummy(def);
+				else
+					return build_struct(def);
+			}();
+
+			def.seen_before = false;
+
+			return std::move(pgraph_node);
 		}
 
 		class type_walk : public ast::ast_walk<type_walk> {
@@ -215,10 +227,13 @@ using namespace idlc;
 using namespace idlc::sema;
 
 // The references in the AST are *not* owners, this vector is
-std::vector<std::pair<ident, node_ptr<data_field>>> idlc::sema::generate_pgraphs(idlc::ast::file& file)
+std::vector<std::pair<ident, node_ptr<data_field>>> idlc::sema::generate_pgraphs(gsl::span<ast::rpc_def* const> rpcs)
 {
 	type_walk walk {};
-	const auto succeeded = walk.visit_file(file);
-	assert(succeeded);
+	for (const auto& rpc : rpcs) {
+		const auto succeeded = walk.visit_rpc_def(*rpc);
+		assert(succeeded);
+	}
+
 	return walk.get_pgraph_owner();
 }
