@@ -15,7 +15,6 @@
 // TODO: since AST uses "external types" (sema) extensively, re-organize these to avoid vicious circularities
 // TODO: sema is better expressed as the set of walks over the AST, and the different ways of walking it (pgraphs)
 namespace idlc::sema {
-	struct projection;
 	struct data_field;
 }
 
@@ -213,8 +212,6 @@ namespace idlc::ast {
 		const node_ptr<ref_vec<proj_field>> fields;
 		const proj_def_kind kind;
 
-		sema::projection* pgraph;
-
 		proj_def(
 			ident name,
 			ident type,
@@ -224,8 +221,7 @@ namespace idlc::ast {
 			name {name},
 			type {type},
 			fields {fields},
-			kind {kind},
-			pgraph {}
+			kind {kind}
 		{}
 	};
 

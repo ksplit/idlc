@@ -28,7 +28,7 @@ namespace idlc::sema {
 				if constexpr (std::is_same_v<type, primitive>) {
 					return pass.visit_primitive(item);
 				}
-				else if constexpr (std::is_same_v<type, projection_ptr>) {
+				else if constexpr (std::is_same_v<type, node_ptr<projection>>) {
 					return pass.visit_projection(*item);
 				}
 				else if constexpr (std::is_same_v<type, node_ptr<dyn_array>>) {

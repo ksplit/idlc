@@ -73,25 +73,8 @@ namespace idlc::sema {
 
 			bool visit_projection(projection& node)
 			{
-				std::cout << "[debug] Struck projection with 0x" << std::hex;
+				std::cout << "[debug] Entered projection with 0x" << std::hex;
 				std::cout << static_cast<std::uintptr_t>(default_with_) << std::dec << "\n";
-				if (!is_clear(node.defaulted_with & annotation::is_set)) {
-					if (node.defaulted_with != default_with_) {
-						std::cout << "Error: Conflicting annotation in lazy projection\n";
-						std::cout << "[debug] Was 0x" << std::hex;
-						std::cout << static_cast<std::uintptr_t>(node.defaulted_with) << std::dec << "\n";
-						return false;
-					}
-					else {
-						std::cout << "[debug] Skipping previously-processed projection\n";
-						return true;
-					}
-				}
-
-				std::cout << "[debug] Marked projection with 0x" << std::hex;
-				std::cout << static_cast<std::uintptr_t>(default_with_) << std::dec << "\n";
-				node.defaulted_with = default_with_;
-
 				for (auto& [name, field] : node.fields) {
 					std::cout<< "[debug] Propagating for projection field \"" << name << "\"\n";
 					if (!propagate_defaults(*field, default_with_))

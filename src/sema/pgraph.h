@@ -18,54 +18,11 @@ namespace idlc::sema {
 	struct static_void_ptr; // a void* that is "actually" a pointer to some other type
 	struct projection;
 	struct rpc_ptr;
-	class projection_ptr; // because these nodes are shared
 
 	template<typename type>
 	using node_ptr = std::unique_ptr<type>;
 
 	struct data_field;
-
-	// Do not confuse this with thread-safe!
-	class projection_ptr {
-	public:
-		projection_ptr() = default;
-
-		projection_ptr(projection* ptr);
-		projection_ptr(projection_ptr& o);
-		projection_ptr& operator=(projection_ptr& o);
-		~projection_ptr();
-
-		projection_ptr(projection_ptr&& o) : ptr_ {o.ptr_}
-		{
-			o.ptr_ = nullptr;
-		}
-
-		projection_ptr& operator=(projection_ptr&& o)
-		{
-			ptr_ = o.ptr_;
-			o.ptr_ = nullptr;
-			return *this;
-		}
-
-
-		auto& operator*() const
-		{
-			return *ptr_;
-		}
-
-		auto operator->() const
-		{
-			return ptr_;
-		}
-
-		auto get() const
-		{
-			return ptr_;
-		}
-
-	private:
-		projection* ptr_ {};
-	};
 
 	using field_type = std::variant<
 		primitive,
@@ -74,7 +31,7 @@ namespace idlc::sema {
 		node_ptr<pointer>,
 		node_ptr<static_void_ptr>,
 		node_ptr<rpc_ptr>,
-		projection_ptr
+		node_ptr<projection>
 	>;
 
 	struct data_field {
@@ -146,59 +103,11 @@ namespace idlc::sema {
 	};
 
 	struct projection {
-		std::vector<std::pair<ident, node_ptr<data_field>>> fields;
-		annotation defaulted_with; // record which anotation triggered the default pass, to detect conflicts
-		unsigned refcount; // NOTE: since projection nodes are ultimately shared due to semantics, it becomes necessary
-		// to track their lifetime by refcount. See projection_ptr
+		std::vector<std::pair<ident, node_ptr<data_field>>> fields {};
 
 		projection() = default;
+		projection(decltype(fields)&& fields) : fields {std::move(fields)} {}
 	};
-
-	inline projection_ptr::~projection_ptr() 
-	{
-		if (ptr_) {
-			assert(ptr_->refcount > 0);
-
-			if (!--ptr_->refcount)
-				delete ptr_;
-		}
-	}
-
-	inline projection_ptr::projection_ptr(projection* ptr) : ptr_ {ptr}
-	{
-		if (ptr) {
-			assert(ptr_->refcount > 0);
-			++(ptr->refcount);
-		}
-	}
-
-	inline projection_ptr::projection_ptr(projection_ptr& o) : ptr_ {o.ptr_}
-	{
-		if (ptr_) {
-			assert(ptr_->refcount > 0);
-			++(ptr_->refcount);
-		}
-	}
-
-	inline projection_ptr& projection_ptr::operator=(projection_ptr& o)
-	{
-		ptr_ = o.ptr_;
-		if (ptr_) {
-			assert(ptr_->refcount > 0);
-			++(ptr_->refcount);
-		}
-
-		return *this;
-	}
-
-	inline auto make_projection()
-	{
-		const auto ptr = new projection {};
-		ptr->refcount++;
-		auto ref = projection_ptr {ptr};
-		ptr->refcount--;
-		return ref;
-	}
 }
 
 #endif
