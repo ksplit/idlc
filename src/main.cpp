@@ -5,7 +5,7 @@
 #include <gsl/gsl>
 
 #include "parser/idl_parse.h"
-#include "ast/dump_ast.h"
+#include "ast/ast_dump.h"
 #include "sema/name_binding.h"
 #include "sema/pgraph_dump.h"
 #include "sema/type_walk.h"

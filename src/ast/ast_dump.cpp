@@ -1,4 +1,4 @@
-#include "dump_ast.h"
+#include "ast_dump.h"
 
 #include <cassert>
 #include <iostream>
