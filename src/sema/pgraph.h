@@ -9,6 +9,10 @@
 #include "../tag_types.h"
 #include "../parser/string_heap.h"
 
+namespace idlc::ast {
+	struct proj_def;
+}
+
 namespace idlc::sema {
 	using primitive = type_primitive;
 	struct null_terminated_array;
@@ -22,6 +26,9 @@ namespace idlc::sema {
 	template<typename type>
 	using node_ptr = std::unique_ptr<type>;
 
+	template<typename type>
+	using node_ref = gsl::not_null<std::shared_ptr<type>>;
+
 	struct data_field;
 
 	using field_type = std::variant<
@@ -31,7 +38,8 @@ namespace idlc::sema {
 		node_ptr<pointer>,
 		node_ptr<static_void_ptr>,
 		node_ptr<rpc_ptr>,
-		node_ptr<projection>
+		node_ref<projection>,
+		gsl::not_null<ast::proj_def*> // NOTE: will *never* appear in a finished pgraph, part of lowering
 	>;
 
 	struct data_field {
@@ -102,6 +110,8 @@ namespace idlc::sema {
 
 	};
 
+	// NOTE: in the "projection template" system, each projection will be instantiated at most 3 times
+	// Each distinct instantiation will require its own set of visitor methods for marshaling
 	struct projection {
 		ident real_name;
 		std::vector<std::pair<ident, node_ptr<data_field>>> fields {};

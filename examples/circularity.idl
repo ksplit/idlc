@@ -5,12 +5,12 @@ module foo {
     }
 
     projection < struct net_device > circ_a {
-        projection circ_b *a;
+        projection circ_b [in] *a;
     }
 
     projection < struct net_device > circ_b {
         projection circ_a *a;
     }
 
-    rpc projection simp_circ* foo(projection circ_a* a, projection circ_b* b) {}
+    rpc projection simp_circ* foo(projection circ_a [out]* a, projection circ_b* b) {}
 }

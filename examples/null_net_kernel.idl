@@ -1,7 +1,7 @@
 // FIXME: how _exactly_ does nullnet use the dev_addr field?
 
 module kernel {
-    rpc void netif_carrier_on( projection dev *dev, projection dev [in] * foo ) {
+    rpc void netif_carrier_on( projection dev *dev ) {
         projection < struct net_device > dev {
             projection _global_netdev_ops *netdev_ops;
         }

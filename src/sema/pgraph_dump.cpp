@@ -99,6 +99,12 @@ namespace idlc::sema {
 				return true;
 			}
 
+			bool visit_proj_def(ast::proj_def& node)
+			{
+				tab_over(std::cout << "[debug]", level_) << "proj_def\n";
+				return true;
+			}
+
 		private:
 			unsigned level_ {1};
 		};

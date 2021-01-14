@@ -23,10 +23,10 @@ add_executable(
 	"src/parser/string_heap.cpp"
 	"src/parser/parse_globals.cpp"
 	"src/ast/ast_dump.cpp"
-	"src/sema/type_walk.cpp"
+	"src/sema/pgraph_generation.cpp"
 	"src/sema/name_binding.cpp"
 	"src/sema/pgraph_dump.cpp"
-	"src/sema/defaults_walk.cpp"
+	"src/sema/lowering.cpp"
 	"src/main.cpp"
 )
 

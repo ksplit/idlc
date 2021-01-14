@@ -7,6 +7,7 @@
 
 namespace idlc {
 	// TODO: clean this up?
+	// TODO: I'd prefer strong-typing the val / pointer distinction
 	enum class annotation {
 		alloc_caller	= 0b100000001,
 		alloc_callee	= 0b100000010,
@@ -27,28 +28,28 @@ namespace idlc {
 		use_default		= 0b000000000, // will not set the is_set flag, thus ensuring it will be defaulted
 	};
 
-	inline auto operator|(annotation a, annotation b)
+	constexpr auto operator|(annotation a, annotation b)
 	{
 		return static_cast<annotation>(static_cast<std::uintptr_t>(a) | static_cast<std::uintptr_t>(b));
 	}
 
-	inline auto& operator|=(annotation& a, annotation b)
+	constexpr auto& operator|=(annotation& a, annotation b)
 	{
 		a = a | b;
 		return a;
 	}
 
-	inline auto operator&(annotation a, annotation b)
+	constexpr auto operator&(annotation a, annotation b)
 	{
 		return static_cast<annotation>(static_cast<std::uintptr_t>(a) & static_cast<std::uintptr_t>(b));
 	}
 
-	inline auto operator~(annotation a)
+	constexpr auto operator~(annotation a)
 	{
 		return static_cast<annotation>(~static_cast<std::uintptr_t>(a));
 	}
 
-	inline auto is_clear(annotation a)
+	constexpr auto is_clear(annotation a)
 	{
 		return static_cast<std::uintptr_t>(a) == 0;
 	}

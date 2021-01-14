@@ -8,8 +8,8 @@
 #include "ast/ast_dump.h"
 #include "sema/name_binding.h"
 #include "sema/pgraph_dump.h"
-#include "sema/type_walk.h"
-#include "sema/defaults_walk.h"
+#include "sema/pgraph_generation.h"
+#include "sema/lowering.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 // NOTE: Currently we work at the scale of a single file. All modules within a file are treated as implicitly imported.
@@ -79,14 +79,18 @@
 // NOTE: All of these are low-priority, but eventually needed (if it breaks nullnet, it's high-priority)
 // TODO: sort out the somewhat hellish logging situation
 // TODO: sort out const-ness handling (low-priority, work around in mean time)
+
+// NOTE: high-priority now, it's impossible to share visitors without also sharing projections
 // TODO: three annotation sets per projection (in, out, in/out), probably generated pessimistically as soon as the
-// projection is "discovered" (not implemented, currently low-priority, only needed to support self-references)
+// projection is "discovered" (needed to support self-references)
 // TODO: ownership of these projection instances is shared
 
 int main(int argc, char** argv)
 {
-	// Very much a hack, will continue to be used until I stop mixing iostreams and debug aborts
-	std::set_terminate([] {	std::cout.flush(); });
+	std::set_terminate([] {
+		std::cout.flush();
+		std::abort();
+	});
 
     const gsl::span<gsl::zstring<>> args {argv, gsl::narrow<std::size_t>(argc)};
     if (argc != 2) {
@@ -106,8 +110,13 @@ int main(int argc, char** argv)
 
 	const auto rpcs = idlc::sema::get_rpcs(file);
 	const auto data_fields = idlc::sema::generate_pgraphs(rpcs);
-	if (!idlc::sema::propagate_defaults(rpcs)) {
-		std::cout << "Error: Defaults propagation failed\n";
+	if (!idlc::sema::lower(rpcs)) {
+		std::cout << "Error: pgraph lowering failed\n";
 		return 1;
+	}
+
+	for (const auto& [name, pgraph] : data_fields) {
+		std::cout << "[debug] \"" << name << "\"\n";
+		idlc::sema::dump_pgraph(*pgraph);
 	}
 }

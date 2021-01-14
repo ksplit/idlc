@@ -1,3 +1,5 @@
+#include "lowering.h"
+
 #include <cassert>
 #include <iostream>
 #include <vector>
@@ -7,6 +9,7 @@
 #include "../tag_types.h"
 #include "pgraph_walk.h"
 #include "pgraph.h"
+#include "pgraph_generation.h"
 
 namespace idlc::sema {
 	namespace {
@@ -24,10 +27,11 @@ namespace idlc::sema {
 			}
 
 		private:
-			std::vector<ast::rpc_def*> defs_ {};
+			std::vector<gsl::not_null<ast::rpc_def*>> defs_ {};
 		};
 
 		bool propagate_defaults(data_field& node, annotation default_with);
+		field_type process_proj_def(ast::proj_def& node, annotation default_with);
 
 		// TODO: implement error checking, currently focused on generating defaults
 		class propagation_walk : public pgraph_walk<propagation_walk> {
@@ -55,7 +59,9 @@ namespace idlc::sema {
 
 			bool visit_pointer(pointer& node)
 			{
-				if (is_clear(node.pointer_annots & annotation::is_set)) {
+				// Default if no pointer annotations are set
+				// TODO: is_set bit no longer means what I thought it did!
+				if (is_clear(node.pointer_annots & annotation::ptr_only)) {
 					std::cout << "[debug] Pointer annotation inferred from value default\n";
 					if (default_with_ == annotation::in)
 						node.pointer_annots = annotation::bind_callee;
@@ -86,6 +92,18 @@ namespace idlc::sema {
 				return true; // NOTE: do *not* traverse projection nodes directly
 			}
 
+			bool visit_field_type(field_type& node)
+			{
+				const auto unlowered = std::get_if<gsl::not_null<ast::proj_def*>>(&node);
+				if (!unlowered) {
+					return traverse(*this, node); // FIXME: is this correct?
+				}
+				else {
+					node = process_proj_def(**unlowered, default_with_);
+					return true;
+				}
+			}
+
 		private:
 			annotation default_with_ {};
 		};
@@ -95,9 +113,54 @@ namespace idlc::sema {
 			propagation_walk ret_walk {default_with};
 			return ret_walk.visit_data_field(node);
 		}
+
+		field_type get_definition(ast::proj_def& node, std::shared_ptr<projection>& cached, annotation default_with)
+		{
+			if (cached) {
+				std::cout << "[debug] Found a prebuilt\n";
+				// NOTE: It's important that we don't try and modify this, as it could be partial
+				return cached;
+			}
+			
+			auto pgraph = build_projection(node);
+			cached = pgraph;
+
+			propagation_walk walk {default_with};
+			if (!walk.visit_projection(*pgraph)) {
+				std::cout << "Error: could not instantiate projection in this context\n";
+				std::terminate(); // TODO: don't like the std::terminate here
+			}
+
+
+			return pgraph;
+		}
+
+		field_type process_proj_def(ast::proj_def& node, annotation default_with)
+		{
+			std::cout << "[debug] Non-lowered projection \"" << node.name << "\"\n";
+			std::cout << "[debug] Would default with 0x" << std::hex << static_cast<std::uintptr_t>(default_with)
+				<< std::dec << "\n";
+
+			switch (default_with) {
+			case annotation::in | annotation::out:
+				std::cout << "[debug] Need in/out instance\n";
+				return get_definition(node, node.in_out_proj, default_with);
+
+			case annotation::in:
+				std::cout << "[debug] Need in instance\n";
+				return get_definition(node, node.in_proj, default_with);
+
+			case annotation::out:
+				std::cout << "[debug] Need out instance\n";
+				return get_definition(node, node.out_proj, default_with);
+
+			default:
+				std::terminate();
+			}
+		}
 	}
 
-	auto get_rpcs(ast::file& root)
+	std::vector<gsl::not_null<ast::rpc_def*>> get_rpcs(ast::file& root)
 	{
 		rpc_collector walk {};
 		const auto succeeded = walk.visit_file(root);
@@ -105,7 +168,7 @@ namespace idlc::sema {
 		return walk.get();
 	}
 
-	bool propagate_defaults(gsl::span<ast::rpc_def* const> rpcs)
+	bool lower(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
 	{
 		for (const auto& rpc : rpcs) {
 			std::cout << "[debug] Propagating for RPC \"" << rpc->name << "\"\n";

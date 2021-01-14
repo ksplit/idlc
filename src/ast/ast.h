@@ -9,14 +9,11 @@
 
 #include "../parser/string_heap.h"
 #include "../sema/scope.h"
-
+#include "../sema/pgraph.h" // pgraph no longer depends on AST
 #include "../tag_types.h"
 
 // TODO: since AST uses "external types" (sema) extensively, re-organize these to avoid vicious circularities
 // TODO: sema is better expressed as the set of walks over the AST, and the different ways of walking it (pgraphs)
-namespace idlc::sema {
-	struct data_field;
-}
 
 namespace idlc::ast {
 	template<typename type>
@@ -212,6 +209,10 @@ namespace idlc::ast {
 		const node_ptr<ref_vec<proj_field>> fields;
 		const proj_def_kind kind;
 
+		std::shared_ptr<sema::projection> in_proj;
+		std::shared_ptr<sema::projection> out_proj;
+		std::shared_ptr<sema::projection> in_out_proj;
+
 		// TODO: remove me! This field is the simplest way to detect that we've hit a cyclic pgraph, which we
 		// don't yet "know" how to generate correctly
 		bool seen_before;
@@ -226,6 +227,9 @@ namespace idlc::ast {
 			type {type},
 			fields {fields},
 			kind {kind},
+			in_proj {},
+			out_proj {},
+			in_out_proj {},
 			seen_before {}
 		{}
 	};

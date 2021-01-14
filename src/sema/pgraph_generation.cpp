@@ -1,4 +1,4 @@
-#include "type_walk.h"
+#include "pgraph_generation.h"
 
 #include <cassert>
 #include <exception>
@@ -47,7 +47,7 @@ namespace idlc::sema {
 					return build_array_type(*item, is_const);
 				}
 				else if constexpr (std::is_same_v<type, ast::node_ref<ast::type_proj>>) {
-					return build_projection(*item);
+					return item->definition;
 				}
 				else if constexpr (std::is_same_v<type, ast::node_ref<ast::type_rpc>>) {
 					// std::cout << "[debug] generating dummy pgraph node for RPC pointer \"" << item->name << "\"\n";
@@ -114,13 +114,13 @@ namespace idlc::sema {
 		{
 			std::cout << "[debug] Union projections are not yet implemented\n";
 			std::cout << "[debug] Will implement as an empty struct projection \"" << def.name << "\"\n";
-			return std::make_unique<projection>(def.type);
+			return std::make_shared<projection>(def.type);
 		}
 
 		auto build_empty_struct(ast::proj_def& def)
 		{
 			// std::cout << "[pgraph] generating empty pgraph projection for \"" << def.name << "\"\n";
-			return std::make_unique<projection>(def.type);
+			return std::make_shared<projection>(def.type);
 		}
 
 		auto build_struct(ast::proj_def& def)
@@ -136,34 +136,7 @@ namespace idlc::sema {
 
 			// std::cout << "[pgraph] finished \"" << def.name << "\"\n";
 
-			return std::make_unique<projection>(def.type, std::move(fields));
-		}
-
-		// FIXME: self-referencing projections do not set their own graphs to non-null, we need three-state
-		// TODO: is it necessary to detect if a projection self-references by value?
-		// TODO: brak this up, it's oversized
-		field_type build_projection(ast::type_proj& node)
-		{
-			auto& def = *node.definition;
-			if (def.seen_before) {
-				std::cout << "[debug] Self-referential projections are not yet supported\n";
-				std::terminate();
-			}
-			
-			// std::cout << "[pgraph] generating new pgraph for \"" << def.name << "\" (" << &def << ")\n";
-			def.seen_before = true;
-			auto pgraph_node = [&def] {
-				if (!def.fields)
-					return build_empty_struct(def);
-				else if (def.kind == ast::proj_def_kind::union_kind)
-					return build_union_dummy(def);
-				else
-					return build_struct(def);
-			}();
-
-			def.seen_before = false;
-
-			return std::move(pgraph_node);
+			return std::make_shared<projection>(def.type, std::move(fields));
 		}
 
 		class type_walk : public ast::ast_walk<type_walk> {
@@ -227,7 +200,8 @@ using namespace idlc;
 using namespace idlc::sema;
 
 // The references in the AST are *not* owners, this vector is
-std::vector<std::pair<ident, node_ptr<data_field>>> idlc::sema::generate_pgraphs(gsl::span<ast::rpc_def* const> rpcs)
+std::vector<std::pair<ident, node_ptr<data_field>>> idlc::sema::generate_pgraphs(
+	gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
 {
 	type_walk walk {};
 	for (const auto& rpc : rpcs) {
@@ -236,4 +210,28 @@ std::vector<std::pair<ident, node_ptr<data_field>>> idlc::sema::generate_pgraphs
 	}
 
 	return walk.get_pgraph_owner();
+}
+
+// TODO: is it necessary to detect if a projection self-references by value?
+std::shared_ptr<idlc::sema::projection> idlc::sema::build_projection(ast::proj_def& node)
+{
+	if (node.seen_before) {
+		std::cout << "[debug] Self-referential projections are not yet supported\n";
+		std::terminate();
+	}
+	
+	// std::cout << "[pgraph] generating new pgraph for \"" << def.name << "\" (" << &def << ")\n";
+	node.seen_before = true;
+	auto pgraph_node = [&node] {
+		if (!node.fields)
+			return build_empty_struct(node);
+		else if (node.kind == ast::proj_def_kind::union_kind)
+			return build_union_dummy(node);
+		else
+			return build_struct(node);
+	}();
+
+	node.seen_before = false;
+
+	return std::move(pgraph_node);
 }

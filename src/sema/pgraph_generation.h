@@ -1,5 +1,5 @@
-#ifndef IDLC_SEMA_TYPE_WALK_H
-#define IDLC_SEMA_TYPE_WALK_H
+#ifndef IDLC_SEMA_PGRAPH_GENERATION_H
+#define IDLC_SEMA_PGRAPH_GENERATION_H
 
 #include <gsl/gsl>
 
@@ -33,7 +33,10 @@ namespace idlc::sema {
 
 	// TODO: introduce the void<> system for "raw" void pointers
 
-	std::vector<std::pair<ident, node_ptr<data_field>>> generate_pgraphs(gsl::span<ast::rpc_def* const> rpcs);
+	std::vector<std::pair<ident, node_ptr<data_field>>> generate_pgraphs(
+		gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs);
+	
+	std::shared_ptr<idlc::sema::projection> build_projection(ast::proj_def& node);
 }
 
 #endif

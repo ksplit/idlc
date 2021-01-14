@@ -28,7 +28,7 @@ namespace idlc::sema {
 				if constexpr (std::is_same_v<type, primitive>) {
 					return pass.visit_primitive(item);
 				}
-				else if constexpr (std::is_same_v<type, node_ptr<projection>>) {
+				else if constexpr (std::is_same_v<type, node_ref<projection>>) {
 					return pass.visit_projection(*item);
 				}
 				else if constexpr (std::is_same_v<type, node_ptr<dyn_array>>) {
@@ -45,6 +45,9 @@ namespace idlc::sema {
 				}
 				else if constexpr (std::is_same_v<type, node_ptr<rpc_ptr>>) {
 					return pass.visit_rpc_ptr(*item);
+				}
+				else if constexpr (std::is_same_v<type, gsl::not_null<ast::proj_def*>>) {
+					return pass.visit_proj_def(*item);
 				}
 				
 				std::terminate();
@@ -142,6 +145,11 @@ namespace idlc::sema {
 		}
 
 		bool visit_primitive(primitive node)
+		{
+			return true;
+		}
+
+		bool visit_proj_def(ast::proj_def& node)
 		{
 			return true;
 		}
