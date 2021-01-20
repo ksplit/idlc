@@ -197,12 +197,6 @@ module kernel {
     rpc void dummy_cleanup_module(  ) {
     }
 
-    /*
-        FIXME: This projection currently produces an annotation conflict, due to being used as both a return *and*
-        and input struct. Nor is it the only place it occurs. Need Yongzhe.
-    
-        This goes into the whole "lazy projections" vs "projection templates."
-    */
     projection < struct net_device_ops > _global_netdev_ops {
         rpc_ptr ndo_init ndo_init;
         rpc_ptr ndo_uninit ndo_uninit;

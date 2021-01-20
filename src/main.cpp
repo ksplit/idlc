@@ -114,9 +114,4 @@ int main(int argc, char** argv)
 		std::cout << "Error: pgraph lowering failed\n";
 		return 1;
 	}
-
-	for (const auto& [name, pgraph] : data_fields) {
-		std::cout << "[debug] \"" << name << "\"\n";
-		idlc::sema::dump_pgraph(*pgraph);
-	}
 }

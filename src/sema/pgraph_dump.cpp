@@ -11,36 +11,12 @@ namespace idlc::sema {
 	namespace {
 		class null_walk : public pgraph_walk<null_walk> {
 		public:
-			bool visit_data_field(data_field& node)
-			{
-				tab_over(std::cout << "[debug]", level_) << "data_field\n";
-				++level_;
-				if (!traverse(*this, node))
-					return false;
-
-				--level_;
-
-				return true;
-			}
-
-			bool visit_field_type(field_type& node)
-			{
-				tab_over(std::cout << "[debug]", level_) << "field_type\n";
-				++level_;
-				if (!traverse(*this, node))
-					return false;
-
-				--level_;
-
-				return true;
-			}
-
 			bool visit_projection(projection& node)
 			{
 				if (!traverse.visited(&node))
-					tab_over(std::cout << "[debug]", level_) << "projection\n";
+					tab_over(std::cout, level_) << "projection\n";
 				else
-					tab_over(std::cout << "[debug]", level_) << "projection (skipped)\n";
+					tab_over(std::cout, level_) << "projection (skipped)\n";
 
 				++level_;
 				if (!traverse(*this, node))
@@ -53,7 +29,7 @@ namespace idlc::sema {
 
 			bool visit_dyn_array(dyn_array& node)
 			{
-				tab_over(std::cout << "[debug]", level_) << "dyn_array\n";
+				tab_over(std::cout, level_) << "dyn_array\n";
 				++level_;
 				if (!traverse(*this, node))
 					return false;
@@ -65,7 +41,7 @@ namespace idlc::sema {
 
 			bool visit_null_terminated_array(null_terminated_array& node)
 			{
-				tab_over(std::cout << "[debug]", level_) << "null_terminated_array\n";
+				tab_over(std::cout, level_) << "null_terminated_array\n";
 				++level_;
 				if (!traverse(*this, node))
 					return false;
@@ -77,7 +53,7 @@ namespace idlc::sema {
 
 			bool visit_pointer(pointer& node)
 			{
-				tab_over(std::cout << "[debug]", level_) << "pointer\n";
+				tab_over(std::cout, level_) << "pointer\n";
 				++level_;
 				if (!traverse(*this, node))
 					return false;
@@ -89,19 +65,19 @@ namespace idlc::sema {
 
 			bool visit_rpc_ptr(rpc_ptr& node)
 			{
-				tab_over(std::cout << "[debug]", level_) << "rpc_ptr\n";
+				tab_over(std::cout, level_) << "rpc_ptr\n";
 				return true;
 			}
 
 			bool visit_primitive(primitive node)
 			{
-				tab_over(std::cout << "[debug]", level_) << "primitive\n";
+				tab_over(std::cout, level_) << "primitive\n";
 				return true;
 			}
 
 			bool visit_proj_def(ast::proj_def& node)
 			{
-				tab_over(std::cout << "[debug]", level_) << "proj_def\n";
+				tab_over(std::cout, level_) << "proj_def\n";
 				return true;
 			}
 

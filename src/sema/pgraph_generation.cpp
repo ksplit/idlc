@@ -14,17 +14,18 @@
 #include "../tag_types.h"
 #include "pgraph.h"
 
+// These functions translate the AST into "high-level" pgraphs (before defaults propagation, projection linking)
+
 namespace idlc::sema {
 	namespace {
 		// Remember: field_type is quite slim, only a tag value and a pointer (16 bytes total)
 
-		field_type build_string_type(bool is_const);
-		field_type build_stem_type(const ast::type_stem& node, bool is_const);
-		field_type build_array_type(const ast::type_array& node, bool is_const);
-		field_type build_projection(ast::type_proj& node);
-		node_ptr<data_field> build_data_field(const ast::type_spec& node);
+		field_type generate_string_type(bool is_const);
+		field_type generate_stem_type(const ast::type_stem& node, bool is_const);
+		field_type generate_array_type(const ast::type_array& node, bool is_const);
+		node_ptr<data_field> generate_data_field(const ast::type_spec& node);
 
-		field_type build_string_type(bool is_const)
+		field_type generate_string_type(bool is_const)
 		{
 			return std::make_unique<null_terminated_array>(
 				std::make_unique<data_field>(primitive::ty_char, ast::annotation::use_default),
@@ -32,7 +33,7 @@ namespace idlc::sema {
 			);
 		}
 
-		field_type build_stem_type(const ast::type_stem& node, bool is_const)
+		field_type generate_stem_type(const ast::type_stem& node, bool is_const)
 		{
 			const auto visit = [is_const](auto&& item) -> field_type
 			{
@@ -41,10 +42,10 @@ namespace idlc::sema {
 					return item;
 				}
 				else if constexpr (std::is_same_v<type, ast::type_string>) {
-					return build_string_type(is_const);
+					return generate_string_type(is_const);
 				}
 				else if constexpr (std::is_same_v<type, ast::node_ref<ast::type_array>>) {
-					return build_array_type(*item, is_const);
+					return generate_array_type(*item, is_const);
 				}
 				else if constexpr (std::is_same_v<type, ast::node_ref<ast::type_proj>>) {
 					return item->definition;
@@ -60,24 +61,24 @@ namespace idlc::sema {
 			return std::visit(visit, node);
 		}
 
-		field_type build_array_type(const ast::type_array& node, bool is_const)
+		field_type generate_array_type(const ast::type_array& node, bool is_const)
 		{
 			const auto visit = [&node, is_const](auto&& item) -> field_type
 			{
 				using type = std::decay_t<decltype(item)>;
 				if constexpr (std::is_same_v<type, ast::tok_kw_null>) {
 					return std::make_unique<null_terminated_array>(
-						build_data_field(*node.element),
+						generate_data_field(*node.element),
 						is_const
 					);
 				}
 				else if constexpr (std::is_same_v<type, unsigned>) {
-					std::cout << "[debug] static-sized arrays are not yet implemented\n";
+					std::cout << "static-sized arrays are not yet implemented\n";
 					std::terminate();
 				}
 				else if constexpr (std::is_same_v<type, ident>) {
 					return std::make_unique<dyn_array>(
-						build_data_field(*node.element),
+						generate_data_field(*node.element),
 						item,
 						is_const
 					);
@@ -89,19 +90,19 @@ namespace idlc::sema {
 			return {};
 		}
 
-		auto build_field(ast::proj_field& node)
+		auto generate_field(ast::proj_field& node)
 		{
 			const auto visit = [](auto&& item) -> std::pair<ident, node_ptr<data_field>>
 			{
 				using type = std::decay_t<decltype(item)>;
 				if constexpr (std::is_same_v<type, ast::node_ref<ast::naked_proj_decl>>) {
-					std::cout << "[debug] Naked projections are not yet implemented\n";
-					std::cout << "[debug] Unknown how to proceed, aborting\n";
+					std::cout << "Naked projections are not yet implemented\n";
+					std::cout << "Unknown how to proceed, aborting\n";
 					std::terminate();
 				}
 				else if constexpr (std::is_same_v<type, ast::node_ref<ast::var_decl>>) {
 					// std::cout << "[pgraph] building var_decl data_field for \"" << item->name << "\"\n";
-					return {item->name, build_data_field(*item->type)};
+					return {item->name, generate_data_field(*item->type)};
 				}
 
 				std::terminate();
@@ -110,26 +111,26 @@ namespace idlc::sema {
 			return std::visit(visit, node);
 		}
 
-		auto build_union_dummy(ast::proj_def& def)
+		auto generate_union_dummy(ast::proj_def& def)
 		{
-			std::cout << "[debug] Union projections are not yet implemented\n";
-			std::cout << "[debug] Will implement as an empty struct projection \"" << def.name << "\"\n";
+			std::cout << "Union projections are not yet implemented\n";
+			std::cout << "Will implement as an empty struct projection \"" << def.name << "\"\n";
 			return std::make_shared<projection>(def.type);
 		}
 
-		auto build_empty_struct(ast::proj_def& def)
+		auto generate_empty_struct(ast::proj_def& def)
 		{
 			// std::cout << "[pgraph] generating empty pgraph projection for \"" << def.name << "\"\n";
 			return std::make_shared<projection>(def.type);
 		}
 
-		auto build_struct(ast::proj_def& def)
+		auto generate_struct(ast::proj_def& def)
 		{
 			const auto& field_nodes = *def.fields;
 			decltype(projection::fields) fields {};
 			fields.reserve(field_nodes.size());
 			for (const auto& field : field_nodes) {
-				auto pgraph = build_field(*field);
+				auto pgraph = generate_field(*field);
 				// std::cout << "[pgraph] completed field \"" << pgraph.first << "\"\n";
 				fields.emplace_back(std::move(pgraph));
 			}
@@ -170,16 +171,16 @@ namespace idlc::sema {
 			// NOTE: the name is not necessarily an ident!!!
 			void insert_field(ast::rpc_def& parent, const ast::type_spec& node, gsl::czstring<> name)
 			{
-				auto pgraph_node = build_data_field(node);
+				auto pgraph_node = generate_data_field(node);
 				parent.pgraphs.emplace_back(pgraph_node.get());
 				store_.emplace_back(name, std::move(pgraph_node));
 			}
 		};
 
-		node_ptr<data_field> build_data_field(const ast::type_spec& node)
+		node_ptr<data_field> generate_data_field(const ast::type_spec& node)
 		{
 			// TODO: finish indirection handling
-			auto type = build_stem_type(*node.stem, node.is_const);
+			auto type = generate_stem_type(*node.stem, node.is_const);
 			for (const auto& ptr_node : node.indirs) {
 				const auto annots = ptr_node->attrs;
 				const auto ptr_annots = annots & ast::annotation::is_ptr;
@@ -213,10 +214,10 @@ std::vector<std::pair<ident, node_ptr<data_field>>> idlc::sema::generate_pgraphs
 }
 
 // TODO: is it necessary to detect if a projection self-references by value?
-std::shared_ptr<idlc::sema::projection> idlc::sema::build_projection(ast::proj_def& node)
+std::shared_ptr<idlc::sema::projection> idlc::sema::generate_projection(ast::proj_def& node)
 {
 	if (node.seen_before) {
-		std::cout << "[debug] Self-referential projections are not yet supported\n";
+		std::cout << "Self-referential projections are not yet supported\n";
 		std::terminate();
 	}
 	
@@ -224,11 +225,11 @@ std::shared_ptr<idlc::sema::projection> idlc::sema::build_projection(ast::proj_d
 	node.seen_before = true;
 	auto pgraph_node = [&node] {
 		if (!node.fields)
-			return build_empty_struct(node);
+			return generate_empty_struct(node);
 		else if (node.kind == ast::proj_def_kind::union_kind)
-			return build_union_dummy(node);
+			return generate_union_dummy(node);
 		else
-			return build_struct(node);
+			return generate_struct(node);
 	}();
 
 	node.seen_before = false;

@@ -61,7 +61,7 @@ namespace idlc::sema {
 			// NOTE: do not remove me!!! See notes in circularity.idl: direct or indirect self-reference requires
 			// a notion of pgraph sharing, which the walk code must account for
 			if (visited(&node)) {
-				std::cout << "[debug] short-circuiting projection\n";
+				std::cout << "short-circuiting projection\n";
 				return true;
 			}
 			else {
