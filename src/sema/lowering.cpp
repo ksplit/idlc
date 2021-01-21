@@ -167,9 +167,24 @@ namespace idlc::sema {
 		return walk.get();
 	}
 
+	void create_enum_id(ast::rpc_def& rpc)
+	{
+		std::cout << "Generated enum ID for RPC \"" << rpc.name << "\"\n";
+		rpc.enum_id = "RPC_ID_";
+		rpc.enum_id += rpc.name;
+		std::transform(
+			rpc.enum_id.begin(),
+			rpc.enum_id.end(),
+			rpc.enum_id.begin(),
+			[](char c) { return std::toupper(c); });
+
+		std::cout << rpc.enum_id << "\n";
+	}
+
 	bool lower(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
 	{
 		for (const auto& rpc : rpcs) {
+			create_enum_id(*rpc);
 			std::cout << "Propagating for RPC \"" << rpc->name << "\"\n";
 			gsl::span<data_field*> pgraphs {rpc->pgraphs};
 			if (rpc->ret_type) {

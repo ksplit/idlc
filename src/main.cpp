@@ -114,4 +114,11 @@ int main(int argc, char** argv)
 		std::cout << "Error: pgraph lowering failed\n";
 		return 1;
 	}
+
+	std::cout << "enum RPC_ID {\n"; 
+	for (const auto& rpc : rpcs) {
+		std::cout << "\t" << rpc->enum_id << ",\n";
+	}
+
+	std::cout << "};\n";
 }

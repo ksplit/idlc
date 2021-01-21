@@ -2,6 +2,7 @@
 #define IDLC_AST_AST_H_
 
 #include <memory>
+#include <string>
 #include <vector>
 #include <variant>
 
@@ -250,6 +251,7 @@ namespace idlc::ast {
 
 		sema::scope scope;
 		std::vector<sema::data_field*> pgraphs;
+		std::string enum_id;
 
 		rpc_def(
 			node_ptr<type_spec> ret_type,
