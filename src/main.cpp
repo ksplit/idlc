@@ -1,3 +1,4 @@
+#include <fstream>
 #include <string>
 #include <iostream>
 #include <variant>
@@ -85,6 +86,27 @@
 // projection is "discovered" (needed to support self-references)
 // TODO: ownership of these projection instances is shared
 
+namespace idlc {
+	namespace {
+		void generate_common_header(const std::vector<gsl::not_null<ast::rpc_def*>>& rpcs)
+		{
+			std::ofstream header {"common.h"};
+			header.exceptions(header.badbit | header.failbit);
+			header << "enum RPC_ID {\n";
+			for (const auto& rpc : rpcs) {
+				header << "\t" << rpc->enum_id << ",\n";
+			}
+
+			header << "};\n\n";
+
+			for (const auto& rpc : rpcs) {
+				if (rpc->kind == ast::rpc_def_kind::indirect)
+					header << "typedef void (*" << rpc->typedef_id << ")();\n";
+			}
+		}
+	}
+}
+
 int main(int argc, char** argv)
 {
 	std::set_terminate([] {
@@ -115,10 +137,5 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	std::cout << "enum RPC_ID {\n"; 
-	for (const auto& rpc : rpcs) {
-		std::cout << "\t" << rpc->enum_id << ",\n";
-	}
-
-	std::cout << "};\n";
+	idlc::generate_common_header(rpcs);
 }

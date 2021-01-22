@@ -251,7 +251,12 @@ namespace idlc::ast {
 
 		sema::scope scope;
 		std::vector<sema::data_field*> pgraphs;
+
 		std::string enum_id;
+		std::string callee_id;
+		std::string typedef_id;
+		std::string trmp_id;
+		std::string impl_id;
 
 		rpc_def(
 			node_ptr<type_spec> ret_type,

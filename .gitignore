@@ -1,4 +1,4 @@
-#object files
+# object files
 *.d
 *.pyc
 *.o
@@ -7,10 +7,13 @@ idl_mod/
 build/
 log.txt
 
-#parser generated files
+# parser generated files
 src/parser/peg_peg.py
 src/parser/parser.cpp
 src/parser/parser.h
 
-#editor configs
+# editor configs
 .vscode/
+
+# outputs
+common.h

@@ -41,7 +41,7 @@ namespace idlc::sema {
 		public:
 			lowering_walk(annotation default_with) : default_with_ {default_with}
 			{
-				assert(is_clear(default_with & annotation::is_ptr));
+				assert(is_clear(default_with & annotation::ptr_only));
 			}
 
 			bool visit_data_field(data_field& node)
@@ -167,40 +167,51 @@ namespace idlc::sema {
 		return walk.get();
 	}
 
-	void create_enum_id(ast::rpc_def& rpc)
+	void create_alternate_names(ast::rpc_def& rpc)
 	{
-		std::cout << "Generated enum ID for RPC \"" << rpc.name << "\"\n";
 		rpc.enum_id = "RPC_ID_";
 		rpc.enum_id += rpc.name;
-		std::transform(
-			rpc.enum_id.begin(),
-			rpc.enum_id.end(),
-			rpc.enum_id.begin(),
-			[](char c) { return std::toupper(c); });
+		rpc.callee_id = rpc.name;
+		rpc.callee_id += "_callee";
 
-		std::cout << rpc.enum_id << "\n";
+		if (rpc.kind == ast::rpc_def_kind::indirect) {
+			rpc.trmp_id = "trmp_";
+			rpc.trmp_id += rpc.name;
+			rpc.impl_id = "trmp_impl_";
+			rpc.impl_id += rpc.name;
+			rpc.typedef_id = "fptr_";
+			rpc.typedef_id += rpc.name;
+		}
+	}
+
+	bool lower(ast::rpc_def& rpc)
+	{
+		std::cout << "Propagating for RPC \"" << rpc.name << "\"\n";
+		gsl::span<data_field*> pgraphs {rpc.pgraphs};
+		if (rpc.ret_type) {
+			std::cout << "Processing return type\n";
+			if (!lower(*pgraphs[0], annotation::out))
+				return false;
+			
+			pgraphs = pgraphs.subspan(1);
+		}
+
+		for (const auto& pgraph : pgraphs) {
+			std::cout << "Processing argument type\n";
+			if (!lower(*pgraph, annotation::in))
+				return false;
+		}
+
+		return true;
 	}
 
 	bool lower(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
 	{
 		for (const auto& rpc : rpcs) {
-			create_enum_id(*rpc);
-			std::cout << "Propagating for RPC \"" << rpc->name << "\"\n";
-			gsl::span<data_field*> pgraphs {rpc->pgraphs};
-			if (rpc->ret_type) {
-				std::cout << "Processing return type\n";
-				if (!lower(*pgraphs[0], annotation::out))
-					return false;
-				
-				pgraphs = pgraphs.subspan(1);
-			}
+			create_alternate_names(*rpc);
+			if (!lower(*rpc))
+				return false;
 
-			for (const auto& pgraph : pgraphs) {
-				std::cout << "Processing argument type\n";
-				if (!lower(*pgraph, annotation::in))
-					return false;
-			}
-		
 			std::cout << "Finished RPC\n";
 		}
 
