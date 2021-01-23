@@ -81,28 +81,26 @@
 // TODO: sort out the somewhat hellish logging situation
 // TODO: sort out const-ness handling (low-priority, work around in mean time)
 
-// NOTE: high-priority now, it's impossible to share visitors without also sharing projections
-// TODO: three annotation sets per projection (in, out, in/out), probably generated pessimistically as soon as the
-// projection is "discovered" (needed to support self-references)
-// TODO: ownership of these projection instances is shared
-
 namespace idlc {
 	namespace {
 		void generate_common_header(const std::vector<gsl::not_null<ast::rpc_def*>>& rpcs)
 		{
 			std::ofstream header {"common.h"};
 			header.exceptions(header.badbit | header.failbit);
+
+			header << "#ifndef COMMON_H\n#define COMMON_H\n\n";
 			header << "enum RPC_ID {\n";
 			for (const auto& rpc : rpcs) {
 				header << "\t" << rpc->enum_id << ",\n";
 			}
 
 			header << "};\n\n";
-
 			for (const auto& rpc : rpcs) {
 				if (rpc->kind == ast::rpc_def_kind::indirect)
 					header << "typedef void (*" << rpc->typedef_id << ")();\n";
 			}
+
+			header << "\n#endif\n";
 		}
 	}
 }

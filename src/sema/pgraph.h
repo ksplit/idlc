@@ -11,6 +11,7 @@
 
 namespace idlc::ast {
 	struct proj_def;
+	struct rpc_def;
 }
 
 namespace idlc::sema {
@@ -46,6 +47,8 @@ namespace idlc::sema {
 		field_type type;
 		annotation value_annots;
 		// FIXME: add const-ness here, drop from <<pointer>>
+
+		std::string type_string;
 
 		data_field(field_type&& type, annotation value_annots) :
 			type {std::move(type)},
@@ -106,9 +109,7 @@ namespace idlc::sema {
 	};
 
 	// TODO: implement me, currently a dummy
-	struct rpc_ptr {
-
-	};
+	struct rpc_ptr {};
 
 	// NOTE: in the "projection template" system, each projection will be instantiated at most 3 times
 	// Each distinct instantiation will require its own set of visitor methods for marshaling
