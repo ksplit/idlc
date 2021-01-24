@@ -83,7 +83,7 @@
 
 namespace idlc {
 	namespace {
-		void generate_common_header(const std::vector<gsl::not_null<ast::rpc_def*>>& rpcs)
+		void generate_common_header(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
 		{
 			std::ofstream header {"common.h"};
 			header.exceptions(header.badbit | header.failbit);
@@ -97,10 +97,27 @@ namespace idlc {
 			header << "};\n\n";
 			for (const auto& rpc : rpcs) {
 				if (rpc->kind == ast::rpc_def_kind::indirect)
-					header << "typedef void (*" << rpc->typedef_id << ")();\n";
+					header << "typedef void (*" << rpc->typedef_id << ")(void);\n";
 			}
 
 			header << "\n#endif\n";
+		}
+
+		void generate_caller(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
+		{
+			std::ofstream caller {"caller.c"};
+			caller.exceptions(caller.badbit | caller.failbit);
+
+			caller << "#include \"common.h\"\n\n";
+			for (const auto& rpc : rpcs) {
+				if (rpc->kind == ast::rpc_def_kind::direct) {
+					caller << "void " << rpc->name << "(void) {}\n";
+				}
+				else {
+					caller << "void " << rpc->trmp_id << "(void) {}\n";
+					caller << "void " << rpc->impl_id << "(" << rpc->typedef_id << " target) {}\n";
+				}
+			}
 		}
 	}
 }
@@ -136,4 +153,5 @@ int main(int argc, char** argv)
 	}
 
 	idlc::generate_common_header(rpcs);
+	idlc::generate_caller(rpcs);
 }
