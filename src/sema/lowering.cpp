@@ -8,6 +8,7 @@
 #include "../ast/walk.h"
 #include "../tag_types.h"
 #include "pgraph_walk.h"
+#include "pgraph_dump.h"
 #include "pgraph.h"
 #include "pgraph_generation.h"
 
@@ -111,10 +112,122 @@ namespace idlc::sema {
 			annotation default_with_ {};
 		};
 
+		class type_string_walk : public pgraph_walk<type_string_walk> {
+		public:
+			auto get() const
+			{
+				return string_;
+			}
+
+			bool visit_data_field(data_field& node)
+			{
+				if (!traverse(*this, node))
+					return false;
+
+				node.type_string = string_;		
+				return true;
+			}
+
+			bool visit_projection(projection& node)
+			{
+				string_ = "struct ";
+				string_ += node.real_name;				
+				return true;
+			}
+
+			bool visit_pointer(pointer& node)
+			{
+				if (!traverse(*this, node))
+					return false;
+				
+				string_ += "*";
+				return true;
+			}
+
+			bool visit_rpc_ptr(rpc_ptr& node)
+			{
+				string_ += node.definition->typedef_id;
+				return true;
+			}
+
+			bool visit_primitive(primitive node)
+			{
+				switch (node) {
+				case primitive::ty_bool:
+					string_ = "bool";
+					break;
+
+				case primitive::ty_char:
+					string_ = "char";
+					break;
+
+				case primitive::ty_schar:
+					string_ = "signed char";
+					break;
+
+				case primitive::ty_uchar:
+					string_ = "unsigned char";
+					break;
+
+				case primitive::ty_short:
+					string_ = "short";
+					break;
+
+				case primitive::ty_ushort:
+					string_ = "unsigned short";
+					break;
+
+				case primitive::ty_int:
+					string_ = "int";
+					break;
+
+				case primitive::ty_uint:
+					string_ = "unsigned int";
+					break;
+
+				case primitive::ty_long:
+					string_ = "long";
+					break;
+
+				case primitive::ty_ulong:
+					string_ = "unsigned long";
+					break;
+
+				case primitive::ty_llong:
+					string_ = "long long";
+					break;
+
+				case primitive::ty_ullong:
+					string_ = "unsigned long long";
+					break;
+
+				default:
+					std::cout << "Unhandled primtive was " << static_cast<std::uintptr_t>(node) << "\n";
+					assert(false);
+				}
+
+				return true;
+			}
+
+		private:
+			std::string string_ {};
+		};
+
+		// NOTE: this *does not* walk into projections, and should only be applied to
+		// variable types (fields or arguments) and return types, as done in the lowering pass
+		void assign_type_strings(data_field& node)
+		{
+			type_string_walk type_walk {};
+			const auto succeeded = type_walk.visit_data_field(node);
+			assert(succeeded);
+			std::cout << "Created type string: \"" << type_walk.get() << "\"\n";	
+			dump_pgraph(node);
+		}
+
 		bool lower(data_field& node, annotation default_with)
 		{
-			lowering_walk ret_walk {default_with};
-			return ret_walk.visit_data_field(node);
+			lowering_walk lowerer {default_with};
+			return lowerer.visit_data_field(node);
 		}
 
 		field_type lower(ast::proj_def& node, std::shared_ptr<projection>& cached, annotation default_with)
@@ -132,6 +245,12 @@ namespace idlc::sema {
 			if (!walk.visit_projection(*pgraph)) {
 				std::cout << "Error: could not instantiate projection in this context\n";
 				std::terminate(); // TODO: don't like the std::terminate here
+			}
+
+			// TODO: should this really be here?
+			for (const auto& [name, field] : pgraph->fields) {
+				std::cout << "Creating type string for \"" << name << "\"\n";
+				assign_type_strings(*field);
 			}
 
 			return pgraph;
@@ -193,6 +312,7 @@ namespace idlc::sema {
 			if (!lower(*pgraphs[0], annotation::out))
 				return false;
 			
+			assign_type_strings(*pgraphs[0]);
 			pgraphs = pgraphs.subspan(1);
 		}
 
@@ -200,6 +320,8 @@ namespace idlc::sema {
 			std::cout << "Processing argument type\n";
 			if (!lower(*pgraph, annotation::in))
 				return false;
+
+			assign_type_strings(*pgraph);
 		}
 
 		return true;
@@ -207,8 +329,11 @@ namespace idlc::sema {
 
 	bool lower(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
 	{
-		for (const auto& rpc : rpcs) {
+		// TODO: better separate the pgraph lowering, names generation, and type string generation
+		for (const auto& rpc : rpcs)
 			create_alternate_names(*rpc);
+
+		for (const auto& rpc : rpcs) {
 			if (!lower(*rpc))
 				return false;
 

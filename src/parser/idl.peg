@@ -447,7 +447,7 @@ type_stem = arr:type_array {{
 }} | proj:type_proj {{
 	value = share(type_stem {get_shared<type_proj>(proj)});
 }} | arith:type_primitive {{
-	value = share(type_stem {to_int<type_primitive>(arr)});
+	value = share(type_stem {to_int<type_primitive>(arith)});
 }} | any:type_any_of {{
 	value = share(type_stem {get_shared<type_any_of>(any)});
 }}

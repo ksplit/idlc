@@ -109,7 +109,11 @@ namespace idlc::sema {
 	};
 
 	// TODO: implement me, currently a dummy
-	struct rpc_ptr {};
+	struct rpc_ptr {
+		ast::rpc_def* definition;
+
+		rpc_ptr(ast::rpc_def* definition) : definition {definition} {}
+	};
 
 	// NOTE: in the "projection template" system, each projection will be instantiated at most 3 times
 	// Each distinct instantiation will require its own set of visitor methods for marshaling

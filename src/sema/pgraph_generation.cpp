@@ -52,7 +52,7 @@ namespace idlc::sema {
 				}
 				else if constexpr (std::is_same_v<type, ast::node_ref<ast::type_rpc>>) {
 					// std::cout << "[debug] generating dummy pgraph node for RPC pointer \"" << item->name << "\"\n";
-					return std::make_unique<rpc_ptr>();
+					return std::make_unique<rpc_ptr>(item.get().get()->definition);
 				}
 
 				std::terminate();
@@ -77,6 +77,7 @@ namespace idlc::sema {
 					std::terminate();
 				}
 				else if constexpr (std::is_same_v<type, ident>) {
+					std::cout << "HELLO\n";
 					return std::make_unique<dyn_array>(
 						generate_data_field(*node.element),
 						item,
@@ -87,7 +88,7 @@ namespace idlc::sema {
 				std::terminate();
 			};
 
-			return {};
+			return std::visit(visit, *node.size);
 		}
 
 		auto generate_field(ast::proj_field& node)

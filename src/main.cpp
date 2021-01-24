@@ -108,7 +108,9 @@ namespace idlc {
 			std::ofstream caller {"caller.c"};
 			caller.exceptions(caller.badbit | caller.failbit);
 
+			caller << "#include <lcd_config/pre_hook.h>\n\n";
 			caller << "#include \"common.h\"\n\n";
+			caller << "#include <lcd_config/post_hook.h>\n\n";
 			for (const auto& rpc : rpcs) {
 				if (rpc->kind == ast::rpc_def_kind::direct) {
 					caller << "void " << rpc->name << "(void) {}\n";

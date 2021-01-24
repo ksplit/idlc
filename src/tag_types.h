@@ -55,6 +55,7 @@ namespace idlc {
 	}
 
 	enum class type_primitive {
+		ty_invalid,
 		ty_bool,
 		ty_char,
 		ty_schar,
