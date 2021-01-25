@@ -250,13 +250,17 @@ namespace idlc::ast {
 		const rpc_def_kind kind;
 
 		sema::scope scope;
-		std::vector<sema::data_field*> pgraphs;
+		sema::data_field* ret_pgraph;
+		std::vector<sema::data_field*> arg_pgraphs;
 
 		std::string enum_id;
 		std::string callee_id;
 		std::string typedef_id;
 		std::string trmp_id;
 		std::string impl_id;
+
+		std::string ret_string;
+		std::string args_string;
 
 		rpc_def(
 			node_ptr<type_spec> ret_type,

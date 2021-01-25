@@ -77,7 +77,6 @@ namespace idlc::sema {
 					std::terminate();
 				}
 				else if constexpr (std::is_same_v<type, ident>) {
-					std::cout << "HELLO\n";
 					return std::make_unique<dyn_array>(
 						generate_data_field(*node.element),
 						item,
@@ -146,11 +145,11 @@ namespace idlc::sema {
 			bool visit_rpc_def(ast::rpc_def& node)
 			{
 				if (node.ret_type)
-					insert_field(node, *node.ret_type, "<ret-type>");
+					node.ret_pgraph = insert_field(*node.ret_type);
 
 				if (node.arguments) {
 					for (auto& argument : *node.arguments)
-						insert_field(node, *argument->type, argument->name);
+						node.arg_pgraphs.emplace_back(insert_field(*argument->type));
 				}
 
 				return ast::traverse(*this, node);
@@ -167,14 +166,15 @@ namespace idlc::sema {
 
 		private:
 			// NOTE: idents are only for debugging
-			std::vector<std::pair<gsl::czstring<>, node_ptr<data_field>>> store_ {};
+			std::vector<node_ptr<data_field>> store_ {};
 
 			// NOTE: the name is not necessarily an ident!!!
-			void insert_field(ast::rpc_def& parent, const ast::type_spec& node, gsl::czstring<> name)
+			data_field* insert_field(const ast::type_spec& node)
 			{
 				auto pgraph_node = generate_data_field(node);
-				parent.pgraphs.emplace_back(pgraph_node.get());
-				store_.emplace_back(name, std::move(pgraph_node));
+				const auto ptr = pgraph_node.get();
+				store_.emplace_back(std::move(pgraph_node));
+				return ptr;
 			}
 		};
 
@@ -202,8 +202,7 @@ using namespace idlc;
 using namespace idlc::sema;
 
 // The references in the AST are *not* owners, this vector is
-std::vector<std::pair<ident, node_ptr<data_field>>> idlc::sema::generate_pgraphs(
-	gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
+std::vector<node_ptr<data_field>> idlc::sema::generate_pgraphs(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
 {
 	type_walk walk {};
 	for (const auto& rpc : rpcs) {

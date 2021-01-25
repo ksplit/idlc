@@ -33,9 +33,7 @@ namespace idlc::sema {
 
 	// TODO: introduce the void<> system for "raw" void pointers
 
-	std::vector<std::pair<ident, node_ptr<data_field>>> generate_pgraphs(
-		gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs);
-	
+	std::vector<node_ptr<data_field>> generate_pgraphs(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs);	
 	std::shared_ptr<idlc::sema::projection> generate_projection(ast::proj_def& node);
 }
 

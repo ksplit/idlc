@@ -26,12 +26,6 @@
 */
 
 /*
-	Identifiers: we often require identifier variants. The important ones are for RPCs: we need the original, the RPC
-	enum identifier, the RPC impl identifier, and the RPC trampoline identifier, if one is needed. There also the
-	variants marshaling needs to give meaningful names to temporaries.
-*/
-
-/*
 	NOTE: Marshaling
 
 	As for outptutting C code for marshaling instructions: we've run into the issue before of having to wrap function
@@ -54,7 +48,6 @@
 
 /*
 	NOTE: front-end passes are irrelevant rn, work on:
-	- annotation defaulting pass
 	- marshal IR
 	- 6 IR generation passes (!!)
 	- code generation
@@ -96,8 +89,10 @@ namespace idlc {
 
 			header << "};\n\n";
 			for (const auto& rpc : rpcs) {
-				if (rpc->kind == ast::rpc_def_kind::indirect)
-					header << "typedef void (*" << rpc->typedef_id << ")(void);\n";
+				if (rpc->kind == ast::rpc_def_kind::indirect) {
+					header << "typedef " << rpc->ret_string << " (*" << rpc->typedef_id << ")("
+						<< rpc->args_string << ");\n";
+				}
 			}
 
 			header << "\n#endif\n";
@@ -113,16 +108,36 @@ namespace idlc {
 			caller << "#include <lcd_config/post_hook.h>\n\n";
 			for (const auto& rpc : rpcs) {
 				if (rpc->kind == ast::rpc_def_kind::direct) {
-					caller << "void " << rpc->name << "(void) {}\n";
+					caller << rpc->ret_string << " " << rpc->name << "(" << rpc->args_string << ");\n";
 				}
 				else {
-					caller << "void " << rpc->trmp_id << "(void) {}\n";
-					caller << "void " << rpc->impl_id << "(" << rpc->typedef_id << " target) {}\n";
+					caller << rpc->ret_string << " " << rpc->trmp_id << "(" << rpc->args_string << ");\n";
+					caller << rpc->ret_string << " " << rpc->impl_id << "(" << rpc->typedef_id << " target, "
+						<< rpc->args_string << ");\n";
 				}
+			}
+		}
+
+		void create_alternate_names(ast::rpc_def& rpc)
+		{
+			rpc.enum_id = "RPC_ID_";
+			rpc.enum_id += rpc.name;
+			rpc.callee_id = rpc.name;
+			rpc.callee_id += "_callee";
+
+			if (rpc.kind == ast::rpc_def_kind::indirect) {
+				rpc.trmp_id = "trmp_";
+				rpc.trmp_id += rpc.name;
+				rpc.impl_id = "trmp_impl_";
+				rpc.impl_id += rpc.name;
+				rpc.typedef_id = "fptr_";
+				rpc.typedef_id += rpc.name;
 			}
 		}
 	}
 }
+
+// NOTE: it is possible to implement type naming as a walk over all var_decls
 
 int main(int argc, char** argv)
 {
@@ -148,10 +163,33 @@ int main(int argc, char** argv)
 	}
 
 	const auto rpcs = idlc::sema::get_rpcs(file);
+	for (auto& rpc : rpcs)
+		idlc::create_alternate_names(*rpc);
+
 	const auto data_fields = idlc::sema::generate_pgraphs(rpcs);
 	if (!idlc::sema::lower(rpcs)) {
 		std::cout << "Error: pgraph lowering failed\n";
 		return 1;
+	}
+
+	for (auto& rpc : rpcs) {
+		if (rpc->ret_type)
+			rpc->ret_string = rpc->ret_pgraph->type_string;
+		else
+			rpc->ret_string = "void";
+
+		bool is_first {true};
+		for (gsl::index i {}; i < rpc->arg_pgraphs.size(); ++i) {
+			const auto& arg = rpc->arg_pgraphs.at(i);
+			const auto name = rpc->arguments->at(i)->name;
+			if (!is_first)
+				rpc->args_string += ", ";
+
+			rpc->args_string += arg->type_string;
+			rpc->args_string += " ";
+			rpc->args_string += name;
+			is_first = false;
+		}
 	}
 
 	idlc::generate_common_header(rpcs);
