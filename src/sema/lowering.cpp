@@ -248,6 +248,7 @@ namespace idlc::sema {
 			}
 
 			// TODO: should this really be here?
+			// We make sure we perform type string assignment *after* the projection has been fully lowered
 			for (const auto& [name, field] : pgraph->fields) {
 				std::cout << "Creating type string for \"" << name << "\"\n";
 				assign_type_strings(*field);

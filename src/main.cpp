@@ -118,20 +118,50 @@ namespace idlc {
 			}
 		}
 
-		void create_alternate_names(ast::rpc_def& rpc)
+		void create_alternate_names(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
 		{
-			rpc.enum_id = "RPC_ID_";
-			rpc.enum_id += rpc.name;
-			rpc.callee_id = rpc.name;
-			rpc.callee_id += "_callee";
+			for (const auto& rpc : rpcs) {
+				rpc->enum_id = "RPC_ID_";
+				rpc->enum_id += rpc->name;
+				rpc->callee_id = rpc->name;
+				rpc->callee_id += "_callee";
 
-			if (rpc.kind == ast::rpc_def_kind::indirect) {
-				rpc.trmp_id = "trmp_";
-				rpc.trmp_id += rpc.name;
-				rpc.impl_id = "trmp_impl_";
-				rpc.impl_id += rpc.name;
-				rpc.typedef_id = "fptr_";
-				rpc.typedef_id += rpc.name;
+				if (rpc->kind == ast::rpc_def_kind::indirect) {
+					rpc->trmp_id = "trmp_";
+					rpc->trmp_id += rpc->name;
+					rpc->impl_id = "trmp_impl_";
+					rpc->impl_id += rpc->name;
+					rpc->typedef_id = "fptr_";
+					rpc->typedef_id += rpc->name;
+				}
+			}
+		}
+
+		void create_prototype_strings(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
+		{
+			for (auto& rpc : rpcs) {
+				if (rpc->ret_type)
+					rpc->ret_string = rpc->ret_pgraph->type_string;
+				else
+					rpc->ret_string = "void";
+
+				if (rpc->arguments) {
+					bool is_first {true};
+					for (gsl::index i {}; i < rpc->arguments->size(); ++i) {
+						const auto& arg = rpc->arg_pgraphs.at(i);
+						const auto name = rpc->arguments->at(i)->name;
+						if (!is_first)
+							rpc->args_string += ", ";
+
+						rpc->args_string += arg->type_string;
+						rpc->args_string += " ";
+						rpc->args_string += name;
+						is_first = false;
+					}
+				}
+				else {
+					rpc->args_string = "void";
+				}
 			}
 		}
 	}
@@ -163,35 +193,14 @@ int main(int argc, char** argv)
 	}
 
 	const auto rpcs = idlc::sema::get_rpcs(file);
-	for (auto& rpc : rpcs)
-		idlc::create_alternate_names(*rpc);
-
 	const auto data_fields = idlc::sema::generate_pgraphs(rpcs);
 	if (!idlc::sema::lower(rpcs)) {
 		std::cout << "Error: pgraph lowering failed\n";
 		return 1;
 	}
 
-	for (auto& rpc : rpcs) {
-		if (rpc->ret_type)
-			rpc->ret_string = rpc->ret_pgraph->type_string;
-		else
-			rpc->ret_string = "void";
-
-		bool is_first {true};
-		for (gsl::index i {}; i < rpc->arg_pgraphs.size(); ++i) {
-			const auto& arg = rpc->arg_pgraphs.at(i);
-			const auto name = rpc->arguments->at(i)->name;
-			if (!is_first)
-				rpc->args_string += ", ";
-
-			rpc->args_string += arg->type_string;
-			rpc->args_string += " ";
-			rpc->args_string += name;
-			is_first = false;
-		}
-	}
-
+	idlc::create_alternate_names(rpcs);
+	idlc::create_prototype_strings(rpcs);
 	idlc::generate_common_header(rpcs);
 	idlc::generate_caller(rpcs);
 }
