@@ -78,61 +78,98 @@ namespace idlc {
 	namespace {
 		void generate_common_header(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
 		{
-			std::ofstream header {"common.h"};
-			header.exceptions(header.badbit | header.failbit);
+			std::ofstream file {"common.h"};
+			file.exceptions(file.badbit | file.failbit);
 
-			header << "#ifndef COMMON_H\n#define COMMON_H\n\n";
-			header << "enum RPC_ID {\n";
+			file << "#ifndef COMMON_H\n#define COMMON_H\n\n";
+			file << "#include <liblcd/trampoline.h>\n";
+			file << "\n";
+			file << "enum RPC_ID {\n";
 			for (const auto& rpc : rpcs) {
-				header << "\t" << rpc->enum_id << ",\n";
+				file << "\t" << rpc->enum_id << ",\n";
 			}
 
-			header << "};\n\n";
+			file << "};\n\n";
 			for (const auto& rpc : rpcs) {
 				if (rpc->kind == ast::rpc_def_kind::indirect) {
-					header << "typedef " << rpc->ret_string << " (*" << rpc->typedef_id << ")("
+					file << "typedef " << rpc->ret_string << " (*" << rpc->typedef_id << ")("
 						<< rpc->args_string << ");\n";
+
+					file << "typedef " << rpc->ret_string << " (*" << rpc->impl_typedef_id << ")(" << rpc->typedef_id
+						<< " target, " << rpc->args_string << ");\n\n";
 				}
 			}
 
-			header << "\n#endif\n";
+			file << "\n#endif\n";
+		}
+
+		void generate_indirect_rpc(ast::rpc_def& rpc, std::ostream& os)
+		{
+			os << rpc.ret_string << " " << rpc.impl_id << "(" << rpc.typedef_id << " target, "
+				<< rpc.args_string << ");\n\n";
+
+			os << "LCD_TRAMPOLINE_DATA(" << rpc.trmp_id << ")\n";
+			os << rpc.ret_string;
+			os << " LCD_TRAMPOLINE_LINKAGE(" << rpc.trmp_id << ") ";
+			os << rpc.trmp_id << "(" << rpc.args_string << ") {\n";
+
+			os << "\tvolatile " << rpc.impl_typedef_id << " impl;\n";
+			os << "\t" << rpc.typedef_id << " target;\n";
+			os << "\tLCD_TRAMPOLINE_PROLOGUE(target, " << rpc.trmp_id << ");\n";
+			os << "\timpl = " << rpc.impl_id << ";\n";
+			os << "\treturn impl(target, " << rpc.params_string << ");\n";
+
+			os << "}\n\n";
 		}
 
 		void generate_caller(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
 		{
-			std::ofstream caller {"caller.c"};
-			caller.exceptions(caller.badbit | caller.failbit);
+			std::ofstream file {"caller.c"};
+			file.exceptions(file.badbit | file.failbit);
 
-			caller << "#include <lcd_config/pre_hook.h>\n\n";
-			caller << "#include \"common.h\"\n\n";
-			caller << "#include <lcd_config/post_hook.h>\n\n";
+			file << "#include <lcd_config/pre_hook.h>\n\n";
+			file << "#include \"common.h\"\n\n";
+			file << "#include <lcd_config/post_hook.h>\n\n";
 			for (const auto& rpc : rpcs) {
 				if (rpc->kind == ast::rpc_def_kind::direct) {
-					caller << rpc->ret_string << " " << rpc->name << "(" << rpc->args_string << ");\n";
+					file << rpc->ret_string << " " << rpc->name << "(" << rpc->args_string << ");\n\n";
 				}
 				else {
-					caller << rpc->ret_string << " " << rpc->trmp_id << "(" << rpc->args_string << ");\n";
-					caller << rpc->ret_string << " " << rpc->impl_id << "(" << rpc->typedef_id << " target, "
-						<< rpc->args_string << ");\n";
+					generate_indirect_rpc(*rpc, file);
 				}
 			}
 		}
 
 		void generate_callee(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
 		{
-			std::ofstream caller {"callee.c"};
-			caller.exceptions(caller.badbit | caller.failbit);
+			std::ofstream file {"callee.c"};
+			file.exceptions(file.badbit | file.failbit);
 
-			caller << "#include <lcd_config/pre_hook.h>\n\n";
-			caller << "#include \"common.h\"\n\n";
-			caller << "#include <lcd_config/post_hook.h>\n\n";
+			file << "#include <lcd_config/pre_hook.h>\n\n";
+			file << "#include \"common.h\"\n\n";
+			file << "#include <lcd_config/post_hook.h>\n\n";
 			for (const auto& rpc : rpcs) {
 				if (rpc->kind == ast::rpc_def_kind::indirect) {
-					caller << rpc->ret_string << " " << rpc->trmp_id << "(" << rpc->args_string << ");\n";
-					caller << rpc->ret_string << " " << rpc->impl_id << "(" << rpc->typedef_id << " target, "
-						<< rpc->args_string << ");\n";
+					generate_indirect_rpc(*rpc, file);
 				}
 			}
+		}
+
+		void generate_linker_script(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
+		{
+			std::ofstream file {"trampolines.lds.S"};
+			file.exceptions(file.badbit | file.failbit);
+
+			file << "#include <liblcd/trampoline_link.h>\n\n";
+			file << "SECTIONS{\n";
+
+			for (const auto& rpc : rpcs) {
+				if (rpc->kind == ast::rpc_def_kind::indirect)
+					file << "\tLCD_TRAMPOLINE_LINKER_SECTION(" << rpc->trmp_id << ")\n";
+			}
+
+			file << "}\n";
+			file << "INSERT AFTER .text\n";
 		}
 
 		void create_alternate_names(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
@@ -150,11 +187,13 @@ namespace idlc {
 					rpc->impl_id += rpc->name;
 					rpc->typedef_id = "fptr_";
 					rpc->typedef_id += rpc->name;
+					rpc->impl_typedef_id = "fptr_impl_";
+					rpc->impl_typedef_id += rpc->name;
 				}
 			}
 		}
 
-		void create_prototype_strings(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
+		void create_function_strings(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
 		{
 			for (auto& rpc : rpcs) {
 				if (rpc->ret_type)
@@ -167,12 +206,17 @@ namespace idlc {
 					for (gsl::index i {}; i < rpc->arguments->size(); ++i) {
 						const auto& arg = rpc->arg_pgraphs.at(i);
 						const auto name = rpc->arguments->at(i)->name;
-						if (!is_first)
+						if (!is_first) {
 							rpc->args_string += ", ";
+							rpc->params_string += ", ";
+						}
 
 						rpc->args_string += arg->type_string;
 						rpc->args_string += " ";
 						rpc->args_string += name;
+
+						rpc->params_string += name;
+
 						is_first = false;
 					}
 				}
@@ -217,8 +261,13 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	idlc::create_prototype_strings(rpcs);
+	// Need to generate all the walk names for each projection
+	// Need to somehow walk all reachable projections (easy)
+	// - for each rpc, walk all pgraph roots with same walk object, only look at projections
+
+	idlc::create_function_strings(rpcs);
 	idlc::generate_common_header(rpcs);
 	idlc::generate_caller(rpcs);
 	idlc::generate_callee(rpcs);
+	idlc::generate_linker_script(rpcs);
 }

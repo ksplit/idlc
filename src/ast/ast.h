@@ -255,12 +255,15 @@ namespace idlc::ast {
 
 		std::string enum_id;
 		std::string callee_id;
+
 		std::string typedef_id;
+		std::string impl_typedef_id;
 		std::string trmp_id;
 		std::string impl_id;
 
 		std::string ret_string;
 		std::string args_string;
+		std::string params_string;
 
 		rpc_def(
 			node_ptr<type_spec> ret_type,
