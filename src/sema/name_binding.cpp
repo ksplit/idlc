@@ -31,6 +31,16 @@ namespace idlc::sema {
 		private:
 			std::vector<scope*> scopes_ {};
 		};
+
+		class scoped_name_walk : public ast::ast_walk<scoped_name_walk> {
+		public:
+			bool visit_module_def(ast::module_def& node);
+			bool visit_rpc_def(ast::rpc_def& node);
+			bool visit_proj_def(ast::proj_def& node);
+
+		private:
+			std::vector<ident> path_ {};
+		};
 	}	
 }
 
@@ -127,12 +137,53 @@ bool idlc::sema::symbol_walk::visit_proj_def(ast::proj_def& node)
 	return true;
 }
 
+bool idlc::sema::scoped_name_walk::visit_proj_def(ast::proj_def& node)
+{
+	for (const auto& item : path_) {
+		node.scoped_name += item;
+		node.scoped_name += "___"; // triple underscore used to reduce odds of collisions
+		// FIXME: scope collisions are still possible!
+	}
+
+	node.scoped_name += node.name;
+
+	return true;
+}
+
+bool idlc::sema::scoped_name_walk::visit_rpc_def(ast::rpc_def& node)
+{
+	path_.emplace_back(node.name);
+	if (!ast::traverse(*this, node))
+		return false;
+
+	path_.pop_back();
+
+	return true;
+}
+
+bool idlc::sema::scoped_name_walk::visit_module_def(ast::module_def& node)
+{
+	path_.emplace_back(node.name);
+	if (!ast::traverse(*this, node))
+		return false;
+
+	path_.pop_back();
+
+	return true;
+}
+
 bool idlc::sema::bind_all(ast::file& root)
 {
+	idlc::sema::scoped_name_walk names_walk {};
 	idlc::sema::symbol_walk walk {};
 	idlc::sema::bind_walk bind_walk {};
 	if (!walk.visit_file(root)) {
 		std::cout << "Error: scope construction failed\n";
+		return false;
+	}
+
+	if (!names_walk.visit_file(root)) {
+		std::cout << "Error: scoped naming failed\n";
 		return false;
 	}
 

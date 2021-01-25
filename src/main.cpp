@@ -74,6 +74,10 @@
 // NOTE: All of these are low-priority, but eventually needed (if it breaks nullnet, it's high-priority)
 // TODO: sort out the somewhat hellish logging situation
 // TODO: sort out const-ness handling (low-priority, work around in mean time)
+// NOTE: all marshaling logic is side-independent, needing only a side-dependent send() primitive
+// It's side-dependent where the dispatch loop gets hooked in, however
+// and kernel functions must not conflict with the generated marshaling code
+// it is the indirect RPCs that are truly side-independent
 
 namespace idlc {
 	namespace {
@@ -84,12 +88,24 @@ namespace idlc {
 
 			bool visit_projection(sema::projection& node)
 			{
-				os_ << "void " << node.visit_arg_marshal_name << "(struct " << node.real_name << "*);\n";
-				os_ << "void " << node.visit_arg_unmarshal_name << "(struct " << node.real_name << "*);\n";
-				os_ << "void " << node.visit_arg_remarshal_name << "(struct " << node.real_name << "*);\n";
-				os_ << "void " << node.visit_arg_unremarshal_name << "(struct " << node.real_name << "*);\n";
-				os_ << "void " << node.visit_ret_marshal_name << "(struct " << node.real_name << "*);\n";
-				os_ << "void " << node.visit_ret_unmarshal_name << "(struct " << node.real_name << "*);\n\n";
+				os_ << "void " << node.visit_arg_marshal_name
+					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
+
+				os_ << "void " << node.visit_arg_unmarshal_name
+					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
+
+				os_ << "void " << node.visit_arg_remarshal_name
+					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
+					
+				os_ << "void " << node.visit_arg_unremarshal_name
+					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
+					
+				os_ << "void " << node.visit_ret_marshal_name
+					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
+					
+				os_ << "void " << node.visit_ret_unmarshal_name
+					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
+
 				return true;
 			}
 
@@ -97,22 +113,8 @@ namespace idlc {
 			std::ostream& os_;
 		};
 
-		void generate_common_header(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
+		void generate_visitor_prototypes(std::ostream& file, gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
 		{
-			std::ofstream file {"common.h"};
-			file.exceptions(file.badbit | file.failbit);
-
-			file << "#ifndef COMMON_H\n#define COMMON_H\n\n";
-			file << "#include <liblcd/trampoline.h>\n";
-			file << "\n";
-			file << "enum RPC_ID {\n";
-			for (const auto& rpc : rpcs) {
-				file << "\t" << rpc->enum_id << ",\n";
-			}
-
-			file << "};\n\n";
-
-			// TODO: repackage me
 			visitor_walk visit_walk {file};
 			for (const auto& rpc : rpcs) {
 				if (rpc->ret_pgraph) {
@@ -125,7 +127,25 @@ namespace idlc {
 					assert(succeeded);
 				}
 			}
+		}
 
+		void generate_common_header(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
+		{
+			std::ofstream file {"common.h"};
+			file.exceptions(file.badbit | file.failbit);
+
+			file << "#ifndef COMMON_H\n#define COMMON_H\n\n";
+			file << "#include <liblcd/trampoline.h>\n";
+			file << "#include <libfipc.h>\n";
+			file << "\n";
+			file << "enum RPC_ID {\n";
+			for (const auto& rpc : rpcs) {
+				file << "\t" << rpc->enum_id << ",\n";
+			}
+
+			file << "};\n\n";
+
+			generate_visitor_prototypes(file, rpcs);
 			for (const auto& rpc : rpcs) {
 				if (rpc->kind == ast::rpc_def_kind::indirect) {
 					file << "typedef " << rpc->ret_string << " (*" << rpc->typedef_id << ")("
@@ -264,7 +284,7 @@ namespace idlc {
 	}
 }
 
-// NOTE: it is possible to implement type naming as a walk over all var_decls
+// TODO: move string processing to stringstream instead of concats (efficiency issue, heap reallocations, etc.)
 
 int main(int argc, char** argv)
 {
@@ -291,7 +311,6 @@ int main(int argc, char** argv)
 
 	const auto rpcs = idlc::sema::get_rpcs(file);
 	const auto data_fields = idlc::sema::generate_pgraphs(rpcs);
-	idlc::create_alternate_names(rpcs); // Note: must occur before type-naming step
 	if (!idlc::sema::lower(rpcs)) {
 		std::cout << "Error: pgraph lowering failed\n";
 		return 1;

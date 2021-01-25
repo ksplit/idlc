@@ -238,7 +238,7 @@ namespace idlc::sema {
 				return cached;
 			}
 			
-			std::string lowered_name {node.name};
+			std::string lowered_name {node.scoped_name};
 			switch (default_with) {
 			case annotation::in:
 				lowered_name += "_in";

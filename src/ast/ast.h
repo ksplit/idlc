@@ -210,6 +210,7 @@ namespace idlc::ast {
 		const node_ptr<ref_vec<proj_field>> fields;
 		const proj_def_kind kind;
 
+		std::string scoped_name;
 		std::shared_ptr<sema::projection> in_proj;
 		std::shared_ptr<sema::projection> out_proj;
 		std::shared_ptr<sema::projection> in_out_proj;
@@ -277,7 +278,23 @@ namespace idlc::ast {
 			arguments {arguments},
 			items {items},
 			kind {kind}
-		{}
+		{
+			enum_id = "RPC_ID_";
+			enum_id += name;
+			callee_id = name;
+			callee_id += "_callee";
+
+			if (kind == ast::rpc_def_kind::indirect) {
+				trmp_id = "trmp_";
+				trmp_id += name;
+				impl_id = "trmp_impl_";
+				impl_id += name;
+				typedef_id = "fptr_";
+				typedef_id += name;
+				impl_typedef_id = "fptr_impl_";
+				impl_typedef_id += name;
+			}
+		}
 	};
 
 	// TODO: impl
