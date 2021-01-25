@@ -6,6 +6,8 @@
 #include <utility>
 #include <variant>
 
+#include <iostream> // TODO: remove me!!!
+
 #include "../tag_types.h"
 #include "../parser/string_heap.h"
 
@@ -117,16 +119,49 @@ namespace idlc::sema {
 
 	// NOTE: in the "projection template" system, each projection will be instantiated at most 3 times
 	// Each distinct instantiation will require its own set of visitor methods for marshaling
-	struct projection {
-		ident real_name;
+	class projection {
+	public:
+		ident real_name {};
+		// This is computed into the pgraph node because there's actually 3 distinct projections
+		// potentially generated from each AST projection node, based off of what it was defaulted with:
+		// - in projection
+		// - out projection
+		// - in/out projection
 		std::vector<std::pair<ident, node_ptr<data_field>>> fields {};
 
-		projection(ident real_name) : real_name {real_name} {};
+		std::string visit_arg_marshal_name {};
+		std::string visit_arg_unmarshal_name {};
+		std::string visit_arg_remarshal_name {};
+		std::string visit_arg_unremarshal_name {};
+		std::string visit_ret_marshal_name {};
+		std::string visit_ret_unmarshal_name {};
+
+		projection(ident real_name, const std::string& name) : real_name {real_name}, fields {}
+		{
+			// Names can be directly populated here
+			// TODO: populate RPC names in node constructor?
+			populate_names(name);
+		};
 		
-		projection(ident real_name, decltype(fields)&& fields) :
+		projection(ident real_name, const std::string& name, decltype(fields)&& fields) :
 			real_name {real_name},
 			fields {std::move(fields)}
-		{}
+		{			
+			// Names can be directly populated here
+			// TODO: populate RPC names in node constructor?
+			populate_names(name);
+		}
+
+	private:
+		void populate_names(const std::string& name)
+		{
+			visit_arg_marshal_name = "visit_arg_marshal_" + name;
+			visit_arg_unmarshal_name = "visit_arg_unmarshal_" + name;
+			visit_arg_remarshal_name = "visit_arg_remarshal_" + name;
+			visit_arg_unremarshal_name = "visit_arg_unremarshal_" + name;
+			visit_ret_marshal_name = "visit_ret_marshal_" + name;
+			visit_ret_unmarshal_name = "visit_ret_unmarshal_" + name;
+		}
 	};
 }
 

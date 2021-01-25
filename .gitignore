@@ -14,3 +14,9 @@ src/parser/parser.h
 
 # editor configs
 .vscode/
+
+# generated files
+callee.c
+caller.c
+common.h
+trampolines.lds.S

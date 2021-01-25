@@ -11,6 +11,7 @@
 #include "sema/pgraph_dump.h"
 #include "sema/pgraph_generation.h"
 #include "sema/lowering.h"
+#include "sema/pgraph_walk.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 // NOTE: Currently we work at the scale of a single file. All modules within a file are treated as implicitly imported.
@@ -76,6 +77,26 @@
 
 namespace idlc {
 	namespace {
+		// TODO: pre-collect all projections in the pgraph tree to allow iteration over them
+		class visitor_walk : public sema::pgraph_walk<visitor_walk> {
+		public:
+			visitor_walk(std::ostream& os) : os_ {os} {}
+
+			bool visit_projection(sema::projection& node)
+			{
+				os_ << "void " << node.visit_arg_marshal_name << "(struct " << node.real_name << "*);\n";
+				os_ << "void " << node.visit_arg_unmarshal_name << "(struct " << node.real_name << "*);\n";
+				os_ << "void " << node.visit_arg_remarshal_name << "(struct " << node.real_name << "*);\n";
+				os_ << "void " << node.visit_arg_unremarshal_name << "(struct " << node.real_name << "*);\n";
+				os_ << "void " << node.visit_ret_marshal_name << "(struct " << node.real_name << "*);\n";
+				os_ << "void " << node.visit_ret_unmarshal_name << "(struct " << node.real_name << "*);\n\n";
+				return true;
+			}
+
+		private:
+			std::ostream& os_;
+		};
+
 		void generate_common_header(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
 		{
 			std::ofstream file {"common.h"};
@@ -90,6 +111,21 @@ namespace idlc {
 			}
 
 			file << "};\n\n";
+
+			// TODO: repackage me
+			visitor_walk visit_walk {file};
+			for (const auto& rpc : rpcs) {
+				if (rpc->ret_pgraph) {
+					const auto succeeded = visit_walk.visit_data_field(*rpc->ret_pgraph);
+					assert(succeeded);
+				}
+
+				for (const auto& arg : rpc->arg_pgraphs) {
+					const auto succeeded = visit_walk.visit_data_field(*arg);
+					assert(succeeded);
+				}
+			}
+
 			for (const auto& rpc : rpcs) {
 				if (rpc->kind == ast::rpc_def_kind::indirect) {
 					file << "typedef " << rpc->ret_string << " (*" << rpc->typedef_id << ")("
@@ -262,6 +298,8 @@ int main(int argc, char** argv)
 	}
 
 	// Need to generate all the walk names for each projection
+	// Use same trick as RPCs: generate names in the AST, then include a backreference to the AST node?
+	// No: there are three *distinct* projections for every AST node, these need to be named independently
 	// Need to somehow walk all reachable projections (easy)
 	// - for each rpc, walk all pgraph roots with same walk object, only look at projections
 

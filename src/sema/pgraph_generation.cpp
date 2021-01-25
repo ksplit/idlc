@@ -111,20 +111,20 @@ namespace idlc::sema {
 			return std::visit(visit, node);
 		}
 
-		auto generate_union_dummy(ast::proj_def& def)
+		auto generate_union_dummy(ast::proj_def& def, const std::string& name)
 		{
 			std::cout << "Union projections are not yet implemented\n";
 			std::cout << "Will implement as an empty struct projection \"" << def.name << "\"\n";
-			return std::make_shared<projection>(def.type);
+			return std::make_shared<projection>(def.type, std::move(name));
 		}
 
-		auto generate_empty_struct(ast::proj_def& def)
+		auto generate_empty_struct(ast::proj_def& def, const std::string& name)
 		{
 			// std::cout << "[pgraph] generating empty pgraph projection for \"" << def.name << "\"\n";
-			return std::make_shared<projection>(def.type);
+			return std::make_shared<projection>(def.type, std::move(name));
 		}
 
-		auto generate_struct(ast::proj_def& def)
+		auto generate_struct(ast::proj_def& def, const std::string& name)
 		{
 			const auto& field_nodes = *def.fields;
 			decltype(projection::fields) fields {};
@@ -137,7 +137,7 @@ namespace idlc::sema {
 
 			// std::cout << "[pgraph] finished \"" << def.name << "\"\n";
 
-			return std::make_shared<projection>(def.type, std::move(fields));
+			return std::make_shared<projection>(def.type, std::move(name), std::move(fields));
 		}
 
 		class type_walk : public ast::ast_walk<type_walk> {
@@ -214,7 +214,7 @@ std::vector<node_ptr<data_field>> idlc::sema::generate_pgraphs(gsl::span<const g
 }
 
 // TODO: is it necessary to detect if a projection self-references by value?
-std::shared_ptr<idlc::sema::projection> idlc::sema::generate_projection(ast::proj_def& node)
+std::shared_ptr<idlc::sema::projection> idlc::sema::generate_projection(ast::proj_def& node, const std::string& name)
 {
 	if (node.seen_before) {
 		std::cout << "Self-referential projections are not yet supported\n";
@@ -223,13 +223,13 @@ std::shared_ptr<idlc::sema::projection> idlc::sema::generate_projection(ast::pro
 	
 	// std::cout << "[pgraph] generating new pgraph for \"" << def.name << "\" (" << &def << ")\n";
 	node.seen_before = true;
-	auto pgraph_node = [&node] {
+	auto pgraph_node = [&node, &name] {
 		if (!node.fields)
-			return generate_empty_struct(node);
+			return generate_empty_struct(node, std::move(name));
 		else if (node.kind == ast::proj_def_kind::union_kind)
-			return generate_union_dummy(node);
+			return generate_union_dummy(node, std::move(name));
 		else
-			return generate_struct(node);
+			return generate_struct(node, std::move(name));
 	}();
 
 	node.seen_before = false;

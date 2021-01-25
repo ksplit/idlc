@@ -238,7 +238,25 @@ namespace idlc::sema {
 				return cached;
 			}
 			
-			auto pgraph = generate_projection(node);
+			std::string lowered_name {node.name};
+			switch (default_with) {
+			case annotation::in:
+				lowered_name += "_in";
+				break;
+
+			case annotation::out:
+				lowered_name += "_out";
+				break;
+
+			case annotation::in | annotation::out:
+				lowered_name += "_in_out";
+				break;
+
+			default:
+				assert(false);
+			}
+
+			auto pgraph = generate_projection(node, lowered_name);
 			cached = pgraph;
 
 			lowering_walk walk {default_with};

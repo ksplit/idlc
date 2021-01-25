@@ -33,8 +33,11 @@ namespace idlc::sema {
 
 	// TODO: introduce the void<> system for "raw" void pointers
 
-	std::vector<node_ptr<data_field>> generate_pgraphs(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs);	
-	std::shared_ptr<idlc::sema::projection> generate_projection(ast::proj_def& node);
+	std::vector<node_ptr<data_field>> generate_pgraphs(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs);
+
+	// TODO: unclear if the projection name should be passed this way
+	// TODO: intern projection name if comparisons are required	
+	std::shared_ptr<idlc::sema::projection> generate_projection(ast::proj_def& node, const std::string& name);
 }
 
 #endif
