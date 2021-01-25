@@ -118,6 +118,23 @@ namespace idlc {
 			}
 		}
 
+		void generate_callee(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
+		{
+			std::ofstream caller {"callee.c"};
+			caller.exceptions(caller.badbit | caller.failbit);
+
+			caller << "#include <lcd_config/pre_hook.h>\n\n";
+			caller << "#include \"common.h\"\n\n";
+			caller << "#include <lcd_config/post_hook.h>\n\n";
+			for (const auto& rpc : rpcs) {
+				if (rpc->kind == ast::rpc_def_kind::indirect) {
+					caller << rpc->ret_string << " " << rpc->trmp_id << "(" << rpc->args_string << ");\n";
+					caller << rpc->ret_string << " " << rpc->impl_id << "(" << rpc->typedef_id << " target, "
+						<< rpc->args_string << ");\n";
+				}
+			}
+		}
+
 		void create_alternate_names(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
 		{
 			for (const auto& rpc : rpcs) {
@@ -194,13 +211,14 @@ int main(int argc, char** argv)
 
 	const auto rpcs = idlc::sema::get_rpcs(file);
 	const auto data_fields = idlc::sema::generate_pgraphs(rpcs);
+	idlc::create_alternate_names(rpcs); // Note: must occur before type-naming step
 	if (!idlc::sema::lower(rpcs)) {
 		std::cout << "Error: pgraph lowering failed\n";
 		return 1;
 	}
 
-	idlc::create_alternate_names(rpcs);
 	idlc::create_prototype_strings(rpcs);
 	idlc::generate_common_header(rpcs);
 	idlc::generate_caller(rpcs);
+	idlc::generate_callee(rpcs);
 }
