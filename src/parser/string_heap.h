@@ -25,7 +25,7 @@ namespace idlc {
 		ident intern(absl::string_view string);
 
 	private:
-		static constexpr std::size_t block_size {1024}; // TODO: Tune
+		static constexpr std::size_t block_size {1024}; // NOTE: you can tune this to reduce allocation pressure
 		using block = std::array<char, block_size>;
 
 		std::vector<gsl::czstring<>> m_strings {};

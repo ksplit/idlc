@@ -240,7 +240,7 @@ module_item_list = first:module_item rest:(tok_space? module_item)* {{
 }}
 
 module_item = header_stmt {{
-	value = share(module_item {header_stmt {} }); // TODO
+	value = share(module_item {header_stmt {} }); // TODO: header_stmt
 }} | ud:union_proj_def {{
 	value = share(module_item {get_shared<proj_def>(ud)});
 }} | sd:struct_proj_def {{
@@ -456,7 +456,6 @@ indirection = attrs:(val:ptr_attrs tok_space? {{ value = val; }})? tok_star is_c
 	value = share(indirection {to_int<annotation>(attrs), is_c.getValue()});
 }}
 
-# TODO: attributes
 type_spec = is_c:(tok_kw_const tok_space)? stem:type_stem indirs:(tok_space? indirection)* val_annotation:(tok_space? val_attrs)? {{
 	auto& ivals = indirs.getValues();
 	ref_vec<indirection> a {};

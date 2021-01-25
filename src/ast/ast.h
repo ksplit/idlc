@@ -14,7 +14,6 @@
 #include "../tag_types.h"
 
 // TODO: since AST uses "external types" (sema) extensively, re-organize these to avoid vicious circularities
-// TODO: sema is better expressed as the set of walks over the AST, and the different ways of walking it (pgraphs)
 
 namespace idlc::ast {
 	template<typename type>
@@ -159,7 +158,6 @@ namespace idlc::ast {
 		{}
 	};
 
-	// FIXME: field order
 	struct type_spec {
 		const node_ref<type_stem> stem;
 		const ref_vec<indirection> indirs;
@@ -215,10 +213,6 @@ namespace idlc::ast {
 		std::shared_ptr<sema::projection> out_proj;
 		std::shared_ptr<sema::projection> in_out_proj;
 
-		// TODO: remove me! This field is the simplest way to detect that we've hit a cyclic pgraph, which we
-		// don't yet "know" how to generate correctly
-		bool seen_before;
-
 		proj_def(
 			ident name,
 			ident type,
@@ -231,8 +225,7 @@ namespace idlc::ast {
 			kind {kind},
 			in_proj {},
 			out_proj {},
-			in_out_proj {},
-			seen_before {}
+			in_out_proj {}
 		{}
 	};
 
@@ -298,6 +291,7 @@ namespace idlc::ast {
 	};
 
 	// TODO: impl
+	// Headers named in these nodes will get included into the generated "common" header
 	struct header_stmt {};
 
 	using module_item = std::variant<

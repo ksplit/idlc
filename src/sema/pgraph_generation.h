@@ -36,7 +36,7 @@ namespace idlc::sema {
 	std::vector<node_ptr<data_field>> generate_pgraphs(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs);
 
 	// TODO: unclear if the projection name should be passed this way
-	// TODO: intern projection name if comparisons are required	
+	// NOTE: intern projection name in the string heap if comparisons are required	
 	std::shared_ptr<idlc::sema::projection> generate_projection(ast::proj_def& node, const std::string& name);
 }
 

@@ -73,7 +73,7 @@ namespace idlc::ast {
 		{
 			using type = std::decay_t<decltype(subnode)>;
 			if constexpr (std::is_same_v<type, header_stmt>)
-				return true; // TODO
+				return true; // TODO: header_stmt impl
 			else if constexpr (std::is_same_v<type, node_ref<proj_def>>)
 				return self.visit_proj_def(*subnode);
 			else if constexpr (std::is_same_v<type, node_ref<rpc_def>>)

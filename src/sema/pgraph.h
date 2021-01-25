@@ -6,8 +6,6 @@
 #include <utility>
 #include <variant>
 
-#include <iostream> // TODO: remove me!!!
-
 #include "../tag_types.h"
 #include "../parser/string_heap.h"
 
@@ -110,23 +108,15 @@ namespace idlc::sema {
 		{}
 	};
 
-	// TODO: implement me, currently a dummy
 	struct rpc_ptr {
 		ast::rpc_def* definition;
 
 		rpc_ptr(ast::rpc_def* definition) : definition {definition} {}
 	};
 
-	// NOTE: in the "projection template" system, each projection will be instantiated at most 3 times
-	// Each distinct instantiation will require its own set of visitor methods for marshaling
 	class projection {
 	public:
 		ident real_name {};
-		// This is computed into the pgraph node because there's actually 3 distinct projections
-		// potentially generated from each AST projection node, based off of what it was defaulted with:
-		// - in projection
-		// - out projection
-		// - in/out projection
 		std::vector<std::pair<ident, node_ptr<data_field>>> fields {};
 
 		std::string visit_arg_marshal_name {};

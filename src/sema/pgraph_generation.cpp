@@ -165,10 +165,8 @@ namespace idlc::sema {
 			}
 
 		private:
-			// NOTE: idents are only for debugging
 			std::vector<node_ptr<data_field>> store_ {};
 
-			// NOTE: the name is not necessarily an ident!!!
 			data_field* insert_field(const ast::type_spec& node)
 			{
 				auto pgraph_node = generate_data_field(node);
@@ -180,7 +178,7 @@ namespace idlc::sema {
 
 		node_ptr<data_field> generate_data_field(const ast::type_spec& node)
 		{
-			// TODO: finish indirection handling
+			// TODO: finish const handling
 			auto type = generate_stem_type(*node.stem, node.is_const);
 			for (const auto& ptr_node : node.indirs) {
 				const auto annots = ptr_node->attrs;
@@ -216,13 +214,6 @@ std::vector<node_ptr<data_field>> idlc::sema::generate_pgraphs(gsl::span<const g
 // TODO: is it necessary to detect if a projection self-references by value?
 std::shared_ptr<idlc::sema::projection> idlc::sema::generate_projection(ast::proj_def& node, const std::string& name)
 {
-	if (node.seen_before) {
-		std::cout << "Self-referential projections are not yet supported\n";
-		std::terminate();
-	}
-	
-	// std::cout << "[pgraph] generating new pgraph for \"" << def.name << "\" (" << &def << ")\n";
-	node.seen_before = true;
 	auto pgraph_node = [&node, &name] {
 		if (!node.fields)
 			return generate_empty_struct(node, std::move(name));
@@ -231,8 +222,6 @@ std::shared_ptr<idlc::sema::projection> idlc::sema::generate_projection(ast::pro
 		else
 			return generate_struct(node, std::move(name));
 	}();
-
-	node.seen_before = false;
 
 	return std::move(pgraph_node);
 }
