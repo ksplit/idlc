@@ -162,12 +162,14 @@ namespace idlc {
 		void generate_indirect_rpc(ast::rpc_def& rpc, std::ostream& os)
 		{
 			os << rpc.ret_string << " " << rpc.impl_id << "(" << rpc.typedef_id << " target, "
-				<< rpc.args_string << ");\n\n";
+				<< rpc.args_string << ")\n{\n";
+			os << (rpc.ret_pgraph ? "\treturn 0;\n" : ""); // TODO: code generation here with indirect prefix / call
+			os << "}\n\n";
 
 			os << "LCD_TRAMPOLINE_DATA(" << rpc.trmp_id << ")\n";
 			os << rpc.ret_string;
 			os << " LCD_TRAMPOLINE_LINKAGE(" << rpc.trmp_id << ") ";
-			os << rpc.trmp_id << "(" << rpc.args_string << ") {\n";
+			os << rpc.trmp_id << "(" << rpc.args_string << ")\n{\n";
 
 			os << "\tvolatile " << rpc.impl_typedef_id << " impl;\n";
 			os << "\t" << rpc.typedef_id << " target;\n";
@@ -188,7 +190,11 @@ namespace idlc {
 			file << "#include <lcd_config/post_hook.h>\n\n";
 			for (const auto& rpc : rpcs) {
 				if (rpc->kind == ast::rpc_def_kind::direct) {
-					file << rpc->ret_string << " " << rpc->name << "(" << rpc->args_string << ");\n\n";
+					file << rpc->ret_string << " " << rpc->name << "(" << rpc->args_string << ")\n{\n";
+					
+					// TODO: code generation here with direct call, no prefix
+					file << (rpc->ret_pgraph ? "\treturn 0;\n" : "");
+					file << "}\n\n";
 				}
 				else {
 					generate_indirect_rpc(*rpc, file);
