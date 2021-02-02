@@ -7,7 +7,7 @@ namespace idlc {
 	inline auto& tab_over(std::ostream& os, unsigned n)
 	{
 		for (int i {}; i < n; ++i)
-			os << "  ";
+			os << "\t";
 
 		return os;
 	}

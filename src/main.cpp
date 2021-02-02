@@ -12,6 +12,7 @@
 #include "sema/pgraph_generation.h"
 #include "sema/lowering.h"
 #include "sema/pgraph_walk.h"
+#include "tab_over.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 // NOTE: Currently we work at the scale of a single file. All modules within a file are treated as implicitly imported.
@@ -159,11 +160,93 @@ namespace idlc {
 			file << "\n#endif\n";
 		}
 
+		class arg_marshal_walk : public sema::pgraph_walk<arg_marshal_walk> {
+		public:
+			arg_marshal_walk(std::ostream& os, gsl::czstring<> holder, unsigned level) :
+				os_ {os},
+				holder_ {holder},
+				level_ {level}
+			{}
+
+			bool visit_pointer(sema::pointer& node)
+			{
+				tab_over(os_, level_) << "if (" << holder_ << ") {\n";
+				const auto state = std::make_tuple(holder_, level_);
+				++level_;
+
+				std::string nested_holder {"*"};
+				nested_holder += holder_;
+				holder_ = nested_holder.c_str();
+
+				if (!traverse(*this, node))
+					return false;
+
+				std::forward_as_tuple(holder_, level_) = state;
+				tab_over(os_, level_) << "}\n\n";
+
+				return true;
+			}
+
+			bool visit_primitive(sema::primitive node)
+			{
+				tab_over(os_, level_) << "// marshal " << holder_ << "\n";
+				return true;
+			}
+
+			bool visit_rpc_ptr(sema::rpc_ptr& node)
+			{
+				tab_over(os_, level_) << "// inject trampoline for " << holder_ << "\n";
+				return true;
+			}
+
+			bool visit_projection(sema::projection& node)
+			{
+				tab_over(os_, level_) << node.visit_arg_marshal_name << "(&" << holder_ << ");\n";
+				return true;
+			}
+
+		private:
+			std::ostream& os_;
+			gsl::czstring<> holder_ {};
+			unsigned level_ {};
+		};
+
+		class arg_unmarshal_walk : public sema::pgraph_walk<arg_unmarshal_walk> {};
+		class arg_remarshal_walk : public sema::pgraph_walk<arg_remarshal_walk> {};
+		class arg_unremarshal_walk : public sema::pgraph_walk<arg_unremarshal_walk> {};
+		class ret_marshal_walk : public sema::pgraph_walk<ret_marshal_walk> {};
+		class ret_unmarshal_walk : public sema::pgraph_walk<ret_unmarshal_walk> {};
+
+		void generate_caller_glue(ast::rpc_def& rpc, std::ostream& os)
+		{
+			const auto n_args = rpc.arg_pgraphs.size();
+
+			for (gsl::index i {}; i < n_args; ++i) {
+				arg_marshal_walk arg_marshal {os, rpc.arguments->at(i)->name, 1}; // TODO: collect names
+				arg_marshal.visit_data_field(*rpc.arg_pgraphs.at(i));
+			}
+
+			// call goes here
+
+			for (auto& arg : rpc.arg_pgraphs) {
+				arg_unremarshal_walk arg_unremarshal {};
+				arg_unremarshal.visit_data_field(*arg);
+			}
+
+			if (rpc.ret_pgraph) {
+				ret_unmarshal_walk ret_unmarshal {};
+				ret_unmarshal.visit_data_field(*rpc.ret_pgraph);
+			}
+
+			os << (rpc.ret_pgraph ? "\treturn 0;\n" : ""); 
+		}
+
 		void generate_indirect_rpc(ast::rpc_def& rpc, std::ostream& os)
 		{
 			os << rpc.ret_string << " " << rpc.impl_id << "(" << rpc.typedef_id << " target, "
 				<< rpc.args_string << ")\n{\n";
-			os << (rpc.ret_pgraph ? "\treturn 0;\n" : ""); // TODO: code generation here with indirect prefix / call
+
+			generate_caller_glue(rpc, os);
 			os << "}\n\n";
 
 			os << "LCD_TRAMPOLINE_DATA(" << rpc.trmp_id << ")\n";
@@ -191,9 +274,7 @@ namespace idlc {
 			for (const auto& rpc : rpcs) {
 				if (rpc->kind == ast::rpc_def_kind::direct) {
 					file << rpc->ret_string << " " << rpc->name << "(" << rpc->args_string << ")\n{\n";
-					
-					// TODO: code generation here with direct call, no prefix
-					file << (rpc->ret_pgraph ? "\treturn 0;\n" : "");
+					generate_caller_glue(*rpc, file);
 					file << "}\n\n";
 				}
 				else {
