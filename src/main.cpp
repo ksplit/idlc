@@ -162,7 +162,7 @@ namespace idlc {
 
 		class arg_marshal_walk : public sema::pgraph_walk<arg_marshal_walk> {
 		public:
-			arg_marshal_walk(std::ostream& os, gsl::czstring<> holder, unsigned level) :
+			arg_marshal_walk(std::ostream& os, const std::string& holder, unsigned level) :
 				os_ {os},
 				holder_ {holder},
 				level_ {level}
@@ -170,14 +170,10 @@ namespace idlc {
 
 			bool visit_pointer(sema::pointer& node)
 			{
-				tab_over(os_, level_) << "if (" << holder_ << ") {\n";
+				tab_over(os_, level_) << "if (*" << holder_ << ") {\n";
 				const auto state = std::make_tuple(holder_, level_);
+				holder_ = "*" + holder_;
 				++level_;
-
-				std::string nested_holder {"*"};
-				nested_holder += holder_;
-				holder_ = nested_holder.c_str();
-
 				if (!traverse(*this, node))
 					return false;
 
@@ -201,13 +197,31 @@ namespace idlc {
 
 			bool visit_projection(sema::projection& node)
 			{
-				tab_over(os_, level_) << node.visit_arg_marshal_name << "(&" << holder_ << ");\n";
+				tab_over(os_, level_) << node.visit_arg_marshal_name << "(NULL, " << holder_ << ");\n";
+				return true;
+			}
+
+			bool visit_null_terminated_array(sema::null_terminated_array& node)
+			{
+				tab_over(os_, level_) << "int i;\n";
+				tab_over(os_, level_) << node.element->type_string << "* array = " << holder_ << ";\n";
+				tab_over(os_, level_) << "for (i = 0; array[i]; ++i) {\n";
+
+				const auto state = std::make_tuple(holder_, level_);
+				holder_ = "array[i]";
+				++level_;
+				if (!traverse(*this, node))
+					return false;
+
+				std::forward_as_tuple(holder_, level_) = state;
+				tab_over(os_, level_) << "}\n\n";
+
 				return true;
 			}
 
 		private:
 			std::ostream& os_;
-			gsl::czstring<> holder_ {};
+			std::string holder_ {};
 			unsigned level_ {};
 		};
 
@@ -217,12 +231,32 @@ namespace idlc {
 		class ret_marshal_walk : public sema::pgraph_walk<ret_marshal_walk> {};
 		class ret_unmarshal_walk : public sema::pgraph_walk<ret_unmarshal_walk> {};
 
-		void generate_caller_glue(ast::rpc_def& rpc, std::ostream& os)
+		auto generate_roots(ast::rpc_def& rpc, std::ostream& os)
 		{
 			const auto n_args = rpc.arg_pgraphs.size();
+			std::vector<std::string> roots(n_args);
+			for (gsl::index i {}; i < n_args; ++i) {
+				const auto name = rpc.arguments->at(i)->name;
+				const auto ts = rpc.arg_pgraphs.at(i)->type_string;
+				std::string ptr_name {name};
+				ptr_name += "_ptr";
+				os << "\t" << ts << "* " << ptr_name << " = &" << name << ";\n";
+				roots.at(i) = ptr_name;
+			}
+
+			os << "\t\n";
+
+			return roots;
+		}
+
+		void generate_caller_glue(ast::rpc_def& rpc, std::ostream& os)
+		{
+			// TODO: n_args is re-computed twice
+			const auto n_args = rpc.arg_pgraphs.size();
+			std::vector<std::string> roots = generate_roots(rpc, os);
 
 			for (gsl::index i {}; i < n_args; ++i) {
-				arg_marshal_walk arg_marshal {os, rpc.arguments->at(i)->name, 1}; // TODO: collect names
+				arg_marshal_walk arg_marshal {os, roots.at(i), 1}; // TODO: collect names
 				arg_marshal.visit_data_field(*rpc.arg_pgraphs.at(i));
 			}
 
