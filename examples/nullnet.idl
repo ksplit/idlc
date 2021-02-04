@@ -16,7 +16,7 @@ module kernel {
     //  rpc void free_percpu(void *ptr) {
     //  }
 
-    rpc u32 register_netdevice( projection dev  *dev ) {
+    rpc u32 register_netdevice( projection dev *dev ) {
         projection < struct net_device > dev {
             u64 [out] features;
             u64 [out] hw_features;

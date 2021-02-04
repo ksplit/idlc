@@ -219,6 +219,16 @@ namespace idlc {
 				return true;
 			}
 
+			bool visit_data_field(sema::data_field& node)
+			{
+				if ((node.value_annots & ast::annotation::in) == ast::annotation::is_set) {
+					std::cout << "Skipped non-in field\n";
+					return true;
+				}
+				
+				return traverse(*this, node);
+			}
+
 		private:
 			std::ostream& os_;
 			std::string holder_ {};
@@ -275,12 +285,21 @@ namespace idlc {
 			os << (rpc.ret_pgraph ? "\treturn 0;\n" : ""); 
 		}
 
+		void generate_callee_glue(ast::rpc_def& rpc, std::ostream& os)
+		{
+			os << "\t// callee glue here\n";
+		}
+
 		void generate_indirect_rpc(ast::rpc_def& rpc, std::ostream& os)
 		{
 			os << rpc.ret_string << " " << rpc.impl_id << "(" << rpc.typedef_id << " target, "
 				<< rpc.args_string << ")\n{\n";
 
 			generate_caller_glue(rpc, os);
+			os << "}\n\n";
+
+			os << "void " << rpc.callee_id << "(struct fipc_message* msg)\n{\n";
+			generate_callee_glue(rpc, os);
 			os << "}\n\n";
 
 			os << "LCD_TRAMPOLINE_DATA(" << rpc.trmp_id << ")\n";
@@ -328,6 +347,11 @@ namespace idlc {
 			for (const auto& rpc : rpcs) {
 				if (rpc->kind == ast::rpc_def_kind::indirect) {
 					generate_indirect_rpc(*rpc, file);
+				}
+				else {
+					file << "void " << rpc->callee_id << "(struct fipc_message* msg)\n{\n";
+					generate_callee_glue(*rpc, file);
+					file << "}\n\n";
 				}
 			}
 		}
