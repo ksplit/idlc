@@ -138,7 +138,9 @@ namespace idlc {
 			file << "#ifndef COMMON_H\n#define COMMON_H\n\n";
 			file << "#include <liblcd/trampoline.h>\n";
 			file << "#include <libfipc.h>\n";
+			file << "#include <asm/lcd_domains/libvmfunc.h>\n";
 			file << "\n";
+			file << "#define glue_marshal(msg, value) // TODO\n\n";
 			file << "enum RPC_ID {\n";
 			for (const auto& rpc : rpcs) {
 				file << "\t" << rpc->enum_id << ",\n";
@@ -168,8 +170,17 @@ namespace idlc {
 				level_ {level}
 			{}
 
+			// TODO: lowering *needs* to compute a size-of-field expression for alloc support
+
 			bool visit_pointer(sema::pointer& node)
 			{
+				if ((node.pointer_annots & ast::annotation::bind_caller) == ast::annotation::bind_caller) {
+					tab_over(os_, level_) << "glue_marshal_shadow(msg, *" << holder_ << ");\n";
+				}
+				else {
+					tab_over(os_, level_) << "glue_marshal(msg, *" << holder_ << ");\n";
+				}
+
 				tab_over(os_, level_) << "if (*" << holder_ << ") {\n";
 				const auto state = std::make_tuple(holder_, level_);
 				holder_ = "*" + holder_;
@@ -185,19 +196,19 @@ namespace idlc {
 
 			bool visit_primitive(sema::primitive node)
 			{
-				tab_over(os_, level_) << "// marshal " << holder_ << "\n";
+				tab_over(os_, level_) << "glue_marshal(msg, *" << holder_ << ");\n";
 				return true;
 			}
 
 			bool visit_rpc_ptr(sema::rpc_ptr& node)
 			{
-				tab_over(os_, level_) << "// inject trampoline for " << holder_ << "\n";
+				tab_over(os_, level_) << "glue_marshal(msg, *" << holder_ << ");\n";
 				return true;
 			}
 
 			bool visit_projection(sema::projection& node)
 			{
-				tab_over(os_, level_) << node.visit_arg_marshal_name << "(NULL, " << holder_ << ");\n";
+				tab_over(os_, level_) << node.visit_arg_marshal_name << "(msg, " << holder_ << ");\n";
 				return true;
 			}
 
@@ -261,6 +272,9 @@ namespace idlc {
 
 		void generate_caller_glue(ast::rpc_def& rpc, std::ostream& os)
 		{
+			os << "\tstruct fipc_message msg_buf = {0};\n";
+			os << "\tstruct fipc_message *msg = &msg_buf;\n\n";
+
 			// TODO: n_args is re-computed twice
 			const auto n_args = rpc.arg_pgraphs.size();
 			std::vector<std::string> roots = generate_roots(rpc, os);
@@ -270,7 +284,7 @@ namespace idlc {
 				arg_marshal.visit_data_field(*rpc.arg_pgraphs.at(i));
 			}
 
-			// call goes here
+			os << "\tvmfunc_wrapper(msg);\n\n";
 
 			for (auto& arg : rpc.arg_pgraphs) {
 				arg_unremarshal_walk arg_unremarshal {};
