@@ -1,5 +1,5 @@
-#ifndef IDLC_SEMA_PGRAPH_GENERATION_H
-#define IDLC_SEMA_PGRAPH_GENERATION_H
+#ifndef IDLC_SEMA_ANALYSIS_H
+#define IDLC_SEMA_ANALYSIS_H
 
 #include <gsl/gsl>
 
@@ -33,11 +33,13 @@ namespace idlc::sema {
 
 	// TODO: introduce the void<> system for "raw" void pointers
 
-	std::vector<node_ptr<data_field>> generate_pgraphs(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs);
 
-	// TODO: unclear if the projection name should be passed this way
-	// NOTE: intern projection name in the string heap if comparisons are required	
-	std::shared_ptr<idlc::sema::projection> generate_projection(ast::proj_def& node, const std::string& name);
+	using rpc_table = std::vector<gsl::not_null<ast::rpc_def*>>;
+	using rpc_table_ref = gsl::span<const gsl::not_null<ast::rpc_def*>>;
+	using pgraph_root_table = std::vector<node_ptr<data_field>>;
+
+	rpc_table get_rpcs(ast::file& root);
+	std::optional<pgraph_root_table> generate_pgraphs(rpc_table_ref rpcs);
 }
 
 #endif

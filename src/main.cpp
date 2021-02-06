@@ -9,8 +9,7 @@
 #include "ast/ast_dump.h"
 #include "sema/name_binding.h"
 #include "sema/pgraph_dump.h"
-#include "sema/pgraph_generation.h"
-#include "sema/lowering.h"
+#include "sema/analysis.h"
 #include "sema/pgraph_walk.h"
 #include "tab_over.h"
 
@@ -140,6 +139,7 @@ namespace idlc {
 			file << "#include <libfipc.h>\n";
 			file << "#include <asm/lcd_domains/libvmfunc.h>\n";
 			file << "\n";
+			file << "#define glue_marshal_shadow(msg, value) // TODO\n";
 			file << "#define glue_marshal(msg, value) // TODO\n\n";
 			file << "enum RPC_ID {\n";
 			for (const auto& rpc : rpcs) {
@@ -458,20 +458,20 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    const auto driver_idl = idlc::parser::parse_file(gsl::at(args, 1));
-    if (!driver_idl)
+    const auto file = idlc::parser::parse_file(gsl::at(args, 1));
+    if (!file)
         return 1;
 
-	auto& file = *driver_idl;
-	if (!idlc::sema::bind_all(file)) {
+	if (!idlc::sema::bind_all(*file)) {
 		std::cout << "Error: Not all names were bound\n";
 		return 1;
 	}
 
-	const auto rpcs = idlc::sema::get_rpcs(file);
-	const auto data_fields = idlc::sema::generate_pgraphs(rpcs);
-	if (!idlc::sema::lower(rpcs)) {
-		std::cout << "Error: pgraph lowering failed\n";
+	const auto rpcs = idlc::sema::get_rpcs(*file);
+	// pgraphs is the owning root of all pgraphs added to the tree
+	const auto pgraphs = idlc::sema::generate_pgraphs(rpcs);
+	if (!pgraphs) {
+		std::cout << "Error: pgraph generation failed\n";
 		return 1;
 	}
 
