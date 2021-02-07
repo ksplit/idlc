@@ -264,13 +264,24 @@ namespace idlc::ast {
 			ident name,
 			node_ptr<ref_vec<var_decl>> arguments,
 			node_ptr<ref_vec<rpc_item>> items,
-			rpc_def_kind kind
-		) :
+			rpc_def_kind kind) :
 			ret_type {ret_type},
 			name {name},
 			arguments {arguments},
 			items {items},
-			kind {kind}
+			kind {kind},
+			scope {},
+			ret_pgraph {},
+			arg_pgraphs {},
+			enum_id {},
+			callee_id {},
+			typedef_id {},
+			impl_typedef_id {},
+			trmp_id {},
+			impl_id {},
+			ret_string {},
+			args_string {},
+			params_string {}
 		{
 			enum_id = "RPC_ID_";
 			enum_id += name;

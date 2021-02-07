@@ -444,6 +444,13 @@ namespace idlc {
 }
 
 // TODO: move string processing to stringstream instead of concats (efficiency issue, heap reallocations, etc.)
+/*
+	TODO: split sema into the name-binding rpc-collection parts, vs the pgraph analysis parts
+	- merge AST and pgraph into a single module, they're interdependent anyways
+	- instead of extracting the pgraph owners, root them in their respective RPC nodes and do away with the unused table
+	- move code generation into its own module
+	- stages after the initial sema stage work solely on the table of RPCs (namely pgraph analysis and code generation)
+*/
 
 int main(int argc, char** argv)
 {
