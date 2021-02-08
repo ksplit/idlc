@@ -1,12 +1,12 @@
-#ifndef _LCDS_IDL_PARSER_WALK_H_
-#define _LCDS_IDL_PARSER_WALK_H_
+#ifndef IDLC_AST_AST_WALK_H_
+#define IDLC_AST_AST_WALK_H_
 
 #include <type_traits>
 #include <iostream>
 
 #include "ast.h"
 
-namespace idlc::ast {
+namespace idlc {
 	/*
 		Walk deficiencies:
 		- Subtree walks have no protection (can have field_walk walk over mutiple fields, for instance)

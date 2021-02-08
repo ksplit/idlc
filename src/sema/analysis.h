@@ -5,9 +5,8 @@
 
 #include "../parser/string_heap.h"
 #include "../ast/ast.h"
-#include "../ast/walk.h"
-
-#include "pgraph.h"
+#include "../ast/ast_walk.h"
+#include "../ast/pgraph.h"
 
 namespace idlc::sema {
 	// TODO: I recall that any_of was in flux
@@ -33,11 +32,11 @@ namespace idlc::sema {
 
 	// TODO: introduce the void<> system for "raw" void pointers
 
-	using rpc_table = std::vector<gsl::not_null<ast::rpc_def*>>;
-	using rpc_table_ref = gsl::span<const gsl::not_null<ast::rpc_def*>>;
+	using rpc_vec = std::vector<gsl::not_null<rpc_def*>>;
+	using rpc_vec_view = gsl::span<const gsl::not_null<rpc_def*>>;
 
-	rpc_table get_rpcs(ast::file& root);
-	bool generate_pgraphs(rpc_table_ref rpcs);
+	rpc_vec get_rpcs(file& root);
+	bool generate_pgraphs(rpc_vec_view rpcs);
 }
 
 #endif

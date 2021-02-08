@@ -7,7 +7,7 @@
 #include "pgraph.h"
 #include "../tab_over.h"
 
-namespace idlc::sema {
+namespace idlc {
 	namespace {
 		class null_walk : public pgraph_walk<null_walk> {
 		public:
@@ -75,7 +75,7 @@ namespace idlc::sema {
 				return true;
 			}
 
-			bool visit_proj_def(ast::proj_def& node)
+			bool visit_proj_def(proj_def& node)
 			{
 				tab_over(std::cout, level_) << "proj_def\n";
 				return true;
@@ -87,7 +87,7 @@ namespace idlc::sema {
 	}
 }
 
-void idlc::sema::dump_pgraph(data_field& root)
+void idlc::dump_pgraph(data_field& root)
 {
 	null_walk walk {};
 	const auto succeeded = walk.visit_data_field(root);

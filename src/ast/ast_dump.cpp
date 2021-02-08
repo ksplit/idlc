@@ -3,11 +3,11 @@
 #include <cassert>
 #include <iostream>
 
-#include "walk.h"
+#include "ast_walk.h"
 #include "ast.h"
 #include "../tab_over.h"
 
-namespace idlc::ast {
+namespace idlc {
 	namespace {
 		class null_walk : public ast_walk<null_walk> {
 		public:
@@ -143,7 +143,7 @@ namespace idlc::ast {
 	}
 }
 
-void idlc::ast::dump_ast(file& root)
+void idlc::dump_ast(file& root)
 {
 	null_walk walk {};
 	const auto succeeded = walk.visit_file(root);

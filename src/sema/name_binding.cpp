@@ -4,39 +4,39 @@
 #include <vector>
 
 #include "../ast/ast.h"
-#include "../ast/walk.h"
-#include "scope.h"
+#include "../ast/ast_walk.h"
+#include "../ast/scope.h"
 
 namespace idlc::sema {
 	namespace {
 		// TODO: a possible performance improvement is in avoiding traversing "uninteresting" subtrees
 
-		class symbol_walk : public ast::ast_walk<symbol_walk> {
+		class symbol_walk : public ast_walk<symbol_walk> {
 		public:
-			bool visit_rpc_def(ast::rpc_def& node);
-			bool visit_module_def(ast::module_def& node);
-			bool visit_proj_def(ast::proj_def& node);
+			bool visit_rpc_def(rpc_def& node);
+			bool visit_module_def(module_def& node);
+			bool visit_proj_def(proj_def& node);
 
 		private:
 			scope* scope_ {};
 		};
 
-		class bind_walk : public ast::ast_walk<bind_walk> {
+		class bind_walk : public ast_walk<bind_walk> {
 		public:
-			bool visit_module_def(ast::module_def& node);
-			bool visit_rpc_def(ast::rpc_def& node);
-			bool visit_type_proj(ast::type_proj& node);
-			bool visit_type_rpc(ast::type_rpc& node);
+			bool visit_module_def(module_def& node);
+			bool visit_rpc_def(rpc_def& node);
+			bool visit_type_proj(type_proj& node);
+			bool visit_type_rpc(type_rpc& node);
 
 		private:
 			std::vector<scope*> scopes_ {};
 		};
 
-		class scoped_name_walk : public ast::ast_walk<scoped_name_walk> {
+		class scoped_name_walk : public ast_walk<scoped_name_walk> {
 		public:
-			bool visit_module_def(ast::module_def& node);
-			bool visit_rpc_def(ast::rpc_def& node);
-			bool visit_proj_def(ast::proj_def& node);
+			bool visit_module_def(module_def& node);
+			bool visit_rpc_def(rpc_def& node);
+			bool visit_proj_def(proj_def& node);
 
 		private:
 			std::vector<ident> path_ {};
@@ -44,10 +44,10 @@ namespace idlc::sema {
 	}	
 }
 
-bool idlc::sema::bind_walk::visit_module_def(ast::module_def& node)
+bool idlc::sema::bind_walk::visit_module_def(module_def& node)
 {
 	scopes_.emplace_back(&node.scope);
-	if (!ast::traverse(*this, node))
+	if (!traverse(*this, node))
 		return false;
 
 	scopes_.pop_back();
@@ -55,10 +55,10 @@ bool idlc::sema::bind_walk::visit_module_def(ast::module_def& node)
 	return true;
 }
 
-bool idlc::sema::bind_walk::visit_rpc_def(ast::rpc_def& node)
+bool idlc::sema::bind_walk::visit_rpc_def(rpc_def& node)
 {
 	scopes_.emplace_back(&node.scope);
-	if (!ast::traverse(*this, node))
+	if (!traverse(*this, node))
 		return false;
 
 	scopes_.pop_back();
@@ -66,16 +66,16 @@ bool idlc::sema::bind_walk::visit_rpc_def(ast::rpc_def& node)
 	return true;
 }
 
-bool idlc::sema::bind_walk::visit_type_proj(ast::type_proj& node)
+bool idlc::sema::bind_walk::visit_type_proj(type_proj& node)
 {
 	auto iter = scopes_.crbegin();
 	const auto last = scopes_.crend();
 	for (; iter != last; ++iter) {
-		const auto def = (*iter)->get<ast::proj_def>(node.name);
+		const auto def = (*iter)->get<proj_def>(node.name);
 		if (def) {
 			node.definition = def;
 			//std::cout << "[scope_walk] Resolved projection \"" << node.name << "\"\n";
-			return ast::traverse(*this, node);
+			return traverse(*this, node);
 		}
 	}
 
@@ -84,16 +84,16 @@ bool idlc::sema::bind_walk::visit_type_proj(ast::type_proj& node)
 	return false;
 }
 
-bool idlc::sema::bind_walk::visit_type_rpc(ast::type_rpc& node)
+bool idlc::sema::bind_walk::visit_type_rpc(type_rpc& node)
 {
 	auto iter = scopes_.crbegin();
 	const auto last = scopes_.crend();
 	for (; iter != last; ++iter) {
-		const auto def = (*iter)->get<ast::rpc_def>(node.name);
+		const auto def = (*iter)->get<rpc_def>(node.name);
 		if (def) {
 			node.definition = def;
 			//std::cout << "[scope_walk] Resolved RPC \"" << node.name << "\"\n";
-			return ast::traverse(*this, node);
+			return traverse(*this, node);
 		}
 	}
 
@@ -102,7 +102,7 @@ bool idlc::sema::bind_walk::visit_type_rpc(ast::type_rpc& node)
 	return false;
 }
 
-bool idlc::sema::symbol_walk::visit_rpc_def(ast::rpc_def& node)
+bool idlc::sema::symbol_walk::visit_rpc_def(rpc_def& node)
 {
 	// Careful to insert into the outer scope
 	scope_->insert(node.name, &node);
@@ -110,7 +110,7 @@ bool idlc::sema::symbol_walk::visit_rpc_def(ast::rpc_def& node)
 
 	const auto old = scope_;
 	scope_ = &node.scope;
-	if (!ast::traverse(*this, node))
+	if (!traverse(*this, node))
 		return false;
 
 	scope_ = old;
@@ -118,11 +118,11 @@ bool idlc::sema::symbol_walk::visit_rpc_def(ast::rpc_def& node)
 	return true;
 }
 
-bool idlc::sema::symbol_walk::visit_module_def(ast::module_def& node)
+bool idlc::sema::symbol_walk::visit_module_def(module_def& node)
 {
 	const auto old = scope_;
 	scope_ = &node.scope;
-	if (!ast::traverse(*this, node))
+	if (!traverse(*this, node))
 		return false;
 
 	scope_ = old;
@@ -130,14 +130,14 @@ bool idlc::sema::symbol_walk::visit_module_def(ast::module_def& node)
 	return true;
 }
 
-bool idlc::sema::symbol_walk::visit_proj_def(ast::proj_def& node)
+bool idlc::sema::symbol_walk::visit_proj_def(proj_def& node)
 {
 	scope_->insert(node.name, &node);
 	//std::cout << "[scopes] Inserted proj def \"" << node.name << "\"\n";
 	return true;
 }
 
-bool idlc::sema::scoped_name_walk::visit_proj_def(ast::proj_def& node)
+bool idlc::sema::scoped_name_walk::visit_proj_def(proj_def& node)
 {
 	for (const auto& item : path_) {
 		node.scoped_name += item;
@@ -150,10 +150,10 @@ bool idlc::sema::scoped_name_walk::visit_proj_def(ast::proj_def& node)
 	return true;
 }
 
-bool idlc::sema::scoped_name_walk::visit_rpc_def(ast::rpc_def& node)
+bool idlc::sema::scoped_name_walk::visit_rpc_def(rpc_def& node)
 {
 	path_.emplace_back(node.name);
-	if (!ast::traverse(*this, node))
+	if (!traverse(*this, node))
 		return false;
 
 	path_.pop_back();
@@ -161,10 +161,10 @@ bool idlc::sema::scoped_name_walk::visit_rpc_def(ast::rpc_def& node)
 	return true;
 }
 
-bool idlc::sema::scoped_name_walk::visit_module_def(ast::module_def& node)
+bool idlc::sema::scoped_name_walk::visit_module_def(module_def& node)
 {
 	path_.emplace_back(node.name);
-	if (!ast::traverse(*this, node))
+	if (!traverse(*this, node))
 		return false;
 
 	path_.pop_back();
@@ -172,7 +172,7 @@ bool idlc::sema::scoped_name_walk::visit_module_def(ast::module_def& node)
 	return true;
 }
 
-bool idlc::sema::bind_all(ast::file& root)
+bool idlc::sema::bind_all(file& root)
 {
 	idlc::sema::scoped_name_walk names_walk {};
 	idlc::sema::symbol_walk walk {};

@@ -6,11 +6,9 @@
 #include <gsl/gsl>
 
 #include "parser/idl_parse.h"
-#include "ast/ast_dump.h"
+#include "ast/pgraph_walk.h"
 #include "sema/name_binding.h"
-#include "sema/pgraph_dump.h"
 #include "sema/analysis.h"
-#include "sema/pgraph_walk.h"
 #include "tab_over.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
@@ -82,11 +80,11 @@
 namespace idlc {
 	namespace {
 		// TODO: pre-collect all projections in the pgraph tree to allow iteration over them
-		class visitor_walk : public sema::pgraph_walk<visitor_walk> {
+		class visitor_walk : public pgraph_walk<visitor_walk> {
 		public:
 			visitor_walk(std::ostream& os) : os_ {os} {}
 
-			bool visit_projection(sema::projection& node)
+			bool visit_projection(projection& node)
 			{
 				os_ << "void " << node.visit_arg_marshal_name
 					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
@@ -113,7 +111,7 @@ namespace idlc {
 			std::ostream& os_;
 		};
 
-		void generate_visitor_prototypes(std::ostream& file, gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
+		void generate_visitor_prototypes(std::ostream& file, gsl::span<const gsl::not_null<rpc_def*>> rpcs)
 		{
 			visitor_walk visit_walk {file};
 			for (const auto& rpc : rpcs) {
@@ -129,7 +127,7 @@ namespace idlc {
 			}
 		}
 
-		void generate_common_header(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
+		void generate_common_header(gsl::span<const gsl::not_null<rpc_def*>> rpcs)
 		{
 			std::ofstream file {"common.h"};
 			file.exceptions(file.badbit | file.failbit);
@@ -150,7 +148,7 @@ namespace idlc {
 
 			generate_visitor_prototypes(file, rpcs);
 			for (const auto& rpc : rpcs) {
-				if (rpc->kind == ast::rpc_def_kind::indirect) {
+				if (rpc->kind == rpc_def_kind::indirect) {
 					file << "typedef " << rpc->ret_string << " (*" << rpc->typedef_id << ")("
 						<< rpc->args_string << ");\n";
 
@@ -162,7 +160,7 @@ namespace idlc {
 			file << "\n#endif\n";
 		}
 
-		class arg_marshal_walk : public sema::pgraph_walk<arg_marshal_walk> {
+		class arg_marshal_walk : public pgraph_walk<arg_marshal_walk> {
 		public:
 			arg_marshal_walk(std::ostream& os, const std::string& holder, unsigned level) :
 				os_ {os},
@@ -172,9 +170,9 @@ namespace idlc {
 
 			// TODO: lowering *needs* to compute a size-of-field expression for alloc support
 
-			bool visit_pointer(sema::pointer& node)
+			bool visit_pointer(pointer& node)
 			{
-				if ((node.pointer_annots & ast::annotation::bind_caller) == ast::annotation::bind_caller) {
+				if ((node.pointer_annots & annotation::bind_caller) == annotation::bind_caller) {
 					tab_over(os_, level_) << "glue_marshal_shadow(msg, *" << holder_ << ");\n";
 				}
 				else {
@@ -194,25 +192,25 @@ namespace idlc {
 				return true;
 			}
 
-			bool visit_primitive(sema::primitive node)
+			bool visit_primitive(primitive node)
 			{
 				tab_over(os_, level_) << "glue_marshal(msg, *" << holder_ << ");\n";
 				return true;
 			}
 
-			bool visit_rpc_ptr(sema::rpc_ptr& node)
+			bool visit_rpc_ptr(rpc_ptr& node)
 			{
 				tab_over(os_, level_) << "glue_marshal(msg, *" << holder_ << ");\n";
 				return true;
 			}
 
-			bool visit_projection(sema::projection& node)
+			bool visit_projection(projection& node)
 			{
 				tab_over(os_, level_) << node.visit_arg_marshal_name << "(msg, " << holder_ << ");\n";
 				return true;
 			}
 
-			bool visit_null_terminated_array(sema::null_terminated_array& node)
+			bool visit_null_terminated_array(null_terminated_array& node)
 			{
 				tab_over(os_, level_) << "int i;\n";
 				tab_over(os_, level_) << node.element->type_string << "* array = " << holder_ << ";\n";
@@ -230,9 +228,9 @@ namespace idlc {
 				return true;
 			}
 
-			bool visit_data_field(sema::data_field& node)
+			bool visit_data_field(data_field& node)
 			{
-				if ((node.value_annots & ast::annotation::in) == ast::annotation::is_set) {
+				if ((node.value_annots & annotation::in) == annotation::is_set) {
 					std::cout << "Skipped non-in field\n";
 					return true;
 				}
@@ -246,13 +244,13 @@ namespace idlc {
 			unsigned level_ {};
 		};
 
-		class arg_unmarshal_walk : public sema::pgraph_walk<arg_unmarshal_walk> {};
-		class arg_remarshal_walk : public sema::pgraph_walk<arg_remarshal_walk> {};
-		class arg_unremarshal_walk : public sema::pgraph_walk<arg_unremarshal_walk> {};
-		class ret_marshal_walk : public sema::pgraph_walk<ret_marshal_walk> {};
-		class ret_unmarshal_walk : public sema::pgraph_walk<ret_unmarshal_walk> {};
+		class arg_unmarshal_walk : public pgraph_walk<arg_unmarshal_walk> {};
+		class arg_remarshal_walk : public pgraph_walk<arg_remarshal_walk> {};
+		class arg_unremarshal_walk : public pgraph_walk<arg_unremarshal_walk> {};
+		class ret_marshal_walk : public pgraph_walk<ret_marshal_walk> {};
+		class ret_unmarshal_walk : public pgraph_walk<ret_unmarshal_walk> {};
 
-		auto generate_roots(ast::rpc_def& rpc, std::ostream& os)
+		auto generate_roots(rpc_def& rpc, std::ostream& os)
 		{
 			const auto n_args = rpc.arg_pgraphs.size();
 			std::vector<std::string> roots(n_args);
@@ -270,7 +268,7 @@ namespace idlc {
 			return roots;
 		}
 
-		void generate_caller_glue(ast::rpc_def& rpc, std::ostream& os)
+		void generate_caller_glue(rpc_def& rpc, std::ostream& os)
 		{
 			os << "\tstruct fipc_message msg_buf = {0};\n";
 			os << "\tstruct fipc_message *msg = &msg_buf;\n\n";
@@ -299,12 +297,12 @@ namespace idlc {
 			os << (rpc.ret_pgraph ? "\treturn 0;\n" : ""); 
 		}
 
-		void generate_callee_glue(ast::rpc_def& rpc, std::ostream& os)
+		void generate_callee_glue(rpc_def& rpc, std::ostream& os)
 		{
 			os << "\t// callee glue here\n";
 		}
 
-		void generate_indirect_rpc(ast::rpc_def& rpc, std::ostream& os)
+		void generate_indirect_rpc(rpc_def& rpc, std::ostream& os)
 		{
 			os << rpc.ret_string << " " << rpc.impl_id << "(" << rpc.typedef_id << " target, "
 				<< rpc.args_string << ")\n{\n";
@@ -330,7 +328,7 @@ namespace idlc {
 			os << "}\n\n";
 		}
 
-		void generate_caller(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
+		void generate_caller(gsl::span<const gsl::not_null<rpc_def*>> rpcs)
 		{
 			std::ofstream file {"caller.c"};
 			file.exceptions(file.badbit | file.failbit);
@@ -339,7 +337,7 @@ namespace idlc {
 			file << "#include \"common.h\"\n\n";
 			file << "#include <lcd_config/post_hook.h>\n\n";
 			for (const auto& rpc : rpcs) {
-				if (rpc->kind == ast::rpc_def_kind::direct) {
+				if (rpc->kind == rpc_def_kind::direct) {
 					file << rpc->ret_string << " " << rpc->name << "(" << rpc->args_string << ")\n{\n";
 					generate_caller_glue(*rpc, file);
 					file << "}\n\n";
@@ -350,7 +348,7 @@ namespace idlc {
 			}
 		}
 
-		void generate_callee(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
+		void generate_callee(gsl::span<const gsl::not_null<rpc_def*>> rpcs)
 		{
 			std::ofstream file {"callee.c"};
 			file.exceptions(file.badbit | file.failbit);
@@ -359,7 +357,7 @@ namespace idlc {
 			file << "#include \"common.h\"\n\n";
 			file << "#include <lcd_config/post_hook.h>\n\n";
 			for (const auto& rpc : rpcs) {
-				if (rpc->kind == ast::rpc_def_kind::indirect) {
+				if (rpc->kind == rpc_def_kind::indirect) {
 					generate_indirect_rpc(*rpc, file);
 				}
 				else {
@@ -370,7 +368,7 @@ namespace idlc {
 			}
 		}
 
-		void generate_linker_script(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
+		void generate_linker_script(gsl::span<const gsl::not_null<rpc_def*>> rpcs)
 		{
 			std::ofstream file {"trampolines.lds.S"};
 			file.exceptions(file.badbit | file.failbit);
@@ -379,7 +377,7 @@ namespace idlc {
 			file << "SECTIONS{\n";
 
 			for (const auto& rpc : rpcs) {
-				if (rpc->kind == ast::rpc_def_kind::indirect)
+				if (rpc->kind == rpc_def_kind::indirect)
 					file << "\tLCD_TRAMPOLINE_LINKER_SECTION(" << rpc->trmp_id << ")\n";
 			}
 
@@ -387,7 +385,7 @@ namespace idlc {
 			file << "INSERT AFTER .text\n";
 		}
 
-		void create_alternate_names(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
+		void create_alternate_names(gsl::span<const gsl::not_null<rpc_def*>> rpcs)
 		{
 			for (const auto& rpc : rpcs) {
 				rpc->enum_id = "RPC_ID_";
@@ -395,7 +393,7 @@ namespace idlc {
 				rpc->callee_id = rpc->name;
 				rpc->callee_id += "_callee";
 
-				if (rpc->kind == ast::rpc_def_kind::indirect) {
+				if (rpc->kind == rpc_def_kind::indirect) {
 					rpc->trmp_id = "trmp_";
 					rpc->trmp_id += rpc->name;
 					rpc->impl_id = "trmp_impl_";
@@ -408,7 +406,7 @@ namespace idlc {
 			}
 		}
 
-		void create_function_strings(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
+		void create_function_strings(gsl::span<const gsl::not_null<rpc_def*>> rpcs)
 		{
 			for (auto& rpc : rpcs) {
 				if (rpc->ret_type)

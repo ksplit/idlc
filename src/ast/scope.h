@@ -11,21 +11,21 @@
 // TODO: consider merging this into the AST module
 
 // TODO: move these
-namespace idlc::ast {
+namespace idlc {
 	struct proj_def;
 	struct rpc_def;
 }
 
-namespace idlc::sema {
+namespace idlc {
 	class scope {
 	public:
-		void insert(ident name, ast::proj_def* ptr)
+		void insert(ident name, proj_def* ptr)
 		{
 			names.emplace_back(name);
 			symbols.emplace_back(ptr);
 		}
 
-		void insert(ident name, ast::rpc_def* ptr)
+		void insert(ident name, rpc_def* ptr)
 		{
 			names.emplace_back(name);
 			symbols.emplace_back(ptr);
@@ -43,7 +43,7 @@ namespace idlc::sema {
 
 	private:
 		std::vector<ident> names {};
-		std::vector<std::variant<ast::proj_def*, ast::rpc_def*>> symbols {};
+		std::vector<std::variant<proj_def*, rpc_def*>> symbols {};
 	};
 }
 

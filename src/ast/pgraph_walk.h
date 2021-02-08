@@ -1,5 +1,5 @@
-#ifndef IDLC_SEMA_DEFAULT_WALK_H
-#define IDLC_SEMA_DEFAULT_WALK_H
+#ifndef IDLC_AST_PGRAPH_WALK_H
+#define IDLC_AST_PGRAPH_WALK_H
 
 #include "pgraph.h"
 
@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <variant>
 
-namespace idlc::sema {
+namespace idlc {
 	template<typename walk>
 	class pgraph_traverse {
 	public:
@@ -46,7 +46,7 @@ namespace idlc::sema {
 				else if constexpr (std::is_same_v<type, node_ptr<rpc_ptr>>) {
 					return pass.visit_rpc_ptr(*item);
 				}
-				else if constexpr (std::is_same_v<type, gsl::not_null<ast::proj_def*>>) {
+				else if constexpr (std::is_same_v<type, gsl::not_null<proj_def*>>) {
 					return pass.visit_proj_def(*item);
 				}
 				
@@ -149,7 +149,7 @@ namespace idlc::sema {
 			return true;
 		}
 
-		bool visit_proj_def(ast::proj_def& node)
+		bool visit_proj_def(proj_def& node)
 		{
 			return true;
 		}

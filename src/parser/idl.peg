@@ -16,7 +16,6 @@ include: {{
 code: {{
 	using namespace idlc;
 	using namespace idlc::parser;
-	using namespace idlc::ast;
 
 	template<typename type>
 	type to_int(const Value& v)

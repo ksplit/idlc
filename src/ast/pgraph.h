@@ -1,20 +1,21 @@
-#ifndef IDLC_SEMA_PGRAPH
-#define IDLC_SEMA_PGRAPH
+#ifndef IDLC_AST_PGRAPH
+#define IDLC_AST_PGRAPH
 
 #include <cassert>
 #include <memory>
 #include <utility>
 #include <variant>
 
+#include "node_ptrs.h"
 #include "../tag_types.h"
 #include "../parser/string_heap.h"
 
-namespace idlc::ast {
+namespace idlc {
 	struct proj_def;
 	struct rpc_def;
 }
 
-namespace idlc::sema {
+namespace idlc {
 	using primitive = type_primitive;
 	struct null_terminated_array;
 	struct static_array;
@@ -23,12 +24,6 @@ namespace idlc::sema {
 	struct static_void_ptr; // a void* that is "actually" a pointer to some other type
 	struct projection;
 	struct rpc_ptr;
-
-	template<typename type>
-	using node_ptr = std::unique_ptr<type>;
-
-	template<typename type>
-	using node_ref = gsl::not_null<std::shared_ptr<type>>;
 
 	struct data_field;
 
@@ -40,7 +35,7 @@ namespace idlc::sema {
 		node_ptr<static_void_ptr>,
 		node_ptr<rpc_ptr>,
 		node_ref<projection>,
-		gsl::not_null<ast::proj_def*> // NOTE: will *never* appear in a finished pgraph, part of lowering
+		gsl::not_null<proj_def*> // NOTE: will *never* appear in a finished pgraph, part of lowering
 	>;
 
 	struct data_field {
@@ -109,9 +104,9 @@ namespace idlc::sema {
 	};
 
 	struct rpc_ptr {
-		ast::rpc_def* definition;
+		rpc_def* definition;
 
-		rpc_ptr(ast::rpc_def* definition) : definition {definition} {}
+		rpc_ptr(rpc_def* definition) : definition {definition} {}
 	};
 
 	class projection {

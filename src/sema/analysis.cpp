@@ -8,13 +8,13 @@
 #include <variant>
 #include <vector>
 
+#include "../tag_types.h"
 #include "../parser/string_heap.h"
 #include "../ast/ast.h"
-#include "../ast/walk.h"
-#include "../tag_types.h"
-#include "pgraph.h"
-#include "pgraph_walk.h"
-#include "pgraph_dump.h"
+#include "../ast/ast_walk.h"
+#include "../ast/pgraph.h"
+#include "../ast/pgraph_walk.h"
+#include "../ast/pgraph_dump.h"
 
 // These functions translate the AST into "high-level" pgraphs (before defaults propagation, projection linking)
 
@@ -23,36 +23,36 @@ namespace idlc::sema {
 		// Remember: field_type is quite slim, only a tag value and a pointer (16 bytes total)
 
 		field_type generate_string_type(bool is_const);
-		field_type generate_stem_type(const ast::type_stem& node, bool is_const);
-		field_type generate_array_type(const ast::type_array& node, bool is_const);
-		node_ptr<data_field> generate_data_field(const ast::type_spec& node);
+		field_type generate_stem_type(const type_stem& node, bool is_const);
+		field_type generate_array_type(const type_array& node, bool is_const);
+		node_ptr<data_field> generate_data_field(const type_spec& node);
 
 		field_type generate_string_type(bool is_const)
 		{
 			return std::make_unique<null_terminated_array>(
-				std::make_unique<data_field>(primitive::ty_char, ast::annotation::use_default),
+				std::make_unique<data_field>(primitive::ty_char, annotation::use_default),
 				is_const
 			);
 		}
 
-		field_type generate_stem_type(const ast::type_stem& node, bool is_const)
+		field_type generate_stem_type(const type_stem& node, bool is_const)
 		{
 			const auto visit = [is_const](auto&& item) -> field_type
 			{
 				using type = std::decay_t<decltype(item)>;
-				if constexpr (std::is_same_v<type, ast::type_primitive>) {
+				if constexpr (std::is_same_v<type, type_primitive>) {
 					return item;
 				}
-				else if constexpr (std::is_same_v<type, ast::type_string>) {
+				else if constexpr (std::is_same_v<type, type_string>) {
 					return generate_string_type(is_const);
 				}
-				else if constexpr (std::is_same_v<type, ast::node_ref<ast::type_array>>) {
+				else if constexpr (std::is_same_v<type, node_ref<type_array>>) {
 					return generate_array_type(*item, is_const);
 				}
-				else if constexpr (std::is_same_v<type, ast::node_ref<ast::type_proj>>) {
+				else if constexpr (std::is_same_v<type, node_ref<type_proj>>) {
 					return item->definition;
 				}
-				else if constexpr (std::is_same_v<type, ast::node_ref<ast::type_rpc>>) {
+				else if constexpr (std::is_same_v<type, node_ref<type_rpc>>) {
 					// std::cout << "[debug] generating dummy pgraph node for RPC pointer \"" << item->name << "\"\n";
 					return std::make_unique<rpc_ptr>(item.get().get()->definition);
 				}
@@ -63,12 +63,12 @@ namespace idlc::sema {
 			return std::visit(visit, node);
 		}
 
-		field_type generate_array_type(const ast::type_array& node, bool is_const)
+		field_type generate_array_type(const type_array& node, bool is_const)
 		{
 			const auto visit = [&node, is_const](auto&& item) -> field_type
 			{
 				using type = std::decay_t<decltype(item)>;
-				if constexpr (std::is_same_v<type, ast::tok_kw_null>) {
+				if constexpr (std::is_same_v<type, tok_kw_null>) {
 					return std::make_unique<null_terminated_array>(
 						generate_data_field(*node.element),
 						is_const
@@ -92,17 +92,17 @@ namespace idlc::sema {
 			return std::visit(visit, *node.size);
 		}
 
-		auto generate_field(ast::proj_field& node)
+		auto generate_field(proj_field& node)
 		{
 			const auto visit = [](auto&& item) -> std::pair<ident, node_ptr<data_field>>
 			{
 				using type = std::decay_t<decltype(item)>;
-				if constexpr (std::is_same_v<type, ast::node_ref<ast::naked_proj_decl>>) {
+				if constexpr (std::is_same_v<type, node_ref<naked_proj_decl>>) {
 					std::cout << "Naked projections are not yet implemented\n";
 					std::cout << "Unknown how to proceed, aborting\n";
 					std::terminate();
 				}
-				else if constexpr (std::is_same_v<type, ast::node_ref<ast::var_decl>>) {
+				else if constexpr (std::is_same_v<type, node_ref<var_decl>>) {
 					// std::cout << "[pgraph] building var_decl data_field for \"" << item->name << "\"\n";
 					return {item->name, generate_data_field(*item->type)};
 				}
@@ -113,20 +113,20 @@ namespace idlc::sema {
 			return std::visit(visit, node);
 		}
 
-		auto generate_union_dummy(ast::proj_def& def, const std::string& name)
+		auto generate_union_dummy(proj_def& def, const std::string& name)
 		{
 			std::cout << "Union projections are not yet implemented\n";
 			std::cout << "Will implement as an empty struct projection \"" << def.name << "\"\n";
 			return std::make_shared<projection>(def.type, std::move(name));
 		}
 
-		auto generate_empty_struct(ast::proj_def& def, const std::string& name)
+		auto generate_empty_struct(proj_def& def, const std::string& name)
 		{
 			// std::cout << "[pgraph] generating empty pgraph projection for \"" << def.name << "\"\n";
 			return std::make_shared<projection>(def.type, std::move(name));
 		}
 
-		auto generate_struct(ast::proj_def& def, const std::string& name)
+		auto generate_struct(proj_def& def, const std::string& name)
 		{
 			const auto& field_nodes = *def.fields;
 			decltype(projection::fields) fields {};
@@ -142,27 +142,27 @@ namespace idlc::sema {
 			return std::make_shared<projection>(def.type, std::move(name), std::move(fields));
 		}
 
-		node_ptr<data_field> generate_data_field(const ast::type_spec& node)
+		node_ptr<data_field> generate_data_field(const type_spec& node)
 		{
 			// TODO: finish const handling
 			auto type = generate_stem_type(*node.stem, node.is_const);
 			for (const auto& ptr_node : node.indirs) {
 				const auto annots = ptr_node->attrs;
-				const auto ptr_annots = annots & ast::annotation::is_ptr;
-				const auto val_annots = annots & ast::annotation::is_val;
+				const auto ptr_annots = annots & annotation::is_ptr;
+				const auto val_annots = annots & annotation::is_val;
 				auto field = std::make_unique<data_field>(std::move(type), val_annots);
 				type = std::make_unique<pointer>(std::move(field), ptr_annots, ptr_node->is_const);
 			}
 
-			assert((node.attrs & ast::annotation::is_val) == node.attrs);
+			assert((node.attrs & annotation::is_val) == node.attrs);
 			auto field = std::make_unique<data_field>(std::move(type), node.attrs);
 
 			return std::move(field);
 		}
 
-		class type_walk : public ast::ast_walk<type_walk> {
+		class type_walk : public ast_walk<type_walk> {
 		public:
-			bool visit_rpc_def(ast::rpc_def& node)
+			bool visit_rpc_def(rpc_def& node)
 			{
 				if (node.ret_type)
 					node.ret_pgraph = generate_data_field(*node.ret_type);
@@ -172,13 +172,13 @@ namespace idlc::sema {
 						node.arg_pgraphs.emplace_back(generate_data_field(*argument->type));
 				}
 
-				return ast::traverse(*this, node);
+				return traverse(*this, node);
 			}
 
 			// TODO: support naked projections
 		};
 
-		void generate_pgraph_roots(rpc_table_ref rpcs)
+		void generate_pgraph_roots(rpc_vec_view rpcs)
 		{
 			type_walk walk {};
 			for (const auto& rpc : rpcs) {
@@ -188,14 +188,14 @@ namespace idlc::sema {
 		}
 
 		// TODO: is it necessary to detect if a projection self-references by value?
-		std::shared_ptr<idlc::sema::projection> generate_projection(
-			ast::proj_def& node,
+		std::shared_ptr<idlc::projection> generate_projection(
+			proj_def& node,
 			const std::string& name)
 		{
 			auto pgraph_node = [&node, &name] {
 				if (!node.fields)
 					return generate_empty_struct(node, std::move(name));
-				else if (node.kind == ast::proj_def_kind::union_kind)
+				else if (node.kind == proj_def_kind::union_kind)
 					return generate_union_dummy(node, std::move(name));
 				else
 					return generate_struct(node, std::move(name));
@@ -204,9 +204,9 @@ namespace idlc::sema {
 			return std::move(pgraph_node);
 		}
 
-		class rpc_collector : public ast::ast_walk<rpc_collector> {
+		class rpc_collector : public ast_walk<rpc_collector> {
 		public:
-			bool visit_rpc_def(ast::rpc_def& node)
+			bool visit_rpc_def(rpc_def& node)
 			{
 				defs_.emplace_back(&node);
 				return true;
@@ -218,11 +218,11 @@ namespace idlc::sema {
 			}
 
 		private:
-			std::vector<gsl::not_null<ast::rpc_def*>> defs_ {};
+			std::vector<gsl::not_null<rpc_def*>> defs_ {};
 		};
 
 		bool lower(data_field& node, annotation default_with);
-		field_type lower(ast::proj_def& node, annotation default_with);
+		field_type lower(proj_def& node, annotation default_with);
 
 		// TODO: implement error checking, currently focused on generating defaults
 		class lowering_walk : public pgraph_walk<lowering_walk> {
@@ -285,7 +285,7 @@ namespace idlc::sema {
 
 			bool visit_field_type(field_type& node)
 			{
-				const auto unlowered = std::get_if<gsl::not_null<ast::proj_def*>>(&node);
+				const auto unlowered = std::get_if<gsl::not_null<proj_def*>>(&node);
 				if (!unlowered) {
 					return traverse(*this, node); // FIXME: is this correct?
 				}
@@ -417,7 +417,7 @@ namespace idlc::sema {
 			return lowerer.visit_data_field(node);
 		}
 
-		field_type lower(ast::proj_def& node, std::shared_ptr<projection>& cached, annotation default_with)
+		field_type lower(proj_def& node, std::shared_ptr<projection>& cached, annotation default_with)
 		{
 			if (cached) {
 				std::cout << "Found a prebuilt\n";
@@ -462,7 +462,7 @@ namespace idlc::sema {
 			return pgraph;
 		}
 
-		field_type lower(ast::proj_def& node, annotation default_with)
+		field_type lower(proj_def& node, annotation default_with)
 		{
 			std::cout << "Non-lowered projection \"" << node.name << "\"\n";
 			switch (default_with) {
@@ -483,7 +483,7 @@ namespace idlc::sema {
 			}
 		}
 
-		bool lower(ast::rpc_def& rpc)
+		bool lower(rpc_def& rpc)
 		{
 			std::cout << "Propagating for RPC \"" << rpc.name << "\"\n";
 			if (rpc.ret_type) {
@@ -505,7 +505,7 @@ namespace idlc::sema {
 			return true;
 		}
 
-		bool lower(gsl::span<const gsl::not_null<ast::rpc_def*>> rpcs)
+		bool lower(gsl::span<const gsl::not_null<rpc_def*>> rpcs)
 		{
 			for (const auto& rpc : rpcs) {
 				if (!lower(*rpc))
@@ -519,13 +519,13 @@ namespace idlc::sema {
 	}
 }
 
-bool idlc::sema::generate_pgraphs(rpc_table_ref rpcs)
+bool idlc::sema::generate_pgraphs(rpc_vec_view rpcs)
 {
 	generate_pgraph_roots(rpcs);
 	return lower(rpcs);
 }
 
-idlc::sema::rpc_table idlc::sema::get_rpcs(ast::file& root)
+idlc::sema::rpc_vec idlc::sema::get_rpcs(file& root)
 {
 	rpc_collector walk {};
 	const auto succeeded = walk.visit_file(root);

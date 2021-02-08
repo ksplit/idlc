@@ -6,7 +6,7 @@
 #include "../ast/ast.h"
 
 namespace idlc::sema {
-	bool bind_all(ast::file& root);
+	bool bind_all(file& root);
 }
 
 #endif

@@ -9,25 +9,14 @@
 #include <gsl/gsl>
 
 #include "../parser/string_heap.h"
-#include "../sema/scope.h"
-#include "../sema/pgraph.h" // pgraph no longer depends on AST
 #include "../tag_types.h"
+#include "scope.h"
+#include "pgraph.h"
+#include "node_ptrs.h"
 
 // TODO: since AST uses "external types" (sema) extensively, re-organize these to avoid vicious circularities
 
-namespace idlc::ast {
-	template<typename type>
-	using node_ptr = std::shared_ptr<type>;
-	
-	template<typename type>
-	using node_ref = gsl::not_null<node_ptr<type>>;
-
-	template<typename type>
-	using ptr_vec = std::vector<node_ptr<type>>;
-
-	template<typename type>
-	using ref_vec = std::vector<node_ref<type>>;
-
+namespace idlc {
 	using ident_vec = std::vector<ident>;
 
 	struct module_def;
@@ -209,9 +198,9 @@ namespace idlc::ast {
 		const proj_def_kind kind;
 
 		std::string scoped_name;
-		std::shared_ptr<sema::projection> in_proj;
-		std::shared_ptr<sema::projection> out_proj;
-		std::shared_ptr<sema::projection> in_out_proj;
+		std::shared_ptr<projection> in_proj;
+		std::shared_ptr<projection> out_proj;
+		std::shared_ptr<projection> in_out_proj;
 
 		proj_def(
 			ident name,
@@ -243,9 +232,9 @@ namespace idlc::ast {
 		const node_ptr<ref_vec<rpc_item>> items;
 		const rpc_def_kind kind;
 
-		sema::scope scope;
-		node_ptr<sema::data_field> ret_pgraph;
-		ptr_vec<sema::data_field> arg_pgraphs;
+		scope scope;
+		node_ptr<data_field> ret_pgraph;
+		ptr_vec<data_field> arg_pgraphs;
 
 		std::string enum_id;
 		std::string callee_id;
@@ -288,7 +277,7 @@ namespace idlc::ast {
 			callee_id = name;
 			callee_id += "_callee";
 
-			if (kind == ast::rpc_def_kind::indirect) {
+			if (kind == rpc_def_kind::indirect) {
 				trmp_id = "trmp_";
 				trmp_id += name;
 				impl_id = "trmp_impl_";
@@ -315,7 +304,7 @@ namespace idlc::ast {
 		const ident name;
 		const node_ptr<ref_vec<module_item>> items;
 
-		sema::scope scope;
+		scope scope;
 
 		module_def(ident name, node_ptr<ref_vec<module_item>> items) :
 			name {name},

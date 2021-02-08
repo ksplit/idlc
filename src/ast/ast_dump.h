@@ -3,7 +3,7 @@
 
 #include "ast.h"
 
-namespace idlc::ast {
+namespace idlc {
 	void dump_ast(file& root);
 }
 
