@@ -8,7 +8,7 @@ include: {{
 
 	#include <gsl/gsl>
 
-	#include "string_heap.h"
+	#include "../string_heap.h"
 	#include "../ast/ast.h"
 	#include "parse_globals.h"
 }}

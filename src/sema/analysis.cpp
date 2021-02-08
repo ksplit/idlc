@@ -8,8 +8,7 @@
 #include <variant>
 #include <vector>
 
-#include "../tag_types.h"
-#include "../parser/string_heap.h"
+#include "../string_heap.h"
 #include "../ast/ast.h"
 #include "../ast/ast_walk.h"
 #include "../ast/pgraph.h"

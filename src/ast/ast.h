@@ -8,8 +8,8 @@
 
 #include <gsl/gsl>
 
-#include "../parser/string_heap.h"
-#include "../tag_types.h"
+#include "../string_heap.h"
+#include "tag_types.h"
 #include "scope.h"
 #include "pgraph.h"
 #include "node_ptrs.h"
@@ -33,10 +33,6 @@ namespace idlc {
 	struct var_decl;
 	
 	struct rpc_def;
-	
-	// Re-export these from the AST
-	using idlc::annotation;
-	using idlc::type_primitive;
 
 	// struct field_rel_ref;
 	// struct field_abs_ref;

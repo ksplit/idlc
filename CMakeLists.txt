@@ -20,12 +20,12 @@ add_custom_command(
 add_executable(
 	idlc
 	"src/parser/parser.cpp"
-	"src/parser/string_heap.cpp"
 	"src/parser/parse_globals.cpp"
 	"src/ast/ast_dump.cpp"
 	"src/ast/pgraph_dump.cpp"
 	"src/sema/analysis.cpp"
 	"src/sema/name_binding.cpp"
+	"src/string_heap.cpp"
 	"src/main.cpp"
 )
 

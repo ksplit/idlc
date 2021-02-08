@@ -7,8 +7,8 @@
 #include <variant>
 
 #include "node_ptrs.h"
-#include "../tag_types.h"
-#include "../parser/string_heap.h"
+#include "tag_types.h"
+#include "../string_heap.h"
 
 namespace idlc {
 	struct proj_def;

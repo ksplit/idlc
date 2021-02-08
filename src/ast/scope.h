@@ -6,7 +6,7 @@
 #include <vector>
 #include <variant>
 
-#include "../parser/string_heap.h"
+#include "../string_heap.h"
 
 // TODO: consider merging this into the AST module
 

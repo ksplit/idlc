@@ -4,7 +4,7 @@
 #include <vector>
 #include <any>
 
-#include "string_heap.h"
+#include "../string_heap.h"
 
 namespace idlc::parser
 {
