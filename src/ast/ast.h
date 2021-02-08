@@ -231,8 +231,8 @@ namespace idlc {
 		const rpc_def_kind kind;
 
 		scope scope;
-		node_ptr<data_field> ret_pgraph;
-		ptr_vec<data_field> arg_pgraphs;
+		node_ptr<value> ret_pgraph;
+		ptr_vec<value> arg_pgraphs;
 
 		std::string enum_id;
 		std::string callee_id;

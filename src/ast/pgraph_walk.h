@@ -12,7 +12,7 @@ namespace idlc {
 	template<typename walk>
 	class pgraph_traverse {
 	public:
-		bool operator()(walk& pass, data_field& node)
+		bool operator()(walk& pass, value& node)
 		{
 			if (!pass.visit_field_type(node.type))
 				return false;
@@ -20,7 +20,7 @@ namespace idlc {
 			return true;
 		}
 
-		bool operator()(walk& pass, field_type& node)
+		bool operator()(walk& pass, passed_type& node)
 		{
 			const auto visit = [this, &pass](auto&& item) -> bool
 			{
@@ -67,7 +67,7 @@ namespace idlc {
 			else {
 				visited_.push_back(&node); // NOTE: this must be here, to prevent nested calls from recursing infinitely
 				for (auto& [name, item] : node.fields) {
-					if (!pass.visit_data_field(*item))
+					if (!pass.visit_value(*item))
 						return false;
 				}
 
@@ -77,17 +77,17 @@ namespace idlc {
 
 		bool operator()(walk& pass, dyn_array& node)
 		{
-			return pass.visit_data_field(*node.element);
+			return pass.visit_value(*node.element);
 		}
 
 		bool operator()(walk& pass, null_terminated_array& node)
 		{
-			return pass.visit_data_field(*node.element);
+			return pass.visit_value(*node.element);
 		}
 
 		bool operator()(walk& pass, pointer& node)
 		{
-			return pass.visit_data_field(*node.referent);
+			return pass.visit_value(*node.referent);
 		}
 
 		bool operator()(walk& pass, rpc_ptr& node)
@@ -109,12 +109,12 @@ namespace idlc {
 	template<typename derived>
 	class pgraph_walk {
 	public:
-		bool visit_data_field(data_field& node)
+		bool visit_value(value& node)
 		{
 			return traverse(self(), node);
 		}
 
-		bool visit_field_type(field_type& node)
+		bool visit_field_type(passed_type& node)
 		{
 			return traverse(self(), node);
 		}
@@ -157,8 +157,7 @@ namespace idlc {
 	protected:
 		// TODO: does this *need* to be a protected member
 		pgraph_traverse<derived> traverse {};
-
-	private:
+		
 		auto& self()
 		{
 			return *reinterpret_cast<derived*>(this);

@@ -14,82 +14,82 @@ namespace idlc {
 			bool visit_projection(projection& node)
 			{
 				if (!traverse.visited(&node))
-					tab_over(std::cout, level_) << "projection\n";
+					indent(std::cout, indent_level_) << "projection\n";
 				else
-					tab_over(std::cout, level_) << "projection (skipped)\n";
+					indent(std::cout, indent_level_) << "projection (skipped)\n";
 
-				++level_;
+				++indent_level_;
 				if (!traverse(*this, node))
 					return false;
 
-				--level_;
+				--indent_level_;
 
 				return true;
 			}
 
 			bool visit_dyn_array(dyn_array& node)
 			{
-				tab_over(std::cout, level_) << "dyn_array\n";
-				++level_;
+				indent(std::cout, indent_level_) << "dyn_array\n";
+				++indent_level_;
 				if (!traverse(*this, node))
 					return false;
 
-				--level_;
+				--indent_level_;
 
 				return true;
 			}
 
 			bool visit_null_terminated_array(null_terminated_array& node)
 			{
-				tab_over(std::cout, level_) << "null_terminated_array\n";
-				++level_;
+				indent(std::cout, indent_level_) << "null_terminated_array\n";
+				++indent_level_;
 				if (!traverse(*this, node))
 					return false;
 
-				--level_;
+				--indent_level_;
 
 				return true;
 			}
 
 			bool visit_pointer(pointer& node)
 			{
-				tab_over(std::cout, level_) << "pointer\n";
-				++level_;
+				indent(std::cout, indent_level_) << "pointer\n";
+				++indent_level_;
 				if (!traverse(*this, node))
 					return false;
 
-				--level_;
+				--indent_level_;
 
 				return true;
 			}
 
 			bool visit_rpc_ptr(rpc_ptr& node)
 			{
-				tab_over(std::cout, level_) << "rpc_ptr\n";
+				indent(std::cout, indent_level_) << "rpc_ptr\n";
 				return true;
 			}
 
 			bool visit_primitive(primitive node)
 			{
-				tab_over(std::cout, level_) << "primitive\n";
+				indent(std::cout, indent_level_) << "primitive\n";
 				return true;
 			}
 
 			bool visit_proj_def(proj_def& node)
 			{
-				tab_over(std::cout, level_) << "proj_def\n";
+				indent(std::cout, indent_level_) << "proj_def\n";
 				return true;
 			}
 
 		private:
-			unsigned level_ {1};
+			unsigned indent_level_ {1};
 		};
 	}
 }
 
-void idlc::dump_pgraph(data_field& root)
+void idlc::dump_pgraph(value& root)
 {
 	null_walk walk {};
-	const auto succeeded = walk.visit_data_field(root);
+	const auto succeeded = walk.visit_value(root);
 	assert(succeeded);
 }

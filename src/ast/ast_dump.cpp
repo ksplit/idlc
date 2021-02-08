@@ -13,132 +13,132 @@ namespace idlc {
 		public:
 			bool visit_module_def(module_def& node)
 			{
-				tab_over(std::cout, level_) << "module_def" << std::endl;
-				++level_;
+				indent(std::cout, indent_level_) << "module_def" << std::endl;
+				++indent_level_;
 				traverse(*this, node);
-				--level_;
+				--indent_level_;
 				return true;
 			}
 
 			bool visit_driver_file(driver_file& node)
 			{
-				tab_over(std::cout, level_) << "driver_file" << std::endl;
-				++level_;
+				indent(std::cout, indent_level_) << "driver_file" << std::endl;
+				++indent_level_;
 				traverse(*this, node);
-				--level_;
+				--indent_level_;
 				return true;
 			}
 
 			bool visit_driver_def(driver_def& node)
 			{
-				tab_over(std::cout, level_) << "driver_def" << std::endl;
-				++level_;
+				indent(std::cout, indent_level_) << "driver_def" << std::endl;
+				++indent_level_;
 				traverse(*this, node);
-				--level_;
+				--indent_level_;
 				return true;
 			}
 
 			bool visit_proj_def(proj_def& node)
 			{
-				tab_over(std::cout, level_) << "proj_def" << std::endl;
-				++level_;
+				indent(std::cout, indent_level_) << "proj_def" << std::endl;
+				++indent_level_;
 				traverse(*this, node);
-				--level_;
+				--indent_level_;
 				return true;
 			}
 
 			bool visit_rpc_def(rpc_def& node)
 			{
-				tab_over(std::cout, level_) << "rpc_def" << std::endl;
-				++level_;
+				indent(std::cout, indent_level_) << "rpc_def" << std::endl;
+				++indent_level_;
 				traverse(*this, node);
-				--level_;
+				--indent_level_;
 				return true;
 			}
 
 			bool visit_var_decl(var_decl& node)
 			{
-				tab_over(std::cout, level_) << "var_decl" << std::endl;
-				++level_;
+				indent(std::cout, indent_level_) << "var_decl" << std::endl;
+				++indent_level_;
 				traverse(*this, node);
-				--level_;
+				--indent_level_;
 				return true;
 			}
 
 			bool visit_type_spec(type_spec& node)
 			{
-				tab_over(std::cout, level_) << "type_spec" << std::endl;
-				++level_;
+				indent(std::cout, indent_level_) << "type_spec" << std::endl;
+				++indent_level_;
 				traverse(*this, node);
-				--level_;
+				--indent_level_;
 				return true;
 			}
 
 			bool visit_indirection(indirection& node)
 			{
-				tab_over(std::cout, level_) << "indirection" << std::endl;
-				++level_;
+				indent(std::cout, indent_level_) << "indirection" << std::endl;
+				++indent_level_;
 				traverse(*this, node);
-				--level_;
+				--indent_level_;
 				return true;
 			}
 
 			bool visit_type_any_of(type_any_of& node)
 			{
-				tab_over(std::cout, level_) << "type_any_of" << std::endl;
-				++level_;
+				indent(std::cout, indent_level_) << "type_any_of" << std::endl;
+				++indent_level_;
 				traverse(*this, node);
-				--level_;
+				--indent_level_;
 				return true;
 			}
 
 			bool visit_type_array(type_array& node)
 			{
-				tab_over(std::cout, level_) << "type_array" << std::endl;
-				++level_;
+				indent(std::cout, indent_level_) << "type_array" << std::endl;
+				++indent_level_;
 				traverse(*this, node);
-				--level_;
+				--indent_level_;
 				return true;
 			}
 
 			bool visit_array_size(array_size& node)
 			{
-				tab_over(std::cout, level_) << "array_size" << std::endl;
-				++level_;
+				indent(std::cout, indent_level_) << "array_size" << std::endl;
+				++indent_level_;
 				traverse(*this, node);
-				--level_;
+				--indent_level_;
 				return true;
 			}
 
 			bool visit_type_proj(type_proj& node)
 			{
-				tab_over(std::cout, level_) << "type_proj" << std::endl;
-				++level_;
+				indent(std::cout, indent_level_) << "type_proj" << std::endl;
+				++indent_level_;
 				traverse(*this, node);
-				--level_;
+				--indent_level_;
 				return true;
 			}
 
 			bool visit_type_rpc(type_rpc& node)
 			{
-				tab_over(std::cout, level_) << "type_rpc" << std::endl;
-				++level_;
+				indent(std::cout, indent_level_) << "type_rpc" << std::endl;
+				++indent_level_;
 				traverse(*this, node);
-				--level_;
+				--indent_level_;
 				return true;
 			}
 
 			bool visit_naked_proj_decl(naked_proj_decl& node)
 			{
-				tab_over(std::cout, level_) << "naked_proj_decl" << std::endl;
-				++level_;
+				indent(std::cout, indent_level_) << "naked_proj_decl" << std::endl;
+				++indent_level_;
 				traverse(*this, node);
-				--level_;
+				--indent_level_;
 				return true;
 			}
 
 		private:
-			unsigned level_ {};
+			unsigned indent_level_ {};
 		};
 	}
 }

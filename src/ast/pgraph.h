@@ -25,9 +25,10 @@ namespace idlc {
 	struct projection;
 	struct rpc_ptr;
 
-	struct data_field;
+	struct value;
 
-	using field_type = std::variant<
+	// TODO: much of these are exclusively owned (except projection nodes), but node_ptrs/node_refs are shared
+	using passed_type = std::variant<
 		primitive,
 		node_ptr<null_terminated_array>,
 		node_ptr<dyn_array>,
@@ -38,40 +39,40 @@ namespace idlc {
 		gsl::not_null<proj_def*> // NOTE: will *never* appear in a finished pgraph, part of lowering
 	>;
 
-	struct data_field {
-		field_type type;
+	struct value {
+		passed_type type;
 		annotation value_annots;
 		// FIXME: add const-ness here, drop from <<pointer>>
 
 		std::string type_string;
 
-		data_field(field_type&& type, annotation value_annots) :
+		value(passed_type&& type, annotation value_annots) :
 			type {std::move(type)},
 			value_annots {value_annots}
 		{}
 	};
 
 	struct null_terminated_array {
-		node_ptr<data_field> element;
+		node_ptr<value> element;
 		bool is_const; // referring to its elements
 
-		null_terminated_array(node_ptr<data_field> element, bool is_const) :
+		null_terminated_array(node_ptr<value> element, bool is_const) :
 			element {std::move(element)},
 			is_const {is_const}
 		{}
 	};
 
 	// struct static_array {
-	// 	node_ptr<data_field> element;
+	// 	node_ptr<value> element;
 	// 	unsigned size;
 	// };
 
 	struct dyn_array {
-		node_ptr<data_field> element;
+		node_ptr<value> element;
 		ident size;
 		bool is_const; // referring to its elements
 
-		dyn_array(node_ptr<data_field> element, ident size, bool is_const) :
+		dyn_array(node_ptr<value> element, ident size, bool is_const) :
 			element {std::move(element)},
 			size {size},
 			is_const {is_const}
@@ -79,11 +80,11 @@ namespace idlc {
 	};
 
 	struct pointer {
-		node_ptr<data_field> referent;
+		node_ptr<value> referent;
 		annotation pointer_annots;
 		bool is_const;
 
-		pointer(node_ptr<data_field> referent, annotation pointer_annots, bool is_const) :
+		pointer(node_ptr<value> referent, annotation pointer_annots, bool is_const) :
 			referent {std::move(referent)},
 			pointer_annots {pointer_annots},
 			is_const {is_const}
@@ -92,11 +93,11 @@ namespace idlc {
 
 	// TODO: this has no syntax
 	struct static_void_ptr {
-		node_ptr<data_field> referent;
+		node_ptr<value> referent;
 		annotation pointer_annots;
 		bool is_const;
 
-		static_void_ptr(node_ptr<data_field> referent, annotation pointer_annots, bool is_const) :
+		static_void_ptr(node_ptr<value> referent, annotation pointer_annots, bool is_const) :
 			referent {std::move(referent)},
 			pointer_annots {pointer_annots},
 			is_const {is_const}
@@ -112,7 +113,7 @@ namespace idlc {
 	class projection {
 	public:
 		ident real_name {};
-		std::vector<std::pair<ident, node_ptr<data_field>>> fields {};
+		std::vector<std::pair<ident, node_ptr<value>>> fields {};
 
 		std::string visit_arg_marshal_name {};
 		std::string visit_arg_unmarshal_name {};

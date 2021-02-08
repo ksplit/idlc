@@ -54,6 +54,11 @@ namespace idlc {
 		return static_cast<std::uintptr_t>(a) == 0;
 	}
 
+	constexpr auto flags_set(annotation field, annotation flags)
+	{
+		return (field & flags) == flags;
+	}
+
 	enum class type_primitive {
 		ty_invalid,
 		ty_bool,

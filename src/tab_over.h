@@ -4,7 +4,7 @@
 #include <iostream>
 
 namespace idlc {
-	inline auto& tab_over(std::ostream& os, unsigned n)
+	inline auto& indent(std::ostream& os, unsigned n)
 	{
 		for (int i {}; i < n; ++i)
 			os << "\t";

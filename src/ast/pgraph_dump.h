@@ -4,7 +4,7 @@
 #include "pgraph.h"
 
 namespace idlc {
-	void dump_pgraph(data_field& root);
+	void dump_pgraph(value& root);
 }
 
 #endif

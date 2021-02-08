@@ -19,24 +19,24 @@
 
 namespace idlc {
 	namespace {
-		// Remember: field_type is quite slim, only a tag value and a pointer (16 bytes total)
+		// Remember: passed_type is quite slim, only a tag value and a pointer (16 bytes total)
 
-		field_type generate_string_type(bool is_const);
-		field_type generate_stem_type(const type_stem& node, bool is_const);
-		field_type generate_array_type(const type_array& node, bool is_const);
-		node_ptr<data_field> generate_data_field(const type_spec& node);
+		passed_type generate_string_type(bool is_const);
+		passed_type generate_stem_type(const type_stem& node, bool is_const);
+		passed_type generate_array_type(const type_array& node, bool is_const);
+		node_ptr<value> generate_value(const type_spec& node);
 
-		field_type generate_string_type(bool is_const)
+		passed_type generate_string_type(bool is_const)
 		{
 			return std::make_unique<null_terminated_array>(
-				std::make_unique<data_field>(primitive::ty_char, annotation::use_default),
+				std::make_unique<value>(primitive::ty_char, annotation::use_default),
 				is_const
 			);
 		}
 
-		field_type generate_stem_type(const type_stem& node, bool is_const)
+		passed_type generate_stem_type(const type_stem& node, bool is_const)
 		{
-			const auto visit = [is_const](auto&& item) -> field_type
+			const auto visit = [is_const](auto&& item) -> passed_type
 			{
 				using type = std::decay_t<decltype(item)>;
 				if constexpr (std::is_same_v<type, type_primitive>) {
@@ -64,14 +64,14 @@ namespace idlc {
 			return std::visit(visit, node);
 		}
 
-		field_type generate_array_type(const type_array& node, bool is_const)
+		passed_type generate_array_type(const type_array& node, bool is_const)
 		{
-			const auto visit = [&node, is_const](auto&& item) -> field_type
+			const auto visit = [&node, is_const](auto&& item) -> passed_type
 			{
 				using type = std::decay_t<decltype(item)>;
 				if constexpr (std::is_same_v<type, tok_kw_null>) {
 					return std::make_unique<null_terminated_array>(
-						generate_data_field(*node.element),
+						generate_value(*node.element),
 						is_const
 					);
 				}
@@ -81,7 +81,7 @@ namespace idlc {
 				}
 				else if constexpr (std::is_same_v<type, ident>) {
 					return std::make_unique<dyn_array>(
-						generate_data_field(*node.element),
+						generate_value(*node.element),
 						item,
 						is_const
 					);
@@ -95,7 +95,7 @@ namespace idlc {
 
 		auto generate_field(proj_field& node)
 		{
-			const auto visit = [](auto&& item) -> std::pair<ident, node_ptr<data_field>>
+			const auto visit = [](auto&& item) -> std::pair<ident, node_ptr<value>>
 			{
 				using type = std::decay_t<decltype(item)>;
 				if constexpr (std::is_same_v<type, node_ref<naked_proj_decl>>) {
@@ -104,8 +104,8 @@ namespace idlc {
 					std::terminate();
 				}
 				else if constexpr (std::is_same_v<type, node_ref<var_decl>>) {
-					// std::cout << "[pgraph] building var_decl data_field for \"" << item->name << "\"\n";
-					return {item->name, generate_data_field(*item->type)};
+					// std::cout << "[pgraph] building var_decl value for \"" << item->name << "\"\n";
+					return {item->name, generate_value(*item->type)};
 				}
 
 				std::terminate();
@@ -143,7 +143,7 @@ namespace idlc {
 			return std::make_shared<projection>(def.type, std::move(name), std::move(fields));
 		}
 
-		node_ptr<data_field> generate_data_field(const type_spec& node)
+		node_ptr<value> generate_value(const type_spec& node)
 		{
 			// TODO: finish const handling
 			auto type = generate_stem_type(*node.stem, node.is_const);
@@ -151,12 +151,12 @@ namespace idlc {
 				const auto annots = ptr_node->attrs;
 				const auto ptr_annots = annots & annotation::is_ptr;
 				const auto val_annots = annots & annotation::is_val;
-				auto field = std::make_unique<data_field>(std::move(type), val_annots);
+				auto field = std::make_unique<value>(std::move(type), val_annots);
 				type = std::make_unique<pointer>(std::move(field), ptr_annots, ptr_node->is_const);
 			}
 
 			assert((node.attrs & annotation::is_val) == node.attrs);
-			auto field = std::make_unique<data_field>(std::move(type), node.attrs);
+			auto field = std::make_unique<value>(std::move(type), node.attrs);
 
 			return std::move(field);
 		}
@@ -166,11 +166,11 @@ namespace idlc {
 			bool visit_rpc_def(rpc_def& node)
 			{
 				if (node.ret_type)
-					node.ret_pgraph = generate_data_field(*node.ret_type);
+					node.ret_pgraph = generate_value(*node.ret_type);
 
 				if (node.arguments) {
 					for (auto& argument : *node.arguments)
-						node.arg_pgraphs.emplace_back(generate_data_field(*argument->type));
+						node.arg_pgraphs.emplace_back(generate_value(*argument->type));
 				}
 
 				return traverse(*this, node);
@@ -222,8 +222,8 @@ namespace idlc {
 			std::vector<gsl::not_null<rpc_def*>> defs_ {};
 		};
 
-		bool annotate_pgraph(data_field& node, annotation default_with);
-		field_type instantiate_projection(proj_def& node, annotation default_with);
+		bool annotate_pgraph(value& node, annotation default_with);
+		passed_type instantiate_projection(proj_def& node, annotation default_with);
 
 		// TODO: implement error checking, currently focused on generating defaults
 		class annotation_walk : public pgraph_walk<annotation_walk> {
@@ -234,7 +234,7 @@ namespace idlc {
 				assert(is_clear(default_with & annotation::ptr_only));
 			}
 
-			bool visit_data_field(data_field& node)
+			bool visit_value(value& node)
 			{
 				// The core logic of propagating a top-level value annotation until an explicit one is found, and
 				// continuing
@@ -285,7 +285,7 @@ namespace idlc {
 				return true; // NOTE: do *not* traverse projection nodes directly
 			}
 
-			bool visit_field_type(field_type& node)
+			bool visit_field_type(passed_type& node)
 			{
 				const auto unlowered = std::get_if<gsl::not_null<proj_def*>>(&node);
 				if (!unlowered) {
@@ -308,7 +308,7 @@ namespace idlc {
 				return string_;
 			}
 
-			bool visit_data_field(data_field& node)
+			bool visit_value(value& node)
 			{
 				if (!traverse(*this, node))
 					return false;
@@ -404,19 +404,19 @@ namespace idlc {
 
 		// NOTE: this *does not* walk into projections, and should only be applied to
 		// variable types (fields or arguments) and return types, as done in the lowering pass
-		void assign_type_strings(data_field& node)
+		void assign_type_strings(value& node)
 		{
 			type_string_walk type_walk {};
-			const auto succeeded = type_walk.visit_data_field(node);
+			const auto succeeded = type_walk.visit_value(node);
 			assert(succeeded);
 			std::cout << "Created type string: \"" << type_walk.get() << "\"\n";	
 			dump_pgraph(node);
 		}
 
-		bool annotate_pgraph(data_field& node, annotation default_with)
+		bool annotate_pgraph(value& node, annotation default_with)
 		{
 			annotation_walk annotator {default_with};
-			return annotator.visit_data_field(node);
+			return annotator.visit_value(node);
 		}
 
 		std::string get_instance_name(absl::string_view base_name, annotation default_with)
@@ -443,7 +443,7 @@ namespace idlc {
 			return instance_name;
 		}
 
-		field_type instantiate_projection(proj_def& node, std::shared_ptr<projection>& cached, annotation default_with)
+		passed_type instantiate_projection(proj_def& node, std::shared_ptr<projection>& cached, annotation default_with)
 		{
 			if (cached) {
 				// NOTE: It's important that we don't try and modify the cached copy, as it could be a partial one
@@ -470,7 +470,7 @@ namespace idlc {
 			return pgraph;
 		}
 
-		field_type instantiate_projection(proj_def& node, annotation default_with)
+		passed_type instantiate_projection(proj_def& node, annotation default_with)
 		{
 			std::cout << "Non-lowered projection \"" << node.name << "\"\n";
 			switch (default_with) {

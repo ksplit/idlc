@@ -5,6 +5,8 @@
 
 #include <gsl/gsl>
 
+#include <absl/strings/string_view.h>
+
 #include "parser/idl_parse.h"
 #include "ast/pgraph_walk.h"
 #include "frontend/name_binding.h"
@@ -85,12 +87,12 @@ namespace idlc {
 			visitor_walk visit_walk {file};
 			for (const auto& rpc : rpcs) {
 				if (rpc->ret_pgraph) {
-					const auto succeeded = visit_walk.visit_data_field(*rpc->ret_pgraph);
+					const auto succeeded = visit_walk.visit_value(*rpc->ret_pgraph);
 					assert(succeeded);
 				}
 
 				for (const auto& arg : rpc->arg_pgraphs) {
-					const auto succeeded = visit_walk.visit_data_field(*arg);
+					const auto succeeded = visit_walk.visit_value(*arg);
 					assert(succeeded);
 				}
 			}
@@ -129,75 +131,98 @@ namespace idlc {
 			file << "\n#endif\n";
 		}
 
-		class arg_marshal_walk : public pgraph_walk<arg_marshal_walk> {
+		template<typename derived>
+		class marshal_walk : public pgraph_walk<derived> {
 		public:
-			arg_marshal_walk(std::ostream& os, const std::string& holder, unsigned level) :
+			marshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
 				os_ {os},
-				holder_ {holder},
-				level_ {level}
+				marshaled_ptr_ {holder},
+				indent_level_ {level}
+			{}
+
+		protected:		
+			// identifier of the variable that points to what we're currently marshaling
+			const auto& marshaled_variable()
+			{
+				return marshaled_ptr_;
+			}
+
+			template<typename node_type>
+			bool marshal(std::string&& new_ptr, node_type& type)
+			{
+				const auto state = std::make_tuple(marshaled_ptr_, indent_level_);
+				marshaled_ptr_ = new_ptr;
+				++indent_level_;
+				if (!this->traverse(this->self(), type))
+					return false;
+
+				std::forward_as_tuple(marshaled_ptr_, indent_level_) = state;
+
+				return true;
+			}
+
+			std::ostream& stream()
+			{
+				return indent(os_, indent_level_);
+			}
+
+		private:
+			std::ostream& os_;
+			std::string marshaled_ptr_ {};
+			unsigned indent_level_ {};
+		};
+
+		class arg_marshal_walk : public marshal_walk<arg_marshal_walk> {
+		public:
+			arg_marshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
+				marshal_walk {os, holder, level}
 			{}
 
 			// TODO: lowering *needs* to compute a size-of-field expression for alloc support
 
 			bool visit_pointer(pointer& node)
 			{
-				if ((node.pointer_annots & annotation::bind_caller) == annotation::bind_caller) {
-					tab_over(os_, level_) << "glue_marshal_shadow(msg, *" << holder_ << ");\n";
-				}
-				else {
-					tab_over(os_, level_) << "glue_marshal(msg, *" << holder_ << ");\n";
-				}
+				if (flags_set(node.pointer_annots, annotation::bind_caller))
+					stream() << "glue_marshal_shadow(msg, *" << marshaled_variable() << ");\n";
+				else
+					stream() << "glue_marshal(msg, *" << marshaled_variable() << ");\n";
 
-				tab_over(os_, level_) << "if (*" << holder_ << ") {\n";
-				const auto state = std::make_tuple(holder_, level_);
-				holder_ = "*" + holder_;
-				++level_;
-				if (!traverse(*this, node))
-					return false;
-
-				std::forward_as_tuple(holder_, level_) = state;
-				tab_over(os_, level_) << "}\n\n";
+				stream() << "if (*" << marshaled_variable() << ") {\n";
+				marshal("*" + marshaled_variable(), node);
+				stream() << "}\n\n";
 
 				return true;
 			}
 
 			bool visit_primitive(primitive node)
 			{
-				tab_over(os_, level_) << "glue_marshal(msg, *" << holder_ << ");\n";
+				stream() << "glue_marshal(msg, *" << marshaled_variable() << ");\n";
 				return true;
 			}
 
 			bool visit_rpc_ptr(rpc_ptr& node)
 			{
-				tab_over(os_, level_) << "glue_marshal(msg, *" << holder_ << ");\n";
+				stream() << "glue_marshal(msg, *" << marshaled_variable() << ");\n";
 				return true;
 			}
 
 			bool visit_projection(projection& node)
 			{
-				tab_over(os_, level_) << node.visit_arg_marshal_name << "(msg, " << holder_ << ");\n";
+				stream() << node.visit_arg_marshal_name << "(msg, " << marshaled_variable() << ");\n";
 				return true;
 			}
 
 			bool visit_null_terminated_array(null_terminated_array& node)
 			{
-				tab_over(os_, level_) << "int i;\n";
-				tab_over(os_, level_) << node.element->type_string << "* array = " << holder_ << ";\n";
-				tab_over(os_, level_) << "for (i = 0; array[i]; ++i) {\n";
-
-				const auto state = std::make_tuple(holder_, level_);
-				holder_ = "array[i]";
-				++level_;
-				if (!traverse(*this, node))
-					return false;
-
-				std::forward_as_tuple(holder_, level_) = state;
-				tab_over(os_, level_) << "}\n\n";
-
+				stream() << "int i;\n";
+				stream() << node.element->type_string << "* array = " << marshaled_variable() << ";\n";
+				stream() << "for (i = 0; array[i]; ++i) {\n";
+				marshal("array[i]", node);
+				stream() << "}\n\n";
 				return true;
 			}
 
-			bool visit_data_field(data_field& node)
+			bool visit_value(value& node)
 			{
 				if ((node.value_annots & annotation::in) == annotation::is_set) {
 					std::cout << "Skipped non-in field\n";
@@ -206,11 +231,6 @@ namespace idlc {
 				
 				return traverse(*this, node);
 			}
-
-		private:
-			std::ostream& os_;
-			std::string holder_ {};
-			unsigned level_ {};
 		};
 
 		class arg_unmarshal_walk : public pgraph_walk<arg_unmarshal_walk> {};
@@ -248,19 +268,19 @@ namespace idlc {
 
 			for (gsl::index i {}; i < n_args; ++i) {
 				arg_marshal_walk arg_marshal {os, roots.at(i), 1}; // TODO: collect names
-				arg_marshal.visit_data_field(*rpc.arg_pgraphs.at(i));
+				arg_marshal.visit_value(*rpc.arg_pgraphs.at(i));
 			}
 
 			os << "\tvmfunc_wrapper(msg);\n\n";
 
 			for (auto& arg : rpc.arg_pgraphs) {
 				arg_unremarshal_walk arg_unremarshal {};
-				arg_unremarshal.visit_data_field(*arg);
+				arg_unremarshal.visit_value(*arg);
 			}
 
 			if (rpc.ret_pgraph) {
 				ret_unmarshal_walk ret_unmarshal {};
-				ret_unmarshal.visit_data_field(*rpc.ret_pgraph);
+				ret_unmarshal.visit_value(*rpc.ret_pgraph);
 			}
 
 			os << (rpc.ret_pgraph ? "\treturn 0;\n" : ""); 
