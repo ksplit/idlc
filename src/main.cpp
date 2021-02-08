@@ -11,7 +11,7 @@
 #include "ast/pgraph_walk.h"
 #include "frontend/name_binding.h"
 #include "frontend/analysis.h"
-#include "tab_over.h"
+#include "utility.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 // NOTE: Currently we work at the scale of a single file. All modules within a file are treated as implicitly imported.
@@ -239,16 +239,24 @@ namespace idlc {
 		class ret_marshal_walk : public pgraph_walk<ret_marshal_walk> {};
 		class ret_unmarshal_walk : public pgraph_walk<ret_unmarshal_walk> {};
 
-		auto generate_roots(rpc_def& rpc, std::ostream& os)
+		/*
+			Some explanation: C usually has two different ways of accessing variables, depnding on if they're a value
+			or a pointer, i.e. foo_ptr->a_field vs. foo_ptr.a_field. To avoid unnecessary copying, and also because in
+			come cases (arrays) copying the variable would be more complex than an assignment, we'd rather work with
+			pointers in marshaling. But, arguments to functions start as values. I didn't want to maintain code paths
+			to correctly track what "kind" of variable we're marshaling to access it correctly, so this function
+			creates pointers to all the arguments of the RPC. That way the marshaling system can be written to only
+			deal with pointers.
+		*/
+		auto generate_root_ptrs(rpc_def& rpc, std::ostream& os)
 		{
 			const auto n_args = rpc.arg_pgraphs.size();
 			std::vector<std::string> roots(n_args);
 			for (gsl::index i {}; i < n_args; ++i) {
 				const auto name = rpc.arguments->at(i)->name;
-				const auto ts = rpc.arg_pgraphs.at(i)->c_specifier;
-				std::string ptr_name {name};
-				ptr_name += "_ptr";
-				os << "\t" << ts << "* " << ptr_name << " = &" << name << ";\n";
+				const auto specifier = rpc.arg_pgraphs.at(i)->c_specifier;
+				const auto ptr_name = concat(name, "_ptr");
+				os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
 				roots.at(i) = ptr_name;
 			}
 
@@ -264,7 +272,7 @@ namespace idlc {
 
 			// TODO: n_args is re-computed twice
 			const auto n_args = rpc.arg_pgraphs.size();
-			std::vector<std::string> roots = generate_roots(rpc, os);
+			std::vector<std::string> roots = generate_root_ptrs(rpc, os);
 
 			for (gsl::index i {}; i < n_args; ++i) {
 				arg_marshal_walk arg_marshal {os, roots.at(i), 1}; // TODO: collect names
@@ -374,27 +382,6 @@ namespace idlc {
 			file << "INSERT AFTER .text\n";
 		}
 
-		void create_alternate_names(gsl::span<const gsl::not_null<rpc_def*>> rpcs)
-		{
-			for (const auto& rpc : rpcs) {
-				rpc->enum_id = "RPC_ID_";
-				rpc->enum_id += rpc->name;
-				rpc->callee_id = rpc->name;
-				rpc->callee_id += "_callee";
-
-				if (rpc->kind == rpc_def_kind::indirect) {
-					rpc->trmp_id = "trmp_";
-					rpc->trmp_id += rpc->name;
-					rpc->impl_id = "trmp_impl_";
-					rpc->impl_id += rpc->name;
-					rpc->typedef_id = "fptr_";
-					rpc->typedef_id += rpc->name;
-					rpc->impl_typedef_id = "fptr_impl_";
-					rpc->impl_typedef_id += rpc->name;
-				}
-			}
-		}
-
 		void create_function_strings(gsl::span<const gsl::not_null<rpc_def*>> rpcs)
 		{
 			for (auto& rpc : rpcs) {
@@ -405,25 +392,23 @@ namespace idlc {
 
 				if (rpc->arguments) {
 					bool is_first {true};
+					auto& args_str = rpc->args_string;
+					auto& param_str = rpc->params_string;
 					for (gsl::index i {}; i < rpc->arguments->size(); ++i) {
 						const auto& arg = rpc->arg_pgraphs.at(i);
 						const auto name = rpc->arguments->at(i)->name;
 						if (!is_first) {
-							rpc->args_string += ", ";
-							rpc->params_string += ", ";
+							args_str += ", ";
+							param_str += ", ";
 						}
 
-						rpc->args_string += arg->c_specifier;
-						rpc->args_string += " ";
-						rpc->args_string += name;
-
-						rpc->params_string += name;
-
+						append(args_str, arg->c_specifier, " ", name);
+						param_str += name;
 						is_first = false;
 					}
 				}
 				else {
-					rpc->args_string = "void";
+					rpc->args_string = "void"; // GCC doesn't like it if we just leave the arguments list empty
 				}
 			}
 		}
@@ -437,7 +422,6 @@ namespace idlc {
 	- instead of extracting the pgraph owners, root them in their respective RPC nodes and do away with the unused table
 	- move code generation into its own module
 	- stages after the initial sema stage work solely on the table of RPCs (namely pgraph analysis and code generation)
-	- move string processing to stringstream instead of concats (efficiency issue, heap reallocations, etc.)
 */
 
 int main(int argc, char** argv)

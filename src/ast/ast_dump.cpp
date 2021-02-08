@@ -5,7 +5,7 @@
 
 #include "ast_walk.h"
 #include "ast.h"
-#include "../tab_over.h"
+#include "../utility.h"
 
 namespace idlc {
 	namespace {

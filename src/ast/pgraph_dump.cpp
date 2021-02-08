@@ -5,7 +5,7 @@
 
 #include "pgraph_walk.h"
 #include "pgraph.h"
-#include "../tab_over.h"
+#include "../utility.h"
 
 namespace idlc {
 	namespace {

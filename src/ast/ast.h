@@ -9,6 +9,7 @@
 #include <gsl/gsl>
 
 #include "../string_heap.h"
+#include "../utility.h"
 #include "tag_types.h"
 #include "scope.h"
 #include "pgraph.h"
@@ -270,20 +271,13 @@ namespace idlc {
 			args_string {},
 			params_string {}
 		{
-			enum_id = "RPC_ID_";
-			enum_id += name;
-			callee_id = name;
-			callee_id += "_callee";
-
+			append(enum_id, "RPC_ID_", name);
+			append(callee_id, name, "_callee");
 			if (kind == rpc_def_kind::indirect) {
-				trmp_id = "trmp_";
-				trmp_id += name;
-				impl_id = "trmp_impl_";
-				impl_id += name;
-				typedef_id = "fptr_";
-				typedef_id += name;
-				impl_typedef_id = "fptr_impl_";
-				impl_typedef_id += name;
+				append(trmp_id, "trmp_", name);
+				append(impl_id, "trmp_impl_", name);
+				append(typedef_id, "fptr_", name);
+				append(impl_typedef_id, "fptr_impl_", name);
 			}
 		}
 	};

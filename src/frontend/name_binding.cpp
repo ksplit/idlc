@@ -144,8 +144,7 @@ bool idlc::symbol_walk::visit_proj_def(proj_def& node)
 bool idlc::scoped_name_walk::visit_proj_def(proj_def& node)
 {
 	for (const auto& item : path_) {
-		node.scoped_name += item;
-		node.scoped_name += "__"; // double underscore used to reduce odds of collisions
+		append(node.scoped_name, item, "__"); // double underscore used to reduce odds of collisions
 		// FIXME: scope collisions are still possible!
 	}
 
