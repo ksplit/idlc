@@ -123,17 +123,19 @@ namespace idlc {
 
 		projection(ident real_name, const std::string& name) : real_name {real_name}, fields {}
 		{
-			// Names can be directly populated here
-			// TODO: populate RPC names in node constructor?
 			populate_names(name);
 		};
 		
 		projection(ident real_name, const std::string& name, decltype(fields)&& fields) :
 			real_name {real_name},
-			fields {std::move(fields)}
-		{			
-			// Names can be directly populated here
-			// TODO: populate RPC names in node constructor?
+			fields {std::move(fields)},
+			visit_arg_marshal_name {},
+			visit_arg_unmarshal_name {},
+			visit_arg_remarshal_name {},
+			visit_arg_unremarshal_name {},
+			visit_ret_marshal_name {},
+			visit_ret_unmarshal_name {}
+		{
 			populate_names(name);
 		}
 

@@ -84,7 +84,8 @@ namespace idlc {
 		proj_def* definition;
 
 		type_proj(ident name) :
-			name {name}
+			name {name},
+			definition {}
 		{}
 	};
 
@@ -94,7 +95,8 @@ namespace idlc {
 		rpc_def* definition;
 
 		type_rpc(ident name) :
-			name {name}
+			name {name},
+			definition {}
 		{}
 	};
 
@@ -304,7 +306,8 @@ namespace idlc {
 
 		module_def(ident name, node_ptr<ref_vec<module_item>> items) :
 			name {name},
-			items {items}
+			items {items},
+			scope {}
 		{}
 	};
 

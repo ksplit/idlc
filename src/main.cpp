@@ -7,8 +7,8 @@
 
 #include "parser/idl_parse.h"
 #include "ast/pgraph_walk.h"
-#include "sema/name_binding.h"
-#include "sema/analysis.h"
+#include "frontend/name_binding.h"
+#include "frontend/analysis.h"
 #include "tab_over.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler

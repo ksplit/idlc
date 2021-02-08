@@ -23,8 +23,8 @@ add_executable(
 	"src/parser/parse_globals.cpp"
 	"src/ast/ast_dump.cpp"
 	"src/ast/pgraph_dump.cpp"
-	"src/sema/analysis.cpp"
-	"src/sema/name_binding.cpp"
+	"src/frontend/analysis.cpp"
+	"src/frontend/name_binding.cpp"
 	"src/string_heap.cpp"
 	"src/main.cpp"
 )
