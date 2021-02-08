@@ -443,22 +443,18 @@ namespace idlc {
 	}
 }
 
-// TODO: move string processing to stringstream instead of concats (efficiency issue, heap reallocations, etc.)
 /*
-	TODO: split sema into the name-binding rpc-collection parts, vs the pgraph analysis parts
+	TODO:
+	- split sema into the name-binding rpc-collection parts, vs the pgraph analysis parts
 	- merge AST and pgraph into a single module, they're interdependent anyways
 	- instead of extracting the pgraph owners, root them in their respective RPC nodes and do away with the unused table
 	- move code generation into its own module
 	- stages after the initial sema stage work solely on the table of RPCs (namely pgraph analysis and code generation)
+	- move string processing to stringstream instead of concats (efficiency issue, heap reallocations, etc.)
 */
 
 int main(int argc, char** argv)
 {
-	std::set_terminate([] {
-		std::cout.flush();
-		std::abort();
-	});
-
     const gsl::span<gsl::zstring<>> args {argv, gsl::narrow<std::size_t>(argc)};
     if (argc != 2) {
         std::cout << "Usage: idlc <idl-file>" << std::endl;
@@ -475,18 +471,10 @@ int main(int argc, char** argv)
 	}
 
 	const auto rpcs = idlc::sema::get_rpcs(*file);
-	// pgraphs is the owning root of all pgraphs added to the tree
-	const auto pgraphs = idlc::sema::generate_pgraphs(rpcs);
-	if (!pgraphs) {
+	if (!idlc::sema::generate_pgraphs(rpcs)) {
 		std::cout << "Error: pgraph generation failed\n";
 		return 1;
 	}
-
-	// Need to generate all the walk names for each projection
-	// Use same trick as RPCs: generate names in the AST, then include a backreference to the AST node?
-	// No: there are three *distinct* projections for every AST node, these need to be named independently
-	// Need to somehow walk all reachable projections (easy)
-	// - for each rpc, walk all pgraph roots with same walk object, only look at projections
 
 	idlc::create_function_strings(rpcs);
 	idlc::generate_common_header(rpcs);

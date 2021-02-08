@@ -33,13 +33,11 @@ namespace idlc::sema {
 
 	// TODO: introduce the void<> system for "raw" void pointers
 
-
 	using rpc_table = std::vector<gsl::not_null<ast::rpc_def*>>;
 	using rpc_table_ref = gsl::span<const gsl::not_null<ast::rpc_def*>>;
-	using pgraph_root_table = std::vector<node_ptr<data_field>>;
 
 	rpc_table get_rpcs(ast::file& root);
-	std::optional<pgraph_root_table> generate_pgraphs(rpc_table_ref rpcs);
+	bool generate_pgraphs(rpc_table_ref rpcs);
 }
 
 #endif

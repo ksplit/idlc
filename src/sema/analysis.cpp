@@ -142,42 +142,6 @@ namespace idlc::sema {
 			return std::make_shared<projection>(def.type, std::move(name), std::move(fields));
 		}
 
-		class type_walk : public ast::ast_walk<type_walk> {
-		public:
-			bool visit_rpc_def(ast::rpc_def& node)
-			{
-				if (node.ret_type)
-					node.ret_pgraph = insert_field(*node.ret_type);
-
-				if (node.arguments) {
-					for (auto& argument : *node.arguments)
-						node.arg_pgraphs.emplace_back(insert_field(*argument->type));
-				}
-
-				return ast::traverse(*this, node);
-			}
-
-			// TODO: support naked projections
-
-			// FIXME: this is probably a hack, thanks to the unclean split between the AST and the assoicated data
-			// structures
-			auto get_pgraph_owner()
-			{
-				return std::move(store_);
-			}
-
-		private:
-			std::vector<node_ptr<data_field>> store_ {};
-
-			data_field* insert_field(const ast::type_spec& node)
-			{
-				auto pgraph_node = generate_data_field(node);
-				const auto ptr = pgraph_node.get();
-				store_.emplace_back(std::move(pgraph_node));
-				return ptr;
-			}
-		};
-
 		node_ptr<data_field> generate_data_field(const ast::type_spec& node)
 		{
 			// TODO: finish const handling
@@ -196,16 +160,31 @@ namespace idlc::sema {
 			return std::move(field);
 		}
 
-		// The references in the AST are *not* owners, this vector is
-		std::vector<node_ptr<data_field>> generate_pgraph_roots(rpc_table_ref rpcs)
+		class type_walk : public ast::ast_walk<type_walk> {
+		public:
+			bool visit_rpc_def(ast::rpc_def& node)
+			{
+				if (node.ret_type)
+					node.ret_pgraph = generate_data_field(*node.ret_type);
+
+				if (node.arguments) {
+					for (auto& argument : *node.arguments)
+						node.arg_pgraphs.emplace_back(generate_data_field(*argument->type));
+				}
+
+				return ast::traverse(*this, node);
+			}
+
+			// TODO: support naked projections
+		};
+
+		void generate_pgraph_roots(rpc_table_ref rpcs)
 		{
 			type_walk walk {};
 			for (const auto& rpc : rpcs) {
 				const auto succeeded = walk.visit_rpc_def(*rpc);
 				assert(succeeded);
 			}
-
-			return walk.get_pgraph_owner();
 		}
 
 		// TODO: is it necessary to detect if a projection self-references by value?
@@ -537,18 +516,13 @@ namespace idlc::sema {
 
 			return true;
 		}
-
-		using pgraph_root_table = std::vector<node_ptr<data_field>>;
 	}
 }
 
-std::optional<idlc::sema::pgraph_root_table> idlc::sema::generate_pgraphs(rpc_table_ref rpcs)
+bool idlc::sema::generate_pgraphs(rpc_table_ref rpcs)
 {
-	auto roots = generate_pgraph_roots(rpcs);
-	if (!lower(rpcs))
-		return std::nullopt;
-	
-	return std::make_optional(std::move(roots));
+	generate_pgraph_roots(rpcs);
+	return lower(rpcs);
 }
 
 idlc::sema::rpc_table idlc::sema::get_rpcs(ast::file& root)

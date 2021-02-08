@@ -244,8 +244,8 @@ namespace idlc::ast {
 		const rpc_def_kind kind;
 
 		sema::scope scope;
-		sema::data_field* ret_pgraph;
-		std::vector<sema::data_field*> arg_pgraphs;
+		node_ptr<sema::data_field> ret_pgraph;
+		ptr_vec<sema::data_field> arg_pgraphs;
 
 		std::string enum_id;
 		std::string callee_id;
