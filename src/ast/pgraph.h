@@ -44,7 +44,7 @@ namespace idlc {
 		annotation value_annots;
 		// FIXME: add const-ness here, drop from <<pointer>>
 
-		std::string type_string;
+		std::string c_specifier;
 
 		value(passed_type&& type, annotation value_annots) :
 			type {std::move(type)},

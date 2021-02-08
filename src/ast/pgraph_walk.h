@@ -14,7 +14,7 @@ namespace idlc {
 	public:
 		bool operator()(walk& pass, value& node)
 		{
-			if (!pass.visit_field_type(node.type))
+			if (!pass.visit_passed_type(node.type))
 				return false;
 
 			return true;
@@ -114,7 +114,7 @@ namespace idlc {
 			return traverse(self(), node);
 		}
 
-		bool visit_field_type(passed_type& node)
+		bool visit_passed_type(passed_type& node)
 		{
 			return traverse(self(), node);
 		}

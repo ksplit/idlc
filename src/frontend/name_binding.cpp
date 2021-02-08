@@ -30,6 +30,20 @@ namespace idlc {
 
 		private:
 			std::vector<scope*> scopes_ {};
+
+			template<typename node_type>
+			node_type* try_resolve(ident name)
+			{
+				auto iter = scopes_.crbegin();
+				const auto last = scopes_.crend();
+				for (; iter != last; ++iter) {
+					const auto def = (*iter)->get<node_type>(name);
+					if (def)
+					return def;
+				}
+
+				return nullptr;
+			}
 		};
 
 		class scoped_name_walk : public ast_walk<scoped_name_walk> {
@@ -68,15 +82,10 @@ bool idlc::bind_walk::visit_rpc_def(rpc_def& node)
 
 bool idlc::bind_walk::visit_type_proj(type_proj& node)
 {
-	auto iter = scopes_.crbegin();
-	const auto last = scopes_.crend();
-	for (; iter != last; ++iter) {
-		const auto def = (*iter)->get<proj_def>(node.name);
-		if (def) {
-			node.definition = def;
-			//std::cout << "[scope_walk] Resolved projection \"" << node.name << "\"\n";
-			return traverse(*this, node);
-		}
+	const auto def = try_resolve<proj_def>(node.name);
+	if (def) {
+		node.definition = def;
+		return traverse(*this, node);
 	}
 
 	std::cout << "[error] Could not resolve \"" << node.name << "\"\n";
@@ -86,15 +95,10 @@ bool idlc::bind_walk::visit_type_proj(type_proj& node)
 
 bool idlc::bind_walk::visit_type_rpc(type_rpc& node)
 {
-	auto iter = scopes_.crbegin();
-	const auto last = scopes_.crend();
-	for (; iter != last; ++iter) {
-		const auto def = (*iter)->get<rpc_def>(node.name);
-		if (def) {
-			node.definition = def;
-			//std::cout << "[scope_walk] Resolved RPC \"" << node.name << "\"\n";
-			return traverse(*this, node);
-		}
+	const auto def = try_resolve<rpc_def>(node.name);
+	if (def) {
+		node.definition = def;
+		return traverse(*this, node);
 	}
 
 	std::cout << "[error] Could not resolve \"" << node.name << "\"\n";

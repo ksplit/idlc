@@ -205,7 +205,7 @@ namespace idlc {
 			return std::move(pgraph_node);
 		}
 
-		class rpc_collector : public ast_walk<rpc_collector> {
+		class rpc_collection_walk : public ast_walk<rpc_collection_walk> {
 		public:
 			bool visit_rpc_def(rpc_def& node)
 			{
@@ -285,7 +285,7 @@ namespace idlc {
 				return true; // NOTE: do *not* traverse projection nodes directly
 			}
 
-			bool visit_field_type(passed_type& node)
+			bool visit_passed_type(passed_type& node)
 			{
 				const auto unlowered = std::get_if<gsl::not_null<proj_def*>>(&node);
 				if (!unlowered) {
@@ -301,11 +301,11 @@ namespace idlc {
 			annotation default_with_ {};
 		};
 
-		class type_string_walk : public pgraph_walk<type_string_walk> {
+		class c_specifier_walk : public pgraph_walk<c_specifier_walk> {
 		public:
 			auto get() const
 			{
-				return string_;
+				return specifier_;
 			}
 
 			bool visit_value(value& node)
@@ -313,14 +313,14 @@ namespace idlc {
 				if (!traverse(*this, node))
 					return false;
 
-				node.type_string = string_;		
+				node.c_specifier = specifier_;		
 				return true;
 			}
 
 			bool visit_projection(projection& node)
 			{
-				string_ = "struct ";
-				string_ += node.real_name;				
+				specifier_ = "struct ";
+				specifier_ += node.real_name;				
 				return true;
 			}
 
@@ -329,13 +329,13 @@ namespace idlc {
 				if (!traverse(*this, node))
 					return false;
 				
-				string_ += "*";
+				specifier_ += "*";
 				return true;
 			}
 
 			bool visit_rpc_ptr(rpc_ptr& node)
 			{
-				string_ += node.definition->typedef_id;
+				specifier_ += node.definition->typedef_id;
 				return true;
 			}
 
@@ -343,55 +343,55 @@ namespace idlc {
 			{
 				switch (node) {
 				case primitive::ty_bool:
-					string_ = "bool";
+					specifier_ = "bool";
 					break;
 
 				case primitive::ty_char:
-					string_ = "char";
+					specifier_ = "char";
 					break;
 
 				case primitive::ty_schar:
-					string_ = "signed char";
+					specifier_ = "signed char";
 					break;
 
 				case primitive::ty_uchar:
-					string_ = "unsigned char";
+					specifier_ = "unsigned char";
 					break;
 
 				case primitive::ty_short:
-					string_ = "short";
+					specifier_ = "short";
 					break;
 
 				case primitive::ty_ushort:
-					string_ = "unsigned short";
+					specifier_ = "unsigned short";
 					break;
 
 				case primitive::ty_int:
-					string_ = "int";
+					specifier_ = "int";
 					break;
 
 				case primitive::ty_uint:
-					string_ = "unsigned int";
+					specifier_ = "unsigned int";
 					break;
 
 				case primitive::ty_long:
-					string_ = "long";
+					specifier_ = "long";
 					break;
 
 				case primitive::ty_ulong:
-					string_ = "unsigned long";
+					specifier_ = "unsigned long";
 					break;
 
 				case primitive::ty_llong:
-					string_ = "long long";
+					specifier_ = "long long";
 					break;
 
 				case primitive::ty_ullong:
-					string_ = "unsigned long long";
+					specifier_ = "unsigned long long";
 					break;
 
 				default:
-					std::cout << "Unhandled primtive was " << static_cast<std::uintptr_t>(node) << "\n";
+					std::cout << "Unhandled primitive was " << static_cast<std::uintptr_t>(node) << "\n";
 					assert(false);
 				}
 
@@ -399,17 +399,17 @@ namespace idlc {
 			}
 
 		private:
-			std::string string_ {};
+			std::string specifier_ {};
 		};
 
 		// NOTE: this *does not* walk into projections, and should only be applied to
 		// variable types (fields or arguments) and return types, as done in the lowering pass
-		void assign_type_strings(value& node)
+		void populate_c_type_specifiers(value& node)
 		{
-			type_string_walk type_walk {};
+			c_specifier_walk type_walk {};
 			const auto succeeded = type_walk.visit_value(node);
 			assert(succeeded);
-			std::cout << "Created type string: \"" << type_walk.get() << "\"\n";	
+			std::cout << "Created type specifier: \"" << type_walk.get() << "\"\n";	
 			dump_pgraph(node);
 		}
 
@@ -461,10 +461,10 @@ namespace idlc {
 			}
 
 			// TODO: should this really be here?
-			// We make sure we perform type string assignment *after* the projection has been fully lowered
+			// We make sure we perform type specifier assignment *after* the projection has been fully completed
 			for (const auto& [name, field] : pgraph->fields) {
-				std::cout << "Creating type string for \"" << name << "\"\n";
-				assign_type_strings(*field);
+				std::cout << "Creating type specifier for \"" << name << "\"\n";
+				populate_c_type_specifiers(*field);
 			}
 
 			return pgraph;
@@ -499,7 +499,7 @@ namespace idlc {
 				if (!annotate_pgraph(*rpc.ret_pgraph, annotation::out))
 					return false;
 				
-				assign_type_strings(*rpc.ret_pgraph);
+				populate_c_type_specifiers(*rpc.ret_pgraph);
 			}
 
 			for (const auto& pgraph : rpc.arg_pgraphs) {
@@ -507,7 +507,7 @@ namespace idlc {
 				if (!annotate_pgraph(*pgraph, annotation::in))
 					return false;
 
-				assign_type_strings(*pgraph);
+				populate_c_type_specifiers(*pgraph);
 			}
 
 			return true;
@@ -535,7 +535,7 @@ bool idlc::generate_pgraphs(rpc_vec_view rpcs)
 
 idlc::rpc_vec idlc::get_rpcs(file& root)
 {
-	rpc_collector walk {};
+	rpc_collection_walk walk {};
 	const auto succeeded = walk.visit_file(root);
 	assert(succeeded);
 	return walk.get();

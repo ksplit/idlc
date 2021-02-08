@@ -215,7 +215,7 @@ namespace idlc {
 			bool visit_null_terminated_array(null_terminated_array& node)
 			{
 				stream() << "int i;\n";
-				stream() << node.element->type_string << "* array = " << marshaled_variable() << ";\n";
+				stream() << node.element->c_specifier << "* array = " << marshaled_variable() << ";\n";
 				stream() << "for (i = 0; array[i]; ++i) {\n";
 				marshal("array[i]", node);
 				stream() << "}\n\n";
@@ -245,7 +245,7 @@ namespace idlc {
 			std::vector<std::string> roots(n_args);
 			for (gsl::index i {}; i < n_args; ++i) {
 				const auto name = rpc.arguments->at(i)->name;
-				const auto ts = rpc.arg_pgraphs.at(i)->type_string;
+				const auto ts = rpc.arg_pgraphs.at(i)->c_specifier;
 				std::string ptr_name {name};
 				ptr_name += "_ptr";
 				os << "\t" << ts << "* " << ptr_name << " = &" << name << ";\n";
@@ -399,7 +399,7 @@ namespace idlc {
 		{
 			for (auto& rpc : rpcs) {
 				if (rpc->ret_type)
-					rpc->ret_string = rpc->ret_pgraph->type_string;
+					rpc->ret_string = rpc->ret_pgraph->c_specifier;
 				else
 					rpc->ret_string = "void";
 
@@ -413,7 +413,7 @@ namespace idlc {
 							rpc->params_string += ", ";
 						}
 
-						rpc->args_string += arg->type_string;
+						rpc->args_string += arg->c_specifier;
 						rpc->args_string += " ";
 						rpc->args_string += name;
 
