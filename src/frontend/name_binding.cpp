@@ -18,7 +18,7 @@ namespace idlc {
 			bool visit_proj_def(proj_def& node);
 
 		private:
-			scope* scope_ {};
+			names_scope* scope_ {};
 		};
 
 		class bind_walk : public ast_walk<bind_walk> {
@@ -29,7 +29,7 @@ namespace idlc {
 			bool visit_type_rpc(type_rpc& node);
 
 		private:
-			std::vector<scope*> scopes_ {};
+			std::vector<names_scope*> scopes_ {};
 
 			template<typename node_type>
 			node_type* try_resolve(ident name)

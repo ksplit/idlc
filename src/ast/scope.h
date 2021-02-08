@@ -17,7 +17,7 @@ namespace idlc {
 }
 
 namespace idlc {
-	class scope {
+	class names_scope {
 	public:
 		void insert(ident name, proj_def* ptr)
 		{

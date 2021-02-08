@@ -231,7 +231,7 @@ namespace idlc {
 		const node_ptr<ref_vec<rpc_item>> items;
 		const rpc_def_kind kind;
 
-		scope scope;
+		names_scope scope;
 		node_ptr<value> ret_pgraph;
 		ptr_vec<value> arg_pgraphs;
 
@@ -296,7 +296,7 @@ namespace idlc {
 		const ident name;
 		const node_ptr<ref_vec<module_item>> items;
 
-		scope scope;
+		names_scope scope;
 
 		module_def(ident name, node_ptr<ref_vec<module_item>> items) :
 			name {name},
