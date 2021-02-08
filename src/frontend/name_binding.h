@@ -5,8 +5,8 @@
 
 #include "../ast/ast.h"
 
-namespace idlc::sema {
-	bool bind_all(file& root);
+namespace idlc {
+	bool bind_all_names(file& root);
 }
 
 #endif

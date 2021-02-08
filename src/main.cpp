@@ -25,34 +25,6 @@
 */
 
 /*
-	NOTE: Marshaling
-
-	As for outptutting C code for marshaling instructions: we've run into the issue before of having to wrap function
-	pointer types in awkward ways. IIRC, we needed to know the pointer types of RPC pointers in a very "full" way,
-	both the specifier form and the actual type name. Check lvd_linux's generated drivers for more info.
-	
-	These can be handled similar to variants: pre-computed strings that we can generate in batches. We could generate
-	the type "forms" on a per-node basis in the passing trees, and simply cache that.
-	
-	These type specifiers / declarators and the identifier variants could be done during the C output stage, or as part
-	of marshalling generation: temporary variable names could be decided during IR generation, or perhaps the IR itself
-	encodes enough information to generate that later.
-	
-	Note that each IR "block" will end up generating a marshal_* function.
-	Each block is per-projection, and RPC-scoped projections will get names correspondingly prepended with the RPC name
-	
-	Package as much as possible into helper functions, this greatly simplifies code generation
-	- you can package bind / alloc / dealloc into helpers
-*/
-
-/*
-	NOTE: front-end passes are irrelevant rn, work on:
-	- marshal IR
-	- 6 IR generation passes (!!)
-	- code generation
-*/
-
-/*
 	NOTE: Vikram notes:
 	- initial pass recording IDs and types of every object in the graph
 	- serialize to flattened array of registers, pointers replaced by IDs
@@ -65,13 +37,10 @@
 		- minimum viable: focus on nullnet
 */
 
-// Note that Roslyn appears to render the AST completely immutable, forcing node properties to be stored
-// by association (hash table, red node, etc.)
-
-// NOTE: Default to a walk, re-write later as needed (premature optimization, etc.)
 // NOTE: All of these are low-priority, but eventually needed (if it breaks nullnet, it's high-priority)
 // TODO: sort out the somewhat hellish logging situation
 // TODO: sort out const-ness handling (low-priority, work around in mean time)
+
 // NOTE: all marshaling logic is side-independent, needing only a side-dependent send() primitive
 // It's side-dependent where the dispatch loop gets hooked in, however
 // and kernel functions must not conflict with the generated marshaling code
@@ -463,13 +432,13 @@ int main(int argc, char** argv)
     if (!file)
         return 1;
 
-	if (!idlc::sema::bind_all(*file)) {
+	if (!idlc::bind_all_names(*file)) {
 		std::cout << "Error: Not all names were bound\n";
 		return 1;
 	}
 
-	const auto rpcs = idlc::sema::get_rpcs(*file);
-	if (!idlc::sema::generate_pgraphs(rpcs)) {
+	const auto rpcs = idlc::get_rpcs(*file);
+	if (!idlc::generate_pgraphs(rpcs)) {
 		std::cout << "Error: pgraph generation failed\n";
 		return 1;
 	}

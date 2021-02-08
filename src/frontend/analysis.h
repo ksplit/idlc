@@ -8,7 +8,7 @@
 #include "../ast/ast_walk.h"
 #include "../ast/pgraph.h"
 
-namespace idlc::sema {
+namespace idlc {
 	// TODO: I recall that any_of was in flux
 	// void<some_type> was for the static case, which is the one nullnet needs
 	// any_of<> does not currently require work

@@ -7,7 +7,7 @@
 #include "../ast/ast_walk.h"
 #include "../ast/scope.h"
 
-namespace idlc::sema {
+namespace idlc {
 	namespace {
 		// TODO: a possible performance improvement is in avoiding traversing "uninteresting" subtrees
 
@@ -44,7 +44,7 @@ namespace idlc::sema {
 	}	
 }
 
-bool idlc::sema::bind_walk::visit_module_def(module_def& node)
+bool idlc::bind_walk::visit_module_def(module_def& node)
 {
 	scopes_.emplace_back(&node.scope);
 	if (!traverse(*this, node))
@@ -55,7 +55,7 @@ bool idlc::sema::bind_walk::visit_module_def(module_def& node)
 	return true;
 }
 
-bool idlc::sema::bind_walk::visit_rpc_def(rpc_def& node)
+bool idlc::bind_walk::visit_rpc_def(rpc_def& node)
 {
 	scopes_.emplace_back(&node.scope);
 	if (!traverse(*this, node))
@@ -66,7 +66,7 @@ bool idlc::sema::bind_walk::visit_rpc_def(rpc_def& node)
 	return true;
 }
 
-bool idlc::sema::bind_walk::visit_type_proj(type_proj& node)
+bool idlc::bind_walk::visit_type_proj(type_proj& node)
 {
 	auto iter = scopes_.crbegin();
 	const auto last = scopes_.crend();
@@ -84,7 +84,7 @@ bool idlc::sema::bind_walk::visit_type_proj(type_proj& node)
 	return false;
 }
 
-bool idlc::sema::bind_walk::visit_type_rpc(type_rpc& node)
+bool idlc::bind_walk::visit_type_rpc(type_rpc& node)
 {
 	auto iter = scopes_.crbegin();
 	const auto last = scopes_.crend();
@@ -102,7 +102,7 @@ bool idlc::sema::bind_walk::visit_type_rpc(type_rpc& node)
 	return false;
 }
 
-bool idlc::sema::symbol_walk::visit_rpc_def(rpc_def& node)
+bool idlc::symbol_walk::visit_rpc_def(rpc_def& node)
 {
 	// Careful to insert into the outer scope
 	scope_->insert(node.name, &node);
@@ -118,7 +118,7 @@ bool idlc::sema::symbol_walk::visit_rpc_def(rpc_def& node)
 	return true;
 }
 
-bool idlc::sema::symbol_walk::visit_module_def(module_def& node)
+bool idlc::symbol_walk::visit_module_def(module_def& node)
 {
 	const auto old = scope_;
 	scope_ = &node.scope;
@@ -130,18 +130,18 @@ bool idlc::sema::symbol_walk::visit_module_def(module_def& node)
 	return true;
 }
 
-bool idlc::sema::symbol_walk::visit_proj_def(proj_def& node)
+bool idlc::symbol_walk::visit_proj_def(proj_def& node)
 {
 	scope_->insert(node.name, &node);
 	//std::cout << "[scopes] Inserted proj def \"" << node.name << "\"\n";
 	return true;
 }
 
-bool idlc::sema::scoped_name_walk::visit_proj_def(proj_def& node)
+bool idlc::scoped_name_walk::visit_proj_def(proj_def& node)
 {
 	for (const auto& item : path_) {
 		node.scoped_name += item;
-		node.scoped_name += "___"; // triple underscore used to reduce odds of collisions
+		node.scoped_name += "__"; // double underscore used to reduce odds of collisions
 		// FIXME: scope collisions are still possible!
 	}
 
@@ -150,7 +150,7 @@ bool idlc::sema::scoped_name_walk::visit_proj_def(proj_def& node)
 	return true;
 }
 
-bool idlc::sema::scoped_name_walk::visit_rpc_def(rpc_def& node)
+bool idlc::scoped_name_walk::visit_rpc_def(rpc_def& node)
 {
 	path_.emplace_back(node.name);
 	if (!traverse(*this, node))
@@ -161,7 +161,7 @@ bool idlc::sema::scoped_name_walk::visit_rpc_def(rpc_def& node)
 	return true;
 }
 
-bool idlc::sema::scoped_name_walk::visit_module_def(module_def& node)
+bool idlc::scoped_name_walk::visit_module_def(module_def& node)
 {
 	path_.emplace_back(node.name);
 	if (!traverse(*this, node))
@@ -172,18 +172,18 @@ bool idlc::sema::scoped_name_walk::visit_module_def(module_def& node)
 	return true;
 }
 
-bool idlc::sema::bind_all(file& root)
+bool idlc::bind_all_names(file& root)
 {
-	idlc::sema::scoped_name_walk names_walk {};
-	idlc::sema::symbol_walk walk {};
-	idlc::sema::bind_walk bind_walk {};
+	idlc::scoped_name_walk names_walk {};
+	idlc::symbol_walk walk {};
+	idlc::bind_walk bind_walk {};
 	if (!walk.visit_file(root)) {
 		std::cout << "Error: scope construction failed\n";
 		return false;
 	}
 
 	if (!names_walk.visit_file(root)) {
-		std::cout << "Error: scoped naming failed\n";
+		std::cout << "Error: scoped naming of some items failed\n";
 		return false;
 	}
 
