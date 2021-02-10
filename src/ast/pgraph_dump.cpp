@@ -14,75 +14,75 @@ namespace idlc {
 			bool visit_projection(projection& node)
 			{
 				if (!traverse.visited(&node))
-					indent(std::cout, indent_level_) << "projection\n";
+					indent(std::cout, m_indent_level) << "projection\n";
 				else
-					indent(std::cout, indent_level_) << "projection (skipped)\n";
+					indent(std::cout, m_indent_level) << "projection (skipped)\n";
 
-				++indent_level_;
+				++m_indent_level;
 				if (!traverse(*this, node))
 					return false;
 
-				--indent_level_;
+				--m_indent_level;
 
 				return true;
 			}
 
 			bool visit_dyn_array(dyn_array& node)
 			{
-				indent(std::cout, indent_level_) << "dyn_array\n";
-				++indent_level_;
+				indent(std::cout, m_indent_level) << "dyn_array\n";
+				++m_indent_level;
 				if (!traverse(*this, node))
 					return false;
 
-				--indent_level_;
+				--m_indent_level;
 
 				return true;
 			}
 
 			bool visit_null_terminated_array(null_terminated_array& node)
 			{
-				indent(std::cout, indent_level_) << "null_terminated_array\n";
-				++indent_level_;
+				indent(std::cout, m_indent_level) << "null_terminated_array\n";
+				++m_indent_level;
 				if (!traverse(*this, node))
 					return false;
 
-				--indent_level_;
+				--m_indent_level;
 
 				return true;
 			}
 
 			bool visit_pointer(pointer& node)
 			{
-				indent(std::cout, indent_level_) << "pointer\n";
-				++indent_level_;
+				indent(std::cout, m_indent_level) << "pointer\n";
+				++m_indent_level;
 				if (!traverse(*this, node))
 					return false;
 
-				--indent_level_;
+				--m_indent_level;
 
 				return true;
 			}
 
 			bool visit_rpc_ptr(rpc_ptr& node)
 			{
-				indent(std::cout, indent_level_) << "rpc_ptr\n";
+				indent(std::cout, m_indent_level) << "rpc_ptr\n";
 				return true;
 			}
 
 			bool visit_primitive(primitive node)
 			{
-				indent(std::cout, indent_level_) << "primitive\n";
+				indent(std::cout, m_indent_level) << "primitive\n";
 				return true;
 			}
 
 			bool visit_proj_def(proj_def& node)
 			{
-				indent(std::cout, indent_level_) << "proj_def\n";
+				indent(std::cout, m_indent_level) << "proj_def\n";
 				return true;
 			}
 
 		private:
-			unsigned indent_level_ {1};
+			unsigned m_indent_level {1};
 		};
 	}
 }

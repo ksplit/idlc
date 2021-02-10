@@ -53,33 +53,33 @@ namespace idlc {
 		// TODO: pre-collect all projections in the pgraph tree to allow iteration over them
 		class visitor_walk : public pgraph_walk<visitor_walk> {
 		public:
-			visitor_walk(std::ostream& os) : os_ {os} {}
+			visitor_walk(std::ostream& os) : m_stream {os} {}
 
 			bool visit_projection(projection& node)
 			{
-				os_ << "void " << node.visit_arg_marshal_name
+				m_stream << "void " << node.visit_arg_marshal_name
 					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 
-				os_ << "void " << node.visit_arg_unmarshal_name
+				m_stream << "void " << node.visit_arg_unmarshal_name
 					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 
-				os_ << "void " << node.visit_arg_remarshal_name
+				m_stream << "void " << node.visit_arg_remarshal_name
 					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 					
-				os_ << "void " << node.visit_arg_unremarshal_name
+				m_stream << "void " << node.visit_arg_unremarshal_name
 					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 					
-				os_ << "void " << node.visit_ret_marshal_name
+				m_stream << "void " << node.visit_ret_marshal_name
 					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 					
-				os_ << "void " << node.visit_ret_unmarshal_name
+				m_stream << "void " << node.visit_ret_unmarshal_name
 					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 
 				return true;
 			}
 
 		private:
-			std::ostream& os_;
+			std::ostream& m_stream;
 		};
 
 		void generate_visitor_prototypes(std::ostream& file, gsl::span<const gsl::not_null<rpc_def*>> rpcs)
@@ -135,41 +135,41 @@ namespace idlc {
 		class marshal_walk : public pgraph_walk<derived> {
 		public:
 			marshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
-				os_ {os},
-				marshaled_ptr_ {holder},
-				indent_level_ {level}
+				m_stream {os},
+				m_marshaled_ptr {holder},
+				m_indent_level {level}
 			{}
 
 		protected:		
 			// identifier of the variable that points to what we're currently marshaling
 			const auto& marshaled_variable()
 			{
-				return marshaled_ptr_;
+				return m_marshaled_ptr;
 			}
 
 			template<typename node_type>
 			bool marshal(std::string&& new_ptr, node_type& type)
 			{
-				const auto state = std::make_tuple(marshaled_ptr_, indent_level_);
-				marshaled_ptr_ = new_ptr;
-				++indent_level_;
+				const auto state = std::make_tuple(m_marshaled_ptr, m_indent_level);
+				m_marshaled_ptr = new_ptr;
+				++m_indent_level;
 				if (!this->traverse(this->self(), type))
 					return false;
 
-				std::forward_as_tuple(marshaled_ptr_, indent_level_) = state;
+				std::forward_as_tuple(m_marshaled_ptr, m_indent_level) = state;
 
 				return true;
 			}
 
 			std::ostream& stream()
 			{
-				return indent(os_, indent_level_);
+				return indent(m_stream, m_indent_level);
 			}
 
 		private:
-			std::ostream& os_;
-			std::string marshaled_ptr_ {};
-			unsigned indent_level_ {};
+			std::ostream& m_stream;
+			std::string m_marshaled_ptr {};
+			unsigned m_indent_level {};
 		};
 
 		class arg_marshal_walk : public marshal_walk<arg_marshal_walk> {
@@ -233,11 +233,40 @@ namespace idlc {
 			}
 		};
 
-		class arg_unmarshal_walk : public pgraph_walk<arg_unmarshal_walk> {};
-		class arg_remarshal_walk : public pgraph_walk<arg_remarshal_walk> {};
-		class arg_unremarshal_walk : public pgraph_walk<arg_unremarshal_walk> {};
-		class ret_marshal_walk : public pgraph_walk<ret_marshal_walk> {};
-		class ret_unmarshal_walk : public pgraph_walk<ret_unmarshal_walk> {};
+		class arg_unmarshal_walk : public marshal_walk<arg_unmarshal_walk> {
+		public:
+			arg_unmarshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
+				marshal_walk {os, holder, level}
+			{}
+		};
+
+		class arg_remarshal_walk : public marshal_walk<arg_remarshal_walk> {
+		public:
+			arg_remarshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
+				marshal_walk {os, holder, level}
+			{}
+		};
+
+		class arg_unremarshal_walk : public marshal_walk<arg_unremarshal_walk> {
+		public:
+			arg_unremarshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
+				marshal_walk {os, holder, level}
+			{}
+		};
+
+		class ret_marshal_walk : public marshal_walk<ret_marshal_walk> {
+		public:
+			ret_marshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
+				marshal_walk {os, holder, level}
+			{}
+		};
+
+		class ret_unmarshal_walk : public marshal_walk<ret_unmarshal_walk> {
+		public:
+			ret_unmarshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
+				marshal_walk {os, holder, level}
+			{}
+		};
 
 		/*
 			Some explanation: C usually has two different ways of accessing variables, depnding on if they're a value
@@ -260,9 +289,15 @@ namespace idlc {
 				roots.at(i) = ptr_name;
 			}
 
+			// TODO: somehow return actual retval pointer name
+			if (rpc.ret_pgraph) {
+				os << "\t" << rpc.ret_pgraph->c_specifier << " ret;\n";
+				os << "\t" << rpc.ret_pgraph->c_specifier << "* ret_ptr = &ret;\n";
+			}
+
 			os << "\t\n";
 
-			return roots;
+			return std::make_tuple(roots, "ret_ptr");
 		}
 
 		void generate_caller_glue(rpc_def& rpc, std::ostream& os)
@@ -270,9 +305,8 @@ namespace idlc {
 			os << "\tstruct fipc_message msg_buf = {0};\n";
 			os << "\tstruct fipc_message *msg = &msg_buf;\n\n";
 
-			// TODO: n_args is re-computed twice
 			const auto n_args = rpc.arg_pgraphs.size();
-			std::vector<std::string> roots = generate_root_ptrs(rpc, os);
+			const auto [roots, ret_root] = generate_root_ptrs(rpc, os);
 
 			for (gsl::index i {}; i < n_args; ++i) {
 				arg_marshal_walk arg_marshal {os, roots.at(i), 1}; // TODO: collect names
@@ -281,13 +315,13 @@ namespace idlc {
 
 			os << "\tvmfunc_wrapper(msg);\n\n";
 
-			for (auto& arg : rpc.arg_pgraphs) {
-				arg_unremarshal_walk arg_unremarshal {};
-				arg_unremarshal.visit_value(*arg);
+			for (gsl::index i {}; i < n_args; ++i) {
+				arg_unremarshal_walk arg_unremarshal {os, roots.at(i), 1};
+				arg_unremarshal.visit_value(*rpc.arg_pgraphs.at(i));
 			}
 
 			if (rpc.ret_pgraph) {
-				ret_unmarshal_walk ret_unmarshal {};
+				ret_unmarshal_walk ret_unmarshal {os, ret_root, 1};
 				ret_unmarshal.visit_value(*rpc.ret_pgraph);
 			}
 
@@ -296,7 +330,37 @@ namespace idlc {
 
 		void generate_callee_glue(rpc_def& rpc, std::ostream& os)
 		{
-			os << "\t// callee glue here\n";
+			const auto n_args = rpc.arg_pgraphs.size();
+			for (gsl::index i {}; i < n_args; ++i) {
+				const auto& type = rpc.arg_pgraphs.at(i)->c_specifier;
+				const auto name = rpc.arguments->at(i)->name;
+				os << "\t" << type << " " << name << " = 0;\n";
+			}
+
+			const auto [roots, ret_root] = generate_root_ptrs(rpc, os);
+
+			for (gsl::index i {}; i < n_args; ++i) {
+				arg_unmarshal_walk arg_unmarshal {os, roots.at(i), 1};
+				arg_unmarshal.visit_value(*rpc.arg_pgraphs.at(i));
+			}
+
+			if (rpc.kind == rpc_def_kind::direct) {
+				os << "\t";
+				if (rpc.ret_pgraph)
+					os << "ret = ";
+
+				os << rpc.name << "(" << rpc.params_string << ");\n\n";
+			}
+
+			for (gsl::index i {}; i < n_args; ++i) {
+				arg_remarshal_walk arg_remarshal {os, roots.at(i), 1};
+				arg_remarshal.visit_value(*rpc.arg_pgraphs.at(i));
+			}
+
+			if (rpc.ret_pgraph) {
+				ret_marshal_walk ret_marshal {os, ret_root, 1};
+				ret_marshal.visit_value(*rpc.ret_pgraph);
+			}
 		}
 
 		void generate_indirect_rpc(rpc_def& rpc, std::ostream& os)

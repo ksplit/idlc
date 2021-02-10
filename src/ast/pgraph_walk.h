@@ -65,7 +65,7 @@ namespace idlc {
 				return true;
 			}
 			else {
-				visited_.push_back(&node); // NOTE: this must be here, to prevent nested calls from recursing infinitely
+				m_visited.push_back(&node); // NOTE: this must be here, to prevent nested calls from recursing infinitely
 				for (auto& [name, item] : node.fields) {
 					if (!pass.visit_value(*item))
 						return false;
@@ -99,11 +99,11 @@ namespace idlc {
 		// more generally
 		bool visited(projection* ptr)
 		{
-			return std::find(visited_.begin(), visited_.end(), ptr) != visited_.end();
+			return std::find(m_visited.begin(), m_visited.end(), ptr) != m_visited.end();
 		}
 
 	private:
-		std::vector<projection*> visited_;
+		std::vector<projection*> m_visited;
 	};
 
 	template<typename derived>

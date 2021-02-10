@@ -18,7 +18,7 @@ namespace idlc {
 			bool visit_proj_def(proj_def& node);
 
 		private:
-			names_scope* scope_ {};
+			names_scope* m_scope {};
 		};
 
 		class bind_walk : public ast_walk<bind_walk> {
@@ -108,35 +108,33 @@ bool idlc::bind_walk::visit_type_rpc(type_rpc& node)
 
 bool idlc::symbol_walk::visit_rpc_def(rpc_def& node)
 {
-	// Careful to insert into the outer scope
-	scope_->insert(node.name, &node);
-	//std::cout << "[scopes] Inserted RPC def \"" << node.name << "\"\n";
-
-	const auto old = scope_;
-	scope_ = &node.scope;
+	// Careful to insert into the outer scope, *not* the inner one
+	m_scope->insert(node.name, &node);
+	const auto old = m_scope;
+	m_scope = &node.scope;
 	if (!traverse(*this, node))
 		return false;
 
-	scope_ = old;
+	m_scope = old;
 
 	return true;
 }
 
 bool idlc::symbol_walk::visit_module_def(module_def& node)
 {
-	const auto old = scope_;
-	scope_ = &node.scope;
+	const auto old = m_scope;
+	m_scope = &node.scope;
 	if (!traverse(*this, node))
 		return false;
 
-	scope_ = old;
+	m_scope = old;
 
 	return true;
 }
 
 bool idlc::symbol_walk::visit_proj_def(proj_def& node)
 {
-	scope_->insert(node.name, &node);
+	m_scope->insert(node.name, &node);
 	//std::cout << "[scopes] Inserted proj def \"" << node.name << "\"\n";
 	return true;
 }

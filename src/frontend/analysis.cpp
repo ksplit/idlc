@@ -209,17 +209,17 @@ namespace idlc {
 		public:
 			bool visit_rpc_def(rpc_def& node)
 			{
-				defs_.emplace_back(&node);
+				m_defs.emplace_back(&node);
 				return true;
 			}
 
 			auto get()
 			{
-				return defs_;
+				return m_defs;
 			}
 
 		private:
-			std::vector<gsl::not_null<rpc_def*>> defs_ {};
+			std::vector<gsl::not_null<rpc_def*>> m_defs {};
 		};
 
 		bool annotate_pgraph(value& node, annotation default_with);
@@ -228,7 +228,7 @@ namespace idlc {
 		// TODO: implement error checking, currently focused on generating defaults
 		class annotation_walk : public pgraph_walk<annotation_walk> {
 		public:
-			annotation_walk(annotation default_with) : default_with_ {default_with}
+			annotation_walk(annotation default_with) : m_default_with {default_with}
 			{
 				// We only support propagating a default value annotation
 				assert(is_clear(default_with & annotation::ptr_only));
@@ -241,11 +241,11 @@ namespace idlc {
 				if (!is_clear(node.value_annots & annotation::val_only)) {
 					std::cout << "Continuing with new value annotation default 0x" << std::hex;
 					std::cout << static_cast<std::uintptr_t>(node.value_annots) << std::dec << "\n";
-					default_with_ = node.value_annots;				
+					m_default_with = node.value_annots;				
 				}
 				else {
 					std::cout << "Applying value annotation default\n";
-					node.value_annots = default_with_;
+					node.value_annots = m_default_with;
 				}
 
 				return traverse(*this, node);
@@ -256,11 +256,11 @@ namespace idlc {
 				// Default if no pointer annotations are set
 				if (is_clear(node.pointer_annots & annotation::ptr_only)) {
 					std::cout << "Pointer annotation inferred from value default\n";
-					if (default_with_ == annotation::in)
+					if (m_default_with == annotation::in)
 						node.pointer_annots = annotation::bind_callee;
-					else if (default_with_ == annotation::out)
+					else if (m_default_with == annotation::out)
 						node.pointer_annots = annotation::bind_caller;
-					else if (default_with_ == (annotation::in | annotation::out))
+					else if (m_default_with == (annotation::in | annotation::out))
 						node.pointer_annots = (annotation::bind_callee | annotation::bind_caller);
 				}
 				else {
@@ -273,10 +273,10 @@ namespace idlc {
 			bool visit_projection(projection& node)
 			{
 				std::cout << "Entered projection with 0x" << std::hex;
-				std::cout << static_cast<std::uintptr_t>(default_with_) << std::dec << "\n";
+				std::cout << static_cast<std::uintptr_t>(m_default_with) << std::dec << "\n";
 				for (auto& [name, field] : node.fields) {
 					std::cout<< "Propagating for projection field \"" << name << "\"\n";
-					if (!annotate_pgraph(*field, default_with_))
+					if (!annotate_pgraph(*field, m_default_with))
 						return false;
 				}
 
@@ -292,20 +292,20 @@ namespace idlc {
 					return traverse(*this, node); // FIXME: is this correct?
 				}
 				else {
-					node = instantiate_projection(**unlowered, default_with_);
+					node = instantiate_projection(**unlowered, m_default_with);
 					return true;
 				}
 			}
 
 		private:
-			annotation default_with_ {};
+			annotation m_default_with {};
 		};
 
 		class c_specifier_walk : public pgraph_walk<c_specifier_walk> {
 		public:
 			auto get() const
 			{
-				return specifier_;
+				return m_specifier;
 			}
 
 			bool visit_value(value& node)
@@ -313,14 +313,14 @@ namespace idlc {
 				if (!traverse(*this, node))
 					return false;
 
-				node.c_specifier = specifier_;		
+				node.c_specifier = m_specifier;		
 				return true;
 			}
 
 			bool visit_projection(projection& node)
 			{
-				specifier_ = "struct ";
-				specifier_ += node.real_name;				
+				m_specifier = "struct ";
+				m_specifier += node.real_name;				
 				return true;
 			}
 
@@ -329,13 +329,13 @@ namespace idlc {
 				if (!traverse(*this, node))
 					return false;
 				
-				specifier_ += "*";
+				m_specifier += "*";
 				return true;
 			}
 
 			bool visit_rpc_ptr(rpc_ptr& node)
 			{
-				specifier_ += node.definition->typedef_id;
+				m_specifier += node.definition->typedef_id;
 				return true;
 			}
 
@@ -343,63 +343,63 @@ namespace idlc {
 			{
 				switch (node) {
 				case primitive::ty_bool:
-					specifier_ = "bool";
+					m_specifier = "bool";
 					break;
 
 				case primitive::ty_char:
-					specifier_ = "char";
+					m_specifier = "char";
 					break;
 
 				case primitive::ty_schar:
-					specifier_ = "signed char";
+					m_specifier = "signed char";
 					break;
 
 				case primitive::ty_uchar:
-					specifier_ = "unsigned char";
+					m_specifier = "unsigned char";
 					break;
 
 				case primitive::ty_short:
-					specifier_ = "short";
+					m_specifier = "short";
 					break;
 
 				case primitive::ty_ushort:
-					specifier_ = "unsigned short";
+					m_specifier = "unsigned short";
 					break;
 
 				case primitive::ty_int:
-					specifier_ = "int";
+					m_specifier = "int";
 					break;
 
 				case primitive::ty_uint:
-					specifier_ = "unsigned int";
+					m_specifier = "unsigned int";
 					break;
 
 				case primitive::ty_long:
-					specifier_ = "long";
+					m_specifier = "long";
 					break;
 
 				case primitive::ty_ulong:
-					specifier_ = "unsigned long";
+					m_specifier = "unsigned long";
 					break;
 
 				case primitive::ty_llong:
-					specifier_ = "long long";
+					m_specifier = "long long";
 					break;
 
 				case primitive::ty_ullong:
-					specifier_ = "unsigned long long";
+					m_specifier = "unsigned long long";
 					break;
 
 				default:
 					std::cout << "Unhandled primitive was " << static_cast<std::uintptr_t>(node) << "\n";
-					assert(false);
+					std::terminate();
 				}
 
 				return true;
 			}
 
 		private:
-			std::string specifier_ {};
+			std::string m_specifier {};
 		};
 
 		// NOTE: this *does not* walk into projections, and should only be applied to
@@ -437,7 +437,7 @@ namespace idlc {
 				break;
 
 			default:
-				assert(false);
+				std::terminate();
 			}
 
 			return instance_name;
