@@ -9,6 +9,7 @@
 #include "node_ptrs.h"
 #include "tag_types.h"
 #include "../string_heap.h"
+#include "../utility.h"
 
 namespace idlc {
 	struct proj_def;
@@ -48,7 +49,8 @@ namespace idlc {
 
 		value(passed_type&& type, annotation value_annots) :
 			type {std::move(type)},
-			value_annots {value_annots}
+			value_annots {value_annots},
+			c_specifier {}
 		{}
 	};
 
@@ -110,19 +112,29 @@ namespace idlc {
 		rpc_ptr(rpc_def* definition) : definition {definition} {}
 	};
 
+	using projection_field = std::pair<ident, node_ptr<value>>;
+
 	class projection {
 	public:
 		ident real_name {};
-		std::vector<std::pair<ident, node_ptr<value>>> fields {};
+		std::vector<projection_field> fields {};
 
-		std::string visit_arg_marshal_name {};
-		std::string visit_arg_unmarshal_name {};
-		std::string visit_arg_remarshal_name {};
-		std::string visit_arg_unremarshal_name {};
-		std::string visit_ret_marshal_name {};
-		std::string visit_ret_unmarshal_name {};
+		std::string arg_marshal_visitor {};
+		std::string arg_unmarshal_visitor {};
+		std::string arg_remarshal_visitor {};
+		std::string arg_unremarshal_visitor {};
+		std::string ret_marshal_visitor {};
+		std::string ret_unmarshal_visitor {};
 
-		projection(ident real_name, const std::string& name) : real_name {real_name}, fields {}
+		projection(ident real_name, const std::string& name) :
+			real_name {real_name},
+			fields {},
+			arg_marshal_visitor {},
+			arg_unmarshal_visitor {},
+			arg_remarshal_visitor {},
+			arg_unremarshal_visitor {},
+			ret_marshal_visitor {},
+			ret_unmarshal_visitor {}
 		{
 			populate_names(name);
 		};
@@ -130,12 +142,12 @@ namespace idlc {
 		projection(ident real_name, const std::string& name, decltype(fields)&& fields) :
 			real_name {real_name},
 			fields {std::move(fields)},
-			visit_arg_marshal_name {},
-			visit_arg_unmarshal_name {},
-			visit_arg_remarshal_name {},
-			visit_arg_unremarshal_name {},
-			visit_ret_marshal_name {},
-			visit_ret_unmarshal_name {}
+			arg_marshal_visitor {},
+			arg_unmarshal_visitor {},
+			arg_remarshal_visitor {},
+			arg_unremarshal_visitor {},
+			ret_marshal_visitor {},
+			ret_unmarshal_visitor {}
 		{
 			populate_names(name);
 		}
@@ -143,12 +155,12 @@ namespace idlc {
 	private:
 		void populate_names(const std::string& name)
 		{
-			visit_arg_marshal_name = "visit_arg_marshal_" + name;
-			visit_arg_unmarshal_name = "visit_arg_unmarshal_" + name;
-			visit_arg_remarshal_name = "visit_arg_remarshal_" + name;
-			visit_arg_unremarshal_name = "visit_arg_unremarshal_" + name;
-			visit_ret_marshal_name = "visit_ret_marshal_" + name;
-			visit_ret_unmarshal_name = "visit_ret_unmarshal_" + name;
+			arg_marshal_visitor = concat("arg_marshal_", name);
+			arg_unmarshal_visitor = concat("arg_unmarshal_", name);
+			arg_remarshal_visitor = concat("arg_remarshal_", name);
+			arg_unremarshal_visitor = concat("arg_unremarshal_", name);
+			ret_marshal_visitor = concat("ret_marshal_", name);
+			ret_unmarshal_visitor = concat("ret_unmarshal_", name);
 		}
 	};
 }

@@ -57,22 +57,22 @@ namespace idlc {
 
 			bool visit_projection(projection& node)
 			{
-				m_stream << "void " << node.visit_arg_marshal_name
+				m_stream << "void " << node.arg_marshal_visitor
 					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 
-				m_stream << "void " << node.visit_arg_unmarshal_name
+				m_stream << "void " << node.arg_unmarshal_visitor
 					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 
-				m_stream << "void " << node.visit_arg_remarshal_name
+				m_stream << "void " << node.arg_remarshal_visitor
 					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 					
-				m_stream << "void " << node.visit_arg_unremarshal_name
+				m_stream << "void " << node.arg_unremarshal_visitor
 					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 					
-				m_stream << "void " << node.visit_ret_marshal_name
+				m_stream << "void " << node.ret_marshal_visitor
 					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 					
-				m_stream << "void " << node.visit_ret_unmarshal_name
+				m_stream << "void " << node.ret_unmarshal_visitor
 					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 
 				return true;
@@ -109,7 +109,9 @@ namespace idlc {
 			file << "#include <asm/lcd_domains/libvmfunc.h>\n";
 			file << "\n";
 			file << "#define glue_marshal_shadow(msg, value) // TODO\n";
-			file << "#define glue_marshal(msg, value) // TODO\n\n";
+			file << "#define glue_marshal(msg, value) // TODO\n";
+			file << "#define glue_unmarshal(msg /*, type*/) 0// TODO\n";
+			file << "#define glue_unmarshal_rpc_ptr(msg, trmp_id) 0// TODO\n\n";
 			file << "enum RPC_ID {\n";
 			for (const auto& rpc : rpcs) {
 				file << "\t" << rpc->enum_id << ",\n";
@@ -137,6 +139,7 @@ namespace idlc {
 			marshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
 				m_stream {os},
 				m_marshaled_ptr {holder},
+				m_marshaled_type_specifier {},
 				m_indent_level {level}
 			{}
 
@@ -145,6 +148,11 @@ namespace idlc {
 			const auto& marshaled_variable()
 			{
 				return m_marshaled_ptr;
+			}
+
+			const auto& c_specifier()
+			{
+				return m_marshaled_type_specifier;
 			}
 
 			template<typename node_type>
@@ -169,6 +177,7 @@ namespace idlc {
 		private:
 			std::ostream& m_stream;
 			std::string m_marshaled_ptr {};
+			std::string m_marshaled_type_specifier {};
 			unsigned m_indent_level {};
 		};
 
@@ -208,7 +217,7 @@ namespace idlc {
 
 			bool visit_projection(projection& node)
 			{
-				stream() << node.visit_arg_marshal_name << "(msg, " << marshaled_variable() << ");\n";
+				stream() << node.arg_marshal_visitor << "(msg, " << marshaled_variable() << ");\n";
 				return true;
 			}
 
@@ -217,19 +226,24 @@ namespace idlc {
 				stream() << "int i;\n";
 				stream() << node.element->c_specifier << "* array = " << marshaled_variable() << ";\n";
 				stream() << "for (i = 0; array[i]; ++i) {\n";
-				marshal("array[i]", node);
+				if (!marshal("(array + i)", node))
+					return false;
+
 				stream() << "}\n\n";
+
 				return true;
 			}
 
 			bool visit_value(value& node)
 			{
-				if ((node.value_annots & annotation::in) == annotation::is_set) {
-					std::cout << "Skipped non-in field\n";
-					return true;
+				if (flags_set(node.value_annots, annotation::in)) {
+					std::cout << "Marshaling input argument\n";
+					return traverse(*this, node);
 				}
-				
-				return traverse(*this, node);
+
+				std::cout << "Skipped non-input argument for marshaling\n";
+
+				return true;				
 			}
 		};
 
@@ -238,6 +252,63 @@ namespace idlc {
 			arg_unmarshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
 				marshal_walk {os, holder, level}
 			{}
+
+			bool visit_value(value& node)
+			{
+				if (flags_set(node.value_annots, annotation::in)) {
+					std::cout << "Unmarshaling input argument\n";
+					return traverse(*this, node);
+				}
+				
+				std::cout << "Skipped non-input argument for unmarshaling\n";
+
+				return true;
+			}
+
+			bool visit_primitive(primitive node)
+			{
+				stream() << "*" << marshaled_variable() << " = glue_unmarshal(msg /*, type string here */);\n";
+				return true;
+			}
+
+			bool visit_pointer(pointer& node)
+			{
+				stream() << "*" << marshaled_variable() << " = glue_unmarshal(msg /*, type */);\n";
+				stream() << "if (*" << marshaled_variable() << ") {\n";
+				if (!marshal("*" + marshaled_variable(), node))
+					return false;
+
+				stream() << "}\n\n";
+
+				return true;
+			}
+
+			bool visit_null_terminated_array(null_terminated_array& node)
+			{
+				stream() << "int i;\n";
+				stream() << node.element->c_specifier << "* array = " << marshaled_variable() << ";\n";
+				stream() << "for (i = 0; array[i]; ++i) {\n";
+				if (!marshal("(array + i)", node))
+					return false;
+
+				stream() << "}\n\n";
+
+				return true;
+			}
+
+			bool visit_rpc_ptr(rpc_ptr& node)
+			{
+				stream() << "*" << marshaled_variable() << " = glue_unmarshal_rpc_ptr(msg, " << node.definition->trmp_id
+					<< ");\n";
+
+				return true;
+			}
+
+			bool visit_projection(projection& node)
+			{
+				stream() << node.arg_unmarshal_visitor << "(msg, " << marshaled_variable() << ");\n";
+				return true;
+			}
 		};
 
 		class arg_remarshal_walk : public marshal_walk<arg_remarshal_walk> {
