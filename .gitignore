@@ -19,4 +19,5 @@ src/parser/parser.h
 callee.c
 caller.c
 common.h
+common.c
 trampolines.lds.S

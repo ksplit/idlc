@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <fstream>
 #include <string>
 #include <iostream>
@@ -50,7 +51,9 @@
 
 namespace idlc {
 	namespace {
-		// TODO: pre-collect all projections in the pgraph tree to allow iteration over them
+		using projection_vec = std::vector<gsl::not_null<projection*>>;
+		using projection_vec_view = gsl::span<const gsl::not_null<projection*>>;
+
 		class visitor_walk : public pgraph_walk<visitor_walk> {
 		public:
 			visitor_walk(std::ostream& os) : m_stream {os} {}
@@ -82,23 +85,14 @@ namespace idlc {
 			std::ostream& m_stream;
 		};
 
-		void generate_visitor_prototypes(std::ostream& file, gsl::span<const gsl::not_null<rpc_def*>> rpcs)
+		void generate_visitor_prototypes(std::ostream& file, projection_vec_view projections)
 		{
 			visitor_walk visit_walk {file};
-			for (const auto& rpc : rpcs) {
-				if (rpc->ret_pgraph) {
-					const auto succeeded = visit_walk.visit_value(*rpc->ret_pgraph);
-					assert(succeeded);
-				}
-
-				for (const auto& arg : rpc->arg_pgraphs) {
-					const auto succeeded = visit_walk.visit_value(*arg);
-					assert(succeeded);
-				}
-			}
+			for (const auto& proj : projections)
+				visit_walk.visit_projection(*proj);
 		}
 
-		void generate_common_header(gsl::span<const gsl::not_null<rpc_def*>> rpcs)
+		void generate_common_header(rpc_vec_view rpcs, projection_vec_view projections)
 		{
 			std::ofstream file {"common.h"};
 			file.exceptions(file.badbit | file.failbit);
@@ -110,8 +104,8 @@ namespace idlc {
 			file << "\n";
 			file << "#define glue_marshal_shadow(msg, value) // TODO\n";
 			file << "#define glue_marshal(msg, value) // TODO\n";
-			file << "#define glue_unmarshal(msg /*, type*/) 0// TODO\n";
-			file << "#define glue_unmarshal_rpc_ptr(msg, trmp_id) 0// TODO\n\n";
+			file << "#define glue_unmarshal(msg, type) (type)0xdeadbeef // TODO\n";
+			file << "#define glue_unmarshal_rpc_ptr(msg, trmp_id) 0 // TODO\n\n";
 			file << "enum RPC_ID {\n";
 			for (const auto& rpc : rpcs) {
 				file << "\t" << rpc->enum_id << ",\n";
@@ -119,7 +113,7 @@ namespace idlc {
 
 			file << "};\n\n";
 
-			generate_visitor_prototypes(file, rpcs);
+			generate_visitor_prototypes(file, projections);
 			for (const auto& rpc : rpcs) {
 				if (rpc->kind == rpc_def_kind::indirect) {
 					file << "typedef " << rpc->ret_string << " (*" << rpc->typedef_id << ")("
@@ -226,7 +220,8 @@ namespace idlc {
 				stream() << "int i;\n";
 				stream() << node.element->c_specifier << "* array = " << marshaled_variable() << ";\n";
 				stream() << "for (i = 0; array[i]; ++i) {\n";
-				if (!marshal("(array + i)", node))
+				stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
+				if (!marshal("element", node))
 					return false;
 
 				stream() << "}\n\n";
@@ -257,7 +252,12 @@ namespace idlc {
 			{
 				if (flags_set(node.value_annots, annotation::in)) {
 					std::cout << "Unmarshaling input argument\n";
-					return traverse(*this, node);
+					const auto old = m_c_specifier;
+					m_c_specifier = node.c_specifier;
+					if (!traverse(*this, node))
+						return false;
+
+					m_c_specifier = old;
 				}
 				
 				std::cout << "Skipped non-input argument for unmarshaling\n";
@@ -267,13 +267,13 @@ namespace idlc {
 
 			bool visit_primitive(primitive node)
 			{
-				stream() << "*" << marshaled_variable() << " = glue_unmarshal(msg /*, type string here */);\n";
+				stream() << "*" << marshaled_variable() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
 				return true;
 			}
 
 			bool visit_pointer(pointer& node)
 			{
-				stream() << "*" << marshaled_variable() << " = glue_unmarshal(msg /*, type */);\n";
+				stream() << "*" << marshaled_variable() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
 				stream() << "if (*" << marshaled_variable() << ") {\n";
 				if (!marshal("*" + marshaled_variable(), node))
 					return false;
@@ -288,7 +288,8 @@ namespace idlc {
 				stream() << "int i;\n";
 				stream() << node.element->c_specifier << "* array = " << marshaled_variable() << ";\n";
 				stream() << "for (i = 0; array[i]; ++i) {\n";
-				if (!marshal("(array + i)", node))
+				stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
+				if (!marshal("element", node))
 					return false;
 
 				stream() << "}\n\n";
@@ -309,6 +310,9 @@ namespace idlc {
 				stream() << node.arg_unmarshal_visitor << "(msg, " << marshaled_variable() << ");\n";
 				return true;
 			}
+
+		private:
+			absl::string_view m_c_specifier {};
 		};
 
 		class arg_remarshal_walk : public marshal_walk<arg_remarshal_walk> {
@@ -460,7 +464,7 @@ namespace idlc {
 			os << "}\n\n";
 		}
 
-		void generate_caller(gsl::span<const gsl::not_null<rpc_def*>> rpcs)
+		void generate_caller(rpc_vec_view rpcs)
 		{
 			std::ofstream file {"caller.c"};
 			file.exceptions(file.badbit | file.failbit);
@@ -480,7 +484,7 @@ namespace idlc {
 			}
 		}
 
-		void generate_callee(gsl::span<const gsl::not_null<rpc_def*>> rpcs)
+		void generate_callee(rpc_vec_view rpcs)
 		{
 			std::ofstream file {"callee.c"};
 			file.exceptions(file.badbit | file.failbit);
@@ -500,7 +504,7 @@ namespace idlc {
 			}
 		}
 
-		void generate_linker_script(gsl::span<const gsl::not_null<rpc_def*>> rpcs)
+		void generate_linker_script(rpc_vec_view rpcs)
 		{
 			std::ofstream file {"trampolines.lds.S"};
 			file.exceptions(file.badbit | file.failbit);
@@ -517,7 +521,7 @@ namespace idlc {
 			file << "INSERT AFTER .text\n";
 		}
 
-		void create_function_strings(gsl::span<const gsl::not_null<rpc_def*>> rpcs)
+		void create_function_strings(rpc_vec_view rpcs)
 		{
 			for (auto& rpc : rpcs) {
 				if (rpc->ret_type)
@@ -546,6 +550,112 @@ namespace idlc {
 					rpc->args_string = "void"; // GCC doesn't like it if we just leave the arguments list empty
 				}
 			}
+		}
+
+		void generate_arg_marshal_visitor(std::ostream& file, projection& node)
+		{
+			file << "void " << node.arg_marshal_visitor
+					<< "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
+
+				
+			file << "}\n\n";
+		}
+
+		void generate_arg_unmarshal_visitor(std::ostream& file, projection& node)
+		{
+			file << "void " << node.arg_unmarshal_visitor
+					<< "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
+
+				
+			file << "}\n\n";
+		}
+
+		void generate_arg_remarshal_visitor(std::ostream& file, projection& node)
+		{
+			file << "void " << node.arg_remarshal_visitor
+					<< "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
+
+				
+			file << "}\n\n";
+		}
+
+		void generate_arg_unremarshal_visitor(std::ostream& file, projection& node)
+		{
+			file << "void " << node.arg_unremarshal_visitor
+					<< "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
+
+				
+			file << "}\n\n";
+		}
+
+		void generate_ret_marshal_visitor(std::ostream& file, projection& node)
+		{
+			file << "void " << node.ret_marshal_visitor
+					<< "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
+
+				
+			file << "}\n\n";
+		}
+
+		void generate_ret_unmarshal_visitor(std::ostream& file, projection& node)
+		{
+			file << "void " << node.ret_unmarshal_visitor
+					<< "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
+
+				
+			file << "}\n\n";
+		}
+
+		void generate_common_source(projection_vec_view projections)
+		{
+			std::ofstream file {"common.c"};
+			file.exceptions(file.badbit | file.failbit);
+
+			file << "#include <lcd_config/pre_hook.h>\n\n";
+			file << "#include \"common.h\"\n\n";
+			file << "#include <lcd_config/post_hook.h>\n\n";
+			for (const auto& projection : projections) {
+				generate_arg_marshal_visitor(file, *projection);
+				generate_arg_unmarshal_visitor(file, *projection);
+				generate_arg_remarshal_visitor(file, *projection);
+				generate_arg_unremarshal_visitor(file, *projection);
+				generate_ret_marshal_visitor(file, *projection);
+				generate_ret_unmarshal_visitor(file, *projection);
+			}
+		}
+
+		class projection_collection_walk : public pgraph_walk<projection_collection_walk> {
+		public:
+			projection_collection_walk(projection_vec& projections) :
+				m_projections {projections}
+			{}
+
+			bool visit_projection(projection& node)
+			{
+				const auto last = m_projections.end();
+				if (std::find(m_projections.begin(), last, &node) == last)
+					m_projections.emplace_back(&node);
+
+				return true;
+			}
+
+		private:
+			projection_vec& m_projections;
+		};
+
+		projection_vec get_projections(rpc_vec_view rpcs)
+		{
+			projection_vec projs {};
+			projection_collection_walk walk {projs};
+			for (const auto& rpc : rpcs) {
+				if (rpc->ret_pgraph)
+					walk.visit_value(*rpc->ret_pgraph);
+				
+				for (const auto& arg : rpc->arg_pgraphs)
+					walk.visit_value(*arg);
+			}
+
+			return projs;
 		}
 	}
 }
@@ -582,8 +692,10 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
+	const auto projections = idlc::get_projections(rpcs);
 	idlc::create_function_strings(rpcs);
-	idlc::generate_common_header(rpcs);
+	idlc::generate_common_header(rpcs, projections);
+	idlc::generate_common_source(projections);
 	idlc::generate_caller(rpcs);
 	idlc::generate_callee(rpcs);
 	idlc::generate_linker_script(rpcs);
