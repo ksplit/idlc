@@ -361,7 +361,7 @@ namespace idlc {
 				const auto specifier = rpc.arg_pgraphs.at(i)->c_specifier;
 				const auto ptr_name = concat(name, "_ptr");
 				os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
-				roots.at(i) = ptr_name;
+				roots.at(i) = std::move(ptr_name);
 			}
 
 			// TODO: somehow return actual retval pointer name
@@ -373,6 +373,22 @@ namespace idlc {
 			os << "\t\n";
 
 			return std::make_tuple(roots, "ret_ptr");
+		}
+
+		auto generate_root_ptrs(projection& projection, absl::string_view source_var, std::ostream& os)
+		{
+			std::vector<std::string> roots;
+			roots.reserve(projection.fields.size());
+			for (const auto& [name, type] : projection.fields) {
+				const auto& specifier = type->c_specifier;
+				const auto ptr_name = concat(name, "_ptr");
+				os << "\t" << specifier << "* " << ptr_name << " = &" << source_var << "->" << name << ";\n";
+				roots.emplace_back(std::move(ptr_name));
+			}
+
+			os << "\t\n";
+
+			return roots;
 		}
 
 		void generate_caller_glue(rpc_def& rpc, std::ostream& os)
@@ -557,7 +573,13 @@ namespace idlc {
 			file << "void " << node.arg_marshal_visitor
 					<< "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
 
-				
+			const auto roots = generate_root_ptrs(node, "ptr", file);
+			const auto n_fields = node.fields.size();
+			for (gsl::index i {}; i < n_fields; ++i) {
+				arg_marshal_walk walk {file, roots.at(i), 1};
+				walk.visit_value(*node.fields.at(i).second);
+			}
+
 			file << "}\n\n";
 		}
 
@@ -566,7 +588,13 @@ namespace idlc {
 			file << "void " << node.arg_unmarshal_visitor
 					<< "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
 
-				
+			const auto roots = generate_root_ptrs(node, "ptr", file);
+			const auto n_fields = node.fields.size();
+			for (gsl::index i {}; i < n_fields; ++i) {
+				arg_unmarshal_walk walk {file, roots.at(i), 1};
+				walk.visit_value(*node.fields.at(i).second);
+			}
+
 			file << "}\n\n";
 		}
 
@@ -636,7 +664,7 @@ namespace idlc {
 				if (std::find(m_projections.begin(), last, &node) == last)
 					m_projections.emplace_back(&node);
 
-				return true;
+				return traverse(*this, node);
 			}
 
 		private:
@@ -660,14 +688,8 @@ namespace idlc {
 	}
 }
 
-/*
-	TODO:
-	- split sema into the name-binding rpc-collection parts, vs the pgraph analysis parts
-	- merge AST and pgraph into a single module, they're interdependent anyways
-	- instead of extracting the pgraph owners, root them in their respective RPC nodes and do away with the unused table
-	- move code generation into its own module
-	- stages after the initial sema stage work solely on the table of RPCs (namely pgraph analysis and code generation)
-*/
+// TODO: move code generation into its own module
+// TODO: fix the const bug (need to touch pgraph, pgraph generation, type specifiers, and code generation)
 
 int main(int argc, char** argv)
 {
