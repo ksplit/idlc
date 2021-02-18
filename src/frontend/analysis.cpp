@@ -21,32 +21,31 @@ namespace idlc {
 	namespace {
 		// Remember: passed_type is quite slim, only a tag value and a pointer (16 bytes total)
 
-		passed_type generate_string_type(bool is_const);
-		passed_type generate_stem_type(const type_stem& node, bool is_const);
-		passed_type generate_array_type(const type_array& node, bool is_const);
+		passed_type generate_string_type();
+		passed_type generate_stem_type(const type_stem& node);
+		passed_type generate_array_type(const type_array& node);
 		node_ptr<value> generate_value(const type_spec& node);
 
-		passed_type generate_string_type(bool is_const)
+		passed_type generate_string_type()
 		{
 			return std::make_unique<null_terminated_array>(
-				std::make_unique<value>(primitive::ty_char, annotation::use_default),
-				is_const
+				std::make_unique<value>(primitive::ty_char, annotation::use_default, true) // TODO: assumes const
 			);
 		}
 
-		passed_type generate_stem_type(const type_stem& node, bool is_const)
+		passed_type generate_stem_type(const type_stem& node)
 		{
-			const auto visit = [is_const](auto&& item) -> passed_type
+			const auto visit = [](auto&& item) -> passed_type
 			{
 				using type = std::decay_t<decltype(item)>;
 				if constexpr (std::is_same_v<type, type_primitive>) {
 					return item;
 				}
 				else if constexpr (std::is_same_v<type, type_string>) {
-					return generate_string_type(is_const);
+					return generate_string_type();
 				}
 				else if constexpr (std::is_same_v<type, node_ref<type_array>>) {
-					return generate_array_type(*item, is_const);
+					return generate_array_type(*item);
 				}
 				else if constexpr (std::is_same_v<type, node_ref<type_proj>>) {
 					// Importantly, we defer the translation of projections, since we cannot know at this stage
@@ -64,27 +63,21 @@ namespace idlc {
 			return std::visit(visit, node);
 		}
 
-		passed_type generate_array_type(const type_array& node, bool is_const)
+		passed_type generate_array_type(const type_array& node)
 		{
-			const auto visit = [&node, is_const](auto&& item) -> passed_type
+			const auto visit = [&node](auto&& item) -> passed_type
 			{
 				using type = std::decay_t<decltype(item)>;
 				if constexpr (std::is_same_v<type, tok_kw_null>) {
-					return std::make_unique<null_terminated_array>(
-						generate_value(*node.element),
-						is_const
-					);
+					return std::make_unique<null_terminated_array>(generate_value(*node.element));
 				}
 				else if constexpr (std::is_same_v<type, unsigned>) {
-					std::cout << "static-sized arrays are not yet implemented\n";
+					std::cout << "Warning: static-sized arrays are not yet implemented\n";
 					std::terminate();
 				}
 				else if constexpr (std::is_same_v<type, ident>) {
-					return std::make_unique<dyn_array>(
-						generate_value(*node.element),
-						item,
-						is_const
-					);
+					std::cout << "Warning: dynamic-sized arrays are not yet fully supported\n";
+					return std::make_unique<dyn_array>(generate_value(*node.element), item);
 				}
 
 				std::terminate();
@@ -146,17 +139,19 @@ namespace idlc {
 		node_ptr<value> generate_value(const type_spec& node)
 		{
 			// TODO: finish const handling
-			auto type = generate_stem_type(*node.stem, node.is_const);
+			auto type = generate_stem_type(*node.stem);
+			bool is_const {node.is_const};
 			for (const auto& ptr_node : node.indirs) {
 				const auto annots = ptr_node->attrs;
 				const auto ptr_annots = annots & annotation::is_ptr;
 				const auto val_annots = annots & annotation::is_val;
-				auto field = std::make_unique<value>(std::move(type), val_annots);
-				type = std::make_unique<pointer>(std::move(field), ptr_annots, ptr_node->is_const);
+				auto field = std::make_unique<value>(std::move(type), val_annots, is_const);
+				type = std::make_unique<pointer>(std::move(field), ptr_annots);
+				is_const = ptr_node->is_const;
 			}
 
 			assert((node.attrs & annotation::is_val) == node.attrs);
-			auto field = std::make_unique<value>(std::move(type), node.attrs);
+			auto field = std::make_unique<value>(std::move(type), node.attrs, is_const);
 
 			return std::move(field);
 		}
@@ -329,7 +324,11 @@ namespace idlc {
 				if (!traverse(*this, node))
 					return false;
 				
+				if (node.referent->is_const)
+					m_specifier += " const";
+
 				m_specifier += "*";
+
 				return true;
 			}
 

@@ -43,24 +43,23 @@ namespace idlc {
 	struct value {
 		passed_type type;
 		annotation value_annots;
-		// FIXME: add const-ness here, drop from <<pointer>>
+		bool is_const;
 
 		std::string c_specifier;
 
-		value(passed_type&& type, annotation value_annots) :
+		value(passed_type&& type, annotation value_annots, bool is_const) :
 			type {std::move(type)},
 			value_annots {value_annots},
+			is_const {is_const},
 			c_specifier {}
 		{}
 	};
 
 	struct null_terminated_array {
 		node_ptr<value> element;
-		bool is_const; // referring to its elements
 
-		null_terminated_array(node_ptr<value> element, bool is_const) :
-			element {std::move(element)},
-			is_const {is_const}
+		null_terminated_array(node_ptr<value> element) :
+			element {std::move(element)}
 		{}
 	};
 
@@ -72,24 +71,20 @@ namespace idlc {
 	struct dyn_array {
 		node_ptr<value> element;
 		ident size;
-		bool is_const; // referring to its elements
 
-		dyn_array(node_ptr<value> element, ident size, bool is_const) :
+		dyn_array(node_ptr<value> element, ident size) :
 			element {std::move(element)},
-			size {size},
-			is_const {is_const}
+			size {size}
 		{}
 	};
 
 	struct pointer {
 		node_ptr<value> referent;
 		annotation pointer_annots;
-		bool is_const;
 
-		pointer(node_ptr<value> referent, annotation pointer_annots, bool is_const) :
+		pointer(node_ptr<value> referent, annotation pointer_annots) :
 			referent {std::move(referent)},
-			pointer_annots {pointer_annots},
-			is_const {is_const}
+			pointer_annots {pointer_annots}
 		{}
 	};
 
@@ -97,12 +92,10 @@ namespace idlc {
 	struct static_void_ptr {
 		node_ptr<value> referent;
 		annotation pointer_annots;
-		bool is_const;
 
-		static_void_ptr(node_ptr<value> referent, annotation pointer_annots, bool is_const) :
+		static_void_ptr(node_ptr<value> referent, annotation pointer_annots) :
 			referent {std::move(referent)},
-			pointer_annots {pointer_annots},
-			is_const {is_const}
+			pointer_annots {pointer_annots}
 		{}
 	};
 

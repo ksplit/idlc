@@ -455,7 +455,7 @@ indirection = attrs:(val:ptr_attrs tok_space? {{ value = val; }})? tok_star is_c
 	value = share(indirection {to_int<annotation>(attrs), is_c.getValue()});
 }}
 
-type_spec = is_c:(tok_kw_const tok_space)? stem:type_stem indirs:(tok_space? indirection)* val_annotation:(tok_space? val_attrs)? {{
+type_spec = is_c:(tok_kw_const tok_space {{	value = $1; }})? stem:type_stem indirs:(tok_space? indirection)* val_annotation:(tok_space? val_attrs)? {{
 	auto& ivals = indirs.getValues();
 	ref_vec<indirection> a {};
 	a.reserve(ivals.size());

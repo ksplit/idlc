@@ -61,19 +61,19 @@ namespace idlc {
 			bool visit_projection(projection& node)
 			{
 				m_stream << "void " << node.arg_marshal_visitor
-					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
+					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << " const*);\n\n";
 
 				m_stream << "void " << node.arg_unmarshal_visitor
 					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 
 				m_stream << "void " << node.arg_remarshal_visitor
-					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
+					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << " const*);\n\n";
 					
 				m_stream << "void " << node.arg_unremarshal_visitor
 					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 					
 				m_stream << "void " << node.ret_marshal_visitor
-					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
+					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << " const*);\n\n";
 					
 				m_stream << "void " << node.ret_unmarshal_visitor
 					<< "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
@@ -217,10 +217,30 @@ namespace idlc {
 
 			bool visit_null_terminated_array(null_terminated_array& node)
 			{
+				const auto star = node.element->is_const ? " const*" : "*";
+				const auto ptr_type = concat(node.element->c_specifier, star);
+
 				stream() << "int i;\n";
-				stream() << node.element->c_specifier << "* array = " << marshaled_variable() << ";\n";
+				stream() << ptr_type << " array = "	<< marshaled_variable() << ";\n";
 				stream() << "for (i = 0; array[i]; ++i) {\n";
-				stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
+				stream() << "\t" << ptr_type << " element = &array[i];\n";
+				if (!marshal("element", node))
+					return false;
+
+				stream() << "}\n\n";
+
+				return true;
+			}
+
+			bool visit_dyn_array(dyn_array& node)
+			{
+				const auto star = node.element->is_const ? " const*" : "*";
+				const auto ptr_type = concat(node.element->c_specifier, star);
+
+				stream() << "int i;\n";
+				stream() << ptr_type << " array = "	<< marshaled_variable() << ";\n";
+				stream() << "for (i = 0; array" << node.size << "; ++i) {\n";
+				stream() << "\t" << ptr_type << " element = &array[i];\n";
 				if (!marshal("element", node))
 					return false;
 
@@ -275,7 +295,7 @@ namespace idlc {
 			{
 				stream() << "*" << marshaled_variable() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
 				stream() << "if (*" << marshaled_variable() << ") {\n";
-				if (!marshal("*" + marshaled_variable(), node))
+				if (!marshal(concat("(", node.referent->c_specifier, "*)*", marshaled_variable()), node))
 					return false;
 
 				stream() << "}\n\n";
@@ -288,6 +308,20 @@ namespace idlc {
 				stream() << "int i;\n";
 				stream() << node.element->c_specifier << "* array = " << marshaled_variable() << ";\n";
 				stream() << "for (i = 0; array[i]; ++i) {\n";
+				stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
+				if (!marshal("element", node))
+					return false;
+
+				stream() << "}\n\n";
+
+				return true;
+			}
+
+			bool visit_dyn_array(dyn_array& node)
+			{
+				stream() << "int i;\n";
+				stream() << node.element->c_specifier << "* array = " << marshaled_variable() << ";\n";
+				stream() << "for (i = 0; i < " << node.size << "; ++i) {\n";
 				stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
 				if (!marshal("element", node))
 					return false;
@@ -375,14 +409,20 @@ namespace idlc {
 			return std::make_tuple(roots, "ret_ptr");
 		}
 
-		auto generate_root_ptrs(projection& projection, absl::string_view source_var, std::ostream& os)
+		auto generate_root_ptrs(
+			projection& projection,
+			absl::string_view source_var,
+			bool is_const_context,
+			std::ostream& os)
 		{
 			std::vector<std::string> roots;
 			roots.reserve(projection.fields.size());
 			for (const auto& [name, type] : projection.fields) {
-				const auto& specifier = type->c_specifier;
+				const auto specifier = concat(type->c_specifier, is_const_context ? " const*" : "*");
 				const auto ptr_name = concat(name, "_ptr");
-				os << "\t" << specifier << "* " << ptr_name << " = &" << source_var << "->" << name << ";\n";
+				os << "\t" << specifier << " " << ptr_name << " = &" << source_var << "->"
+					<< name << ";\n";
+
 				roots.emplace_back(std::move(ptr_name));
 			}
 
@@ -571,9 +611,9 @@ namespace idlc {
 		void generate_arg_marshal_visitor(std::ostream& file, projection& node)
 		{
 			file << "void " << node.arg_marshal_visitor
-					<< "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
+					<< "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << " const* ptr)\n{\n";
 
-			const auto roots = generate_root_ptrs(node, "ptr", file);
+			const auto roots = generate_root_ptrs(node, "ptr", true, file);
 			const auto n_fields = node.fields.size();
 			for (gsl::index i {}; i < n_fields; ++i) {
 				arg_marshal_walk walk {file, roots.at(i), 1};
@@ -588,7 +628,7 @@ namespace idlc {
 			file << "void " << node.arg_unmarshal_visitor
 					<< "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
 
-			const auto roots = generate_root_ptrs(node, "ptr", file);
+			const auto roots = generate_root_ptrs(node, "ptr", false, file);
 			const auto n_fields = node.fields.size();
 			for (gsl::index i {}; i < n_fields; ++i) {
 				arg_unmarshal_walk walk {file, roots.at(i), 1};
@@ -601,7 +641,7 @@ namespace idlc {
 		void generate_arg_remarshal_visitor(std::ostream& file, projection& node)
 		{
 			file << "void " << node.arg_remarshal_visitor
-					<< "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
+					<< "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << " const* ptr)\n{\n";
 
 				
 			file << "}\n\n";
@@ -619,7 +659,7 @@ namespace idlc {
 		void generate_ret_marshal_visitor(std::ostream& file, projection& node)
 		{
 			file << "void " << node.ret_marshal_visitor
-					<< "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
+					<< "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << " const* ptr)\n{\n";
 
 				
 			file << "}\n\n";
@@ -689,7 +729,11 @@ namespace idlc {
 }
 
 // TODO: move code generation into its own module
+// TODO: add static_void_ptr syntax (low priority)
+// TODO: dynamic arrays, and how they must be ordered relative to their size field (which must be adjacent!)
 // TODO: fix the const bug (need to touch pgraph, pgraph generation, type specifiers, and code generation)
+// TODO: ndo_start_xmit uncovered an issue with enum promotion not being applicable to function pointers, i.e. the IDL
+// needs a concept of enums (so does the pgraph, etc.)
 
 int main(int argc, char** argv)
 {
