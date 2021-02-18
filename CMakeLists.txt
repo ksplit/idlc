@@ -26,6 +26,7 @@ add_executable(
 	"src/frontend/analysis.cpp"
 	"src/frontend/name_binding.cpp"
 	"src/string_heap.cpp"
+	"src/generation.cpp"
 	"src/main.cpp"
 )
 

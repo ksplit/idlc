@@ -1,6 +1,9 @@
 #ifndef IDLC_SEMA_ANALYSIS_H
 #define IDLC_SEMA_ANALYSIS_H
 
+#include <optional>
+#include <vector>
+
 #include <gsl/gsl>
 
 #include "../string_heap.h"
@@ -35,8 +38,7 @@ namespace idlc {
 	using rpc_vec = std::vector<gsl::not_null<rpc_def*>>;
 	using rpc_vec_view = gsl::span<const gsl::not_null<rpc_def*>>;
 
-	rpc_vec get_rpcs(file& root);
-	bool generate_pgraphs(rpc_vec_view rpcs);
+	std::optional<rpc_vec> geerate_rpc_pgraphs(file& root);
 }
 
 #endif

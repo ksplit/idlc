@@ -3,6 +3,7 @@
 #include <cassert>
 #include <exception>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -208,7 +209,7 @@ namespace idlc {
 				return true;
 			}
 
-			auto get()
+			auto& get()
 			{
 				return m_defs;
 			}
@@ -298,7 +299,7 @@ namespace idlc {
 
 		class c_specifier_walk : public pgraph_walk<c_specifier_walk> {
 		public:
-			auto get() const
+			const auto& get() const
 			{
 				return m_specifier;
 			}
@@ -523,19 +524,26 @@ namespace idlc {
 
 			return true;
 		}
+
+		bool generate_pgraphs(rpc_vec_view rpcs)
+		{
+			create_pgraphs_from_types(rpcs);
+			return annotate_pgraphs(rpcs);
+		}
 	}
 }
 
-bool idlc::generate_pgraphs(rpc_vec_view rpcs)
-{
-	create_pgraphs_from_types(rpcs);
-	return annotate_pgraphs(rpcs);
-}
 
-idlc::rpc_vec idlc::get_rpcs(file& root)
+
+std::optional<idlc::rpc_vec> idlc::geerate_rpc_pgraphs(file& root)
 {
 	rpc_collection_walk walk {};
 	const auto succeeded = walk.visit_file(root);
 	assert(succeeded);
-	return walk.get();
+
+	auto& rpcs = walk.get();
+	if (!generate_pgraphs(rpcs))
+		return std::nullopt;
+
+	return std::make_optional(std::move(rpcs));
 }
