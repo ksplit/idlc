@@ -9,6 +9,8 @@
 #include <variant>
 
 namespace idlc {
+	// TODO: treat rpc_def as a pgraph node, logic to visit all pgraphs in an rpc is obnoxious and repetitive
+
 	template<typename walk>
 	class pgraph_traverse {
 	public:

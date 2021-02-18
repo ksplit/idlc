@@ -40,13 +40,13 @@ namespace idlc {
 
             m_stream << "void " << node.arg_remarshal_visitor
                 << "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << " const*);\n\n";
-                
+
             m_stream << "void " << node.arg_unremarshal_visitor
                 << "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
-                
+
             m_stream << "void " << node.ret_marshal_visitor
                 << "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << " const*);\n\n";
-                
+
             m_stream << "void " << node.ret_unmarshal_visitor
                 << "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 
@@ -112,7 +112,7 @@ namespace idlc {
             m_indent_level {level}
         {}
 
-    protected:		
+    protected:
         // identifier of the variable that points to what we're currently marshaling
         const auto& subject()
         {
@@ -209,7 +209,7 @@ namespace idlc {
                 return traverse(*this, node);
             }
 
-            return true;				
+            return true;
         }
     };
 
@@ -373,7 +373,7 @@ namespace idlc {
             if (flags_set(node.value_annots, annotation::out))
                 return traverse(*this, node);
 
-            return true;				
+            return true;
         }
     };
 
@@ -537,7 +537,7 @@ namespace idlc {
             if (flags_set(node.value_annots, annotation::out))
                 return traverse(*this, node);
 
-            return true;				
+            return true;
         }
     };
 
@@ -721,7 +721,7 @@ namespace idlc {
             ret_unmarshal.visit_value(*rpc.ret_pgraph);
         }
 
-        os << (rpc.ret_pgraph ? concat("\treturn ret;\n") : ""); 
+        os << (rpc.ret_pgraph ? concat("\treturn ret;\n") : "");
     }
 
     void generate_callee_glue(rpc_def& rpc, std::ostream& os)
@@ -914,7 +914,7 @@ namespace idlc {
             arg_remarshal_walk walk {file, name, 1};
             walk.visit_value(*type);
         }
-            
+
         file << "}\n\n";
     }
 
@@ -929,7 +929,7 @@ namespace idlc {
             arg_unremarshal_walk walk {file, name, 1};
             walk.visit_value(*type);
         }
-            
+
         file << "}\n\n";
     }
 
@@ -944,7 +944,7 @@ namespace idlc {
             ret_marshal_walk walk {file, name, 1};
             walk.visit_value(*type);
         }
-            
+
         file << "}\n\n";
     }
 
@@ -959,7 +959,7 @@ namespace idlc {
             ret_unmarshal_walk walk {file, name, 1};
             walk.visit_value(*type);
         }
-            
+
         file << "}\n\n";
     }
 
@@ -1007,7 +1007,7 @@ namespace idlc {
         for (const auto& rpc : rpcs) {
             if (rpc->ret_pgraph)
                 walk.visit_value(*rpc->ret_pgraph);
-            
+
             for (const auto& arg : rpc->arg_pgraphs)
                 walk.visit_value(*arg);
         }
@@ -1015,14 +1015,149 @@ namespace idlc {
         return projs;
     }
 
+    void populate_c_type_specifiers(value& node);
+
+    class c_specifier_walk : public pgraph_walk<c_specifier_walk> {
+    public:
+        const auto& get() const
+        {
+            return m_specifier;
+        }
+
+        bool visit_value(value& node)
+        {
+            if (!traverse(*this, node))
+                return false;
+
+            node.c_specifier = m_specifier;
+            return true;
+        }
+
+        bool visit_projection(projection& node)
+        {
+            m_specifier = "struct ";
+            m_specifier += node.real_name;
+            for (const auto& [name, field] : node.fields)
+                populate_c_type_specifiers(*field);
+
+            return true;
+        }
+
+        bool visit_pointer(pointer& node)
+        {
+            if (!traverse(*this, node))
+                return false;
+
+            if (node.referent->is_const)
+                m_specifier += " const";
+
+            m_specifier += "*";
+
+            return true;
+        }
+
+        bool visit_rpc_ptr(rpc_ptr& node)
+        {
+            m_specifier += node.definition->typedef_id;
+            return true;
+        }
+
+        bool visit_primitive(primitive node)
+        {
+            switch (node) {
+            case primitive::ty_bool:
+                m_specifier = "bool";
+                break;
+
+            case primitive::ty_char:
+                m_specifier = "char";
+                break;
+
+            case primitive::ty_schar:
+                m_specifier = "signed char";
+                break;
+
+            case primitive::ty_uchar:
+                m_specifier = "unsigned char";
+                break;
+
+            case primitive::ty_short:
+                m_specifier = "short";
+                break;
+
+            case primitive::ty_ushort:
+                m_specifier = "unsigned short";
+                break;
+
+            case primitive::ty_int:
+                m_specifier = "int";
+                break;
+
+            case primitive::ty_uint:
+                m_specifier = "unsigned int";
+                break;
+
+            case primitive::ty_long:
+                m_specifier = "long";
+                break;
+
+            case primitive::ty_ulong:
+                m_specifier = "unsigned long";
+                break;
+
+            case primitive::ty_llong:
+                m_specifier = "long long";
+                break;
+
+            case primitive::ty_ullong:
+                m_specifier = "unsigned long long";
+                break;
+
+            default:
+                std::cout << "Debug: Unhandled primitive was " << static_cast<std::uintptr_t>(node) << "\n";
+                std::terminate();
+            }
+
+            return true;
+        }
+
+    private:
+        std::string m_specifier {};
+    };
+
+    // NOTE: this *does not* walk into projections, and should only be applied to
+    // variable types (fields or arguments) and return types, as done in the lowering pass
+    void populate_c_type_specifiers(value& node)
+    {
+        c_specifier_walk type_walk {};
+        const auto succeeded = type_walk.visit_value(node);
+        assert(succeeded);
+    }
+
+    void populate_c_type_specifiers(rpc_def& node)
+    {
+        if (node.ret_pgraph)
+            populate_c_type_specifiers(*node.ret_pgraph);
+        
+        for (const auto& arg : node.arg_pgraphs)
+            populate_c_type_specifiers(*arg);
+    }
+
+    void populate_c_type_specifiers(rpc_vec_view rpcs)
+    {
+        for (const auto& rpc : rpcs)
+            populate_c_type_specifiers(*rpc);
+    }
+
     void generate(rpc_vec_view rpcs)
     {
         const auto projections = idlc::get_projections(rpcs);
-        idlc::create_function_strings(rpcs);
-        idlc::generate_common_header(rpcs, projections);
-        idlc::generate_common_source(projections);
-        idlc::generate_caller(rpcs);
-        idlc::generate_callee(rpcs);
-        idlc::generate_linker_script(rpcs);
+        populate_c_type_specifiers(rpcs);
+        create_function_strings(rpcs);
+        generate_common_header(rpcs, projections);
+        generate_common_source(projections);
+        generate_caller(rpcs);
+        generate_callee(rpcs);
+        generate_linker_script(rpcs);
     }
 }

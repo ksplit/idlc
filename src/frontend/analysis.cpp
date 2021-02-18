@@ -282,120 +282,6 @@ namespace idlc {
 			annotation m_default_with {};
 		};
 
-		class c_specifier_walk : public pgraph_walk<c_specifier_walk> {
-		public:
-			const auto& get() const
-			{
-				return m_specifier;
-			}
-
-			bool visit_value(value& node)
-			{
-				if (!traverse(*this, node))
-					return false;
-
-				node.c_specifier = m_specifier;		
-				return true;
-			}
-
-			bool visit_projection(projection& node)
-			{
-				m_specifier = "struct ";
-				m_specifier += node.real_name;				
-				return true;
-			}
-
-			bool visit_pointer(pointer& node)
-			{
-				if (!traverse(*this, node))
-					return false;
-				
-				if (node.referent->is_const)
-					m_specifier += " const";
-
-				m_specifier += "*";
-
-				return true;
-			}
-
-			bool visit_rpc_ptr(rpc_ptr& node)
-			{
-				m_specifier += node.definition->typedef_id;
-				return true;
-			}
-
-			bool visit_primitive(primitive node)
-			{
-				switch (node) {
-				case primitive::ty_bool:
-					m_specifier = "bool";
-					break;
-
-				case primitive::ty_char:
-					m_specifier = "char";
-					break;
-
-				case primitive::ty_schar:
-					m_specifier = "signed char";
-					break;
-
-				case primitive::ty_uchar:
-					m_specifier = "unsigned char";
-					break;
-
-				case primitive::ty_short:
-					m_specifier = "short";
-					break;
-
-				case primitive::ty_ushort:
-					m_specifier = "unsigned short";
-					break;
-
-				case primitive::ty_int:
-					m_specifier = "int";
-					break;
-
-				case primitive::ty_uint:
-					m_specifier = "unsigned int";
-					break;
-
-				case primitive::ty_long:
-					m_specifier = "long";
-					break;
-
-				case primitive::ty_ulong:
-					m_specifier = "unsigned long";
-					break;
-
-				case primitive::ty_llong:
-					m_specifier = "long long";
-					break;
-
-				case primitive::ty_ullong:
-					m_specifier = "unsigned long long";
-					break;
-
-				default:
-					std::cout << "Debug: Unhandled primitive was " << static_cast<std::uintptr_t>(node) << "\n";
-					std::terminate();
-				}
-
-				return true;
-			}
-
-		private:
-			std::string m_specifier {};
-		};
-
-		// NOTE: this *does not* walk into projections, and should only be applied to
-		// variable types (fields or arguments) and return types, as done in the lowering pass
-		void populate_c_type_specifiers(value& node)
-		{
-			c_specifier_walk type_walk {};
-			const auto succeeded = type_walk.visit_value(node);
-			assert(succeeded);
-		}
-
 		bool annotate_pgraph(value& node, annotation default_with)
 		{
 			annotation_walk annotator {default_with};
@@ -426,7 +312,7 @@ namespace idlc {
 			return instance_name;
 		}
 
-		passed_type instantiate_projection(proj_def& node, std::shared_ptr<projection>& cached, annotation default_with)
+		passed_type instantiate_projection(proj_def& node, node_ptr<projection>& cached, annotation default_with)
 		{
 			if (cached) {
 				// NOTE: It's important that we don't try and modify the cached copy, as it could be a partial one
@@ -442,11 +328,6 @@ namespace idlc {
 				std::cout << "Error: could not annotate projection in this context\n";
 				std::terminate(); // TODO: don't like the std::terminate here
 			}
-
-			// TODO: should this really be here?
-			// We make sure we perform type specifier assignment *after* the projection has been fully completed
-			for (const auto& [name, field] : pgraph->fields)
-				populate_c_type_specifiers(*field);
 
 			return pgraph;
 		}
@@ -477,21 +358,17 @@ namespace idlc {
 			if (rpc.ret_type) {
 				if (!annotate_pgraph(*rpc.ret_pgraph, annotation::out))
 					return false;
-				
-				populate_c_type_specifiers(*rpc.ret_pgraph);
 			}
 
 			for (const auto& pgraph : rpc.arg_pgraphs) {
 				if (!annotate_pgraph(*pgraph, annotation::in))
 					return false;
-
-				populate_c_type_specifiers(*pgraph);
 			}
 
 			return true;
 		}
 
-		bool annotate_pgraphs(gsl::span<const gsl::not_null<rpc_def*>> rpcs)
+		bool annotate_pgraphs(rpc_vec_view rpcs)
 		{
 			for (const auto& rpc : rpcs) {
 				if (!annotate_pgraphs(*rpc))
