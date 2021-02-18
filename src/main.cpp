@@ -295,8 +295,19 @@ namespace idlc {
 			{
 				stream() << "*" << marshaled_variable() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
 				stream() << "if (*" << marshaled_variable() << ") {\n";
-				if (!marshal(concat("(", node.referent->c_specifier, "*)*", marshaled_variable()), node))
-					return false;
+
+				if (node.referent->is_const) {
+					const auto type = concat(node.referent->c_specifier, "*");
+					stream() << "\t" << type << " writable = "
+						<< concat("(", type, ")*", marshaled_variable()) << ";\n";
+
+					if (!marshal("writable", node))
+						return false;
+				}
+				else {
+					if (!marshal(concat("*", marshaled_variable()), node))
+						return false;
+				}
 
 				stream() << "}\n\n";
 
@@ -400,9 +411,8 @@ namespace idlc {
 				roots.emplace_back(std::move(ptr_name), pgraph.get());
 			}
 
-			// TODO: somehow return actual retval pointer name
 			if (rpc.ret_pgraph) {
-				os << "\t" << rpc.ret_pgraph->c_specifier << " ret;\n";
+				os << "\t" << rpc.ret_pgraph->c_specifier << " ret = 0;\n";
 				os << "\t" << rpc.ret_pgraph->c_specifier << "* ret_ptr = &ret;\n";
 			}
 
@@ -462,7 +472,7 @@ namespace idlc {
 				ret_unmarshal.visit_value(*rpc.ret_pgraph);
 			}
 
-			os << (rpc.ret_pgraph ? "\treturn 0;\n" : ""); 
+			os << (rpc.ret_pgraph ? concat("\treturn ret;\n") : ""); 
 		}
 
 		void generate_callee_glue(rpc_def& rpc, std::ostream& os)
