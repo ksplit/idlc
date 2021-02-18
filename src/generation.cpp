@@ -69,7 +69,7 @@ namespace idlc {
         file << "#define glue_marshal(msg, value) (void)(value) // TODO\n";
         file << "#define glue_unmarshal(msg, type) (type)0xdeadbeef // TODO\n";
         file << "#define glue_unmarshal_rpc_ptr(msg, trmp_id) 0 // TODO\n";
-        file << "#define glue_look_ahead(msg) 0 // TODO\n\n";
+        file << "#define glue_look_ahead(msg) 0 // TODO\n";
         file << "\n";
         file << "enum RPC_ID {\n";
         for (const auto& rpc : rpcs) {
@@ -309,6 +309,71 @@ namespace idlc {
         arg_remarshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
             marshal_walk {os, holder, level}
         {}
+
+        // TODO: lowering *needs* to compute a size-of-field expression for alloc support
+
+        bool visit_pointer(pointer& node)
+        {
+            if (flags_set(node.pointer_annots, annotation::bind_caller))
+                stream() << "glue_marshal_shadow(msg, *" << subject() << ");\n";
+            else
+                stream() << "glue_marshal(msg, *" << subject() << ");\n";
+
+            stream() << "if (*" << subject() << ") {\n";
+            marshal("*" + subject(), node);
+            stream() << "}\n\n";
+
+            return true;
+        }
+
+        bool visit_primitive(primitive node)
+        {
+            stream() << "glue_marshal(msg, *" << subject() << ");\n";
+            return true;
+        }
+
+        bool visit_rpc_ptr(rpc_ptr& node)
+        {
+            stream() << "glue_marshal(msg, *" << subject() << ");\n";
+            return true;
+        }
+
+        bool visit_projection(projection& node)
+        {
+            stream() << node.arg_remarshal_visitor << "(msg, " << subject() << ");\n";
+            return true;
+        }
+
+        bool visit_null_terminated_array(null_terminated_array& node)
+        {
+            const auto star = node.element->is_const ? " const*" : "*";
+            const auto ptr_type = concat(node.element->c_specifier, star);
+
+            stream() << "size_t i, len;\n";
+            stream() << ptr_type << " array = "	<< subject() << ";\n";
+            stream() << "for (len = 0; array[len]; ++len);\n";
+            stream() << "glue_marshal(msg, len);\n";
+            stream() << "for (i = 0; i < len; ++i) {\n";
+            stream() << "\t" << ptr_type << " element = &array[i];\n";
+            if (!marshal("element", node))
+                return false;
+
+            stream() << "}\n\n";
+
+            return true;
+        }
+
+        bool visit_value(value& node)
+        {
+            if (flags_set(node.value_annots, annotation::out)) {
+                std::cout << "Marshaling output argument\n";
+                return traverse(*this, node);
+            }
+
+            std::cout << "Skipped non-output argument for marshaling\n";
+
+            return true;				
+        }
     };
 
     class arg_unremarshal_walk : public marshal_walk<arg_unremarshal_walk> {
@@ -316,6 +381,98 @@ namespace idlc {
         arg_unremarshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
             marshal_walk {os, holder, level}
         {}
+
+        bool visit_value(value& node)
+        {
+            if (flags_set(node.value_annots, annotation::out)) {
+                std::cout << "Unmarshaling output argument\n";
+                const auto old = m_c_specifier;
+                m_c_specifier = node.c_specifier;
+                if (!traverse(*this, node))
+                    return false;
+
+                m_c_specifier = old;
+            }
+            
+            std::cout << "Skipped non-output argument for unmarshaling\n";
+
+            return true;
+        }
+
+        bool visit_primitive(primitive node)
+        {
+            stream() << "*" << subject() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
+            return true;
+        }
+
+        bool visit_pointer(pointer& node)
+        {
+            stream() << "*" << subject() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
+            stream() << "if (*" << subject() << ") {\n";
+
+            if (node.referent->is_const) {
+                const auto type = concat(node.referent->c_specifier, "*");
+                stream() << "\t" << type << " writable = "
+                    << concat("(", type, ")*", subject()) << ";\n";
+
+                if (!marshal("writable", node))
+                    return false;
+            }
+            else {
+                if (!marshal(concat("*", subject()), node))
+                    return false;
+            }
+
+            stream() << "}\n\n";
+
+            return true;
+        }
+
+        bool visit_null_terminated_array(null_terminated_array& node)
+        {
+            stream() << "size_t i, len;\n";
+            stream() << node.element->c_specifier << "* array = " << subject() << ";\n";
+            stream() << "len = glue_unmarshal(msg, size_t);\n";
+            stream() << "for (i = 0; i < len; ++i) {\n";
+            stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
+            if (!marshal("element", node))
+                return false;
+
+            stream() << "}\n\n";
+
+            return true;
+        }
+
+        bool visit_dyn_array(dyn_array& node)
+        {
+            stream() << "int i;\n";
+            stream() << node.element->c_specifier << "* array = " << subject() << ";\n";
+            stream() << "for (i = 0; i < " << node.size << "; ++i) {\n";
+            stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
+            if (!marshal("element", node))
+                return false;
+
+            stream() << "}\n\n";
+
+            return true;
+        }
+
+        bool visit_rpc_ptr(rpc_ptr& node)
+        {
+            stream() << "*" << subject() << " = glue_unmarshal_rpc_ptr(msg, " << node.definition->trmp_id
+                << ");\n";
+
+            return true;
+        }
+
+        bool visit_projection(projection& node)
+        {
+            stream() << node.arg_unremarshal_visitor << "(msg, " << subject() << ");\n";
+            return true;
+        }
+
+    private:
+        absl::string_view m_c_specifier {};
     };
 
     class ret_marshal_walk : public marshal_walk<ret_marshal_walk> {
@@ -323,6 +480,71 @@ namespace idlc {
         ret_marshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
             marshal_walk {os, holder, level}
         {}
+
+        // TODO: lowering *needs* to compute a size-of-field expression for alloc support
+
+        bool visit_pointer(pointer& node)
+        {
+            if (flags_set(node.pointer_annots, annotation::bind_caller))
+                stream() << "glue_marshal_shadow(msg, *" << subject() << ");\n";
+            else
+                stream() << "glue_marshal(msg, *" << subject() << ");\n";
+
+            stream() << "if (*" << subject() << ") {\n";
+            marshal("*" + subject(), node);
+            stream() << "}\n\n";
+
+            return true;
+        }
+
+        bool visit_primitive(primitive node)
+        {
+            stream() << "glue_marshal(msg, *" << subject() << ");\n";
+            return true;
+        }
+
+        bool visit_rpc_ptr(rpc_ptr& node)
+        {
+            stream() << "glue_marshal(msg, *" << subject() << ");\n";
+            return true;
+        }
+
+        bool visit_projection(projection& node)
+        {
+            stream() << node.ret_marshal_visitor << "(msg, " << subject() << ");\n";
+            return true;
+        }
+
+        bool visit_null_terminated_array(null_terminated_array& node)
+        {
+            const auto star = node.element->is_const ? " const*" : "*";
+            const auto ptr_type = concat(node.element->c_specifier, star);
+
+            stream() << "size_t i, len;\n";
+            stream() << ptr_type << " array = "	<< subject() << ";\n";
+            stream() << "for (len = 0; array[len]; ++len);\n";
+            stream() << "glue_marshal(msg, len);\n";
+            stream() << "for (i = 0; i < len; ++i) {\n";
+            stream() << "\t" << ptr_type << " element = &array[i];\n";
+            if (!marshal("element", node))
+                return false;
+
+            stream() << "}\n\n";
+
+            return true;
+        }
+
+        bool visit_value(value& node)
+        {
+            if (flags_set(node.value_annots, annotation::out)) {
+                std::cout << "Marshaling output field\n";
+                return traverse(*this, node);
+            }
+
+            std::cout << "Skipped non-output field for marshaling\n";
+
+            return true;				
+        }
     };
 
     class ret_unmarshal_walk : public marshal_walk<ret_unmarshal_walk> {
@@ -330,6 +552,98 @@ namespace idlc {
         ret_unmarshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
             marshal_walk {os, holder, level}
         {}
+
+        bool visit_value(value& node)
+        {
+            if (flags_set(node.value_annots, annotation::out)) {
+                std::cout << "Unmarshaling output field\n";
+                const auto old = m_c_specifier;
+                m_c_specifier = node.c_specifier;
+                if (!traverse(*this, node))
+                    return false;
+
+                m_c_specifier = old;
+            }
+            
+            std::cout << "Skipped non-output field for unmarshaling\n";
+
+            return true;
+        }
+
+        bool visit_primitive(primitive node)
+        {
+            stream() << "*" << subject() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
+            return true;
+        }
+
+        bool visit_pointer(pointer& node)
+        {
+            stream() << "*" << subject() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
+            stream() << "if (*" << subject() << ") {\n";
+
+            if (node.referent->is_const) {
+                const auto type = concat(node.referent->c_specifier, "*");
+                stream() << "\t" << type << " writable = "
+                    << concat("(", type, ")*", subject()) << ";\n";
+
+                if (!marshal("writable", node))
+                    return false;
+            }
+            else {
+                if (!marshal(concat("*", subject()), node))
+                    return false;
+            }
+
+            stream() << "}\n\n";
+
+            return true;
+        }
+
+        bool visit_null_terminated_array(null_terminated_array& node)
+        {
+            stream() << "size_t i, len;\n";
+            stream() << node.element->c_specifier << "* array = " << subject() << ";\n";
+            stream() << "len = glue_unmarshal(msg, size_t);\n";
+            stream() << "for (i = 0; i < len; ++i) {\n";
+            stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
+            if (!marshal("element", node))
+                return false;
+
+            stream() << "}\n\n";
+
+            return true;
+        }
+
+        bool visit_dyn_array(dyn_array& node)
+        {
+            stream() << "int i;\n";
+            stream() << node.element->c_specifier << "* array = " << subject() << ";\n";
+            stream() << "for (i = 0; i < " << node.size << "; ++i) {\n";
+            stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
+            if (!marshal("element", node))
+                return false;
+
+            stream() << "}\n\n";
+
+            return true;
+        }
+
+        bool visit_rpc_ptr(rpc_ptr& node)
+        {
+            stream() << "*" << subject() << " = glue_unmarshal_rpc_ptr(msg, " << node.definition->trmp_id
+                << ");\n";
+
+            return true;
+        }
+
+        bool visit_projection(projection& node)
+        {
+            stream() << node.ret_unmarshal_visitor << "(msg, " << subject() << ");\n";
+            return true;
+        }
+
+    private:
+        absl::string_view m_c_specifier {};
     };
 
     /*
@@ -603,6 +917,12 @@ namespace idlc {
         file << "void " << node.arg_remarshal_visitor
                 << "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << " const* ptr)\n{\n";
 
+        const auto roots = generate_root_ptrs(file, node, "ptr", annotation::out, true);
+        const auto n_fields = node.fields.size();
+        for (const auto& [name, type] : roots) {
+            arg_remarshal_walk walk {file, name, 1};
+            walk.visit_value(*type);
+        }
             
         file << "}\n\n";
     }
@@ -612,6 +932,12 @@ namespace idlc {
         file << "void " << node.arg_unremarshal_visitor
                 << "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
 
+        const auto roots = generate_root_ptrs(file, node, "ptr", annotation::out, false);
+        const auto n_fields = node.fields.size();
+        for (const auto& [name, type] : roots) {
+            arg_unremarshal_walk walk {file, name, 1};
+            walk.visit_value(*type);
+        }
             
         file << "}\n\n";
     }
@@ -621,6 +947,12 @@ namespace idlc {
         file << "void " << node.ret_marshal_visitor
                 << "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << " const* ptr)\n{\n";
 
+        const auto roots = generate_root_ptrs(file, node, "ptr", annotation::out, true);
+        const auto n_fields = node.fields.size();
+        for (const auto& [name, type] : roots) {
+            ret_marshal_walk walk {file, name, 1};
+            walk.visit_value(*type);
+        }
             
         file << "}\n\n";
     }
@@ -630,6 +962,12 @@ namespace idlc {
         file << "void " << node.ret_unmarshal_visitor
                 << "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
 
+        const auto roots = generate_root_ptrs(file, node, "ptr", annotation::out, false);
+        const auto n_fields = node.fields.size();
+        for (const auto& [name, type] : roots) {
+            ret_unmarshal_walk walk {file, name, 1};
+            walk.visit_value(*type);
+        }
             
         file << "}\n\n";
     }
