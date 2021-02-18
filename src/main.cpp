@@ -389,13 +389,15 @@ namespace idlc {
 		auto generate_root_ptrs(rpc_def& rpc, std::ostream& os)
 		{
 			const auto n_args = rpc.arg_pgraphs.size();
-			std::vector<std::string> roots(n_args);
+			std::vector<std::tuple<std::string, value*>> roots;
+			roots.reserve(n_args);
 			for (gsl::index i {}; i < n_args; ++i) {
-				const auto name = rpc.arguments->at(i)->name;
-				const auto specifier = rpc.arg_pgraphs.at(i)->c_specifier;
+				const auto& name = rpc.arguments->at(i)->name;
+				const auto& pgraph = rpc.arg_pgraphs.at(i);
+				const auto& specifier = pgraph->c_specifier;
 				const auto ptr_name = concat(name, "_ptr");
 				os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
-				roots.at(i) = std::move(ptr_name);
+				roots.emplace_back(std::move(ptr_name), pgraph.get());
 			}
 
 			// TODO: somehow return actual retval pointer name
@@ -410,20 +412,24 @@ namespace idlc {
 		}
 
 		auto generate_root_ptrs(
+			std::ostream& os,
 			projection& projection,
 			absl::string_view source_var,
-			bool is_const_context,
-			std::ostream& os)
+			annotation context,
+			bool is_const_context)
 		{
-			std::vector<std::string> roots;
+			std::vector<std::tuple<std::string, value*>> roots;
 			roots.reserve(projection.fields.size());
 			for (const auto& [name, type] : projection.fields) {
+				if (!flags_set(type->value_annots, context))
+					continue;
+
 				const auto specifier = concat(type->c_specifier, is_const_context ? " const*" : "*");
 				const auto ptr_name = concat(name, "_ptr");
 				os << "\t" << specifier << " " << ptr_name << " = &" << source_var << "->"
 					<< name << ";\n";
 
-				roots.emplace_back(std::move(ptr_name));
+				roots.emplace_back(std::move(ptr_name), type.get());
 			}
 
 			os << "\t\n";
@@ -439,16 +445,16 @@ namespace idlc {
 			const auto n_args = rpc.arg_pgraphs.size();
 			const auto [roots, ret_root] = generate_root_ptrs(rpc, os);
 
-			for (gsl::index i {}; i < n_args; ++i) {
-				arg_marshal_walk arg_marshal {os, roots.at(i), 1}; // TODO: collect names
-				arg_marshal.visit_value(*rpc.arg_pgraphs.at(i));
+			for (const auto& [name, type] : roots) {
+				arg_marshal_walk arg_marshal {os, name, 1};
+				arg_marshal.visit_value(*type);
 			}
 
 			os << "\tvmfunc_wrapper(msg);\n\n";
 
-			for (gsl::index i {}; i < n_args; ++i) {
-				arg_unremarshal_walk arg_unremarshal {os, roots.at(i), 1};
-				arg_unremarshal.visit_value(*rpc.arg_pgraphs.at(i));
+			for (const auto& [name, type] : roots) {
+				arg_unremarshal_walk arg_unremarshal {os, name, 1};
+				arg_unremarshal.visit_value(*type);
 			}
 
 			if (rpc.ret_pgraph) {
@@ -470,9 +476,9 @@ namespace idlc {
 
 			const auto [roots, ret_root] = generate_root_ptrs(rpc, os);
 
-			for (gsl::index i {}; i < n_args; ++i) {
-				arg_unmarshal_walk arg_unmarshal {os, roots.at(i), 1};
-				arg_unmarshal.visit_value(*rpc.arg_pgraphs.at(i));
+			for (const auto& [name, type] : roots) {
+				arg_unmarshal_walk arg_unmarshal {os, name, 1};
+				arg_unmarshal.visit_value(*type);
 			}
 
 			if (rpc.kind == rpc_def_kind::direct) {
@@ -483,9 +489,9 @@ namespace idlc {
 				os << rpc.name << "(" << rpc.params_string << ");\n\n";
 			}
 
-			for (gsl::index i {}; i < n_args; ++i) {
-				arg_remarshal_walk arg_remarshal {os, roots.at(i), 1};
-				arg_remarshal.visit_value(*rpc.arg_pgraphs.at(i));
+			for (const auto& [name, type] : roots) {
+				arg_remarshal_walk arg_remarshal {os, name, 1};
+				arg_remarshal.visit_value(*type);
 			}
 
 			if (rpc.ret_pgraph) {
@@ -613,11 +619,11 @@ namespace idlc {
 			file << "void " << node.arg_marshal_visitor
 					<< "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << " const* ptr)\n{\n";
 
-			const auto roots = generate_root_ptrs(node, "ptr", true, file);
+			const auto roots = generate_root_ptrs(file, node, "ptr", annotation::in, true);
 			const auto n_fields = node.fields.size();
-			for (gsl::index i {}; i < n_fields; ++i) {
-				arg_marshal_walk walk {file, roots.at(i), 1};
-				walk.visit_value(*node.fields.at(i).second);
+			for (const auto& [name, type] : roots) {
+				arg_marshal_walk walk {file, name, 1};
+				walk.visit_value(*type);
 			}
 
 			file << "}\n\n";
@@ -628,11 +634,11 @@ namespace idlc {
 			file << "void " << node.arg_unmarshal_visitor
 					<< "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
 
-			const auto roots = generate_root_ptrs(node, "ptr", false, file);
+			const auto roots = generate_root_ptrs(file, node, "ptr", annotation::in, false);
 			const auto n_fields = node.fields.size();
-			for (gsl::index i {}; i < n_fields; ++i) {
-				arg_unmarshal_walk walk {file, roots.at(i), 1};
-				walk.visit_value(*node.fields.at(i).second);
+			for (const auto& [name, type] : roots) {
+				arg_unmarshal_walk walk {file, name, 1};
+				walk.visit_value(*type);
 			}
 
 			file << "}\n\n";
