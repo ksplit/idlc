@@ -11,6 +11,17 @@
 #include "frontend/analysis.h"
 #include "utility.h"
 
+// TODO: most of the marshal walks are identical, with differences in flag values
+// TODO: similar situation with unmarshaling walks
+// FIXME: do not generate pointer if-blocks if the value will be skipped (warning spam)
+// FIXME: the writable-pointer cast hack is needed on both sides for unmarshaling, not just callee-side
+// FIXME: don't ignore pointer annotations
+// TODO: implement alloc support, which requires the concept of a value's "size expression"
+// TODO: in general, lots of shared code and refactoring opportunities between the context-specific marshaling stuff
+// (6!!)
+// TODO: c_specifier_walk and company all belong in here, the generation module
+// TODO: possibly split this module, it's by far the biggest one in the compiler
+
 namespace idlc {
     using projection_vec = std::vector<gsl::not_null<projection*>>;
     using projection_vec_view = gsl::span<const gsl::not_null<projection*>>;
@@ -195,11 +206,8 @@ namespace idlc {
         bool visit_value(value& node)
         {
             if (flags_set(node.value_annots, annotation::in)) {
-                std::cout << "Marshaling input argument\n";
                 return traverse(*this, node);
             }
-
-            std::cout << "Skipped non-input argument for marshaling\n";
 
             return true;				
         }
@@ -214,7 +222,6 @@ namespace idlc {
         bool visit_value(value& node)
         {
             if (flags_set(node.value_annots, annotation::in)) {
-                std::cout << "Unmarshaling input argument\n";
                 const auto old = m_c_specifier;
                 m_c_specifier = node.c_specifier;
                 if (!traverse(*this, node))
@@ -222,8 +229,6 @@ namespace idlc {
 
                 m_c_specifier = old;
             }
-            
-            std::cout << "Skipped non-input argument for unmarshaling\n";
 
             return true;
         }
@@ -365,12 +370,8 @@ namespace idlc {
 
         bool visit_value(value& node)
         {
-            if (flags_set(node.value_annots, annotation::out)) {
-                std::cout << "Marshaling output argument\n";
+            if (flags_set(node.value_annots, annotation::out))
                 return traverse(*this, node);
-            }
-
-            std::cout << "Skipped non-output argument for marshaling\n";
 
             return true;				
         }
@@ -385,7 +386,6 @@ namespace idlc {
         bool visit_value(value& node)
         {
             if (flags_set(node.value_annots, annotation::out)) {
-                std::cout << "Unmarshaling output argument\n";
                 const auto old = m_c_specifier;
                 m_c_specifier = node.c_specifier;
                 if (!traverse(*this, node))
@@ -393,8 +393,6 @@ namespace idlc {
 
                 m_c_specifier = old;
             }
-            
-            std::cout << "Skipped non-output argument for unmarshaling\n";
 
             return true;
         }
@@ -536,12 +534,8 @@ namespace idlc {
 
         bool visit_value(value& node)
         {
-            if (flags_set(node.value_annots, annotation::out)) {
-                std::cout << "Marshaling output field\n";
+            if (flags_set(node.value_annots, annotation::out))
                 return traverse(*this, node);
-            }
-
-            std::cout << "Skipped non-output field for marshaling\n";
 
             return true;				
         }
@@ -556,7 +550,6 @@ namespace idlc {
         bool visit_value(value& node)
         {
             if (flags_set(node.value_annots, annotation::out)) {
-                std::cout << "Unmarshaling output field\n";
                 const auto old = m_c_specifier;
                 m_c_specifier = node.c_specifier;
                 if (!traverse(*this, node))
@@ -564,8 +557,6 @@ namespace idlc {
 
                 m_c_specifier = old;
             }
-            
-            std::cout << "Skipped non-output field for unmarshaling\n";
 
             return true;
         }

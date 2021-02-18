@@ -41,24 +41,14 @@
 		- minimum viable: focus on nullnet
 */
 
-// NOTE: All of these are low-priority, but eventually needed (if it breaks nullnet, it's high-priority)
-// TODO: sort out the somewhat hellish logging situation
-// TODO: sort out const-ness handling (low-priority, work around in mean time)
-
 // NOTE: all marshaling logic is side-independent, needing only a side-dependent send() primitive
 // It's side-dependent where the dispatch loop gets hooked in, however
 // and kernel functions must not conflict with the generated marshaling code
 // it is the indirect RPCs that are truly side-independent
 
-
-
-// TODO: move code generation into its own module
 // TODO: add static_void_ptr syntax (low priority)
-// TODO: dynamic arrays, and how they must be ordered relative to their size field (which must be adjacent!)
 // TODO: ndo_start_xmit uncovered an issue with enum promotion not being applicable to function pointers, i.e. the IDL
 // needs a concept of enums (so does the pgraph, etc.)
-// TODO: pointer annotation handling
-// TODO: correctly passing array sizes (and using them in unmarshaling)
 
 int main(int argc, char** argv)
 {

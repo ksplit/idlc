@@ -88,7 +88,7 @@ bool idlc::bind_walk::visit_type_proj(type_proj& node)
 		return traverse(*this, node);
 	}
 
-	std::cout << "[error] Could not resolve \"" << node.name << "\"\n";
+	std::cout << "Error: Could not resolve \"" << node.name << "\"\n";
 
 	return false;
 }
@@ -101,7 +101,7 @@ bool idlc::bind_walk::visit_type_rpc(type_rpc& node)
 		return traverse(*this, node);
 	}
 
-	std::cout << "[error] Could not resolve \"" << node.name << "\"\n";
+	std::cout << "Error: Could not resolve \"" << node.name << "\"\n";
 
 	return false;
 }
@@ -135,7 +135,6 @@ bool idlc::symbol_walk::visit_module_def(module_def& node)
 bool idlc::symbol_walk::visit_proj_def(proj_def& node)
 {
 	m_scope->insert(node.name, &node);
-	//std::cout << "[scopes] Inserted proj def \"" << node.name << "\"\n";
 	return true;
 }
 

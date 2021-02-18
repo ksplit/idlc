@@ -54,7 +54,6 @@ namespace idlc {
 					return item->definition;
 				}
 				else if constexpr (std::is_same_v<type, node_ref<type_rpc>>) {
-					// std::cout << "[debug] generating dummy pgraph node for RPC pointer \"" << item->name << "\"\n";
 					return std::make_unique<rpc_ptr>(item.get().get()->definition);
 				}
 
@@ -93,12 +92,11 @@ namespace idlc {
 			{
 				using type = std::decay_t<decltype(item)>;
 				if constexpr (std::is_same_v<type, node_ref<naked_proj_decl>>) {
-					std::cout << "Naked projections are not yet implemented\n";
-					std::cout << "Unknown how to proceed, aborting\n";
+					std::cout << "Warning: Naked projections are not yet implemented\n";
+					std::cout << "Warning: Unknown how to proceed, aborting\n";
 					std::terminate();
 				}
 				else if constexpr (std::is_same_v<type, node_ref<var_decl>>) {
-					// std::cout << "[pgraph] building var_decl value for \"" << item->name << "\"\n";
 					return {item->name, generate_value(*item->type)};
 				}
 
@@ -110,14 +108,13 @@ namespace idlc {
 
 		auto generate_union_dummy(proj_def& def, const std::string& name)
 		{
-			std::cout << "Union projections are not yet implemented\n";
-			std::cout << "Will implement as an empty struct projection \"" << def.name << "\"\n";
+			std::cout << "Warning: Union projections are not yet implemented\n";
+			std::cout << "Warning: Will implement as an empty struct projection \"" << def.name << "\"\n";
 			return std::make_shared<projection>(def.type, std::move(name));
 		}
 
 		auto generate_empty_struct(proj_def& def, const std::string& name)
 		{
-			// std::cout << "[pgraph] generating empty pgraph projection for \"" << def.name << "\"\n";
 			return std::make_shared<projection>(def.type, std::move(name));
 		}
 
@@ -128,11 +125,8 @@ namespace idlc {
 			fields.reserve(field_nodes.size());
 			for (const auto& field : field_nodes) {
 				auto pgraph = generate_field(*field);
-				// std::cout << "[pgraph] completed field \"" << pgraph.first << "\"\n";
 				fields.emplace_back(std::move(pgraph));
 			}
-
-			// std::cout << "[pgraph] finished \"" << def.name << "\"\n";
 
 			return std::make_shared<projection>(def.type, std::move(name), std::move(fields));
 		}
@@ -235,12 +229,9 @@ namespace idlc {
 				// The core logic of propagating a top-level value annotation until an explicit one is found, and
 				// continuing
 				if (!is_clear(node.value_annots & annotation::val_only)) {
-					std::cout << "Continuing with new value annotation default 0x" << std::hex;
-					std::cout << static_cast<std::uintptr_t>(node.value_annots) << std::dec << "\n";
 					m_default_with = node.value_annots;				
 				}
 				else {
-					std::cout << "Applying value annotation default\n";
 					node.value_annots = m_default_with;
 				}
 
@@ -251,7 +242,6 @@ namespace idlc {
 			{
 				// Default if no pointer annotations are set
 				if (is_clear(node.pointer_annots & annotation::ptr_only)) {
-					std::cout << "Pointer annotation inferred from value default\n";
 					if (m_default_with == annotation::in)
 						node.pointer_annots = annotation::bind_callee;
 					else if (m_default_with == annotation::out)
@@ -260,7 +250,7 @@ namespace idlc {
 						node.pointer_annots = (annotation::bind_callee | annotation::bind_caller);
 				}
 				else {
-					std::cout << "Pointer annotation previously set, ignoring\n";
+					// Annotation already set, ignore
 				}
 
 				return traverse(*this, node);
@@ -268,15 +258,10 @@ namespace idlc {
 
 			bool visit_projection(projection& node)
 			{
-				std::cout << "Entered projection with 0x" << std::hex;
-				std::cout << static_cast<std::uintptr_t>(m_default_with) << std::dec << "\n";
 				for (auto& [name, field] : node.fields) {
-					std::cout<< "Propagating for projection field \"" << name << "\"\n";
 					if (!annotate_pgraph(*field, m_default_with))
 						return false;
 				}
-
-				std::cout << "Finished projection\n";
 
 				return true; // NOTE: do *not* traverse projection nodes directly
 			}
@@ -391,7 +376,7 @@ namespace idlc {
 					break;
 
 				default:
-					std::cout << "Unhandled primitive was " << static_cast<std::uintptr_t>(node) << "\n";
+					std::cout << "Debug: Unhandled primitive was " << static_cast<std::uintptr_t>(node) << "\n";
 					std::terminate();
 				}
 
@@ -409,8 +394,6 @@ namespace idlc {
 			c_specifier_walk type_walk {};
 			const auto succeeded = type_walk.visit_value(node);
 			assert(succeeded);
-			std::cout << "Created type specifier: \"" << type_walk.get() << "\"\n";	
-			dump_pgraph(node);
 		}
 
 		bool annotate_pgraph(value& node, annotation default_with)
@@ -462,28 +445,26 @@ namespace idlc {
 
 			// TODO: should this really be here?
 			// We make sure we perform type specifier assignment *after* the projection has been fully completed
-			for (const auto& [name, field] : pgraph->fields) {
-				std::cout << "Creating type specifier for \"" << name << "\"\n";
+			for (const auto& [name, field] : pgraph->fields)
 				populate_c_type_specifiers(*field);
-			}
 
 			return pgraph;
 		}
 
 		passed_type instantiate_projection(proj_def& node, annotation default_with)
 		{
-			std::cout << "Non-lowered projection \"" << node.name << "\"\n";
+			std::cout << "Debug: Non-lowered projection \"" << node.name << "\"\n";
 			switch (default_with) {
 			case annotation::in | annotation::out:
-				std::cout << "Need \"in/out\" instance\n";
+				std::cout << "Debug: Need \"in/out\" instance\n";
 				return instantiate_projection(node, node.in_out_proj, default_with);
 
 			case annotation::in:
-				std::cout << "Need \"in\" instance\n";
+				std::cout << "Debug: Need \"in\" instance\n";
 				return instantiate_projection(node, node.in_proj, default_with);
 
 			case annotation::out:
-				std::cout << "Need \"out\" instance\n";
+				std::cout << "Debug: Need \"out\" instance\n";
 				return instantiate_projection(node, node.out_proj, default_with);
 
 			default:
@@ -493,9 +474,7 @@ namespace idlc {
 
 		bool annotate_pgraphs(rpc_def& rpc)
 		{
-			std::cout << "Propagating for RPC \"" << rpc.name << "\"\n";
 			if (rpc.ret_type) {
-				std::cout << "Processing return type\n";
 				if (!annotate_pgraph(*rpc.ret_pgraph, annotation::out))
 					return false;
 				
@@ -503,7 +482,6 @@ namespace idlc {
 			}
 
 			for (const auto& pgraph : rpc.arg_pgraphs) {
-				std::cout << "Processing argument type\n";
 				if (!annotate_pgraph(*pgraph, annotation::in))
 					return false;
 
@@ -518,8 +496,6 @@ namespace idlc {
 			for (const auto& rpc : rpcs) {
 				if (!annotate_pgraphs(*rpc))
 					return false;
-
-				std::cout << "Finished RPC\n";
 			}
 
 			return true;
