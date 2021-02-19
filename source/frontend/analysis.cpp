@@ -133,7 +133,6 @@ namespace idlc {
 
 		node_ptr<value> generate_value(const type_spec& node)
 		{
-			// TODO: finish const handling
 			auto type = generate_stem_type(*node.stem);
 			bool is_const {node.is_const};
 			for (const auto& ptr_node : node.indirs) {
@@ -270,7 +269,7 @@ namespace idlc {
 			{
 				const auto unlowered = std::get_if<gsl::not_null<proj_def*>>(&node);
 				if (!unlowered) {
-					return traverse(*this, node); // FIXME: is this correct?
+					return traverse(*this, node);
 				}
 				else {
 					node = instantiate_projection(**unlowered, m_default_with);
@@ -388,7 +387,7 @@ namespace idlc {
 
 
 
-std::optional<idlc::rpc_vec> idlc::geerate_rpc_pgraphs(file& root)
+std::optional<idlc::rpc_vec> idlc::generate_rpc_pgraphs(file& root)
 {
 	rpc_collection_walk walk {};
 	const auto succeeded = walk.visit_file(root);

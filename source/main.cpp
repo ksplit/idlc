@@ -67,7 +67,7 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	const auto rpcs = idlc::geerate_rpc_pgraphs(*file);
+	const auto rpcs = idlc::generate_rpc_pgraphs(*file);
 	if (!rpcs) {
 		std::cout << "Error: pgraph generation failed\n";
 		return 1;

@@ -8,9 +8,9 @@ build/
 log.txt
 
 # parser generated files
-src/parser/peg_peg.py
-src/parser/parser.cpp
-src/parser/parser.h
+source/parser/peg_peg.py
+source/parser/parser.cpp
+source/parser/parser.h
 
 # editor configs
 .vscode/
