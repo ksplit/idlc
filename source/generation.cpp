@@ -705,6 +705,9 @@ namespace idlc {
             const auto n_args = rpc.arg_pgraphs.size();
             const auto [roots, ret_root] = generate_root_ptrs(rpc, os);
 
+            if (rpc.kind == rpc_def_kind::indirect)
+                os << "\tglue_marshal(msg, target);\n";
+
             for (const auto& [name, type] : roots) {
                 arg_marshal_walk arg_marshal {os, name, 1};
                 arg_marshal.visit_value(*type);
@@ -727,6 +730,9 @@ namespace idlc {
 
         void generate_callee_glue(rpc_def& rpc, std::ostream& os)
         {
+            if (rpc.kind == rpc_def_kind::indirect)
+                os << "\t" << rpc.typedef_id << " function_ptr = glue_unmarshal(msg, " << rpc.typedef_id << ");\n";
+
             const auto n_args = rpc.arg_pgraphs.size();
             for (gsl::index i {}; i < n_args; ++i) {
                 const auto& type = rpc.arg_pgraphs.at(i)->c_specifier;
@@ -741,13 +747,12 @@ namespace idlc {
                 arg_unmarshal.visit_value(*type);
             }
 
-            if (rpc.kind == rpc_def_kind::direct) {
-                os << "\t";
-                if (rpc.ret_pgraph)
-                    os << "ret = ";
+            os << "\t";
+            if (rpc.ret_pgraph)
+                os << "ret = ";
 
-                os << rpc.name << "(" << rpc.params_string << ");\n\n";
-            }
+            const auto impl_name = (rpc.kind == rpc_def_kind::direct) ? rpc.name : "function_ptr";
+            os << impl_name << "(" << rpc.params_string << ");\n\n";
 
             for (const auto& [name, type] : roots) {
                 arg_remarshal_walk arg_remarshal {os, name, 1};
