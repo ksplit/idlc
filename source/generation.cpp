@@ -150,44 +150,44 @@ namespace idlc {
             callee
         };
 
-        class marshaling_walk : public generation_walk<marshaling_walk> {
+        template<rpc_side side>
+        class marshaling_walk : public generation_walk<marshaling_walk<side>> {
         public:
-            marshaling_walk(rpc_side side, std::ostream& os, absl::string_view holder, unsigned level) :
-                generation_walk {os, holder, level},
-                m_should_walk_annot {(side == rpc_side::caller) ? annotation::in : annotation::out},
-                m_should_bind_annot {(side == rpc_side::caller) ? annotation::bind_caller : annotation::bind_callee},
-                m_should_alloc_annot {(side == rpc_side::caller) ? annotation::alloc_caller : annotation::alloc_callee}
+            marshaling_walk(std::ostream& os, absl::string_view holder, unsigned level) :
+                generation_walk<marshaling_walk<side>> {os, holder, level}
             {}
 
             bool visit_pointer(pointer& node)
             {
-                if (flags_set(node.pointer_annots, m_should_bind_annot))
-                    stream() << "glue_marshal_shadow(msg, *" << subject() << ");\n";
+                if (should_bind(node.pointer_annots))
+                    this->stream() << "glue_marshal_shadow(msg, *" << this->subject() << ");\n";
                 else
-                    stream() << "glue_marshal(msg, *" << subject() << ");\n";
+                    this->stream() << "glue_marshal(msg, *" << this->subject() << ");\n";
 
-                stream() << "if (*" << subject() << ") {\n";
-                marshal("*" + subject(), node);
-                stream() << "}\n\n";
+                if (should_walk(node.pointer_annots)) {
+                    this->stream() << "if (*" << this->subject() << ") {\n";
+                    this->marshal("*" + this->subject(), node);
+                    this->stream() << "}\n\n";
+                }
 
                 return true;
             }
 
             bool visit_primitive(primitive node)
             {
-                stream() << "glue_marshal(msg, *" << subject() << ");\n";
+                this->stream() << "glue_marshal(msg, *" << this->subject() << ");\n";
                 return true;
             }
 
             bool visit_rpc_ptr(rpc_ptr& node)
             {
-                stream() << "glue_marshal(msg, *" << subject() << ");\n";
+                this->stream() << "glue_marshal(msg, *" << this->subject() << ");\n";
                 return true;
             }
 
             bool visit_projection(projection& node)
             {
-                stream() << node.arg_marshal_visitor << "(msg, " << subject() << ");\n";
+                this->stream() << node.arg_marshal_visitor << "(msg, " << this->subject() << ");\n";
                 return true;
             }
 
@@ -196,47 +196,77 @@ namespace idlc {
                 const auto star = node.element->is_const ? " const*" : "*";
                 const auto ptr_type = concat(node.element->c_specifier, star);
 
-                stream() << "size_t i, len;\n";
-                stream() << ptr_type << " array = "	<< subject() << ";\n";
-                stream() << "for (len = 0; array[len]; ++len);\n";
-                stream() << "glue_marshal(msg, len);\n";
-                stream() << "for (i = 0; i < len; ++i) {\n";
-                stream() << "\t" << ptr_type << " element = &array[i];\n";
-                if (!marshal("element", node))
+                this->stream() << "size_t i, len;\n";
+                this->stream() << ptr_type << " array = "	<< this->subject() << ";\n";
+                this->stream() << "for (len = 0; array[len]; ++len);\n";
+                this->stream() << "glue_marshal(msg, len);\n";
+                this->stream() << "for (i = 0; i < len; ++i) {\n";
+                this->stream() << "\t" << ptr_type << " element = &array[i];\n";
+                if (!this->marshal("element", node))
                     return false;
 
-                stream() << "}\n\n";
+                this->stream() << "}\n\n";
 
                 return true;
             }
 
             bool visit_value(value& node)
             {
-                if (flags_set(node.value_annots, m_should_walk_annot)) {
-                    return traverse(*this, node);
+                if (should_walk(node.value_annots)) {
+                    return this->traverse(*this, node);
                 }
 
                 return true;
             }
 
         private:
-            const annotation m_should_walk_annot {};
-            const annotation m_should_bind_annot {};
-            const annotation m_should_alloc_annot {};
+            static constexpr bool should_walk(annotation flags)
+            {
+                switch (side) {
+                case rpc_side::caller:
+                    return flags_set(flags, annotation::in);
+
+                case rpc_side::callee:
+                    return flags_set(flags, annotation::out);
+                }
+            }
+
+            static constexpr bool should_bind(annotation flags)
+            {
+                switch (side) {
+                case rpc_side::caller:
+                    return flags_set(flags, annotation::bind_caller);
+
+                case rpc_side::callee:
+                    return flags_set(flags, annotation::bind_callee);
+                }
+            }
+
+            static constexpr bool should_alloc(annotation flags)
+            {
+                switch (side) {
+                case rpc_side::caller:
+                    return flags_set(flags, annotation::alloc_caller);
+
+                case rpc_side::callee:
+                    return flags_set(flags, annotation::alloc_callee);
+                }
+            }
         };
 
-        class arg_unmarshal_walk : public generation_walk<arg_unmarshal_walk> {
+        template<rpc_side side>
+        class unmarshaling_walk : public generation_walk<unmarshaling_walk<side>> {
         public:
-            arg_unmarshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
-                generation_walk {os, holder, level}
+            unmarshaling_walk(std::ostream& os, absl::string_view holder, unsigned level) :
+                generation_walk<unmarshaling_walk<side>> {os, holder, level}
             {}
 
             bool visit_value(value& node)
             {
-                if (flags_set(node.value_annots, annotation::in)) {
+                if (should_walk(node.value_annots)) {
                     const auto old = m_c_specifier;
                     m_c_specifier = node.c_specifier;
-                    if (!traverse(*this, node))
+                    if (!this->traverse(*this, node))
                         return false;
 
                     m_c_specifier = old;
@@ -247,271 +277,114 @@ namespace idlc {
 
             bool visit_primitive(primitive node)
             {
-                stream() << "*" << subject() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
+                this->stream() << "*" << this->subject() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
                 return true;
             }
 
             bool visit_pointer(pointer& node)
             {
-                stream() << "*" << subject() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
-                stream() << "if (*" << subject() << ") {\n";
+                this->stream() << "*" << this->subject() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
 
+                if (!should_walk(node.referent->value_annots))
+                    return true;
+
+                this->stream() << "if (*" << this->subject() << ") {\n";
                 if (node.referent->is_const) {
                     const auto type = concat(node.referent->c_specifier, "*");
-                    stream() << "\t" << type << " writable = "
-                        << concat("(", type, ")*", subject()) << ";\n";
+                    this->stream() << "\t" << type << " writable = "
+                        << concat("(", type, ")*", this->subject()) << ";\n";
 
-                    if (!marshal("writable", node))
+                    if (!this->marshal("writable", node))
                         return false;
                 }
                 else {
-                    if (!marshal(concat("*", subject()), node))
+                    if (!this->marshal(concat("*", this->subject()), node))
                         return false;
                 }
 
-                stream() << "}\n\n";
+                this->stream() << "}\n\n";
 
                 return true;
             }
 
             bool visit_null_terminated_array(null_terminated_array& node)
             {
-                stream() << "size_t i, len;\n";
-                stream() << node.element->c_specifier << "* array = " << subject() << ";\n";
-                stream() << "len = glue_unmarshal(msg, size_t);\n";
-                stream() << "for (i = 0; i < len; ++i) {\n";
-                stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
-                if (!marshal("element", node))
+                this->stream() << "size_t i, len;\n";
+                this->stream() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
+                this->stream() << "len = glue_unmarshal(msg, size_t);\n";
+                this->stream() << "for (i = 0; i < len; ++i) {\n";
+                this->stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
+                if (!this->marshal("element", node))
                     return false;
 
-                stream() << "}\n\n";
+                this->stream() << "}\n\n";
 
                 return true;
             }
 
             bool visit_dyn_array(dyn_array& node)
             {
-                stream() << "int i;\n";
-                stream() << node.element->c_specifier << "* array = " << subject() << ";\n";
-                stream() << "for (i = 0; i < " << node.size << "; ++i) {\n";
-                stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
-                if (!marshal("element", node))
+                this->stream() << "int i;\n";
+                this->stream() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
+                this->stream() << "for (i = 0; i < " << node.size << "; ++i) {\n";
+                this->stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
+                if (!this->marshal("element", node))
                     return false;
 
-                stream() << "}\n\n";
+                this->stream() << "}\n\n";
 
                 return true;
             }
 
             bool visit_rpc_ptr(rpc_ptr& node)
             {
-                stream() << "*" << subject() << " = glue_unmarshal_rpc_ptr(msg, " << node.definition->trmp_id
-                    << ");\n";
+                this->stream() << "*" << this->subject() << " = glue_unmarshal_rpc_ptr(msg, "
+                    << node.definition->trmp_id << ");\n";
 
                 return true;
             }
 
             bool visit_projection(projection& node)
             {
-                stream() << node.arg_unmarshal_visitor << "(msg, " << subject() << ");\n";
+                this->stream() << node.arg_unmarshal_visitor << "(msg, " << this->subject() << ");\n";
                 return true;
             }
 
         private:
             absl::string_view m_c_specifier {};
-        };
 
-        class arg_unremarshal_walk : public generation_walk<arg_unremarshal_walk> {
-        public:
-            arg_unremarshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
-                generation_walk {os, holder, level}
-            {}
-
-            bool visit_value(value& node)
+            static constexpr bool should_walk(annotation flags)
             {
-                if (flags_set(node.value_annots, annotation::out)) {
-                    const auto old = m_c_specifier;
-                    m_c_specifier = node.c_specifier;
-                    if (!traverse(*this, node))
-                        return false;
+                switch (side) {
+                case rpc_side::callee:
+                    return flags_set(flags, annotation::in);
 
-                    m_c_specifier = old;
+                case rpc_side::caller:
+                    return flags_set(flags, annotation::out);
                 }
-
-                return true;
             }
 
-            bool visit_primitive(primitive node)
+            static constexpr bool should_bind(annotation flags)
             {
-                stream() << "*" << subject() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
-                return true;
-            }
+                switch (side) {
+                case rpc_side::callee:
+                    return flags_set(flags, annotation::bind_caller);
 
-            bool visit_pointer(pointer& node)
-            {
-                stream() << "*" << subject() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
-                stream() << "if (*" << subject() << ") {\n";
-
-                // FIXME: this is caller-side, it doesn't make sense to have it here
-                if (node.referent->is_const) {
-                    const auto type = concat(node.referent->c_specifier, "*");
-                    stream() << "\t" << type << " writable = "
-                        << concat("(", type, ")*", subject()) << ";\n";
-
-                    if (!marshal("writable", node))
-                        return false;
+                case rpc_side::caller:
+                    return flags_set(flags, annotation::bind_callee);
                 }
-                else {
-                    if (!marshal(concat("*", subject()), node))
-                        return false;
+            }
+
+            static constexpr bool should_alloc(annotation flags)
+            {
+                switch (side) {
+                case rpc_side::callee:
+                    return flags_set(flags, annotation::alloc_caller);
+
+                case rpc_side::caller:
+                    return flags_set(flags, annotation::alloc_callee);
                 }
-
-                stream() << "}\n\n";
-
-                return true;
             }
-
-            bool visit_null_terminated_array(null_terminated_array& node)
-            {
-                stream() << "size_t i, len;\n";
-                stream() << node.element->c_specifier << "* array = " << subject() << ";\n";
-                stream() << "len = glue_unmarshal(msg, size_t);\n";
-                stream() << "for (i = 0; i < len; ++i) {\n";
-                stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
-                if (!marshal("element", node))
-                    return false;
-
-                stream() << "}\n\n";
-
-                return true;
-            }
-
-            bool visit_dyn_array(dyn_array& node)
-            {
-                stream() << "int i;\n";
-                stream() << node.element->c_specifier << "* array = " << subject() << ";\n";
-                stream() << "for (i = 0; i < " << node.size << "; ++i) {\n";
-                stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
-                if (!marshal("element", node))
-                    return false;
-
-                stream() << "}\n\n";
-
-                return true;
-            }
-
-            bool visit_rpc_ptr(rpc_ptr& node)
-            {
-                stream() << "*" << subject() << " = glue_unmarshal_rpc_ptr(msg, " << node.definition->trmp_id
-                    << ");\n";
-
-                return true;
-            }
-
-            bool visit_projection(projection& node)
-            {
-                stream() << node.arg_unremarshal_visitor << "(msg, " << subject() << ");\n";
-                return true;
-            }
-
-        private:
-            absl::string_view m_c_specifier {};
-        };
-
-        class ret_unmarshal_walk : public generation_walk<ret_unmarshal_walk> {
-        public:
-            ret_unmarshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
-                generation_walk {os, holder, level}
-            {}
-
-            bool visit_value(value& node)
-            {
-                if (flags_set(node.value_annots, annotation::out)) {
-                    const auto old = m_c_specifier;
-                    m_c_specifier = node.c_specifier;
-                    if (!traverse(*this, node))
-                        return false;
-
-                    m_c_specifier = old;
-                }
-
-                return true;
-            }
-
-            bool visit_primitive(primitive node)
-            {
-                stream() << "*" << subject() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
-                return true;
-            }
-
-            bool visit_pointer(pointer& node)
-            {
-                stream() << "*" << subject() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
-                stream() << "if (*" << subject() << ") {\n";
-
-                if (node.referent->is_const) {
-                    const auto type = concat(node.referent->c_specifier, "*");
-                    stream() << "\t" << type << " writable = "
-                        << concat("(", type, ")*", subject()) << ";\n";
-
-                    if (!marshal("writable", node))
-                        return false;
-                }
-                else {
-                    if (!marshal(concat("*", subject()), node))
-                        return false;
-                }
-
-                stream() << "}\n\n";
-
-                return true;
-            }
-
-            bool visit_null_terminated_array(null_terminated_array& node)
-            {
-                stream() << "size_t i, len;\n";
-                stream() << node.element->c_specifier << "* array = " << subject() << ";\n";
-                stream() << "len = glue_unmarshal(msg, size_t);\n";
-                stream() << "for (i = 0; i < len; ++i) {\n";
-                stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
-                if (!marshal("element", node))
-                    return false;
-
-                stream() << "}\n\n";
-
-                return true;
-            }
-
-            bool visit_dyn_array(dyn_array& node)
-            {
-                stream() << "int i;\n";
-                stream() << node.element->c_specifier << "* array = " << subject() << ";\n";
-                stream() << "for (i = 0; i < " << node.size << "; ++i) {\n";
-                stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
-                if (!marshal("element", node))
-                    return false;
-
-                stream() << "}\n\n";
-
-                return true;
-            }
-
-            bool visit_rpc_ptr(rpc_ptr& node)
-            {
-                stream() << "*" << subject() << " = glue_unmarshal_rpc_ptr(msg, " << node.definition->trmp_id
-                    << ");\n";
-
-                return true;
-            }
-
-            bool visit_projection(projection& node)
-            {
-                stream() << node.ret_unmarshal_visitor << "(msg, " << subject() << ");\n";
-                return true;
-            }
-
-        private:
-            absl::string_view m_c_specifier {};
         };
 
         /*
@@ -585,19 +458,19 @@ namespace idlc {
                 os << "\tglue_marshal(msg, target);\n";
 
             for (const auto& [name, type] : roots) {
-                marshaling_walk arg_marshal {rpc_side::caller, os, name, 1};
+                marshaling_walk<rpc_side::caller> arg_marshal {os, name, 1};
                 arg_marshal.visit_value(*type);
             }
 
             os << "\tvmfunc_wrapper(msg);\n\n";
 
             for (const auto& [name, type] : roots) {
-                arg_unremarshal_walk arg_unremarshal {os, name, 1};
+                unmarshaling_walk<rpc_side::caller> arg_unremarshal {os, name, 1};
                 arg_unremarshal.visit_value(*type);
             }
 
             if (rpc.ret_pgraph) {
-                ret_unmarshal_walk ret_unmarshal {os, ret_root, 1};
+                unmarshaling_walk<rpc_side::caller> ret_unmarshal {os, ret_root, 1};
                 ret_unmarshal.visit_value(*rpc.ret_pgraph);
             }
 
@@ -619,7 +492,7 @@ namespace idlc {
             const auto [roots, ret_root] = generate_root_ptrs(rpc, os);
 
             for (const auto& [name, type] : roots) {
-                arg_unmarshal_walk arg_unmarshal {os, name, 1};
+                unmarshaling_walk<rpc_side::callee> arg_unmarshal {os, name, 1};
                 arg_unmarshal.visit_value(*type);
             }
 
@@ -631,12 +504,12 @@ namespace idlc {
             os << impl_name << "(" << rpc.params_string << ");\n\n";
 
             for (const auto& [name, type] : roots) {
-                marshaling_walk arg_remarshal {rpc_side::callee, os, name, 1};
+                marshaling_walk<rpc_side::callee> arg_remarshal {os, name, 1};
                 arg_remarshal.visit_value(*type);
             }
 
             if (rpc.ret_pgraph) {
-                marshaling_walk ret_marshal {rpc_side::callee, os, ret_root, 1};
+                marshaling_walk<rpc_side::callee> ret_marshal {os, ret_root, 1};
                 ret_marshal.visit_value(*rpc.ret_pgraph);
             }
         }
@@ -763,7 +636,7 @@ namespace idlc {
             const auto roots = generate_root_ptrs(file, node, "ptr", annotation::in, true);
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
-                marshaling_walk walk {rpc_side::caller, file, name, 1};
+                marshaling_walk<rpc_side::caller> walk {file, name, 1};
                 walk.visit_value(*type);
             }
 
@@ -778,7 +651,7 @@ namespace idlc {
             const auto roots = generate_root_ptrs(file, node, "ptr", annotation::in, false);
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
-                arg_unmarshal_walk walk {file, name, 1};
+                unmarshaling_walk<rpc_side::callee> walk {file, name, 1};
                 walk.visit_value(*type);
             }
 
@@ -793,7 +666,7 @@ namespace idlc {
             const auto roots = generate_root_ptrs(file, node, "ptr", annotation::out, true);
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
-                marshaling_walk walk {rpc_side::callee, file, name, 1};
+                marshaling_walk<rpc_side::callee> walk {file, name, 1};
                 walk.visit_value(*type);
             }
 
@@ -808,7 +681,7 @@ namespace idlc {
             const auto roots = generate_root_ptrs(file, node, "ptr", annotation::out, false);
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
-                arg_unremarshal_walk walk {file, name, 1};
+                unmarshaling_walk<rpc_side::caller> walk {file, name, 1};
                 walk.visit_value(*type);
             }
 
@@ -824,7 +697,7 @@ namespace idlc {
             const auto roots = generate_root_ptrs(file, node, "ptr", annotation::out, true);
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
-                marshaling_walk walk {rpc_side::callee, file, name, 1};
+                marshaling_walk<rpc_side::callee> walk {file, name, 1};
                 walk.visit_value(*type);
             }
 
@@ -839,7 +712,7 @@ namespace idlc {
             const auto roots = generate_root_ptrs(file, node, "ptr", annotation::out, false);
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
-                ret_unmarshal_walk walk {file, name, 1};
+                unmarshaling_walk<rpc_side::caller> walk {file, name, 1};
                 walk.visit_value(*type);
             }
 
