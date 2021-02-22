@@ -242,9 +242,9 @@ namespace idlc {
 				// Default if no pointer annotations are set
 				if (is_clear(node.pointer_annots & annotation::ptr_only)) {
 					if (m_default_with == annotation::in)
-						node.pointer_annots = annotation::bind_callee;
-					else if (m_default_with == annotation::out)
 						node.pointer_annots = annotation::bind_caller;
+					else if (m_default_with == annotation::out)
+						node.pointer_annots = annotation::bind_callee;
 					else if (m_default_with == (annotation::in | annotation::out))
 						node.pointer_annots = (annotation::bind_callee | annotation::bind_caller);
 				}

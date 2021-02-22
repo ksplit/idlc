@@ -105,9 +105,9 @@ namespace idlc {
         }
 
         template<typename derived>
-        class marshal_walk : public pgraph_walk<derived> {
+        class generation_walk : public pgraph_walk<derived> {
         public:
-            marshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
+            generation_walk(std::ostream& os, absl::string_view holder, unsigned level) :
                 m_stream {os},
                 m_marshaled_ptr {holder},
                 m_indent_level {level}
@@ -145,17 +145,23 @@ namespace idlc {
             unsigned m_indent_level {};
         };
 
-        class arg_marshal_walk : public marshal_walk<arg_marshal_walk> {
-        public:
-            arg_marshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
-                marshal_walk {os, holder, level}
-            {}
+        enum class rpc_side {
+            caller,
+            callee
+        };
 
-            // TODO: lowering *needs* to compute a size-of-field expression for alloc support
+        class marshaling_walk : public generation_walk<marshaling_walk> {
+        public:
+            marshaling_walk(rpc_side side, std::ostream& os, absl::string_view holder, unsigned level) :
+                generation_walk {os, holder, level},
+                m_value_annot {(side == rpc_side::caller) ? annotation::in : annotation::out},
+                m_bind_annot {(side == rpc_side::caller) ? annotation::bind_caller : annotation::bind_callee},
+                m_alloc_annot {(side == rpc_side::caller) ? annotation::alloc_caller : annotation::alloc_callee}
+            {}
 
             bool visit_pointer(pointer& node)
             {
-                if (flags_set(node.pointer_annots, annotation::bind_caller))
+                if (flags_set(node.pointer_annots, m_bind_annot))
                     stream() << "glue_marshal_shadow(msg, *" << subject() << ");\n";
                 else
                     stream() << "glue_marshal(msg, *" << subject() << ");\n";
@@ -206,18 +212,23 @@ namespace idlc {
 
             bool visit_value(value& node)
             {
-                if (flags_set(node.value_annots, annotation::in)) {
+                if (flags_set(node.value_annots, m_value_annot)) {
                     return traverse(*this, node);
                 }
 
                 return true;
             }
+
+        private:
+            const annotation m_value_annot {};
+            const annotation m_bind_annot {};
+            const annotation m_alloc_annot {};
         };
 
-        class arg_unmarshal_walk : public marshal_walk<arg_unmarshal_walk> {
+        class arg_unmarshal_walk : public generation_walk<arg_unmarshal_walk> {
         public:
             arg_unmarshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
-                marshal_walk {os, holder, level}
+                generation_walk {os, holder, level}
             {}
 
             bool visit_value(value& node)
@@ -310,78 +321,10 @@ namespace idlc {
             absl::string_view m_c_specifier {};
         };
 
-        class arg_remarshal_walk : public marshal_walk<arg_remarshal_walk> {
-        public:
-            arg_remarshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
-                marshal_walk {os, holder, level}
-            {}
-
-            // TODO: lowering *needs* to compute a size-of-field expression for alloc support
-
-            bool visit_pointer(pointer& node)
-            {
-                if (flags_set(node.pointer_annots, annotation::bind_caller))
-                    stream() << "glue_marshal_shadow(msg, *" << subject() << ");\n";
-                else
-                    stream() << "glue_marshal(msg, *" << subject() << ");\n";
-
-                stream() << "if (*" << subject() << ") {\n";
-                marshal("*" + subject(), node);
-                stream() << "}\n\n";
-
-                return true;
-            }
-
-            bool visit_primitive(primitive node)
-            {
-                stream() << "glue_marshal(msg, *" << subject() << ");\n";
-                return true;
-            }
-
-            bool visit_rpc_ptr(rpc_ptr& node)
-            {
-                stream() << "glue_marshal(msg, *" << subject() << ");\n";
-                return true;
-            }
-
-            bool visit_projection(projection& node)
-            {
-                stream() << node.arg_remarshal_visitor << "(msg, " << subject() << ");\n";
-                return true;
-            }
-
-            bool visit_null_terminated_array(null_terminated_array& node)
-            {
-                const auto star = node.element->is_const ? " const*" : "*";
-                const auto ptr_type = concat(node.element->c_specifier, star);
-
-                stream() << "size_t i, len;\n";
-                stream() << ptr_type << " array = "	<< subject() << ";\n";
-                stream() << "for (len = 0; array[len]; ++len);\n";
-                stream() << "glue_marshal(msg, len);\n";
-                stream() << "for (i = 0; i < len; ++i) {\n";
-                stream() << "\t" << ptr_type << " element = &array[i];\n";
-                if (!marshal("element", node))
-                    return false;
-
-                stream() << "}\n\n";
-
-                return true;
-            }
-
-            bool visit_value(value& node)
-            {
-                if (flags_set(node.value_annots, annotation::out))
-                    return traverse(*this, node);
-
-                return true;
-            }
-        };
-
-        class arg_unremarshal_walk : public marshal_walk<arg_unremarshal_walk> {
+        class arg_unremarshal_walk : public generation_walk<arg_unremarshal_walk> {
         public:
             arg_unremarshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
-                marshal_walk {os, holder, level}
+                generation_walk {os, holder, level}
             {}
 
             bool visit_value(value& node)
@@ -409,6 +352,7 @@ namespace idlc {
                 stream() << "*" << subject() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
                 stream() << "if (*" << subject() << ") {\n";
 
+                // FIXME: this is caller-side, it doesn't make sense to have it here
                 if (node.referent->is_const) {
                     const auto type = concat(node.referent->c_specifier, "*");
                     stream() << "\t" << type << " writable = "
@@ -474,78 +418,10 @@ namespace idlc {
             absl::string_view m_c_specifier {};
         };
 
-        class ret_marshal_walk : public marshal_walk<ret_marshal_walk> {
-        public:
-            ret_marshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
-                marshal_walk {os, holder, level}
-            {}
-
-            // TODO: lowering *needs* to compute a size-of-field expression for alloc support
-
-            bool visit_pointer(pointer& node)
-            {
-                if (flags_set(node.pointer_annots, annotation::bind_caller))
-                    stream() << "glue_marshal_shadow(msg, *" << subject() << ");\n";
-                else
-                    stream() << "glue_marshal(msg, *" << subject() << ");\n";
-
-                stream() << "if (*" << subject() << ") {\n";
-                marshal("*" + subject(), node);
-                stream() << "}\n\n";
-
-                return true;
-            }
-
-            bool visit_primitive(primitive node)
-            {
-                stream() << "glue_marshal(msg, *" << subject() << ");\n";
-                return true;
-            }
-
-            bool visit_rpc_ptr(rpc_ptr& node)
-            {
-                stream() << "glue_marshal(msg, *" << subject() << ");\n";
-                return true;
-            }
-
-            bool visit_projection(projection& node)
-            {
-                stream() << node.ret_marshal_visitor << "(msg, " << subject() << ");\n";
-                return true;
-            }
-
-            bool visit_null_terminated_array(null_terminated_array& node)
-            {
-                const auto star = node.element->is_const ? " const*" : "*";
-                const auto ptr_type = concat(node.element->c_specifier, star);
-
-                stream() << "size_t i, len;\n";
-                stream() << ptr_type << " array = "	<< subject() << ";\n";
-                stream() << "for (len = 0; array[len]; ++len);\n";
-                stream() << "glue_marshal(msg, len);\n";
-                stream() << "for (i = 0; i < len; ++i) {\n";
-                stream() << "\t" << ptr_type << " element = &array[i];\n";
-                if (!marshal("element", node))
-                    return false;
-
-                stream() << "}\n\n";
-
-                return true;
-            }
-
-            bool visit_value(value& node)
-            {
-                if (flags_set(node.value_annots, annotation::out))
-                    return traverse(*this, node);
-
-                return true;
-            }
-        };
-
-        class ret_unmarshal_walk : public marshal_walk<ret_unmarshal_walk> {
+        class ret_unmarshal_walk : public generation_walk<ret_unmarshal_walk> {
         public:
             ret_unmarshal_walk(std::ostream& os, absl::string_view holder, unsigned level) :
-                marshal_walk {os, holder, level}
+                generation_walk {os, holder, level}
             {}
 
             bool visit_value(value& node)
@@ -709,7 +585,7 @@ namespace idlc {
                 os << "\tglue_marshal(msg, target);\n";
 
             for (const auto& [name, type] : roots) {
-                arg_marshal_walk arg_marshal {os, name, 1};
+                marshaling_walk arg_marshal {rpc_side::caller, os, name, 1};
                 arg_marshal.visit_value(*type);
             }
 
@@ -755,12 +631,12 @@ namespace idlc {
             os << impl_name << "(" << rpc.params_string << ");\n\n";
 
             for (const auto& [name, type] : roots) {
-                arg_remarshal_walk arg_remarshal {os, name, 1};
+                marshaling_walk arg_remarshal {rpc_side::callee, os, name, 1};
                 arg_remarshal.visit_value(*type);
             }
 
             if (rpc.ret_pgraph) {
-                ret_marshal_walk ret_marshal {os, ret_root, 1};
+                marshaling_walk ret_marshal {rpc_side::callee, os, ret_root, 1};
                 ret_marshal.visit_value(*rpc.ret_pgraph);
             }
         }
@@ -887,7 +763,7 @@ namespace idlc {
             const auto roots = generate_root_ptrs(file, node, "ptr", annotation::in, true);
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
-                arg_marshal_walk walk {file, name, 1};
+                marshaling_walk walk {rpc_side::caller, file, name, 1};
                 walk.visit_value(*type);
             }
 
@@ -917,7 +793,7 @@ namespace idlc {
             const auto roots = generate_root_ptrs(file, node, "ptr", annotation::out, true);
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
-                arg_remarshal_walk walk {file, name, 1};
+                marshaling_walk walk {rpc_side::callee, file, name, 1};
                 walk.visit_value(*type);
             }
 
@@ -939,6 +815,7 @@ namespace idlc {
             file << "}\n\n";
         }
 
+        // FIXME: now a duplicate of arg remarshaling
         void generate_ret_marshal_visitor(std::ostream& file, projection& node)
         {
             file << "void " << node.ret_marshal_visitor
@@ -947,7 +824,7 @@ namespace idlc {
             const auto roots = generate_root_ptrs(file, node, "ptr", annotation::out, true);
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
-                ret_marshal_walk walk {file, name, 1};
+                marshaling_walk walk {rpc_side::callee, file, name, 1};
                 walk.visit_value(*type);
             }
 
