@@ -154,14 +154,14 @@ namespace idlc {
         public:
             marshaling_walk(rpc_side side, std::ostream& os, absl::string_view holder, unsigned level) :
                 generation_walk {os, holder, level},
-                m_value_annot {(side == rpc_side::caller) ? annotation::in : annotation::out},
-                m_bind_annot {(side == rpc_side::caller) ? annotation::bind_caller : annotation::bind_callee},
-                m_alloc_annot {(side == rpc_side::caller) ? annotation::alloc_caller : annotation::alloc_callee}
+                m_should_walk_annot {(side == rpc_side::caller) ? annotation::in : annotation::out},
+                m_should_bind_annot {(side == rpc_side::caller) ? annotation::bind_caller : annotation::bind_callee},
+                m_should_alloc_annot {(side == rpc_side::caller) ? annotation::alloc_caller : annotation::alloc_callee}
             {}
 
             bool visit_pointer(pointer& node)
             {
-                if (flags_set(node.pointer_annots, m_bind_annot))
+                if (flags_set(node.pointer_annots, m_should_bind_annot))
                     stream() << "glue_marshal_shadow(msg, *" << subject() << ");\n";
                 else
                     stream() << "glue_marshal(msg, *" << subject() << ");\n";
@@ -212,7 +212,7 @@ namespace idlc {
 
             bool visit_value(value& node)
             {
-                if (flags_set(node.value_annots, m_value_annot)) {
+                if (flags_set(node.value_annots, m_should_walk_annot)) {
                     return traverse(*this, node);
                 }
 
@@ -220,9 +220,9 @@ namespace idlc {
             }
 
         private:
-            const annotation m_value_annot {};
-            const annotation m_bind_annot {};
-            const annotation m_alloc_annot {};
+            const annotation m_should_walk_annot {};
+            const annotation m_should_bind_annot {};
+            const annotation m_should_alloc_annot {};
         };
 
         class arg_unmarshal_walk : public generation_walk<arg_unmarshal_walk> {
