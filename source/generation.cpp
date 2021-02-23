@@ -33,22 +33,19 @@ namespace idlc {
 
             bool visit_projection(projection& node)
             {
-                m_stream << "void " << node.arg_marshal_visitor
+                m_stream << "void " << node.caller_marshal_visitor
                     << "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << " const*);\n\n";
 
-                m_stream << "void " << node.arg_unmarshal_visitor
+                m_stream << "void " << node.callee_unmarshal_visitor
                     << "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 
-                m_stream << "void " << node.arg_remarshal_visitor
+                m_stream << "void " << node.callee_marshal_visitor
                     << "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << " const*);\n\n";
 
-                m_stream << "void " << node.arg_unremarshal_visitor
+                m_stream << "void " << node.caller_const_unmarshal_visitor
                     << "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 
-                m_stream << "void " << node.ret_marshal_visitor
-                    << "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << " const*);\n\n";
-
-                m_stream << "void " << node.ret_unmarshal_visitor
+                m_stream << "void " << node.caller_unmarshal_visitor
                     << "(\n\tstruct fipc_message*,\n\tstruct " << node.real_name << "*);\n\n";
 
                 return true;
@@ -187,7 +184,7 @@ namespace idlc {
 
             bool visit_projection(projection& node)
             {
-                this->stream() << node.arg_marshal_visitor << "(msg, " << this->subject() << ");\n";
+                this->stream() << visitor(node) << "(msg, " << this->subject() << ");\n";
                 return true;
             }
 
@@ -252,13 +249,24 @@ namespace idlc {
                     return flags_set(flags, annotation::alloc_callee);
                 }
             }
+
+            static constexpr absl::string_view visitor(projection& node)
+            {
+                switch (side) {
+                case rpc_side::caller:
+                    return node.caller_marshal_visitor;
+
+                case rpc_side::callee:
+                    return node.callee_marshal_visitor;
+                }
+            }
         };
 
-        template<rpc_side side>
-        class unmarshaling_walk : public generation_walk<unmarshaling_walk<side>> {
+        template<rpc_side side, bool hard_const = false>
+        class unmarshaling_walk : public generation_walk<unmarshaling_walk<side, hard_const>> {
         public:
             unmarshaling_walk(std::ostream& os, absl::string_view holder, unsigned level) :
-                generation_walk<unmarshaling_walk<side>> {os, holder, level}
+                generation_walk<unmarshaling_walk<side, hard_const>> {os, holder, level}
             {}
 
             bool visit_value(value& node)
@@ -290,12 +298,18 @@ namespace idlc {
 
                 this->stream() << "if (*" << this->subject() << ") {\n";
                 if (node.referent->is_const) {
-                    const auto type = concat(node.referent->c_specifier, "*");
-                    this->stream() << "\t" << type << " writable = "
-                        << concat("(", type, ")*", this->subject()) << ";\n";
+                    if (hard_const) {
+                        std::cout << "Debug: tried to unmarshal a const output argument\n";
+                        this->stream() << "\tpanic(\"IDL undefined behavior\"); // Could invoke undefined behavior\n";
+                    }
+                    else {
+                        const auto type = concat(node.referent->c_specifier, "*");
+                        this->stream() << "\t" << type << " writable = "
+                            << concat("(", type, ")*", this->subject()) << ";\n";
 
-                    if (!this->marshal("writable", node))
-                        return false;
+                        if (!this->marshal("writable", node))
+                            return false;
+                    }
                 }
                 else {
                     if (!this->marshal(concat("*", this->subject()), node))
@@ -346,7 +360,7 @@ namespace idlc {
 
             bool visit_projection(projection& node)
             {
-                this->stream() << node.arg_unmarshal_visitor << "(msg, " << this->subject() << ");\n";
+                this->stream() << visitor(node) << "(msg, " << this->subject() << ");\n";
                 return true;
             }
 
@@ -383,6 +397,17 @@ namespace idlc {
 
                 case rpc_side::caller:
                     return flags_set(flags, annotation::alloc_callee);
+                }
+            }
+
+            static constexpr absl::string_view visitor(projection& node)
+            {
+                switch (side) {
+                case rpc_side::callee:
+                    return node.callee_unmarshal_visitor;
+
+                case rpc_side::caller:
+                    return hard_const ? node.caller_const_unmarshal_visitor : node.caller_unmarshal_visitor;
                 }
             }
         };
@@ -465,7 +490,7 @@ namespace idlc {
             os << "\tvmfunc_wrapper(msg);\n\n";
 
             for (const auto& [name, type] : roots) {
-                unmarshaling_walk<rpc_side::caller> arg_unremarshal {os, name, 1};
+                unmarshaling_walk<rpc_side::caller, true> arg_unremarshal {os, name, 1};
                 arg_unremarshal.visit_value(*type);
             }
 
@@ -630,7 +655,7 @@ namespace idlc {
 
         void generate_arg_marshal_visitor(std::ostream& file, projection& node)
         {
-            file << "void " << node.arg_marshal_visitor << "(\n\tstruct fipc_message* msg,\n\tstruct "
+            file << "void " << node.caller_marshal_visitor << "(\n\tstruct fipc_message* msg,\n\tstruct "
                 << node.real_name << " const* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs(file, node, "ptr", annotation::in, true);
@@ -645,7 +670,7 @@ namespace idlc {
 
         void generate_arg_unmarshal_visitor(std::ostream& file, projection& node)
         {
-            file << "void " << node.arg_unmarshal_visitor << "(\n\tstruct fipc_message* msg,\n\tstruct "
+            file << "void " << node.callee_unmarshal_visitor << "(\n\tstruct fipc_message* msg,\n\tstruct "
                 << node.real_name << "* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs(file, node, "ptr", annotation::in, false);
@@ -660,7 +685,7 @@ namespace idlc {
 
         void generate_arg_remarshal_visitor(std::ostream& file, projection& node)
         {
-            file << "void " << node.arg_remarshal_visitor
+            file << "void " << node.callee_marshal_visitor
                     << "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << " const* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs(file, node, "ptr", annotation::out, true);
@@ -675,29 +700,13 @@ namespace idlc {
 
         void generate_arg_unremarshal_visitor(std::ostream& file, projection& node)
         {
-            file << "void " << node.arg_unremarshal_visitor
+            file << "void " << node.caller_const_unmarshal_visitor
                     << "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs(file, node, "ptr", annotation::out, false);
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
-                unmarshaling_walk<rpc_side::caller> walk {file, name, 1};
-                walk.visit_value(*type);
-            }
-
-            file << "}\n\n";
-        }
-
-        // FIXME: now a duplicate of arg remarshaling
-        void generate_ret_marshal_visitor(std::ostream& file, projection& node)
-        {
-            file << "void " << node.ret_marshal_visitor
-                    << "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << " const* ptr)\n{\n";
-
-            const auto roots = generate_root_ptrs(file, node, "ptr", annotation::out, true);
-            const auto n_fields = node.fields.size();
-            for (const auto& [name, type] : roots) {
-                marshaling_walk<rpc_side::callee> walk {file, name, 1};
+                unmarshaling_walk<rpc_side::caller, true> walk {file, name, 1};
                 walk.visit_value(*type);
             }
 
@@ -706,7 +715,7 @@ namespace idlc {
 
         void generate_ret_unmarshal_visitor(std::ostream& file, projection& node)
         {
-            file << "void " << node.ret_unmarshal_visitor
+            file << "void " << node.caller_unmarshal_visitor
                     << "(\n\tstruct fipc_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs(file, node, "ptr", annotation::out, false);
@@ -728,11 +737,11 @@ namespace idlc {
             file << "#include \"common.h\"\n\n";
             file << "#include <lcd_config/post_hook.h>\n\n";
             for (const auto& projection : projections) {
+                // TODO: make these optional
                 generate_arg_marshal_visitor(file, *projection);
                 generate_arg_unmarshal_visitor(file, *projection);
                 generate_arg_remarshal_visitor(file, *projection);
                 generate_arg_unremarshal_visitor(file, *projection);
-                generate_ret_marshal_visitor(file, *projection);
                 generate_ret_unmarshal_visitor(file, *projection);
             }
         }

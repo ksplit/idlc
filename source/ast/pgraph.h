@@ -112,22 +112,20 @@ namespace idlc {
 		ident real_name {};
 		std::vector<projection_field> fields {};
 
-		std::string arg_marshal_visitor {};
-		std::string arg_unmarshal_visitor {};
-		std::string arg_remarshal_visitor {};
-		std::string arg_unremarshal_visitor {};
-		std::string ret_marshal_visitor {};
-		std::string ret_unmarshal_visitor {};
+		std::string caller_marshal_visitor {};
+		std::string callee_unmarshal_visitor {};
+		std::string callee_marshal_visitor {};
+		std::string caller_const_unmarshal_visitor {};
+		std::string caller_unmarshal_visitor {};
 
 		projection(ident real_name, const std::string& name) :
 			real_name {real_name},
 			fields {},
-			arg_marshal_visitor {},
-			arg_unmarshal_visitor {},
-			arg_remarshal_visitor {},
-			arg_unremarshal_visitor {},
-			ret_marshal_visitor {},
-			ret_unmarshal_visitor {}
+			caller_marshal_visitor {},
+			callee_unmarshal_visitor {},
+			callee_marshal_visitor {},
+			caller_const_unmarshal_visitor {},
+			caller_unmarshal_visitor {}
 		{
 			populate_names(name);
 		};
@@ -135,12 +133,11 @@ namespace idlc {
 		projection(ident real_name, const std::string& name, decltype(fields)&& fields) :
 			real_name {real_name},
 			fields {std::move(fields)},
-			arg_marshal_visitor {},
-			arg_unmarshal_visitor {},
-			arg_remarshal_visitor {},
-			arg_unremarshal_visitor {},
-			ret_marshal_visitor {},
-			ret_unmarshal_visitor {}
+			caller_marshal_visitor {},
+			callee_unmarshal_visitor {},
+			callee_marshal_visitor {},
+			caller_const_unmarshal_visitor {},
+			caller_unmarshal_visitor {}
 		{
 			populate_names(name);
 		}
@@ -148,12 +145,11 @@ namespace idlc {
 	private:
 		void populate_names(const std::string& name)
 		{
-			arg_marshal_visitor = concat("arg_marshal_", name);
-			arg_unmarshal_visitor = concat("arg_unmarshal_", name);
-			arg_remarshal_visitor = concat("arg_remarshal_", name);
-			arg_unremarshal_visitor = concat("arg_unremarshal_", name);
-			ret_marshal_visitor = concat("ret_marshal_", name);
-			ret_unmarshal_visitor = concat("ret_unmarshal_", name);
+			caller_marshal_visitor = concat("caller_marshal_", name);
+			callee_unmarshal_visitor = concat("callee_unmarshal_", name);
+			callee_marshal_visitor = concat("callee_marshal_", name);
+			caller_const_unmarshal_visitor = concat("caller_const_unmarshal_", name);
+			caller_unmarshal_visitor = concat("caller_unmarshal_", name);
 		}
 	};
 }
