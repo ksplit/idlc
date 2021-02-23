@@ -115,7 +115,6 @@ namespace idlc {
 		std::string caller_marshal_visitor {};
 		std::string callee_unmarshal_visitor {};
 		std::string callee_marshal_visitor {};
-		std::string caller_const_unmarshal_visitor {};
 		std::string caller_unmarshal_visitor {};
 
 		projection(ident real_name, const std::string& name) :
@@ -124,7 +123,6 @@ namespace idlc {
 			caller_marshal_visitor {},
 			callee_unmarshal_visitor {},
 			callee_marshal_visitor {},
-			caller_const_unmarshal_visitor {},
 			caller_unmarshal_visitor {}
 		{
 			populate_names(name);
@@ -136,7 +134,6 @@ namespace idlc {
 			caller_marshal_visitor {},
 			callee_unmarshal_visitor {},
 			callee_marshal_visitor {},
-			caller_const_unmarshal_visitor {},
 			caller_unmarshal_visitor {}
 		{
 			populate_names(name);
@@ -148,7 +145,6 @@ namespace idlc {
 			caller_marshal_visitor = concat("caller_marshal_", name);
 			callee_unmarshal_visitor = concat("callee_unmarshal_", name);
 			callee_marshal_visitor = concat("callee_marshal_", name);
-			caller_const_unmarshal_visitor = concat("caller_const_unmarshal_", name);
 			caller_unmarshal_visitor = concat("caller_unmarshal_", name);
 		}
 	};

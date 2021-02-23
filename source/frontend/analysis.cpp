@@ -240,6 +240,7 @@ namespace idlc {
 			bool visit_pointer(pointer& node)
 			{
 				// Default if no pointer annotations are set
+				// TODO: what are the correct defaults here?
 				if (is_clear(node.pointer_annots & annotation::ptr_only)) {
 					if (m_default_with == annotation::in)
 						node.pointer_annots = annotation::bind_caller;
