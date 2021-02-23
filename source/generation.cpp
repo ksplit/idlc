@@ -74,9 +74,11 @@ namespace idlc {
             file << "\n";
             file << "#include \"glue_user.h\"\n";
             file << "\n";
-            file << "#define glue_marshal_shadow(msg, value) (void)(value) // TODO\n";
             file << "#define glue_marshal(msg, value) (void)(value) // TODO\n";
+            file << "#define glue_marshal_shadow(msg, value) (void)(value) // TODO\n";
             file << "#define glue_unmarshal(msg, type) (type)0xdeadbeef // TODO\n";
+            file << "#define glue_unmarshal_shadow(msg, type) (type)0xdeadbeef // TODO\n";
+            file << "#define glue_unmarshal_new_shadow(msg, type, size) (type)0xdeadbeef // TODO\n";
             file << "#define glue_unmarshal_rpc_ptr(msg, trmp_id) 0 // TODO\n";
             file << "#define glue_look_ahead(msg) 0 // TODO\n";
             file << "\n";
@@ -133,6 +135,11 @@ namespace idlc {
 
             std::ostream& stream()
             {
+                return m_stream;
+            }
+
+            std::ostream& new_line()
+            {
                 return indent(m_stream, m_indent_level);
             }
 
@@ -157,14 +164,14 @@ namespace idlc {
             bool visit_pointer(pointer& node)
             {
                 if (should_bind(node.pointer_annots))
-                    this->stream() << "glue_marshal_shadow(msg, *" << this->subject() << ");\n";
+                    this->new_line() << "glue_marshal_shadow(msg, *" << this->subject() << ");\n";
                 else
-                    this->stream() << "glue_marshal(msg, *" << this->subject() << ");\n";
+                    this->new_line() << "glue_marshal(msg, *" << this->subject() << ");\n";
 
                 if (should_walk(node.pointer_annots)) {
-                    this->stream() << "if (*" << this->subject() << ") {\n";
+                    this->new_line() << "if (*" << this->subject() << ") {\n";
                     this->marshal("*" + this->subject(), node);
-                    this->stream() << "}\n\n";
+                    this->new_line() << "}\n\n";
                 }
 
                 return true;
@@ -172,19 +179,19 @@ namespace idlc {
 
             bool visit_primitive(primitive node)
             {
-                this->stream() << "glue_marshal(msg, *" << this->subject() << ");\n";
+                this->new_line() << "glue_marshal(msg, *" << this->subject() << ");\n";
                 return true;
             }
 
             bool visit_rpc_ptr(rpc_ptr& node)
             {
-                this->stream() << "glue_marshal(msg, *" << this->subject() << ");\n";
+                this->new_line() << "glue_marshal(msg, *" << this->subject() << ");\n";
                 return true;
             }
 
             bool visit_projection(projection& node)
             {
-                this->stream() << visitor(node) << "(msg, " << this->subject() << ");\n";
+                this->new_line() << visitor(node) << "(msg, " << this->subject() << ");\n";
                 return true;
             }
 
@@ -193,16 +200,16 @@ namespace idlc {
                 const auto star = node.element->is_const ? " const*" : "*";
                 const auto ptr_type = concat(node.element->c_specifier, star);
 
-                this->stream() << "size_t i, len;\n";
-                this->stream() << ptr_type << " array = "	<< this->subject() << ";\n";
-                this->stream() << "for (len = 0; array[len]; ++len);\n";
-                this->stream() << "glue_marshal(msg, len);\n";
-                this->stream() << "for (i = 0; i < len; ++i) {\n";
-                this->stream() << "\t" << ptr_type << " element = &array[i];\n";
+                this->new_line() << "size_t i, len;\n";
+                this->new_line() << ptr_type << " array = "	<< this->subject() << ";\n";
+                this->new_line() << "for (len = 0; array[len]; ++len);\n";
+                this->new_line() << "glue_marshal(msg, len);\n";
+                this->new_line() << "for (i = 0; i < len; ++i) {\n";
+                this->new_line() << "\t" << ptr_type << " element = &array[i];\n";
                 if (!this->marshal("element", node))
                     return false;
 
-                this->stream() << "}\n\n";
+                this->new_line() << "}\n\n";
 
                 return true;
             }
@@ -236,17 +243,6 @@ namespace idlc {
 
                 case rpc_side::callee:
                     return flags_set(flags, annotation::bind_callee);
-                }
-            }
-
-            static constexpr bool should_alloc(annotation flags)
-            {
-                switch (side) {
-                case rpc_side::caller:
-                    return flags_set(flags, annotation::alloc_caller);
-
-                case rpc_side::callee:
-                    return flags_set(flags, annotation::alloc_callee);
                 }
             }
 
@@ -285,26 +281,34 @@ namespace idlc {
 
             bool visit_primitive(primitive node)
             {
-                this->stream() << "*" << this->subject() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
+                this->new_line() << "*" << this->subject() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
                 return true;
             }
 
             bool visit_pointer(pointer& node)
             {
-                this->stream() << "*" << this->subject() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
+                this->new_line() << "*" << this->subject() << " = ";
+                if (should_bind(node.pointer_annots))
+                    this->stream() << "glue_unmarshal_shadow(msg, " << m_c_specifier << ")";
+                else if (should_alloc(node.pointer_annots))
+                    this->stream() << "glue_unmarshal_new_shadow(msg, " << m_c_specifier << ", 0)";
+                else
+                    this->stream() << "glue_unmarshal(msg, " << m_c_specifier << ")";
+
+                this->stream() << ";\n";
 
                 if (!should_walk(node.referent->value_annots))
                     return true;
 
-                this->stream() << "if (*" << this->subject() << ") {\n";
+                this->new_line() << "if (*" << this->subject() << ") {\n";
                 if (node.referent->is_const) {
                     if (hard_const) {
                         std::cout << "Debug: tried to unmarshal a const output argument\n";
-                        this->stream() << "\tpanic(\"IDL undefined behavior\"); // Could invoke undefined behavior\n";
+                        this->new_line() << "\tpanic(\"IDL undefined behavior\"); // Could invoke undefined behavior\n";
                     }
                     else {
                         const auto type = concat(node.referent->c_specifier, "*");
-                        this->stream() << "\t" << type << " writable = "
+                        this->new_line() << "\t" << type << " writable = "
                             << concat("(", type, ")*", this->subject()) << ";\n";
 
                         if (!this->marshal("writable", node))
@@ -316,43 +320,43 @@ namespace idlc {
                         return false;
                 }
 
-                this->stream() << "}\n\n";
+                this->new_line() << "}\n\n";
 
                 return true;
             }
 
             bool visit_null_terminated_array(null_terminated_array& node)
             {
-                this->stream() << "size_t i, len;\n";
-                this->stream() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
-                this->stream() << "len = glue_unmarshal(msg, size_t);\n";
-                this->stream() << "for (i = 0; i < len; ++i) {\n";
-                this->stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
+                this->new_line() << "size_t i, len;\n";
+                this->new_line() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
+                this->new_line() << "len = glue_unmarshal(msg, size_t);\n";
+                this->new_line() << "for (i = 0; i < len; ++i) {\n";
+                this->new_line() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
                 if (!this->marshal("element", node))
                     return false;
 
-                this->stream() << "}\n\n";
+                this->new_line() << "}\n\n";
 
                 return true;
             }
 
             bool visit_dyn_array(dyn_array& node)
             {
-                this->stream() << "int i;\n";
-                this->stream() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
-                this->stream() << "for (i = 0; i < " << node.size << "; ++i) {\n";
-                this->stream() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
+                this->new_line() << "int i;\n";
+                this->new_line() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
+                this->new_line() << "for (i = 0; i < " << node.size << "; ++i) {\n";
+                this->new_line() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
                 if (!this->marshal("element", node))
                     return false;
 
-                this->stream() << "}\n\n";
+                this->new_line() << "}\n\n";
 
                 return true;
             }
 
             bool visit_rpc_ptr(rpc_ptr& node)
             {
-                this->stream() << "*" << this->subject() << " = glue_unmarshal_rpc_ptr(msg, "
+                this->new_line() << "*" << this->subject() << " = glue_unmarshal_rpc_ptr(msg, "
                     << node.definition->trmp_id << ");\n";
 
                 return true;
@@ -360,7 +364,7 @@ namespace idlc {
 
             bool visit_projection(projection& node)
             {
-                this->stream() << visitor(node) << "(msg, " << this->subject() << ");\n";
+                this->new_line() << visitor(node) << "(msg, " << this->subject() << ");\n";
                 return true;
             }
 
@@ -392,10 +396,10 @@ namespace idlc {
             static constexpr bool should_alloc(annotation flags)
             {
                 switch (side) {
-                case rpc_side::callee:
+                case rpc_side::caller:
                     return flags_set(flags, annotation::alloc_caller);
 
-                case rpc_side::caller:
+                case rpc_side::callee:
                     return flags_set(flags, annotation::alloc_callee);
                 }
             }
