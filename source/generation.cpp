@@ -230,6 +230,8 @@ namespace idlc {
                 case rpc_side::callee:
                     return flags_set(flags, annotation::out);
                 }
+
+                std::terminate();
             }
 
             /*
@@ -246,6 +248,8 @@ namespace idlc {
                 case rpc_side::callee:
                     return flags_set(flags, annotation::bind_callee);
                 }
+
+                std::terminate();
             }
 
             static constexpr absl::string_view visitor(projection& node)
@@ -257,6 +261,8 @@ namespace idlc {
                 case rpc_side::callee:
                     return node.callee_marshal_visitor;
                 }
+
+                std::terminate();
             }
         };
 
@@ -392,6 +398,8 @@ namespace idlc {
                 case rpc_side::caller:
                     return flags_set(flags, annotation::out);
                 }
+
+                std::terminate();
             }
 
             static constexpr bool should_bind(annotation flags)
@@ -403,6 +411,8 @@ namespace idlc {
                 case rpc_side::callee:
                     return flags_set(flags, annotation::bind_callee);
                 }
+
+                std::terminate();
             }
 
             static constexpr bool should_alloc(annotation flags)
@@ -414,6 +424,8 @@ namespace idlc {
                 case rpc_side::callee:
                     return flags_set(flags, annotation::alloc_callee);
                 }
+
+                std::terminate();
             }
 
             static constexpr absl::string_view visitor(projection& node)
@@ -425,6 +437,8 @@ namespace idlc {
                 case rpc_side::caller:
                     return node.caller_unmarshal_visitor;
                 }
+
+                std::terminate();
             }
         };
 
@@ -439,14 +453,14 @@ namespace idlc {
         */
         auto generate_root_ptrs(rpc_def& rpc, std::ostream& os)
         {
-            const auto n_args = rpc.arg_pgraphs.size();
+            const auto n_args = gsl::narrow<gsl::index>(rpc.arg_pgraphs.size());
             std::vector<std::tuple<std::string, value*>> roots;
             roots.reserve(n_args);
             for (gsl::index i {}; i < n_args; ++i) {
                 const auto& name = rpc.arguments->at(i)->name;
                 const auto& pgraph = rpc.arg_pgraphs.at(i);
                 const auto& specifier = pgraph->c_specifier;
-                const auto ptr_name = concat(name, "_ptr");
+                auto ptr_name = concat(name, "_ptr");
                 os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
                 roots.emplace_back(std::move(ptr_name), pgraph.get());
             }
@@ -476,7 +490,7 @@ namespace idlc {
                     continue;
 
                 const auto specifier = concat(type->c_specifier, is_const_context ? " const*" : "*");
-                const auto ptr_name = concat(name, "_ptr");
+                auto ptr_name = concat(name, "_ptr");
                 os << "\t" << specifier << " " << ptr_name << " = &" << source_var << "->"
                     << name << ";\n";
 
@@ -524,7 +538,7 @@ namespace idlc {
             if (rpc.kind == rpc_def_kind::indirect)
                 os << "\t" << rpc.typedef_id << " function_ptr = glue_unmarshal(msg, " << rpc.typedef_id << ");\n";
 
-            const auto n_args = rpc.arg_pgraphs.size();
+            const auto n_args = gsl::narrow<gsl::index>(rpc.arg_pgraphs.size());
             for (gsl::index i {}; i < n_args; ++i) {
                 const auto& type = rpc.arg_pgraphs.at(i)->c_specifier;
                 const auto name = rpc.arguments->at(i)->name;
@@ -651,7 +665,8 @@ namespace idlc {
                     bool is_first {true};
                     auto& args_str = rpc->args_string;
                     auto& param_str = rpc->params_string;
-                    for (gsl::index i {}; i < rpc->arguments->size(); ++i) {
+                    const auto size = gsl::narrow<gsl::index>(rpc->arguments->size());
+                    for (gsl::index i {}; i < size; ++i) {
                         const auto& arg = rpc->arg_pgraphs.at(i);
                         const auto name = rpc->arguments->at(i)->name;
                         if (!is_first) {

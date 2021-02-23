@@ -452,7 +452,7 @@ type_stem = arr:type_array {{
 }}
 
 indirection = attrs:(val:ptr_attrs tok_space? {{ value = val; }})? tok_star is_c:(tok_space? tok_kw_const)? {{
-	value = share(indirection {to_int<annotation>(attrs), is_c.getValue()});
+	value = share(indirection {to_int<annotation>(attrs), gsl::narrow_cast<bool>(is_c.getValue())});
 }}
 
 type_spec = is_c:(tok_kw_const tok_space {{	value = $1; }})? stem:type_stem indirs:(tok_space? indirection)* val_annotation:(tok_space? val_attrs)? {{
@@ -466,7 +466,7 @@ type_spec = is_c:(tok_kw_const tok_space {{	value = $1; }})? stem:type_stem indi
 		get_shared<type_stem>(stem),
 		std::move(a),
 		to_int<annotation>(val_annotation),
-		is_c.getValue()
+		gsl::narrow_cast<bool>(is_c.getValue())
 	});
 }}
 

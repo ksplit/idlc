@@ -23,7 +23,7 @@ namespace idlc {
 	struct dyn_array;
 	struct pointer;
 	struct static_void_ptr; // a void* that is "actually" a pointer to some other type
-	struct projection;
+	class projection;
 	struct rpc_ptr;
 
 	struct value;

@@ -4,10 +4,12 @@
 #include <iostream>
 #include <string>
 
+#include <gsl/gsl>
+
 namespace idlc {
 	inline auto& indent(std::ostream& os, unsigned n)
 	{
-		for (int i {}; i < n; ++i)
+		for (int i {}; gsl::narrow_cast<unsigned>(i) < n; ++i)
 			os << "\t";
 
 		return os;
