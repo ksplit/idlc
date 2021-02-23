@@ -15,6 +15,7 @@ source/parser/parser.h
 # editor configs
 .vscode/
 .vs/
+CMakeSettings.json
 
 # generated files
 callee.c

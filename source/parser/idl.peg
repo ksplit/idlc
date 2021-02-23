@@ -147,7 +147,8 @@ lex_block_comment_char = [ !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRS
 lex_line_comment_char = [ !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz{|}~] | [ \t] | <ascii 93>
 lex_whitespace = [ \t\n\r]
 
-lex_line_comment = "//" lex_line_comment_char* "\n"
+lex_newline = "\r" "\n" | "\n"
+lex_line_comment = "//" lex_line_comment_char* lex_newline
 lex_block_comment = "/*" lex_block_comment_tail
 lex_block_comment_tail = "*/" | lex_block_comment_char lex_block_comment_tail
 lex_comment = lex_line_comment | lex_block_comment
