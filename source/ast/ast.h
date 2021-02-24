@@ -15,8 +15,6 @@
 #include "pgraph.h"
 #include "node_ptrs.h"
 
-// TODO: since AST uses "external types" (sema) extensively, re-organize these to avoid vicious circularities
-
 namespace idlc {
 	using ident_vec = std::vector<ident>;
 
@@ -35,10 +33,6 @@ namespace idlc {
 	
 	struct rpc_def;
 
-	// struct field_rel_ref;
-	// struct field_abs_ref;
-
-	// TODO: can this be removed?
 	struct tok_kw_null {}; // Doesn't exist in parse rules, used as marker (represents tok_kw_null)
 	
 	using file = std::variant<node_ref<driver_file>, node_ref<ref_vec<module_def>>>;

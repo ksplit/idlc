@@ -247,7 +247,7 @@ namespace idlc {
 					else if (m_default_with == annotation::out)
 						node.pointer_annots = annotation::bind_callee;
 					else if (m_default_with == (annotation::in | annotation::out))
-						node.pointer_annots = (annotation::bind_callee | annotation::bind_caller);
+						node.pointer_annots = (annotation::bind_callee | annotation::bind_caller); // FIXME
 				}
 				else {
 					// Annotation already set, ignore

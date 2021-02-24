@@ -7,10 +7,6 @@
 #include <variant>
 
 #include "../string_heap.h"
-
-// TODO: consider merging this into the AST module
-
-// TODO: move these
 namespace idlc {
 	struct proj_def;
 	struct rpc_def;

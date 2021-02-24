@@ -43,7 +43,7 @@ namespace idlc {
 					return pass.visit_pointer(*item);
 				}
 				else if constexpr (std::is_same_v<type, node_ptr<static_void_ptr>>) {
-					// TODO: static_void_ptr
+					// TODO: void<>
 				}
 				else if constexpr (std::is_same_v<type, node_ptr<rpc_ptr>>) {
 					return pass.visit_rpc_ptr(*item);
@@ -157,7 +157,6 @@ namespace idlc {
 		}
 
 	protected:
-		// TODO: does this *need* to be a protected member
 		pgraph_traverse<derived> traverse {};
 		
 		auto& self()

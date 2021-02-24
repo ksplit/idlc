@@ -18,8 +18,8 @@ source/parser/parser.h
 CMakeSettings.json
 
 # generated files
-callee.c
-caller.c
+client.c
+server.c
 common.h
 common.c
 trampolines.lds.S

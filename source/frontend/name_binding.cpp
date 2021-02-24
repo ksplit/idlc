@@ -9,8 +9,6 @@
 
 namespace idlc {
 	namespace {
-		// TODO: a possible performance improvement is in avoiding traversing "uninteresting" subtrees
-
 		class symbol_walk : public ast_walk<symbol_walk> {
 		public:
 			bool visit_rpc_def(rpc_def& node);
