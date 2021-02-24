@@ -105,6 +105,8 @@ namespace idlc {
 
             file << "};\n\n";
 
+            file << "int try_dispatch(enum RPC_ID id, struct glue_message* msg);\n\n";
+
             generate_visitor_prototypes(file, projections);
             for (const auto& rpc : rpcs) {
                 if (rpc->kind == rpc_def_kind::indirect) {
@@ -184,7 +186,7 @@ namespace idlc {
                 else
                     this->new_line() << "glue_pack(msg, *" << this->subject() << ");\n";
 
-                if (should_walk(node.pointer_annots)) {
+                if (should_walk(node.referent->value_annots)) {
                     this->new_line() << "if (*" << this->subject() << ") {\n";
                     this->marshal("*" + this->subject(), node);
                     this->new_line() << "}\n\n";
@@ -207,7 +209,7 @@ namespace idlc {
 
             bool visit_projection(projection& node)
             {
-                this->new_line() << visitor(node) << "(msg, " << this->subject() << ");\n";
+                this->new_line() << get_visitor_name(node) << "(msg, " << this->subject() << ");\n";
                 return true;
             }
 
@@ -254,7 +256,7 @@ namespace idlc {
             }
 
             /*
-                This confused me today; it will confuse you too
+                NOTE: This confused me today; it will confuse you too
                 Bind annotations indicate which side of the call has the shadow copy (statically)
                 Whether or not they are bound on a side is irrespective of whether we are marshaling or unmarshaling
             */
@@ -271,7 +273,7 @@ namespace idlc {
                 std::terminate();
             }
 
-            static constexpr absl::string_view visitor(projection& node)
+            static constexpr absl::string_view get_visitor_name(projection& node)
             {
                 switch (side) {
                 case marshal_side::caller:
@@ -329,8 +331,9 @@ namespace idlc {
             bool visit_pointer(pointer& node)
             {
                 this->new_line() << "*" << this->subject() << " = ";
-                if (should_bind(node.pointer_annots))
+                if (should_bind(node.pointer_annots)) {
                     this->stream() << "glue_unpack_shadow(msg, " << m_c_specifier << ")";
+                }
                 else if (should_alloc(node.pointer_annots)) {
                     this->stream() << "glue_unpack_new_shadow(msg, " << m_c_specifier << ", "
                         << get_size_expr(*node.referent) << ")";
@@ -346,6 +349,8 @@ namespace idlc {
 
                 this->new_line() << "if (*" << this->subject() << ") {\n";
                 if (node.referent->is_const) {
+                    // Since the type itself must include const, but we need to write to it for unmarshaling,
+                    // We create a writeable version of the pointer and use it instead
                     const auto type = concat(node.referent->c_specifier, "*");
                     this->new_line() << "\t" << type << " writable = "
                         << concat("(", type, ")*", this->subject()) << ";\n";
@@ -378,6 +383,7 @@ namespace idlc {
                 return true;
             }
 
+            // FIXME: we pack the array size before the array elements, but this doesn't try and use it
             bool visit_dyn_array(dyn_array& node)
             {
                 this->new_line() << "int i;\n";
@@ -805,7 +811,7 @@ namespace idlc {
             file << "}\n\n";
         }
 
-        void generate_common_source(projection_vec_view projections)
+        void generate_common_source(rpc_vec_view rpcs, projection_vec_view projections)
         {
             std::ofstream file {"common.c"};
             file.exceptions(file.badbit | file.failbit);
@@ -813,6 +819,19 @@ namespace idlc {
             file << "#include <lcd_config/pre_hook.h>\n\n";
             file << "#include \"common.h\"\n\n";
             file << "#include <lcd_config/post_hook.h>\n\n";
+
+            // file << "int try_dispatch(enum RPC_ID id, struct glue_message* msg)\n";
+            // file << "{\n";
+            // file << "\tswitch(id) {\n";
+            // for (const auto& rpc : rpcs) {
+            //     file << "\tcase " << rpc->enum_id << ":\n";
+            //     file << "\t\t" << rpc->callee_id << "(msg);\n";
+            //     file << "\t\tbreak;\n\n";
+            // }
+
+            // file << "\tdefault:\n\t\treturn 0;\n";
+            // file << "\t}\n\n\treturn 1;\n}\n\n";
+
             for (const auto& projection : projections) {
                 // TODO: make these optional
                 generate_caller_marshal_visitor(file, *projection);
@@ -994,7 +1013,7 @@ namespace idlc {
         populate_c_type_specifiers(rpcs);
         create_function_strings(rpcs);
         generate_common_header(rpcs, projections);
-        generate_common_source(projections);
+        generate_common_source(rpcs, projections);
         generate_client(rpcs);
         generate_server(rpcs);
         generate_linker_script(rpcs);
