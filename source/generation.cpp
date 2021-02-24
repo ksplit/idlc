@@ -57,13 +57,11 @@ namespace idlc {
 
             file << "#ifndef COMMON_H\n#define COMMON_H\n\n";
             file << "#include <liblcd/trampoline.h>\n";
-            file << "#include <libfipc.h>\n";
-            file << "#include <asm/lcd_domains/libvmfunc.h>\n";
             file << "\n";
             file << "#include \"glue_user.h\"\n";
             file << "\n";
             file << "#define GLUE_MAX_SLOTS 32\n";
-            file << "#define glue_pack(msg, value) glue_pack_impl((msg), (unsigned long)(value))\n";
+            file << "#define glue_pack(msg, value) glue_pack_impl((msg), (uint64_t)(value))\n";
             file << "#define glue_pack_shadow(msg, value) glue_pack(msg, glue_user_map_from_shadow(value))\n";
             file << "#define glue_unpack(msg, type) (type)glue_unpack_impl((msg))\n";
             file << "#define glue_unpack_shadow(msg, type) (type)glue_user_map_to_shadow(glue_unpack(msg, void*));\n";
@@ -72,8 +70,12 @@ namespace idlc {
 
             file << "#define glue_unpack_rpc_ptr(msg, trmp_id) 0 // TODO\n";
             file << "#define glue_peek(msg) glue_peek_impl(msg)\n";
-            file << "#define glue_call_server(msg, rpc_id) (void)(msg); (void)(rpc_id) // TODO\n";
-            file << "#define glue_call_client(msg, rpc_id) (void)(msg); (void)(rpc_id) // TODO\n";
+            file << "#define glue_call_server(msg, rpc_id) \\\n"
+                << "\tmsg->slots[0] = msg->position; glue_user_call_server(msg->slots, rpc_id);\n\n";
+
+            file << "#define glue_call_client(msg, rpc_id) (void)(msg); (void)(rpc_id) \\\n"
+                << "\tmsg->slots[0] = msg->position; glue_user_call_client(msg->slots, rpc_id);\n\n";
+
             file << "\n";
             file << "void glue_user_panic(const char* msg);\n";
             file << "void glue_user_trace(const char* msg);\n";
@@ -81,10 +83,12 @@ namespace idlc {
             file << "void* glue_user_map_from_shadow(const void* shadow);\n";
             file << "void* glue_user_add_shadow(const void* ptr, const void* shadow);\n";
             file << "void* glue_user_alloc(size_t size);\n";
+            file << "void glue_user_call_server(const uint64_t* data, size_t rpc_id);\n";
+            file << "void glue_user_call_client(const uint64_t* data, size_t rpc_id);\n";
             file << "\n";
             file << "struct glue_message {\n";
-            file << "\tunsigned long slots[GLUE_MAX_SLOTS];\n";
-            file << "\tunsigned long position;\n";
+            file << "\tuint64_t slots[GLUE_MAX_SLOTS];\n";
+            file << "\tuint64_t position;\n";
             file << "};\n";
             file << "\n";
             file << "static inline void glue_pack_impl(struct glue_message* msg, unsigned long value)\n";
