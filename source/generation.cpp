@@ -63,13 +63,13 @@ namespace idlc {
             file << "#include \"glue_user.h\"\n";
             file << "\n";
             file << "#define GLUE_MAX_SLOTS 32\n";
-            file << "#define glue_marshal(msg, value) glue_pack((msg), (unsigned long)(value))\n";
-            file << "#define glue_marshal_shadow(msg, value) (void)(value) // TODO\n";
-            file << "#define glue_unmarshal(msg, type) (type)glue_unpack((msg))\n";
-            file << "#define glue_unmarshal_shadow(msg, type) (type)0xdeadbeef // TODO\n";
-            file << "#define glue_unmarshal_new_shadow(msg, type, size) (type)0xdeadbeef // TODO\n";
-            file << "#define glue_unmarshal_rpc_ptr(msg, trmp_id) 0 // TODO\n";
-            file << "#define glue_look_ahead(msg) 0 // TODO\n";
+            file << "#define glue_pack(msg, value) glue_pack_impl((msg), (unsigned long)(value))\n";
+            file << "#define glue_pack_shadow(msg, value) (void)(value) // TODO\n";
+            file << "#define glue_unpack(msg, type) (type)glue_unpack_impl((msg))\n";
+            file << "#define glue_unpack_shadow(msg, type) (type)0xdeadbeef // TODO\n";
+            file << "#define glue_unpack_new_shadow(msg, type, size) (type)0xdeadbeef // TODO\n";
+            file << "#define glue_unpack_rpc_ptr(msg, trmp_id) 0 // TODO\n";
+            file << "#define glue_peek(msg) glue_peek_impl\n";
             file << "#define glue_call_server(msg, rpc_id) (void)(msg); (void)(rpc_id) // TODO\n";
             file << "#define glue_call_client(msg, rpc_id) (void)(msg); (void)(rpc_id) // TODO\n";
             file << "\n";
@@ -78,24 +78,30 @@ namespace idlc {
             file << "\tunsigned long position;\n";
             file << "};\n";
             file << "\n";
-            file << "static inline void glue_pack(struct glue_message* msg, unsigned long value)\n";
+            file << "static inline void glue_pack_impl(struct glue_message* msg, unsigned long value)\n";
             file << "{\n";
             file << "\tif (msg->position >= GLUE_MAX_SLOTS)\n";
             file << "\t\tpanic(\"Glue message was too large\");\n";
             file << "\tmsg->slots[msg->position++ + 1] = value;\n";
             file << "}\n";
             file << "\n";
-            file << "static inline unsigned long glue_unpack(struct glue_message* msg)\n";
+            file << "static inline unsigned long glue_unpack_impl(struct glue_message* msg)\n";
             file << "{\n";
             file << "\tif (msg->position >= msg->slots[0])\n";
             file << "\t\tpanic(\"Unpacked past end of glue message\");\n";
             file << "\treturn msg->slots[msg->position++ + 1];\n";
             file << "}\n";
             file << "\n";
+            file << "static inline unsigned long glue_peek_impl(struct glue_message* msg)\n";
+            file << "{\n";
+            file << "\tif (msg->position >= msg->slots[0])\n";
+            file << "\t\tpanic(\"Peeked past end of glue message\");\n";
+            file << "\treturn msg->slots[msg->position + 2];\n";
+            file << "}\n";
+            file << "\n";
             file << "enum RPC_ID {\n";
-            for (const auto& rpc : rpcs) {
+            for (const auto& rpc : rpcs)
                 file << "\t" << rpc->enum_id << ",\n";
-            }
 
             file << "};\n\n";
 
@@ -174,9 +180,9 @@ namespace idlc {
             bool visit_pointer(pointer& node)
             {
                 if (should_bind(node.pointer_annots))
-                    this->new_line() << "glue_marshal_shadow(msg, *" << this->subject() << ");\n";
+                    this->new_line() << "glue_pack_shadow(msg, *" << this->subject() << ");\n";
                 else
-                    this->new_line() << "glue_marshal(msg, *" << this->subject() << ");\n";
+                    this->new_line() << "glue_pack(msg, *" << this->subject() << ");\n";
 
                 if (should_walk(node.pointer_annots)) {
                     this->new_line() << "if (*" << this->subject() << ") {\n";
@@ -189,13 +195,13 @@ namespace idlc {
 
             bool visit_primitive(primitive node)
             {
-                this->new_line() << "glue_marshal(msg, *" << this->subject() << ");\n";
+                this->new_line() << "glue_pack(msg, *" << this->subject() << ");\n";
                 return true;
             }
 
             bool visit_rpc_ptr(rpc_ptr& node)
             {
-                this->new_line() << "glue_marshal(msg, *" << this->subject() << ");\n";
+                this->new_line() << "glue_pack(msg, *" << this->subject() << ");\n";
                 return true;
             }
 
@@ -213,7 +219,7 @@ namespace idlc {
                 this->new_line() << "size_t i, len;\n";
                 this->new_line() << ptr_type << " array = "	<< this->subject() << ";\n";
                 this->new_line() << "for (len = 0; array[len]; ++len);\n";
-                this->new_line() << "glue_marshal(msg, len);\n";
+                this->new_line() << "glue_pack(msg, len);\n";
                 this->new_line() << "for (i = 0; i < len; ++i) {\n";
                 this->new_line() << "\t" << ptr_type << " element = &array[i];\n";
                 if (!this->marshal("element", node))
@@ -284,7 +290,7 @@ namespace idlc {
             const auto visit = [&node](auto&& item) {
                 using node_type = std::decay_t<decltype(item)>;
                 if constexpr (std::is_same_v<node_type, null_terminated_array> || std::is_same_v<node_type, dyn_array>)
-                    return concat("sizeof(", node.c_specifier, " * glue_look_ahead(msg))");
+                    return concat("sizeof(", node.c_specifier, " * glue_peek(msg))");
                 else
                     return concat("sizeof(", node.c_specifier, ")");
             };
@@ -315,7 +321,7 @@ namespace idlc {
 
             bool visit_primitive(primitive node)
             {
-                this->new_line() << "*" << this->subject() << " = glue_unmarshal(msg, " << m_c_specifier << ");\n";
+                this->new_line() << "*" << this->subject() << " = glue_unpack(msg, " << m_c_specifier << ");\n";
                 return true;
             }
 
@@ -324,13 +330,13 @@ namespace idlc {
             {
                 this->new_line() << "*" << this->subject() << " = ";
                 if (should_bind(node.pointer_annots))
-                    this->stream() << "glue_unmarshal_shadow(msg, " << m_c_specifier << ")";
+                    this->stream() << "glue_unpack_shadow(msg, " << m_c_specifier << ")";
                 else if (should_alloc(node.pointer_annots)) {
-                    this->stream() << "glue_unmarshal_new_shadow(msg, " << m_c_specifier << ", "
+                    this->stream() << "glue_unpack_new_shadow(msg, " << m_c_specifier << ", "
                         << get_size_expr(*node.referent) << ")";
                 }
                 else {
-                    this->stream() << "glue_unmarshal(msg, " << m_c_specifier << ")";
+                    this->stream() << "glue_unpack(msg, " << m_c_specifier << ")";
                 }
 
                 this->stream() << ";\n";
@@ -361,7 +367,7 @@ namespace idlc {
             {
                 this->new_line() << "size_t i, len;\n";
                 this->new_line() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
-                this->new_line() << "len = glue_unmarshal(msg, size_t);\n";
+                this->new_line() << "len = glue_unpack(msg, size_t);\n";
                 this->new_line() << "for (i = 0; i < len; ++i) {\n";
                 this->new_line() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
                 if (!this->marshal("element", node))
@@ -388,7 +394,7 @@ namespace idlc {
 
             bool visit_rpc_ptr(rpc_ptr& node)
             {
-                this->new_line() << "*" << this->subject() << " = glue_unmarshal_rpc_ptr(msg, "
+                this->new_line() << "*" << this->subject() << " = glue_unpack_rpc_ptr(msg, "
                     << node.definition->trmp_id << ");\n";
 
                 return true;
@@ -537,7 +543,7 @@ namespace idlc {
             const auto roots = generate_root_ptrs(rpc, os);
 
             if (rpc.kind == rpc_def_kind::indirect)
-                os << "\tglue_marshal(msg, target);\n"; // make sure we marshal the target pointer before everything
+                os << "\tglue_pack(msg, target);\n"; // make sure we marshal the target pointer before everything
 
             for (const auto& [name, type] : roots.arguments) {
                 marshaling_walk<marshal_side::caller> arg_marshal {os, name, 1};
@@ -583,7 +589,7 @@ namespace idlc {
         void generate_callee_glue(rpc_def& rpc, std::ostream& os)
         {
             if (rpc.kind == rpc_def_kind::indirect)
-                os << "\t" << rpc.typedef_id << " function_ptr = glue_unmarshal(msg, " << rpc.typedef_id << ");\n";
+                os << "\t" << rpc.typedef_id << " function_ptr = glue_unpack(msg, " << rpc.typedef_id << ");\n";
 
             const auto n_args = gsl::narrow<gsl::index>(rpc.arg_pgraphs.size());
             for (gsl::index i {}; i < n_args; ++i) {
