@@ -64,14 +64,23 @@ namespace idlc {
             file << "\n";
             file << "#define GLUE_MAX_SLOTS 32\n";
             file << "#define glue_pack(msg, value) glue_pack_impl((msg), (unsigned long)(value))\n";
-            file << "#define glue_pack_shadow(msg, value) (void)(value) // TODO\n";
+            file << "#define glue_pack_shadow(msg, value) glue_pack(msg, glue_user_map_from_shadow(value))\n";
             file << "#define glue_unpack(msg, type) (type)glue_unpack_impl((msg))\n";
-            file << "#define glue_unpack_shadow(msg, type) (type)0xdeadbeef // TODO\n";
-            file << "#define glue_unpack_new_shadow(msg, type, size) (type)0xdeadbeef // TODO\n";
+            file << "#define glue_unpack_shadow(msg, type) (type)glue_user_map_to_shadow(glue_unpack(msg, void*));\n";
+            file << "#define glue_unpack_new_shadow(msg, type, size) \\\n"
+                << "\t(type)glue_unpack_new_shadow_impl(glue_unpack(msg, void*), size)\n\n";
+
             file << "#define glue_unpack_rpc_ptr(msg, trmp_id) 0 // TODO\n";
-            file << "#define glue_peek(msg) glue_peek_impl\n";
+            file << "#define glue_peek(msg) glue_peek_impl(msg)\n";
             file << "#define glue_call_server(msg, rpc_id) (void)(msg); (void)(rpc_id) // TODO\n";
             file << "#define glue_call_client(msg, rpc_id) (void)(msg); (void)(rpc_id) // TODO\n";
+            file << "\n";
+            file << "void glue_user_panic(const char* msg);\n";
+            file << "void glue_user_trace(const char* msg);\n";
+            file << "void* glue_user_map_to_shadow(const void* obj);\n";
+            file << "void* glue_user_map_from_shadow(const void* shadow);\n";
+            file << "void* glue_user_add_shadow(const void* ptr, const void* shadow);\n";
+            file << "void* glue_user_alloc(size_t size);\n";
             file << "\n";
             file << "struct glue_message {\n";
             file << "\tunsigned long slots[GLUE_MAX_SLOTS];\n";
@@ -81,22 +90,29 @@ namespace idlc {
             file << "static inline void glue_pack_impl(struct glue_message* msg, unsigned long value)\n";
             file << "{\n";
             file << "\tif (msg->position >= GLUE_MAX_SLOTS)\n";
-            file << "\t\tpanic(\"Glue message was too large\");\n";
+            file << "\t\tglue_user_panic(\"Glue message was too large\");\n";
             file << "\tmsg->slots[msg->position++ + 1] = value;\n";
             file << "}\n";
             file << "\n";
             file << "static inline unsigned long glue_unpack_impl(struct glue_message* msg)\n";
             file << "{\n";
             file << "\tif (msg->position >= msg->slots[0])\n";
-            file << "\t\tpanic(\"Unpacked past end of glue message\");\n";
+            file << "\t\tglue_user_panic(\"Unpacked past end of glue message\");\n";
             file << "\treturn msg->slots[msg->position++ + 1];\n";
             file << "}\n";
             file << "\n";
             file << "static inline unsigned long glue_peek_impl(struct glue_message* msg)\n";
             file << "{\n";
             file << "\tif (msg->position >= msg->slots[0])\n";
-            file << "\t\tpanic(\"Peeked past end of glue message\");\n";
+            file << "\t\tglue_user_panic(\"Peeked past end of glue message\");\n";
             file << "\treturn msg->slots[msg->position + 2];\n";
+            file << "}\n";
+            file << "\n";            
+            file << "static inline void* glue_unpack_new_shadow_impl(const void* ptr, size_t size)\n";
+            file << "{\n";
+            file << "\tvoid* shadow = glue_user_alloc(size);\n";
+            file << "\tglue_user_add_shadow(ptr, shadow);\n";
+            file << "\treturn shadow;\n";
             file << "}\n";
             file << "\n";
             file << "enum RPC_ID {\n";
@@ -661,6 +677,26 @@ namespace idlc {
             generate_indirect_rpc_common_code(os, rpc);
         }
 
+        template<rpc_side side>
+        void generate_dispatch_fn(std::ostream& os, rpc_vec_view rpcs)
+        {
+            os << "int try_dispatch(enum RPC_ID id, struct glue_message* msg)\n";
+            os << "{\n";
+            os << "\tswitch(id) {\n";
+            for (const auto& rpc : rpcs) {
+                if (rpc->kind == rpc_def_kind::direct && side == rpc_side::client)
+                    continue;
+                
+                os << "\tcase " << rpc->enum_id << ":\n";
+                os << "\t\tglue_user_trace(\"" << rpc->callee_id << "\");\n";
+                os << "\t\t" << rpc->callee_id << "(msg);\n";
+                os << "\t\tbreak;\n\n";
+            }
+
+            os << "\tdefault:\n\t\treturn 0;\n";
+            os << "\t}\n\n\treturn 1;\n}\n\n";
+        }
+
         void generate_client(rpc_vec_view rpcs)
         {
             std::ofstream file {"client.c"};
@@ -679,6 +715,8 @@ namespace idlc {
                     generate_indirect_rpc<rpc_side::client>(*rpc, file);
                 }
             }
+
+            generate_dispatch_fn<rpc_side::client>(file, rpcs);
         }
 
         void generate_server(rpc_vec_view rpcs)
@@ -699,6 +737,8 @@ namespace idlc {
                     file << "}\n\n";
                 }
             }
+
+            generate_dispatch_fn<rpc_side::server>(file, rpcs);
         }
 
         void generate_linker_script(rpc_vec_view rpcs)
@@ -815,23 +855,9 @@ namespace idlc {
         {
             std::ofstream file {"common.c"};
             file.exceptions(file.badbit | file.failbit);
-
             file << "#include <lcd_config/pre_hook.h>\n\n";
             file << "#include \"common.h\"\n\n";
             file << "#include <lcd_config/post_hook.h>\n\n";
-
-            // file << "int try_dispatch(enum RPC_ID id, struct glue_message* msg)\n";
-            // file << "{\n";
-            // file << "\tswitch(id) {\n";
-            // for (const auto& rpc : rpcs) {
-            //     file << "\tcase " << rpc->enum_id << ":\n";
-            //     file << "\t\t" << rpc->callee_id << "(msg);\n";
-            //     file << "\t\tbreak;\n\n";
-            // }
-
-            // file << "\tdefault:\n\t\treturn 0;\n";
-            // file << "\t}\n\n\treturn 1;\n}\n\n";
-
             for (const auto& projection : projections) {
                 // TODO: make these optional
                 generate_caller_marshal_visitor(file, *projection);
