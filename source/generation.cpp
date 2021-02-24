@@ -319,6 +319,7 @@ namespace idlc {
                 return true;
             }
 
+            // TODO: long an complex, could use some splitting
             bool visit_pointer(pointer& node)
             {
                 this->new_line() << "*" << this->subject() << " = ";
@@ -395,7 +396,7 @@ namespace idlc {
 
             bool visit_projection(projection& node)
             {
-                this->new_line() << visitor(node) << "(msg, " << this->subject() << ");\n";
+                this->new_line() << get_visitor_name(node) << "(msg, " << this->subject() << ");\n";
                 return true;
             }
 
@@ -441,7 +442,7 @@ namespace idlc {
                 std::terminate();
             }
 
-            static constexpr absl::string_view visitor(projection& node)
+            static constexpr absl::string_view get_visitor_name(projection& node)
             {
                 switch (side) {
                 case marshal_side::callee:
@@ -456,7 +457,6 @@ namespace idlc {
         };
 
         using root_vec = std::vector<std::tuple<std::string, value*>>;
-        using root_vec_view = gsl::span<const std::tuple<std::string, value*>>;
 
         struct marshal_roots {
             ident return_value;
@@ -537,7 +537,7 @@ namespace idlc {
             const auto roots = generate_root_ptrs(rpc, os);
 
             if (rpc.kind == rpc_def_kind::indirect)
-                os << "\tglue_marshal(msg, target);\n";
+                os << "\tglue_marshal(msg, target);\n"; // make sure we marshal the target pointer before everything
 
             for (const auto& [name, type] : roots.arguments) {
                 marshaling_walk<marshal_side::caller> arg_marshal {os, name, 1};
@@ -579,6 +579,7 @@ namespace idlc {
             generate_caller_glue_epilogue(os, rpc, roots);
         }
 
+        // TODO: large and complex, needs splitting
         void generate_callee_glue(rpc_def& rpc, std::ostream& os)
         {
             if (rpc.kind == rpc_def_kind::indirect)
@@ -705,6 +706,7 @@ namespace idlc {
             file << "INSERT AFTER .text\n";
         }
 
+        // Pre-compute these for convenience when generating function calls or prototypes
         void create_function_strings(rpc_vec_view rpcs)
         {
             for (auto& rpc : rpcs) {
@@ -823,6 +825,7 @@ namespace idlc {
             bool visit_projection(projection& node)
             {
                 const auto last = m_projections.end();
+                // Traversal code protects us from traversing a projection multiple times, but not from visiting it
                 if (std::find(m_projections.begin(), last, &node) == last)
                     m_projections.emplace_back(&node);
 
