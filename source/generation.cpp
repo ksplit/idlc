@@ -12,6 +12,7 @@
 #include "utility.h"
 
 // TODO: possibly split this module, it's by far the biggest one in the compiler
+// TODO: there is a certain illegal range of ints that cannot be reversibly casted
 
 namespace idlc {
     namespace {
@@ -80,8 +81,8 @@ namespace idlc {
             file << "void glue_user_panic(const char* msg);\n";
             file << "void glue_user_trace(const char* msg);\n";
             file << "void* glue_user_map_to_shadow(const void* obj);\n";
-            file << "void* glue_user_map_from_shadow(const void* shadow);\n";
-            file << "void* glue_user_add_shadow(const void* ptr, const void* shadow);\n";
+            file << "const void* glue_user_map_from_shadow(const void* shadow);\n";
+            file << "void glue_user_add_shadow(const void* ptr, void* shadow);\n";
             file << "void* glue_user_alloc(size_t size);\n";
             file << "void glue_user_call_server(const uint64_t* data, size_t rpc_id);\n";
             file << "void glue_user_call_client(const uint64_t* data, size_t rpc_id);\n";
@@ -91,21 +92,21 @@ namespace idlc {
             file << "\tuint64_t position;\n";
             file << "};\n";
             file << "\n";
-            file << "static inline void glue_pack_impl(struct glue_message* msg, unsigned long value)\n";
+            file << "static inline void glue_pack_impl(struct glue_message* msg, uint64_t value)\n";
             file << "{\n";
             file << "\tif (msg->position >= GLUE_MAX_SLOTS)\n";
             file << "\t\tglue_user_panic(\"Glue message was too large\");\n";
             file << "\tmsg->slots[msg->position++ + 1] = value;\n";
             file << "}\n";
             file << "\n";
-            file << "static inline unsigned long glue_unpack_impl(struct glue_message* msg)\n";
+            file << "static inline uint64_t glue_unpack_impl(struct glue_message* msg)\n";
             file << "{\n";
             file << "\tif (msg->position >= msg->slots[0])\n";
             file << "\t\tglue_user_panic(\"Unpacked past end of glue message\");\n";
             file << "\treturn msg->slots[msg->position++ + 1];\n";
             file << "}\n";
             file << "\n";
-            file << "static inline unsigned long glue_peek_impl(struct glue_message* msg)\n";
+            file << "static inline uint64_t glue_peek_impl(struct glue_message* msg)\n";
             file << "{\n";
             file << "\tif (msg->position >= msg->slots[0])\n";
             file << "\t\tglue_user_panic(\"Peeked past end of glue message\");\n";
@@ -311,8 +312,8 @@ namespace idlc {
         {
             const auto visit = [&node](auto&& item) {
                 using node_type = std::decay_t<decltype(item)>;
-                if constexpr (std::is_same_v<node_type, null_terminated_array> || std::is_same_v<node_type, dyn_array>)
-                    return concat("sizeof(", node.c_specifier, " * glue_peek(msg))");
+                if constexpr (std::is_same_v<node_type, node_ptr<null_terminated_array>> || std::is_same_v<node_type, node_ptr<dyn_array>>)
+                    return concat("sizeof(", node.c_specifier, ") * glue_peek(msg)");
                 else
                     return concat("sizeof(", node.c_specifier, ")");
             };
@@ -348,6 +349,7 @@ namespace idlc {
             }
 
             // TODO: long an complex, could use some splitting
+            // TODO: need to automatically free shadows as they're replaced?
             bool visit_pointer(pointer& node)
             {
                 this->new_line() << "*" << this->subject() << " = ";
@@ -393,6 +395,7 @@ namespace idlc {
                 this->new_line() << "size_t i, len;\n";
                 this->new_line() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
                 this->new_line() << "len = glue_unpack(msg, size_t);\n";
+                this->new_line() << "array[len] = '\\0';\n";
                 this->new_line() << "for (i = 0; i < len; ++i) {\n";
                 this->new_line() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
                 if (!this->marshal("element", node))
@@ -692,7 +695,7 @@ namespace idlc {
                     continue;
                 
                 os << "\tcase " << rpc->enum_id << ":\n";
-                os << "\t\tglue_user_trace(\"" << rpc->callee_id << "\");\n";
+                os << "\t\tglue_user_trace(\"" << rpc->name << "\\n\");\n";
                 os << "\t\t" << rpc->callee_id << "(msg);\n";
                 os << "\t\tbreak;\n\n";
             }
