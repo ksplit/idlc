@@ -62,7 +62,7 @@ namespace idlc {
             file << "\n";
             file << "#include \"glue_user.h\"\n";
             file << "\n";
-            file << "#define GLUE_MAX_SLOTS 512\n";
+            file << "#define GLUE_MAX_SLOTS 128\n";
             file << "#define glue_pack(msg, value) glue_pack_impl((msg), (uint64_t)(value))\n";
             file << "#define glue_pack_shadow(msg, value) glue_pack_shadow_impl((msg), (value))\n";
             file << "#define glue_unpack(msg, type) (type)glue_unpack_impl((msg))\n";
@@ -75,7 +75,7 @@ namespace idlc {
             file << "#define glue_call_server(msg, rpc_id) \\\n"
                 << "\tmsg->slots[0] = msg->position; msg->position = 0; glue_user_call_server(msg->slots, rpc_id);\n\n";
 
-            file << "#define glue_call_client(msg, rpc_id) (void)(msg); (void)(rpc_id) \\\n"
+            file << "#define glue_call_client(msg, rpc_id) \\\n"
                 << "\tmsg->slots[0] = msg->position; msg->position = 0; glue_user_call_client(msg->slots, rpc_id);\n\n";
 
             file << "\n";
@@ -85,6 +85,7 @@ namespace idlc {
             file << "const void* glue_user_map_from_shadow(const void* shadow);\n";
             file << "void glue_user_add_shadow(const void* ptr, void* shadow);\n";
             file << "void* glue_user_alloc(size_t size);\n";
+            file << "void glue_user_free(void* ptr);\n";
             file << "void glue_user_call_server(const uint64_t* data, size_t rpc_id);\n";
             file << "void glue_user_call_client(const uint64_t* data, size_t rpc_id);\n";
             file << "\n";
@@ -116,10 +117,11 @@ namespace idlc {
             file << "\n";
             file << "static inline void* glue_unpack_new_shadow_impl(const void* ptr, size_t size)\n";
             file << "{\n";
+            file << "\tvoid* shadow = 0;";
             file << "\tif (!ptr)\n";
             file << "\t\treturn NULL;\n";
             file << "\n";
-            file << "\tvoid* shadow = glue_user_alloc(size);\n";
+            file << "\tshadow = glue_user_alloc(size);\n";
             file << "\tglue_user_add_shadow(ptr, shadow);\n";
             file << "\treturn shadow;\n";
             file << "}\n";
@@ -404,6 +406,7 @@ namespace idlc {
                 return true;
             }
 
+            // FIXME: consider the fact that these can change size
             bool visit_null_terminated_array(null_terminated_array& node)
             {
                 this->new_line() << "size_t i, len;\n";
@@ -579,8 +582,7 @@ namespace idlc {
 
         auto generate_caller_glue_prologue(std::ostream& os, rpc_def& rpc)
         {
-            os << "\tstruct glue_message msg_buf = {0};\n";
-            os << "\tstruct glue_message *msg = &msg_buf;\n\n";
+            os << "\tstruct glue_message *msg = glue_user_alloc(sizeof(struct glue_message));\n\n";
 
             const auto n_args = rpc.arg_pgraphs.size();
             const auto roots = generate_root_ptrs(rpc, os);
@@ -608,6 +610,7 @@ namespace idlc {
                 ret_unmarshal.visit_value(*rpc.ret_pgraph);
             }
 
+            os << "\tglue_user_free(msg);\n";
             os << (rpc.ret_pgraph ? concat("\treturn ret;\n") : "");
         }
 
@@ -753,7 +756,7 @@ namespace idlc {
             file << "#include <lcd_config/post_hook.h>\n\n";
             for (const auto& rpc : rpcs) {
                 if (rpc->kind == rpc_def_kind::indirect) {
-                    generate_indirect_rpc<rpc_side::client>(*rpc, file);
+                    generate_indirect_rpc<rpc_side::server>(*rpc, file);
                 }
                 else {
                     file << "void " << rpc->callee_id << "(struct glue_message* msg)\n{\n";
@@ -926,8 +929,6 @@ namespace idlc {
             return projs;
         }
 
-        void populate_c_type_specifiers(value& node);
-
         class c_specifier_walk : public pgraph_walk<c_specifier_walk> {
         public:
             const auto& get() const
@@ -948,15 +949,6 @@ namespace idlc {
             {
                 m_specifier = "struct ";
                 m_specifier += node.real_name;
-                auto old = std::move(m_specifier);
-                m_specifier.clear();
-                for (const auto& [name, field] : node.fields) {
-                    if (!traverse(*this, node))
-                        return false;
-                }
-
-                m_specifier = std::move(old);
-
                 return true;
             }
 
@@ -1051,7 +1043,7 @@ namespace idlc {
             assert(succeeded);
         }
 
-        void populate_c_type_specifiers(rpc_vec_view rpcs)
+        void populate_c_type_specifiers(rpc_vec_view rpcs, projection_vec_view projections)
         {
             for (const auto& node : rpcs) {
                 if (node->ret_pgraph)
@@ -1060,13 +1052,18 @@ namespace idlc {
                 for (const auto& arg : node->arg_pgraphs)
                     populate_c_type_specifiers(*arg);
             }
+
+            for (const auto& projection : projections) {
+                for (const auto& [name, field] : projection->fields)
+                    populate_c_type_specifiers(*field);
+            }
         }
     }
 
     void generate(rpc_vec_view rpcs)
     {
         const auto projections = idlc::get_projections(rpcs);
-        populate_c_type_specifiers(rpcs);
+        populate_c_type_specifiers(rpcs, projections);
         create_function_strings(rpcs);
         generate_common_header(rpcs, projections);
         generate_common_source(rpcs, projections);
