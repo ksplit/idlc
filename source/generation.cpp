@@ -72,10 +72,10 @@ namespace idlc {
             file << "#define glue_unpack_rpc_ptr(msg, trmp_id) 0 // TODO\n";
             file << "#define glue_peek(msg) glue_peek_impl(msg)\n";
             file << "#define glue_call_server(msg, rpc_id) \\\n"
-                << "\tmsg->slots[0] = msg->position; glue_user_call_server(msg->slots, rpc_id);\n\n";
+                << "\tmsg->slots[0] = msg->position; msg->position = 0; glue_user_call_server(msg->slots, rpc_id);\n\n";
 
             file << "#define glue_call_client(msg, rpc_id) (void)(msg); (void)(rpc_id) \\\n"
-                << "\tmsg->slots[0] = msg->position; glue_user_call_client(msg->slots, rpc_id);\n\n";
+                << "\tmsg->slots[0] = msg->position; msg->position = 0; glue_user_call_client(msg->slots, rpc_id);\n\n";
 
             file << "\n";
             file << "void glue_user_panic(const char* msg);\n";
@@ -639,6 +639,7 @@ namespace idlc {
 
             const auto impl_name = (rpc.kind == rpc_def_kind::direct) ? rpc.name : "function_ptr";
             os << impl_name << "(" << rpc.params_string << ");\n\n";
+            os << "\tmsg->position = 0;\n";
 
             for (const auto& [name, type] : roots.arguments) {
                 marshaling_walk<marshal_side::callee> arg_remarshal {os, name, 1};
@@ -649,6 +650,8 @@ namespace idlc {
                 marshaling_walk<marshal_side::callee> ret_marshal {os, roots.return_value, 1};
                 ret_marshal.visit_value(*rpc.ret_pgraph);
             }
+
+            os << "\tmsg->slots[0] = msg->position;\n";
         }
 
         // Portions of indirect RPC glue that are identical in both client and server
