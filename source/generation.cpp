@@ -14,6 +14,7 @@
 // TODO: possibly split this module, it's by far the biggest one in the compiler
 // TODO: there is a certain illegal range of ints that cannot be reversibly casted
 // TODO: bug where we try and overwrite an existing, const value, but this should never happen in sane code?
+// FIXME: annotations are only valid at the leaves!
 
 namespace idlc {
     namespace {
@@ -209,6 +210,18 @@ namespace idlc {
             callee
         };
 
+        // TODO: move me to the pgraph headers
+        bool is_nonterminal(const value& node)
+        {
+            const auto visit = [](auto&& item) {
+                using type = std::decay_t<decltype(item)>;
+                return std::is_same_v<type, node_ptr<projection>>
+                    || std::is_same_v<type, node_ptr<pointer>>;
+            };
+
+            return std::visit(visit, node.type);
+        }
+
         template<marshal_side side>
         class marshaling_walk : public generation_walk<marshaling_walk<side>> {
         public:
@@ -218,16 +231,18 @@ namespace idlc {
 
             bool visit_pointer(pointer& node)
             {
+
                 if (should_bind(node.pointer_annots))
                     this->new_line() << "glue_pack_shadow(msg, *" << this->subject() << ");\n";
                 else
                     this->new_line() << "glue_pack(msg, *" << this->subject() << ");\n";
+                
+                if (!should_walk(*node.referent))
+                    return true;
 
-                if (should_walk(node.referent->value_annots)) {
-                    this->new_line() << "if (*" << this->subject() << ") {\n";
-                    this->marshal("*" + this->subject(), node);
-                    this->new_line() << "}\n\n";
-                }
+                this->new_line() << "if (*" << this->subject() << ") {\n";
+                this->marshal("*" + this->subject(), node);
+                this->new_line() << "}\n\n";
 
                 return true;
             }
@@ -271,7 +286,7 @@ namespace idlc {
 
             bool visit_value(value& node)
             {
-                if (should_walk(node.value_annots)) {
+                if (should_walk(node)) {
                     return this->traverse(*this, node);
                 }
 
@@ -279,8 +294,12 @@ namespace idlc {
             }
 
         private:
-            static constexpr bool should_walk(annotation flags)
+            static constexpr bool should_walk(const value& node)
             {
+                if (is_nonterminal(node))
+                    return true;
+
+                const auto flags = node.value_annots;
                 switch (side) {
                 case marshal_side::caller:
                     return flags_set(flags, annotation::in);
@@ -346,7 +365,7 @@ namespace idlc {
 
             bool visit_value(value& node)
             {
-                if (should_walk(node.value_annots)) {
+                if (should_walk(node)) {
                     auto old = std::move(m_c_specifier);
                     m_c_specifier = node.c_specifier;
                     if (!this->traverse(*this, node))
@@ -381,8 +400,7 @@ namespace idlc {
                 }
 
                 this->stream() << ";\n";
-
-                if (!should_walk(node.referent->value_annots))
+                if (!should_walk(*node.referent))
                     return true;
 
                 this->new_line() << "if (*" << this->subject() << ") {\n";
@@ -455,8 +473,12 @@ namespace idlc {
         private:
             absl::string_view m_c_specifier {};
 
-            static constexpr bool should_walk(annotation flags)
+            static constexpr bool should_walk(const value& node)
             {
+                if (is_nonterminal(node))
+                    return true;
+
+                const auto flags = node.value_annots;
                 switch (side) {
                 case marshal_side::callee:
                     return flags_set(flags, annotation::in);
