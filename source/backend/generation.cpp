@@ -5,11 +5,11 @@
 
 #include <gsl/gsl>
 
-#include "ast/ast.h"
-#include "ast/pgraph.h"
-#include "ast/pgraph_walk.h"
-#include "frontend/analysis.h"
-#include "utility.h"
+#include "../ast/ast.h"
+#include "../ast/pgraph.h"
+#include "../ast/pgraph_walk.h"
+#include "../frontend/analysis.h"
+#include "../utility.h"
 
 // TODO: possibly split this module, it's by far the biggest one in the compiler
 // TODO: there is a certain illegal range of ints that cannot be reversibly casted

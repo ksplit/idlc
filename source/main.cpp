@@ -12,8 +12,8 @@
 #include "ast/pgraph_walk.h"
 #include "frontend/name_binding.h"
 #include "frontend/analysis.h"
+#include "backend/generation.h"
 #include "utility.h"
-#include "generation.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 // NOTE: Currently we work at the scale of a single file. All modules within a file are treated as implicitly imported.

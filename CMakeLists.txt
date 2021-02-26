@@ -25,8 +25,8 @@ add_executable(
 	"source/ast/pgraph_dump.cpp"
 	"source/frontend/analysis.cpp"
 	"source/frontend/name_binding.cpp"
+	"source/backend/generation.cpp"
 	"source/string_heap.cpp"
-	"source/generation.cpp"
 	"source/main.cpp"
 )
 

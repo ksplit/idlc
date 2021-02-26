@@ -1,4 +1,5 @@
-#ifndef IDLC_GENERATION_H
+#ifndef IDLC_BACKEND_GENERATION_H
+#define IDLC_BACKEND_GENERATION_H
 
 #include "frontend/analysis.h"
 
