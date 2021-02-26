@@ -210,18 +210,6 @@ namespace idlc {
             callee
         };
 
-        // TODO: move me to the pgraph headers
-        bool is_nonterminal(const value& node)
-        {
-            const auto visit = [](auto&& item) {
-                using type = std::decay_t<decltype(item)>;
-                return std::is_same_v<type, node_ptr<projection>>
-                    || std::is_same_v<type, node_ptr<pointer>>;
-            };
-
-            return std::visit(visit, node.type);
-        }
-
         template<marshal_side side>
         class marshaling_walk : public generation_walk<marshaling_walk<side>> {
         public:
@@ -231,14 +219,18 @@ namespace idlc {
 
             bool visit_pointer(pointer& node)
             {
-
-                if (should_bind(node.pointer_annots))
-                    this->new_line() << "glue_pack_shadow(msg, *" << this->subject() << ");\n";
-                else
-                    this->new_line() << "glue_pack(msg, *" << this->subject() << ");\n";
+                if (m_should_marshal) {
+                    if (should_bind(node.pointer_annots))
+                        this->new_line() << "glue_pack_shadow(msg, *" << this->subject() << ");\n";
+                    else
+                        this->new_line() << "glue_pack(msg, *" << this->subject() << ");\n";
+                }
                 
-                if (!should_walk(*node.referent))
+                // This is done to absorb any unused variables
+                if (!should_walk(*node.referent)) {
+                    this->new_line() << "(void)" << this->subject() << ";\n";
                     return true;
+                }
 
                 this->new_line() << "if (*" << this->subject() << ") {\n";
                 this->marshal("*" + this->subject(), node);
@@ -287,18 +279,22 @@ namespace idlc {
             bool visit_value(value& node)
             {
                 if (should_walk(node)) {
-                    return this->traverse(*this, node);
+                    const auto old = m_should_marshal;
+                    m_should_marshal = should_marshal(node);
+                    if (!this->traverse(*this, node))
+                        return false;
+
+                    m_should_marshal = old;
                 }
 
                 return true;
             }
 
         private:
-            static constexpr bool should_walk(const value& node)
-            {
-                if (is_nonterminal(node))
-                    return true;
+            bool m_should_marshal {};
 
+            static constexpr bool should_marshal(const value& node)
+            {
                 const auto flags = node.value_annots;
                 switch (side) {
                 case marshal_side::caller:
@@ -309,6 +305,11 @@ namespace idlc {
                 }
 
                 std::terminate();
+            }
+
+            static constexpr bool should_walk(const value& node)
+            {
+                return is_nonterminal(node) || should_marshal(node);                
             }
 
             /*
@@ -347,7 +348,7 @@ namespace idlc {
         {
             const auto visit = [&node](auto&& item) {
                 using node_type = std::decay_t<decltype(item)>;
-                if constexpr (std::is_same_v<node_type, node_ptr<null_terminated_array>> || std::is_same_v<node_type, node_ptr<dyn_array>>)
+                if constexpr (std::is_same_v<node_type, node_ref<null_terminated_array>> || std::is_same_v<node_type, node_ref<dyn_array>>)
                     return concat("sizeof(", node.c_specifier, ") * glue_peek(msg)");
                 else
                     return concat("sizeof(", node.c_specifier, ")");
@@ -366,12 +367,13 @@ namespace idlc {
             bool visit_value(value& node)
             {
                 if (should_walk(node)) {
-                    auto old = std::move(m_c_specifier);
+                    auto old = std::forward_as_tuple(std::move(m_c_specifier), m_should_marshal);
                     m_c_specifier = node.c_specifier;
+                    m_should_marshal = should_marshal(node);
                     if (!this->traverse(*this, node))
                         return false;
 
-                    m_c_specifier = std::move(old);
+                    std::make_tuple(m_c_specifier, m_should_marshal) = std::move(old);
                 }
 
                 return true;
@@ -387,39 +389,16 @@ namespace idlc {
             // TODO: need to automatically free shadows as they're replaced?
             bool visit_pointer(pointer& node)
             {
-                this->new_line() << "*" << this->subject() << " = ";
-                if (should_bind(node.pointer_annots)) {
-                    this->stream() << "glue_unpack_shadow(msg, " << m_c_specifier << ")";
-                }
-                else if (should_alloc(node.pointer_annots)) {
-                    this->stream() << "glue_unpack_new_shadow(msg, " << m_c_specifier << ", "
-                        << get_size_expr(*node.referent) << ")";
-                }
-                else {
-                    this->stream() << "glue_unpack(msg, " << m_c_specifier << ")";
-                }
+                if (m_should_marshal)
+                    marshal_pointer_value(node);
 
-                this->stream() << ";\n";
-                if (!should_walk(*node.referent))
+                if (!should_walk(*node.referent)) {
+                    this->new_line() << "(void)" << this->subject() << ";\n";
                     return true;
-
-                this->new_line() << "if (*" << this->subject() << ") {\n";
-                if (node.referent->is_const) {
-                    // Since the type itself must include const, but we need to write to it for unmarshaling,
-                    // We create a writeable version of the pointer and use it instead
-                    const auto type = concat(node.referent->c_specifier, "*");
-                    this->new_line() << "\t" << type << " writable = "
-                        << concat("(", type, ")*", this->subject()) << ";\n";
-
-                    if (!this->marshal("writable", node))
-                        return false;
                 }
                 else {
-                    if (!this->marshal(concat("*", this->subject()), node))
-                        return false;
-                }
-
-                this->new_line() << "}\n\n";
+                    return marshal_pointer_child(node);
+                }                
 
                 return true;
             }
@@ -472,12 +451,10 @@ namespace idlc {
 
         private:
             absl::string_view m_c_specifier {};
+            bool m_should_marshal {};
 
-            static constexpr bool should_walk(const value& node)
+            static constexpr bool should_marshal(const value& node)
             {
-                if (is_nonterminal(node))
-                    return true;
-
                 const auto flags = node.value_annots;
                 switch (side) {
                 case marshal_side::callee:
@@ -488,6 +465,11 @@ namespace idlc {
                 }
 
                 std::terminate();
+            }
+
+            static constexpr bool should_walk(const value& node)
+            {
+                return is_nonterminal(node) || should_marshal(node);
             }
 
             static constexpr bool should_bind(annotation flags)
@@ -527,6 +509,46 @@ namespace idlc {
                 }
 
                 std::terminate();
+            }
+
+            void marshal_pointer_value(pointer& node)
+            {
+                this->new_line() << "*" << this->subject() << " = ";
+                if (should_bind(node.pointer_annots)) {
+                    this->stream() << "glue_unpack_shadow(msg, " << m_c_specifier << ")";
+                }
+                else if (should_alloc(node.pointer_annots)) {
+                    this->stream() << "glue_unpack_new_shadow(msg, " << m_c_specifier << ", "
+                        << get_size_expr(*node.referent) << ")";
+                }
+                else {
+                    this->stream() << "glue_unpack(msg, " << m_c_specifier << ")";
+                }
+
+                this->stream() << ";\n";
+            }
+
+            bool marshal_pointer_child(pointer& node)
+            {
+                this->new_line() << "if (*" << this->subject() << ") {\n";
+                if (node.referent->is_const) {
+                    // Since the type itself must include const, but we need to write to it for unmarshaling,
+                    // We create a writeable version of the pointer and use it instead
+                    const auto type = concat(node.referent->c_specifier, "*");
+                    this->new_line() << "\t" << type << " writable = "
+                        << concat("(", type, ")*", this->subject()) << ";\n";
+
+                    if (!this->marshal("writable", node))
+                        return false;
+                }
+                else {
+                    if (!this->marshal(concat("*", this->subject()), node))
+                        return false;
+                }
+
+                this->new_line() << "}\n\n";
+
+                return true;
             }
         };
 
@@ -581,7 +603,8 @@ namespace idlc {
             std::vector<std::tuple<std::string, value*>> roots;
             roots.reserve(projection.fields.size());
             for (const auto& [name, type] : projection.fields) {
-                if (!flags_set(type->value_annots, context))
+                // This is an identical check to that conducted in the marshaling walks
+                if (!is_nonterminal(*type) && !flags_set(type->value_annots, context))
                     continue;
 
                 const auto specifier = concat(type->c_specifier, is_const_context ? " const*" : "*");

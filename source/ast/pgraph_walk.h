@@ -33,19 +33,19 @@ namespace idlc {
 				else if constexpr (std::is_same_v<type, node_ref<projection>>) {
 					return pass.visit_projection(*item);
 				}
-				else if constexpr (std::is_same_v<type, node_ptr<dyn_array>>) {
+				else if constexpr (std::is_same_v<type, node_ref<dyn_array>>) {
 					return pass.visit_dyn_array(*item);
 				}
-				else if constexpr (std::is_same_v<type, node_ptr<null_terminated_array>>) {
+				else if constexpr (std::is_same_v<type, node_ref<null_terminated_array>>) {
 					return pass.visit_null_terminated_array(*item);
 				}
-				else if constexpr (std::is_same_v<type, node_ptr<pointer>>) {
+				else if constexpr (std::is_same_v<type, node_ref<pointer>>) {
 					return pass.visit_pointer(*item);
 				}
-				else if constexpr (std::is_same_v<type, node_ptr<static_void_ptr>>) {
+				else if constexpr (std::is_same_v<type, node_ref<static_void_ptr>>) {
 					// TODO: void<>
 				}
-				else if constexpr (std::is_same_v<type, node_ptr<rpc_ptr>>) {
+				else if constexpr (std::is_same_v<type, node_ref<rpc_ptr>>) {
 					return pass.visit_rpc_ptr(*item);
 				}
 				else if constexpr (std::is_same_v<type, gsl::not_null<proj_def*>>) {

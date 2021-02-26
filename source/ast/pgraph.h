@@ -31,11 +31,11 @@ namespace idlc {
 	// TODO: much of these are exclusively owned (except projection nodes), but node_ptrs/node_refs are shared
 	using passed_type = std::variant<
 		primitive,
-		node_ptr<null_terminated_array>,
-		node_ptr<dyn_array>,
-		node_ptr<pointer>,
-		node_ptr<static_void_ptr>,
-		node_ptr<rpc_ptr>,
+		node_ref<null_terminated_array>,
+		node_ref<dyn_array>,
+		node_ref<pointer>,
+		node_ref<static_void_ptr>,
+		node_ref<rpc_ptr>,
 		node_ref<projection>,
 		gsl::not_null<proj_def*> // NOTE: will *never* appear in a finished pgraph, part of lowering
 	>;
@@ -54,6 +54,20 @@ namespace idlc {
 			c_specifier {}
 		{}
 	};
+
+	// NOTE: A non-terminal node is any node that has child nodes
+	// NOTE: we *always* walk non-terminals, to be able to marshal otherwise innaccessible [out] fields
+	// TODO: add support for array non-terminals
+	inline bool is_nonterminal(const value& node)
+	{
+		const auto visit = [](auto&& item) {
+			using type = std::decay_t<decltype(item)>;
+			return std::is_same_v<type, node_ref<projection>>
+				|| std::is_same_v<type, node_ref<pointer>>;
+		};
+
+		return std::visit(visit, node.type);
+	}
 
 	struct null_terminated_array {
 		node_ptr<value> element;
