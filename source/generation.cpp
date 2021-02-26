@@ -210,6 +210,55 @@ namespace idlc {
             callee
         };
 
+        enum class marshal_role {
+            marshaling,
+            unmarshaling
+        };
+
+        template<marshal_side side>
+        constexpr bool should_marshal(const value& node)
+        {
+            const auto flags = node.value_annots;
+            switch (side) {
+            case marshal_side::caller:
+                return flags_set(flags, annotation::in);
+
+            case marshal_side::callee:
+                return flags_set(flags, annotation::out);
+            }
+
+            std::terminate();
+        }
+
+        template<marshal_side side>
+        constexpr bool should_unmarshal(const value& node)
+        {
+            const auto flags = node.value_annots;
+            switch (side) {
+            case marshal_side::callee:
+                return flags_set(flags, annotation::in);
+
+            case marshal_side::caller:
+                return flags_set(flags, annotation::out);
+            }
+
+            std::terminate();
+        }
+
+        template<marshal_role role, marshal_side side>
+        constexpr bool should_walk(const value& node)
+        {
+            switch (role) {
+            case marshal_role::marshaling:
+                return is_nonterminal(node) || should_marshal<side>(node);
+
+            case marshal_role::unmarshaling:
+                return is_nonterminal(node) || should_unmarshal<side>(node);
+            }
+
+            std::terminate();
+        }
+
         template<marshal_side side>
         class marshaling_walk : public generation_walk<marshaling_walk<side>> {
         public:
@@ -227,7 +276,7 @@ namespace idlc {
                 }
                 
                 // This is done to absorb any unused variables
-                if (!should_walk(*node.referent)) {
+                if (!should_walk<marshal_role::marshaling, side>(*node.referent)) {
                     this->new_line() << "(void)" << this->subject() << ";\n";
                     return true;
                 }
@@ -278,9 +327,9 @@ namespace idlc {
 
             bool visit_value(value& node)
             {
-                if (should_walk(node)) {
+                if (should_walk<marshal_role::marshaling, side>(node)) {
                     const auto old = m_should_marshal;
-                    m_should_marshal = should_marshal(node);
+                    m_should_marshal = should_marshal<side>(node);
                     if (!this->traverse(*this, node))
                         return false;
 
@@ -292,25 +341,6 @@ namespace idlc {
 
         private:
             bool m_should_marshal {};
-
-            static constexpr bool should_marshal(const value& node)
-            {
-                const auto flags = node.value_annots;
-                switch (side) {
-                case marshal_side::caller:
-                    return flags_set(flags, annotation::in);
-
-                case marshal_side::callee:
-                    return flags_set(flags, annotation::out);
-                }
-
-                std::terminate();
-            }
-
-            static constexpr bool should_walk(const value& node)
-            {
-                return is_nonterminal(node) || should_marshal(node);                
-            }
 
             /*
                 NOTE: This confused me today; it will confuse you too
@@ -366,10 +396,10 @@ namespace idlc {
 
             bool visit_value(value& node)
             {
-                if (should_walk(node)) {
+                if (should_walk<marshal_role::unmarshaling, side>(node)) {
                     auto old = std::forward_as_tuple(std::move(m_c_specifier), m_should_marshal);
                     m_c_specifier = node.c_specifier;
-                    m_should_marshal = should_marshal(node);
+                    m_should_marshal = should_unmarshal<side>(node);
                     if (!this->traverse(*this, node))
                         return false;
 
@@ -392,7 +422,7 @@ namespace idlc {
                 if (m_should_marshal)
                     marshal_pointer_value(node);
 
-                if (!should_walk(*node.referent)) {
+                if (!should_walk<marshal_role::unmarshaling, side>(*node.referent)) {
                     this->new_line() << "(void)" << this->subject() << ";\n";
                     return true;
                 }
@@ -452,25 +482,6 @@ namespace idlc {
         private:
             absl::string_view m_c_specifier {};
             bool m_should_marshal {};
-
-            static constexpr bool should_marshal(const value& node)
-            {
-                const auto flags = node.value_annots;
-                switch (side) {
-                case marshal_side::callee:
-                    return flags_set(flags, annotation::in);
-
-                case marshal_side::caller:
-                    return flags_set(flags, annotation::out);
-                }
-
-                std::terminate();
-            }
-
-            static constexpr bool should_walk(const value& node)
-            {
-                return is_nonterminal(node) || should_marshal(node);
-            }
 
             static constexpr bool should_bind(annotation flags)
             {
@@ -593,18 +604,18 @@ namespace idlc {
         }
 
         // TODO: this is confusing, document it
+        template<marshal_role role, marshal_side side>
         auto generate_root_ptrs(
             std::ostream& os,
             projection& projection,
-            absl::string_view source_var,
-            annotation context,
-            bool is_const_context)
+            absl::string_view source_var)
         {
             std::vector<std::tuple<std::string, value*>> roots;
             roots.reserve(projection.fields.size());
+            const auto is_const_context {role == marshal_role::marshaling};
             for (const auto& [name, type] : projection.fields) {
                 // This is an identical check to that conducted in the marshaling walks
-                if (!is_nonterminal(*type) && !flags_set(type->value_annots, context))
+                if (!should_walk<role, side>(*type))
                     continue;
 
                 const auto specifier = concat(type->c_specifier, is_const_context ? " const*" : "*");
@@ -868,7 +879,7 @@ namespace idlc {
             file << "void " << node.caller_marshal_visitor << "(\n\tstruct glue_message* msg,\n\tstruct "
                 << node.real_name << " const* ptr)\n{\n";
 
-            const auto roots = generate_root_ptrs(file, node, "ptr", annotation::in, true);
+            const auto roots = generate_root_ptrs<marshal_role::marshaling, marshal_side::caller>(file, node, "ptr");
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
                 marshaling_walk<marshal_side::caller> walk {file, name, 1};
@@ -883,7 +894,7 @@ namespace idlc {
             file << "void " << node.callee_unmarshal_visitor << "(\n\tstruct glue_message* msg,\n\tstruct "
                 << node.real_name << "* ptr)\n{\n";
 
-            const auto roots = generate_root_ptrs(file, node, "ptr", annotation::in, false);
+            const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::callee>(file, node, "ptr");
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
                 unmarshaling_walk<marshal_side::callee> walk {file, name, 1};
@@ -898,7 +909,7 @@ namespace idlc {
             file << "void " << node.callee_marshal_visitor
                     << "(\n\tstruct glue_message* msg,\n\tstruct " << node.real_name << " const* ptr)\n{\n";
 
-            const auto roots = generate_root_ptrs(file, node, "ptr", annotation::out, true);
+            const auto roots = generate_root_ptrs<marshal_role::marshaling, marshal_side::callee>(file, node, "ptr");
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
                 marshaling_walk<marshal_side::callee> walk {file, name, 1};
@@ -913,7 +924,7 @@ namespace idlc {
             file << "void " << node.caller_unmarshal_visitor
                     << "(\n\tstruct glue_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
 
-            const auto roots = generate_root_ptrs(file, node, "ptr", annotation::out, false);
+            const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::caller>(file, node, "ptr");
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
                 unmarshaling_walk<marshal_side::caller> walk {file, name, 1};
