@@ -71,7 +71,7 @@ namespace idlc {
             file << "#define glue_unpack_new_shadow(msg, type, size) \\\n"
                 << "\t(type)glue_unpack_new_shadow_impl(glue_unpack(msg, void*), size)\n\n";
 
-            file << "#define glue_unpack_rpc_ptr(msg, trmp_id) 0 // TODO\n";
+            file << "#define glue_unpack_rpc_ptr(msg, trmp_id) 0; glue_user_panic(\"RPC pointers!!!\")\n";
             file << "#define glue_peek(msg) glue_peek_impl(msg)\n";
             file << "#define glue_call_server(msg, rpc_id) \\\n"
                 << "\tmsg->slots[0] = msg->position; msg->position = 0; glue_user_call_server(msg->slots, rpc_id);\n\n";
@@ -94,6 +94,12 @@ namespace idlc {
             file << "\tuint64_t slots[GLUE_MAX_SLOTS];\n";
             file << "\tuint64_t position;\n";
             file << "};\n";
+            file << "extern struct glue_message shared_buffer;\n";
+            file << "\n";
+            file << "static inline struct glue_message* glue_init_msg(void)\n{\n";
+            file << "\tshared_buffer.position = 0;\n";
+            file << "\treturn &shared_buffer;\n";
+            file << "}\n\n";
             file << "\n";
             file << "static inline void glue_pack_impl(struct glue_message* msg, uint64_t value)\n";
             file << "{\n";
@@ -638,7 +644,7 @@ namespace idlc {
 
         auto generate_caller_glue_prologue(std::ostream& os, rpc_def& rpc)
         {
-            os << "\tstruct glue_message *msg = glue_user_alloc(sizeof(struct glue_message));\n\n";
+            os << "\tstruct glue_message *msg = glue_init_msg();\n\n";
 
             const auto n_args = rpc.arg_pgraphs.size();
             const auto roots = generate_root_ptrs(rpc, os);
@@ -666,7 +672,6 @@ namespace idlc {
                 ret_unmarshal.visit_value(*rpc.ret_pgraph);
             }
 
-            os << "\tglue_user_free(msg);\n";
             os << (rpc.ret_pgraph ? concat("\treturn ret;\n") : "");
         }
 
@@ -941,6 +946,7 @@ namespace idlc {
             file << "#include <lcd_config/pre_hook.h>\n\n";
             file << "#include \"common.h\"\n\n";
             file << "#include <lcd_config/post_hook.h>\n\n";
+            file << "struct glue_message shared_buffer = {0};\n\n";
             for (const auto& projection : projections) {
                 // TODO: make these optional
                 generate_caller_marshal_visitor(file, *projection);
