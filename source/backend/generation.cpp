@@ -71,7 +71,10 @@ namespace idlc {
             file << "#define glue_unpack_new_shadow(msg, type, size) \\\n"
                 << "\t(type)glue_unpack_new_shadow_impl(glue_unpack(msg, void*), size)\n\n";
 
-            file << "#define glue_unpack_rpc_ptr(msg, trmp_id) 0; glue_user_panic(\"RPC pointers!!!\")\n";
+            file << "#define glue_unpack_rpc_ptr(msg, name) \\\n"
+                << "\tglue_peek(msg) ? (fptr_##name)glue_unpack_rpc_ptr_impl(glue_unpack(msg, void*), "
+                << "LCD_DUP_TRAMPOLINE(trmp_##name)) : 0\n\n";
+
             file << "#define glue_peek(msg) glue_peek_impl(msg)\n";
             file << "#define glue_call_server(msg, rpc_id) \\\n"
                 << "\tmsg->slots[0] = msg->position; msg->position = 0; glue_user_call_server(msg->slots, rpc_id);\n\n";
@@ -80,6 +83,7 @@ namespace idlc {
                 << "\tmsg->slots[0] = msg->position; msg->position = 0; glue_user_call_client(msg->slots, rpc_id);\n\n";
 
             file << "\n";
+            file << "void glue_user_init(void);\n";
             file << "void glue_user_panic(const char* msg);\n";
             file << "void glue_user_trace(const char* msg);\n";
             file << "void* glue_user_map_to_shadow(const void* obj);\n";
@@ -87,8 +91,8 @@ namespace idlc {
             file << "void glue_user_add_shadow(const void* ptr, void* shadow);\n";
             file << "void* glue_user_alloc(size_t size);\n";
             file << "void glue_user_free(void* ptr);\n";
-            file << "void glue_user_call_server(const uint64_t* data, size_t rpc_id);\n";
-            file << "void glue_user_call_client(const uint64_t* data, size_t rpc_id);\n";
+            file << "void glue_user_call_server(uint64_t* data, size_t rpc_id);\n";
+            file << "void glue_user_call_client(uint64_t* data, size_t rpc_id);\n";
             file << "\n";
             file << "struct glue_message {\n";
             file << "\tuint64_t slots[GLUE_MAX_SLOTS];\n";
@@ -99,7 +103,17 @@ namespace idlc {
             file << "static inline struct glue_message* glue_init_msg(void)\n{\n";
             file << "\tshared_buffer.position = 0;\n";
             file << "\treturn &shared_buffer;\n";
-            file << "}\n\n";
+            file << "}\n";
+            file << "\n";
+            file << "static inline void* glue_unpack_rpc_ptr_impl(void* target, "
+                << "struct lcd_trampoline_handle* handle)\n";
+            
+            file << "{\n";
+            file << "if (!target)\n\t\tglue_user_panic(\"Target was NULL\");\n\n";
+            file << "if (!handle)\n\t\tglue_user_panic(\"Trmp was NULL\");\n\n";
+            file << "\thandle->hidden_args = target;\n";
+            file << "\treturn LCD_HANDLE_TO_TRAMPOLINE(handle);\n";
+            file << "}\n";
             file << "\n";
             file << "static inline void glue_pack_impl(struct glue_message* msg, uint64_t value)\n";
             file << "{\n";
@@ -159,6 +173,11 @@ namespace idlc {
 
                     file << "typedef " << rpc->ret_string << " (*" << rpc->impl_typedef_id << ")(" << rpc->typedef_id
                         << " target, " << rpc->args_string << ");\n\n";
+
+                    file << "LCD_TRAMPOLINE_DATA(" << rpc->trmp_id << ")\n";
+                    file << rpc->ret_string << " "
+                        << "LCD_TRAMPOLINE_LINKAGE(" << rpc->trmp_id << ") "
+                        << rpc->trmp_id << "(" << rpc->args_string << ");\n\n";
                 }
             }
 
@@ -474,7 +493,7 @@ namespace idlc {
             bool visit_rpc_ptr(rpc_ptr& node)
             {
                 this->new_line() << "*" << this->subject() << " = glue_unpack_rpc_ptr(msg, "
-                    << node.definition->trmp_id << ");\n";
+                    << node.definition->name << ");\n";
 
                 return true;
             }
