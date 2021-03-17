@@ -35,3 +35,6 @@ interface. The generated code makes calls to `glue_user_*` functions (these impl
 implementations of tracing, shadow tracking, or RPC message delivery), which must be defined and linked by both sides.
 The `nullnet_gen` driver in the `nullnet_gen` branch of `lvd-linux` has a mostly complete set of implementations in
 `glue_user.c`, which should be usable as a drop-in implementation in any other LVD driver.
+
+You will also need to implement the KLCD dispatch loop and the LVDs `handle_rpc_calls` dispatcher, an implementation
+of the former of wich you'll find in `nullnet_gen/net_klcd/main.c`.
