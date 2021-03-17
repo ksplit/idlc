@@ -38,3 +38,14 @@ The `nullnet_gen` driver in the `nullnet_gen` branch of `lvd-linux` has a mostly
 
 You will also need to implement the KLCD dispatch loop and the LVDs `handle_rpc_calls` dispatcher, an implementation
 of the former of wich you'll find in `nullnet_gen/net_klcd/main.c`.
+
+Currently one manual modification is always required: the LVD requires certain init / exit calls (i.e.
+`__dummy_lcd_init()` in nullnet), and you will have to add RPC_IDs for these in `common.h` and handle them explicitly in
+your dispatch loop code. Note also that `glue_user_init()` in the existing `glue_user.c` **must** be called by both
+sides before the glue layer can track shadows, as this call initializes the employed hashmaps.
+
+Therefore, what `nullnet_gen` modifies manually is as follows:
+- Adding `MODULE_INIT` and `MODULE_EXIT` `RPC_ID`s
+- Adding switch cases to the driver-side (i.e. client-side) dispatch code (in `nullnet_gen/client.c:try_dispatch`) to handle these and call `__dummy_lcd_init()` and `__dummy_lcd_exit()`, respectively
+- Calling `glue_user_init()` in the module init functions of both the KLCD and LCD before any RPC calls
+	- Refer to `nullnet_gen/net_klcd/main.c:99` and `nullnet_gen/dummy_lcd/main.c:74`
