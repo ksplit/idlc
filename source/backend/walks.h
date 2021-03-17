@@ -157,7 +157,8 @@ namespace idlc {
             this->new_line() << "size_t i, len;\n";
             this->new_line() << ptr_type << " array = "	<< this->subject() << ";\n";
             this->new_line() << "for (len = 0; array[len]; ++len);\n";
-            this->new_line() << "glue_pack(msg, len);\n";
+            // The size slot is used for allocation, so we have a +1 for the null terminator
+            this->new_line() << "glue_pack(msg, len + 1);\n";
             this->new_line() << "for (i = 0; i < len; ++i) {\n";
             this->new_line() << "\t" << ptr_type << " element = &array[i];\n";
             if (!this->marshal("element", node))
@@ -281,7 +282,8 @@ namespace idlc {
         {
             this->new_line() << "size_t i, len;\n";
             this->new_line() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
-            this->new_line() << "len = glue_unpack(msg, size_t);\n";
+            // The size slot is used for allocation, so we have a +1 for the null terminator
+            this->new_line() << "len = glue_unpack(msg, size_t) - 1;\n";
             this->new_line() << "array[len] = '\\0';\n";
             this->new_line() << "for (i = 0; i < len; ++i) {\n";
             this->new_line() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
