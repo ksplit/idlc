@@ -450,6 +450,8 @@ type_stem = arr:type_array {{
 	value = share(type_stem {to_int<type_primitive>(arith)});
 }} | any:type_any_of {{
 	value = share(type_stem {get_shared<type_any_of>(any)});
+}} | tok_kw_void {{
+	value = share(type_stem {type_primitive::ty_uchar});
 }}
 
 indirection = attrs:(val:ptr_attrs tok_space? {{ value = val; }})? tok_star is_c:(tok_space? tok_kw_const)? {{
@@ -471,7 +473,7 @@ type_spec = is_c:(tok_kw_const tok_space {{	value = $1; }})? stem:type_stem indi
 	});
 }}
 
-ret_type = type_spec | tok_kw_void {{ value = nullptr; }}
+ret_type = tok_kw_void {{ value = nullptr; }} | type_spec
 
 rpc_def = tok_kw_rpc tok_space? ret_t:ret_type tok_space? name:tok_ident tok_space? tok_lpar args:(tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace projs:(tok_space? rpc_item_list)? tok_space? tok_rbrace {{
 	value = share(rpc_def {
