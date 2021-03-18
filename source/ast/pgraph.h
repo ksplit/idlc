@@ -32,6 +32,7 @@ namespace idlc {
 	using passed_type = std::variant<
 		primitive,
 		node_ref<null_terminated_array>,
+		node_ref<static_array>,
 		node_ref<dyn_array>,
 		node_ref<pointer>,
 		node_ref<static_void_ptr>,
@@ -87,6 +88,16 @@ namespace idlc {
 		ident size;
 
 		dyn_array(node_ptr<value> element, ident size) :
+			element {std::move(element)},
+			size {size}
+		{}
+	};
+
+	struct static_array {
+		node_ptr<value> element;
+		unsigned size;
+
+		static_array(node_ptr<value> element, unsigned size) :
 			element {std::move(element)},
 			size {size}
 		{}

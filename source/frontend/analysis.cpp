@@ -72,8 +72,7 @@ namespace idlc {
 					return std::make_unique<null_terminated_array>(generate_value(*node.element));
 				}
 				else if constexpr (std::is_same_v<type, unsigned>) {
-					std::cout << "Warning: static-sized arrays are not yet implemented\n";
-					std::terminate();
+					return std::make_shared<static_array>(generate_value(*node.element), item);
 				}
 				else if constexpr (std::is_same_v<type, ident>) {
 					std::cout << "Warning: dynamic-sized arrays are not yet fully supported\n";

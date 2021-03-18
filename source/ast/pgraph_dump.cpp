@@ -39,6 +39,18 @@ namespace idlc {
 				return true;
 			}
 
+			bool visit_static_array(static_array& node)
+			{
+				indent(std::cout, m_indent_level) << "static_array\n";
+				++m_indent_level;
+				if (!traverse(*this, node))
+					return false;
+
+				--m_indent_level;
+
+				return true;
+			}
+
 			bool visit_null_terminated_array(null_terminated_array& node)
 			{
 				indent(std::cout, m_indent_level) << "null_terminated_array\n";

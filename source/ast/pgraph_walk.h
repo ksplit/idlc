@@ -39,6 +39,9 @@ namespace idlc {
 				else if constexpr (std::is_same_v<type, node_ref<null_terminated_array>>) {
 					return pass.visit_null_terminated_array(*item);
 				}
+				else if constexpr (std::is_same_v<type, node_ref<static_array>>) {
+					return pass.visit_static_array(*item);
+				}
 				else if constexpr (std::is_same_v<type, node_ref<pointer>>) {
 					return pass.visit_pointer(*item);
 				}
@@ -87,6 +90,11 @@ namespace idlc {
 			return pass.visit_value(*node.element);
 		}
 
+		bool operator()(walk& pass, static_array& node)
+		{
+			return pass.visit_value(*node.element);
+		}
+
 		bool operator()(walk& pass, pointer& node)
 		{
 			return pass.visit_value(*node.referent);
@@ -127,6 +135,11 @@ namespace idlc {
 		}
 
 		bool visit_dyn_array(dyn_array& node)
+		{
+			return traverse(self(), node);
+		}
+
+		bool visit_static_array(static_array& node)
 		{
 			return traverse(self(), node);
 		}
