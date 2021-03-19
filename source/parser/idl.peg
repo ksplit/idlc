@@ -378,7 +378,7 @@ ptr_attr_list = first:ptr_attr rest:(tok_space? tok_comma tok_space? ptr_attr)* 
 
 type_primitive = "u64" {{
 	value = reinterpret_cast<void*>(type_primitive::ty_ullong);
-}} | "s64" {{
+}} | "i64" {{
 	value = reinterpret_cast<void*>(type_primitive::ty_llong);
 }} | "u32" {{
 	value = reinterpret_cast<void*>(type_primitive::ty_uint);
@@ -386,11 +386,11 @@ type_primitive = "u64" {{
 	value = reinterpret_cast<void*>(type_primitive::ty_ushort);
 }} | "u8" {{
 	value = reinterpret_cast<void*>(type_primitive::ty_uchar);
-}} | "s8" {{
+}} | "i8" {{
 	value = reinterpret_cast<void*>(type_primitive::ty_schar);
-}} | "s16" {{
+}} | "i16" {{
 	value = reinterpret_cast<void*>(type_primitive::ty_short);
-}} | "s32" {{
+}} | "i32" {{
 	value = reinterpret_cast<void*>(type_primitive::ty_int);
 }} | tok_kw_char {{
 	value = reinterpret_cast<void*>(type_primitive::ty_char);
