@@ -477,7 +477,7 @@ rpc_ptr void ndo_dfwd_add_station( projection pdev * pdev, projection vdev * vde
 	projection < struct net_device > pdev {
 		array< u8, 16>  name;
 	}
-	projection < struct net_device > v_dev {
+	projection < struct net_device > vdev {
 		array< u8, 16>  name;
 		u32  num_rx_queues;
 		u32  num_tx_queues;

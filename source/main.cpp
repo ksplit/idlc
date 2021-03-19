@@ -9,6 +9,8 @@
 #include <absl/strings/string_view.h>
 
 #include "parser/idl_parse.h"
+#include "ast/ast_dump.h"
+#include "ast/pgraph_dump.h"
 #include "ast/pgraph_walk.h"
 #include "frontend/name_binding.h"
 #include "frontend/analysis.h"
@@ -62,6 +64,7 @@ int main(int argc, char** argv)
     if (!file)
         return 1;
 
+	idlc::dump_ast(*file);
 	if (!idlc::bind_all_names(*file)) {
 		std::cout << "Error: Not all names were bound\n";
 		return 1;
@@ -71,6 +74,20 @@ int main(int argc, char** argv)
 	if (!rpcs) {
 		std::cout << "Error: pgraph generation failed\n";
 		return 1;
+	}
+
+	for (const auto& rpc : *rpcs) {
+		if (rpc->ret_pgraph) {
+			std::cout << rpc->name << "::__return\n";
+			idlc::dump_pgraph(*rpc->ret_pgraph);
+		}
+		
+		std::size_t index {};
+		for (const auto& arg : rpc->arg_pgraphs) {
+			std::cout << rpc->name << "::" << rpc->arguments->at(index)->name << "\n";
+			idlc::dump_pgraph(*arg);
+			++index;
+		}
 	}
 
 	idlc::generate(*rpcs);
