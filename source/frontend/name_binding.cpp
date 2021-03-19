@@ -87,6 +87,7 @@ bool idlc::bind_walk::visit_type_proj(type_proj& node)
 	}
 
 	std::cout << "Error: Could not resolve \"" << node.name << "\"\n";
+	std::cout << "In: " << scopes_.back()->get_path() << "\n";
 
 	return false;
 }
@@ -100,6 +101,7 @@ bool idlc::bind_walk::visit_type_rpc(type_rpc& node)
 	}
 
 	std::cout << "Error: Could not resolve \"" << node.name << "\"\n";
+	std::cout << "In: " << scopes_.back()->get_path() << "\n";
 
 	return false;
 }
@@ -151,6 +153,7 @@ bool idlc::scoped_name_walk::visit_proj_def(proj_def& node)
 bool idlc::scoped_name_walk::visit_rpc_def(rpc_def& node)
 {
 	path_.emplace_back(node.name);
+	node.scope.set_path(path_);
 	if (!traverse(*this, node))
 		return false;
 
@@ -162,6 +165,7 @@ bool idlc::scoped_name_walk::visit_rpc_def(rpc_def& node)
 bool idlc::scoped_name_walk::visit_module_def(module_def& node)
 {
 	path_.emplace_back(node.name);
+	node.scope.set_path(path_);
 	if (!traverse(*this, node))
 		return false;
 

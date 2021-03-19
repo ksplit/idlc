@@ -15,6 +15,19 @@ namespace idlc {
 namespace idlc {
 	class names_scope {
 	public:
+		void set_path(gsl::span<const ident> path)
+		{
+			for (const auto id : path) {
+				m_path += "::";
+				m_path += id;
+			}
+		}
+
+		std::string_view get_path()
+		{
+			return m_path;
+		}
+
 		void insert(ident name, proj_def* ptr)
 		{
 			m_names.emplace_back(name);
@@ -40,6 +53,7 @@ namespace idlc {
 	private:
 		std::vector<ident> m_names {};
 		std::vector<std::variant<proj_def*, rpc_def*>> m_symbols {};
+		std::string m_path {};
 	};
 }
 
