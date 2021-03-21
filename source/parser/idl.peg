@@ -473,9 +473,7 @@ type_spec = is_c:(tok_kw_const tok_space {{	value = $1; }})? stem:type_stem indi
 	});
 }}
 
-ret_type = tok_kw_void {{ value = nullptr; }} | type_spec
-
-rpc_def = tok_kw_rpc tok_space? ret_t:ret_type tok_space? name:tok_ident tok_space? tok_lpar args:(tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace projs:(tok_space? rpc_item_list)? tok_space? tok_rbrace {{
+rpc_def = tok_kw_rpc tok_space? ret_t:type_spec tok_space? name:tok_ident tok_space? tok_lpar args:(tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace projs:(tok_space? rpc_item_list)? tok_space? tok_rbrace {{
 	value = share(rpc_def {
 		get_shared<type_spec>(ret_t),
 		to_ptr<ident>(name),
@@ -485,7 +483,7 @@ rpc_def = tok_kw_rpc tok_space? ret_t:ret_type tok_space? name:tok_ident tok_spa
 	});
 }}
 
-rpc_ptr_def = tok_kw_rpc_ptr tok_space? ret_t:ret_type tok_space? name:tok_ident tok_space? tok_lpar args:(tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace projs:(tok_space? rpc_item_list)? tok_space? tok_rbrace {{
+rpc_ptr_def = tok_kw_rpc_ptr tok_space? ret_t:type_spec tok_space? name:tok_ident tok_space? tok_lpar args:(tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace projs:(tok_space? rpc_item_list)? tok_space? tok_rbrace {{
 	value = share(rpc_def {
 		get_shared<type_spec>(ret_t),
 		to_ptr<ident>(name),
