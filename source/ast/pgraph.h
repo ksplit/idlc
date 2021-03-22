@@ -25,12 +25,14 @@ namespace idlc {
 	struct static_void_ptr; // a void* that is "actually" a pointer to some other type
 	class projection;
 	struct rpc_ptr;
+	struct none {};
 
 	struct value;
 
 	// TODO: much of these are exclusively owned (except projection nodes), but node_ptrs/node_refs are shared
 	using passed_type = std::variant<
 		primitive,
+		none,
 		node_ref<null_terminated_array>,
 		node_ref<static_array>,
 		node_ref<dyn_array>,

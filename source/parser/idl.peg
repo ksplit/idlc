@@ -451,7 +451,7 @@ type_stem = arr:type_array {{
 }} | any:type_any_of {{
 	value = share(type_stem {get_shared<type_any_of>(any)});
 }} | tok_kw_void {{
-	value = share(type_stem {type_primitive::ty_uchar});
+	value = share(type_stem {type_none {} });
 }}
 
 indirection = attrs:(val:ptr_attrs tok_space? {{ value = val; }})? tok_star is_c:(tok_space? tok_kw_const)? {{

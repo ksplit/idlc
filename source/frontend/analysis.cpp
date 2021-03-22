@@ -56,7 +56,12 @@ namespace idlc {
 				else if constexpr (std::is_same_v<type, node_ref<type_rpc>>) {
 					return std::make_unique<rpc_ptr>(item.get().get()->definition);
 				}
+				else if constexpr (std::is_same_v<type, type_none>) {
+					return none {};
+				}
 
+				std::cout << "Debug: Unknown stem type conversion\n";
+				std::cout.flush();
 				std::terminate();
 			};
 
@@ -153,9 +158,7 @@ namespace idlc {
 		public:
 			bool visit_rpc_def(rpc_def& node)
 			{
-				if (node.ret_type)
-					node.ret_pgraph = generate_value(*node.ret_type);
-
+				node.ret_pgraph = generate_value(*node.ret_type);
 				if (node.arguments) {
 					for (auto& argument : *node.arguments)
 						node.arg_pgraphs.emplace_back(generate_value(*argument->type));
@@ -354,10 +357,8 @@ namespace idlc {
 
 		bool annotate_pgraphs(rpc_def& rpc)
 		{
-			if (rpc.ret_type) {
-				if (!annotate_pgraph(*rpc.ret_pgraph, annotation::out))
-					return false;
-			}
+			if (!annotate_pgraph(*rpc.ret_pgraph, annotation::out))
+				return false;
 
 			for (const auto& pgraph : rpc.arg_pgraphs) {
 				if (!annotate_pgraph(*pgraph, annotation::in))

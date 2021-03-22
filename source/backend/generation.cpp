@@ -471,11 +471,7 @@ namespace idlc {
         void create_function_strings(rpc_vec_view rpcs)
         {
             for (auto& rpc : rpcs) {
-                if (rpc->ret_type)
-                    rpc->ret_string = rpc->ret_pgraph->c_specifier;
-                else
-                    rpc->ret_string = "void";
-
+                rpc->ret_string = rpc->ret_pgraph->c_specifier;
                 if (rpc->arguments) {
                     bool is_first {true};
                     auto& args_str = rpc->args_string;

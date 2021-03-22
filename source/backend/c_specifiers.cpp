@@ -15,6 +15,7 @@ namespace idlc {
             bool visit_pointer(pointer& node);
             bool visit_rpc_ptr(rpc_ptr& node);
             bool visit_primitive(primitive node);
+            bool visit_none(none);
 
         private:
             std::string m_specifier {};
@@ -143,5 +144,11 @@ bool idlc::c_specifier_walk::visit_primitive(primitive node)
         std::terminate();
     }
 
+    return true;
+}
+
+bool idlc::c_specifier_walk::visit_none(none)
+{
+    m_specifier = "void";
     return true;
 }

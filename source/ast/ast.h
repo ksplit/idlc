@@ -21,6 +21,7 @@ namespace idlc {
 	struct module_def;
 	struct driver_def;
 	struct driver_file;
+	struct type_none;
 	struct type_rpc;
 	struct type_proj;
 	struct type_array;
@@ -42,11 +43,14 @@ namespace idlc {
 	using type_stem = std::variant<
 		type_primitive,
 		type_string,
+		type_none,
 		node_ref<type_rpc>,
 		node_ref<type_proj>,
 		node_ref<type_array>,
 		node_ref<type_any_of>
 	>;
+
+	struct type_none {};
 
 	struct driver_def {
 		const ident name;
@@ -219,7 +223,7 @@ namespace idlc {
 	};
 
 	struct rpc_def {
-		const node_ptr<type_spec> ret_type; // null type is used for <void>
+		const node_ref<type_spec> ret_type;
 		const ident name;
 		const node_ptr<ref_vec<var_decl>> arguments;
 		const node_ptr<ref_vec<rpc_item>> items;
