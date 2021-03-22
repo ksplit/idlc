@@ -1,0 +1,70 @@
+module kernel {
+rpc_ptr u32 read( projection file * file, u8* buf, u64 count, u64* ppos ) {
+    projection <struct inode> inode {
+        u32 i_rdev;
+    }
+	projection < struct file > file {
+        projection inode *inode;
+	}
+}
+rpc_ptr u32 write( projection file * file, u8* buf, u64 count, u64* ppos ) {
+    projection <struct inode> inode {
+        u32 i_rdev;
+    }
+	projection < struct file > file {
+        projection inode *inode;
+	}
+}
+rpc_ptr u32 compat_ioctl( projection file * file, u32 ioc, u64 arg ) {
+    projection <struct inode> inode {
+        u32 i_rdev;
+    }
+	projection < struct file > file {
+        projection inode *inode;
+        u32  f_mode;
+	}
+}
+rpc_ptr u32 open( projection inode * inode, projection file * file ) {
+	projection < struct inode > inode {
+        u32 i_rdev;
+	}
+	projection < struct file > file {
+	}
+}
+rpc u32 __register_chrdev( u32 major, u32 baseminor, u32 count, u8* name, projection fops * fops ) {
+	projection < struct file_operations > fops {
+		projection owner * owner;
+		rpc_ptr read read;
+		rpc_ptr write write;
+		rpc_ptr unlocked_ioctl unlocked_ioctl;
+		rpc_ptr compat_ioctl compat_ioctl;
+		rpc_ptr open open;
+	}
+	projection < struct module > owner {
+	}
+}
+rpc void __unregister_chrdev( u32 major, u32 baseminor, u32 count, u8* name ) {
+}
+rpc void warn_slowpath_fmt( u8* file, u32 line, u8* fmt ) {
+}
+rpc void cpu_maps_update_begin(  ) {
+}
+rpc void cpu_maps_update_done(  ) {
+}
+rpc u8* kasprintf( u32 gfp, u8* fmt ) {
+}
+rpc u32 wrmsr_safe_regs_on_cpu( u32 cpu, u32* regs ) {
+}
+rpc u32 rdmsr_safe_regs_on_cpu( u32 cpu, u32* regs ) {
+}
+rpc u32 wrmsr_safe_on_cpu( u32 cpu, u32 msr_no, u32 l, u32 h ) {
+}
+rpc u32 rdmsr_safe_on_cpu( u32 cpu, u32 msr_no, u32* l, u32* h ) {
+}
+rpc bool capable( u32 cap ) {
+}
+rpc u64 no_seek_end_llseek( projection file * file, u64 offset, u32 whence ) {
+	projection < struct file > file {
+	}
+}
+}
