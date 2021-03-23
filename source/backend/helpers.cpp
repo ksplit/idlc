@@ -14,7 +14,7 @@ void idlc::generate_helpers(std::ostream& file)
 
     file << "#define glue_unpack_rpc_ptr(msg, name) \\\n"
         << "\tglue_peek(msg) ? (fptr_##name)glue_unpack_rpc_ptr_impl(glue_unpack(msg, void*), "
-        << "LCD_DUP_TRAMPOLINE(trmp_##name)) : 0\n\n";
+        << "LCD_DUP_TRAMPOLINE(trmp_##name), LCD_TRAMPOLINE_SIZE(trmp_##name)) : NULL\n\n";
 
     file << "#define glue_peek(msg) glue_peek_impl(msg)\n";
     file << "#define glue_call_server(msg, rpc_id) \\\n"
@@ -47,12 +47,12 @@ void idlc::generate_helpers(std::ostream& file)
     file << "}\n";
     file << "\n";
     file << "static inline void* glue_unpack_rpc_ptr_impl(void* target, "
-        << "struct lcd_trampoline_handle* handle)\n";
+        << "struct lcd_trampoline_handle* handle, size_t size)\n";
     
     file << "{\n";
     file << "\tif (!target)\n\t\tglue_user_panic(\"Target was NULL\");\n\n";
     file << "\tif (!handle)\n\t\tglue_user_panic(\"Trmp was NULL\");\n\n";
-    // TODO: clear nx bit here
+    file << "\tset_memory_x(((unsigned long)handle) & PAGE_MASK, ALIGN(size, PAGE_SIZE) >> PAGE_SHIFT);\n";
     file << "\thandle->hidden_args = target;\n";
     file << "\treturn LCD_HANDLE_TO_TRAMPOLINE(handle);\n";
     file << "}\n";

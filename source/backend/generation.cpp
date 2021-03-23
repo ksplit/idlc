@@ -62,6 +62,7 @@ namespace idlc {
 
             file << "#ifndef COMMON_H\n#define COMMON_H\n\n";
             file << "#include <liblcd/trampoline.h>\n";
+            file << "#include <asm/cacheflush.h>\n";
             file << "\n";
             file << "#include \"glue_user.h\"\n";
             file << "\n";
