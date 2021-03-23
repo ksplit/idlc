@@ -27,6 +27,7 @@ add_executable(
 	"source/frontend/name_binding.cpp"
 	"source/backend/generation.cpp"
 	"source/backend/c_specifiers.cpp"
+	"source/backend/helpers.cpp"
 	"source/string_heap.cpp"
 	"source/main.cpp"
 )

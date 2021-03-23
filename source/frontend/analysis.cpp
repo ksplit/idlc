@@ -385,8 +385,6 @@ namespace idlc {
 	}
 }
 
-
-
 std::optional<idlc::rpc_vec> idlc::generate_rpc_pgraphs(file& root)
 {
 	rpc_collection_walk walk {};
