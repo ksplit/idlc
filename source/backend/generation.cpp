@@ -306,12 +306,12 @@ namespace idlc {
             if constexpr (side == rpc_side::client) {
                 os << "\tcase MODULE_INIT:\n";
                 os << "\t\tglue_user_trace(\"MODULE_INIT\");\n";
-                os << "\t\t// FIXME\n";
+                os << "\t\t__module_lcd_init();\n";
                 os << "\t\tbreak;\n\n";
 
                  os << "\tcase MODULE_EXIT:\n";
                 os << "\t\tglue_user_trace(\"MODULE_EXIT\");\n";
-                os << "\t\t// FIXME\n";
+                os << "\t\t__module_lcd_exit();\n";
                 os << "\t\tbreak;\n\n";
             }
 
