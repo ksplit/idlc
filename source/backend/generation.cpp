@@ -69,6 +69,12 @@ namespace idlc {
             generate_helpers(file);
             file << "\n";
             file << "enum RPC_ID {\n";
+
+            // Add MODULE_{INIT,EXIT} enums that are used to load and teardown
+            // the module
+            file << "\tMODULE_INIT,\n";
+            file << "\tMODULE_EXIT,\n";
+
             for (const auto& rpc : rpcs)
                 file << "\t" << rpc->enum_id << ",\n";
 
