@@ -8,9 +8,15 @@ module foo {
         projection circ_b [in] *a;
     }
 
+    projection <union foo_union> unifoo {
+        u32 discrim;
+        projection circ_a* a;
+        projection circ_b* b;
+    }
+
     projection < struct net_device > circ_b {
         projection circ_a *a;
     }
 
-    rpc projection simp_circ* foo(projection circ_a [out]* a, projection circ_b* b) {}
+    rpc projection simp_circ* foo(projection unifoo* c, projection circ_a [out]* a, projection circ_b* b) {}
 }
