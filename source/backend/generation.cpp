@@ -303,6 +303,18 @@ namespace idlc {
             os << "int try_dispatch(enum RPC_ID id, struct glue_message* msg)\n";
             os << "{\n";
             os << "\tswitch(id) {\n";
+            if constexpr (side == rpc_side::client) {
+                os << "\tcase MODULE_INIT:\n";
+                os << "\t\tglue_user_trace(\"MODULE_INIT\");\n";
+                os << "\t\t// FIXME\n";
+                os << "\t\tbreak;\n\n";
+
+                 os << "\tcase MODULE_EXIT:\n";
+                os << "\t\tglue_user_trace(\"MODULE_EXIT\");\n";
+                os << "\t\t// FIXME\n";
+                os << "\t\tbreak;\n\n";
+            }
+
             for (const auto& rpc : rpcs) {
                 if (rpc->kind == rpc_def_kind::direct && side == rpc_side::client)
                     continue;
