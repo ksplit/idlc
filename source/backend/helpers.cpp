@@ -19,7 +19,8 @@ void idlc::generate_helpers(std::ostream& file)
         << "LCD_DUP_TRAMPOLINE(trmp_##name), LCD_TRAMPOLINE_SIZE(trmp_##name)) : NULL\n\n";
 
     file << "#else\n";
-    file << "#define glue_unpack_rpc_ptr(msg, name) NULL\n";
+    file << "#define glue_unpack_rpc_ptr(msg, name) NULL;"
+        << " glue_user_panic(\"Trampolines cannot be used on LCD side\")\n";
     file << "#endif\n\n";
 
     file << "#define glue_peek(msg) glue_peek_impl(msg)\n";
