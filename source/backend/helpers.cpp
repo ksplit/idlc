@@ -4,6 +4,7 @@
 
 void idlc::generate_helpers(std::ostream& file)
 {
+    file << "#define verbose_debug 0\n";
     file << "#define GLUE_MAX_SLOTS 128\n";
     file << "#define glue_pack(msg, value) glue_pack_impl((msg), (uint64_t)(value))\n";
     file << "#define glue_pack_shadow(msg, value) glue_pack_shadow_impl((msg), (value))\n";

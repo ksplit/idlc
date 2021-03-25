@@ -181,6 +181,10 @@ namespace idlc {
             const auto n_args = rpc.arg_pgraphs.size();
             const auto roots = generate_root_ptrs(rpc, os);
 
+            // Add verbose printk's while entering
+            os << "\tif (verbose_debug) {\n";
+            os << "\t\tprintk(\"%s:%d, entered!\\n\", __func__, __LINE__);\n" << "\t}\n\n";
+
             if (rpc.kind == rpc_def_kind::indirect)
                 os << "\tglue_pack(msg, target);\n"; // make sure we marshal the target pointer before everything
 
@@ -203,6 +207,10 @@ namespace idlc {
                 unmarshaling_walk<marshal_side::caller> ret_unmarshal {os, roots.return_value, 1};
                 ret_unmarshal.visit_value(*rpc.ret_pgraph);
             }
+
+            // Add verbose printk's while returning
+            os << "\tif (verbose_debug) {\n";
+            os << "\t\tprintk(\"%s:%d, returned!\\n\", __func__, __LINE__);\n" << "\t}\n";
 
             os << (rpc.ret_pgraph ? concat("\treturn ret;\n") : "");
         }
@@ -238,6 +246,11 @@ namespace idlc {
             }
 
             const auto roots = generate_root_ptrs(rpc, os);
+
+            // Add verbose printk's while entering
+            os << "\tif (verbose_debug) {\n";
+            os << "\t\tprintk(\"%s:%d, entered!\\n\", __func__, __LINE__);\n" << "\t}\n\n";
+
             for (const auto& [name, type] : roots.arguments) {
                 unmarshaling_walk<marshal_side::callee> arg_unmarshal {os, name, 1};
                 arg_unmarshal.visit_value(*type);
@@ -262,6 +275,10 @@ namespace idlc {
             }
 
             os << "\tmsg->slots[0] = msg->position;\n";
+
+            // Add verbose printk's while returning
+            os << "\tif (verbose_debug) {\n";
+            os << "\t\tprintk(\"%s:%d, returned!\\n\", __func__, __LINE__);\n" << "\t}\n";
         }
 
         // Portions of indirect RPC glue that are identical in both client and server
@@ -306,12 +323,12 @@ namespace idlc {
             if constexpr (side == rpc_side::client) {
                 os << "\tcase MODULE_INIT:\n";
                 os << "\t\tglue_user_trace(\"MODULE_INIT\");\n";
-                os << "\t\t// FIXME\n";
+                os << "\t\t__module_lcd_init();\n";
                 os << "\t\tbreak;\n\n";
 
                  os << "\tcase MODULE_EXIT:\n";
                 os << "\t\tglue_user_trace(\"MODULE_EXIT\");\n";
-                os << "\t\t// FIXME\n";
+                os << "\t\t__module_lcd_exit();\n";
                 os << "\t\tbreak;\n\n";
             }
 
