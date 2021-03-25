@@ -13,9 +13,14 @@ void idlc::generate_helpers(std::ostream& file)
     file << "#define glue_unpack_new_shadow(msg, type, size) \\\n"
         << "\t(type)glue_unpack_new_shadow_impl(glue_unpack(msg, void*), size)\n\n";
 
+    file << "#ifndef LCD_ISOLATE\n";
     file << "#define glue_unpack_rpc_ptr(msg, name) \\\n"
         << "\tglue_peek(msg) ? (fptr_##name)glue_unpack_rpc_ptr_impl(glue_unpack(msg, void*), "
         << "LCD_DUP_TRAMPOLINE(trmp_##name), LCD_TRAMPOLINE_SIZE(trmp_##name)) : NULL\n\n";
+
+    file << "#else\n";
+    file << "#define glue_unpack_rpc_ptr(msg, name) NULL\n";
+    file << "#endif\n\n";
 
     file << "#define glue_peek(msg) glue_peek_impl(msg)\n";
     file << "#define glue_call_server(msg, rpc_id) \\\n"
