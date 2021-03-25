@@ -10,6 +10,7 @@ module foo {
 
     projection < struct net_device > circ_b {
         projection circ_a *a;
+        const signed char* c;
     }
 
     rpc projection simp_circ* foo(projection circ_a [out]* a, projection circ_b* b) {}

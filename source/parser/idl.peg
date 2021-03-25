@@ -400,6 +400,22 @@ type_primitive = tok_kw_unsigned tok_space tok_kw_long tok_space tok_kw_long {{
 	value = reinterpret_cast<void*>(type_primitive::ty_char);
 }} | tok_kw_bool {{
 	value = reinterpret_cast<void*>(type_primitive::ty_bool);
+}} | "s64" {{
+	value = reinterpret_cast<void*>(type_primitive::ty_llong);
+}} | "s32" {{
+	value = reinterpret_cast<void*>(type_primitive::ty_int);
+}} | "s16" {{
+	value = reinterpret_cast<void*>(type_primitive::ty_short);
+}} | "s8" {{
+	value = reinterpret_cast<void*>(type_primitive::ty_schar);
+}} | "u64" {{
+	value = reinterpret_cast<void*>(type_primitive::ty_ullong);
+}} | "u32" {{
+	value = reinterpret_cast<void*>(type_primitive::ty_uint);
+}} | "u16" {{
+	value = reinterpret_cast<void*>(type_primitive::ty_ushort);
+}} | "u8" {{
+	value = reinterpret_cast<void*>(type_primitive::ty_uchar);
 }}
 
 # Do note that there is very little difference between const array<int, 10> and array<const int, 10>.
