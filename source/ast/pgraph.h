@@ -132,9 +132,12 @@ namespace idlc {
 
 	using projection_field = std::pair<ident, node_ptr<value>>;
 
+	using projection_kind = proj_def_kind;
+
 	class projection {
 	public:
 		ident real_name {};
+		projection_kind kind;
 		std::vector<projection_field> fields {};
 
 		std::string caller_marshal_visitor {};
@@ -142,8 +145,9 @@ namespace idlc {
 		std::string callee_marshal_visitor {};
 		std::string caller_unmarshal_visitor {};
 
-		projection(ident real_name, const std::string& name) :
+		projection(ident real_name, projection_kind kind, const std::string& name) :
 			real_name {real_name},
+			kind {kind},
 			fields {},
 			caller_marshal_visitor {},
 			callee_unmarshal_visitor {},
@@ -153,8 +157,9 @@ namespace idlc {
 			populate_names(name);
 		};
 		
-		projection(ident real_name, const std::string& name, decltype(fields)&& fields) :
+		projection(ident real_name, projection_kind kind, const std::string& name, decltype(fields)&& fields) :
 			real_name {real_name},
+			kind {kind},
 			fields {std::move(fields)},
 			caller_marshal_visitor {},
 			callee_unmarshal_visitor {},
