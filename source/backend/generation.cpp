@@ -283,11 +283,19 @@ namespace idlc {
             os << "\t\tprintk(\"%s:%d, returned!\\n\", __func__, __LINE__);\n" << "\t}\n";
         }
 
-        // Portions of indirect RPC glue that are identical in both client and server
-        void generate_indirect_rpc_common_code(std::ostream& os, rpc_def& rpc)
+        void generate_indirect_rpc_callee(std::ostream& os, rpc_def& rpc)
         {
             os << "void " << rpc.callee_id << "(struct glue_message* msg)\n{\n";
             generate_callee_glue(rpc, os);
+            os << "}\n\n";            
+        }
+
+        void generate_indirect_rpc_caller(std::ostream& os, rpc_def& rpc)
+        {
+            os << rpc.ret_string << " " << rpc.impl_id << "(" << rpc.typedef_id << " target, "
+                << rpc.args_string << ")\n{\n";
+
+            generate_caller_glue<rpc_side::server>(rpc, os);
             os << "}\n\n";
 
             os << "LCD_TRAMPOLINE_DATA(" << rpc.trmp_id << ")\n";
@@ -302,18 +310,6 @@ namespace idlc {
             os << "\treturn impl(target, " << rpc.params_string << ");\n";
 
             os << "}\n\n";
-        }
-
-        template<rpc_side side>
-        void generate_indirect_rpc(rpc_def& rpc, std::ostream& os)
-        {
-            os << rpc.ret_string << " " << rpc.impl_id << "(" << rpc.typedef_id << " target, "
-                << rpc.args_string << ")\n{\n";
-
-            generate_caller_glue<side>(rpc, os);
-            os << "}\n\n";
-
-            generate_indirect_rpc_common_code(os, rpc);
         }
 
         template<rpc_side side>
@@ -338,6 +334,9 @@ namespace idlc {
                 if (rpc->kind == rpc_def_kind::direct && side == rpc_side::client)
                     continue;
                 
+                if (rpc->kind == rpc_def_kind::indirect && side == rpc_side::server)
+                    continue;
+                
                 os << "\tcase " << rpc->enum_id << ":\n";
                 os << "\t\tglue_user_trace(\"" << rpc->name << "\\n\");\n";
                 os << "\t\t" << rpc->callee_id << "(msg);\n";
@@ -357,13 +356,16 @@ namespace idlc {
             file << "#include \"common.h\"\n\n";
             file << "#include <lcd_config/post_hook.h>\n\n";
             for (const auto& rpc : rpcs) {
-                if (rpc->kind == rpc_def_kind::direct) {
+                switch (rpc->kind) {
+                case rpc_def_kind::direct:
                     file << rpc->ret_string << " " << rpc->name << "(" << rpc->args_string << ")\n{\n";
                     generate_caller_glue<rpc_side::client>(*rpc, file);
                     file << "}\n\n";
-                }
-                else {
-                    generate_indirect_rpc<rpc_side::client>(*rpc, file);
+                    break;
+
+                case rpc_def_kind::indirect:
+                    generate_indirect_rpc_callee(file, *rpc);
+                    break;
                 }
             }
 
@@ -379,13 +381,16 @@ namespace idlc {
             file << "#include \"common.h\"\n\n";
             file << "#include <lcd_config/post_hook.h>\n\n";
             for (const auto& rpc : rpcs) {
-                if (rpc->kind == rpc_def_kind::indirect) {
-                    generate_indirect_rpc<rpc_side::server>(*rpc, file);
-                }
-                else {
+                switch (rpc->kind) {
+                case rpc_def_kind::indirect:
+                    generate_indirect_rpc_caller(file, *rpc);
+                    break;
+
+                case rpc_def_kind::direct:
                     file << "void " << rpc->callee_id << "(struct glue_message* msg)\n{\n";
                     generate_callee_glue(*rpc, file);
                     file << "}\n\n";
+                    break;                    
                 }
             }
 
