@@ -30,16 +30,16 @@ namespace idlc {
             bool visit_projection(projection& node)
             {
                 m_stream << "void " << node.caller_marshal_visitor
-                    << "(\n\tstruct glue_message*,\n\tstruct " << node.real_name << " const*);\n\n";
+                    << "(\n\tstruct fipc_message*, struct ext_registers*,\n\tstruct " << node.real_name << " const*);\n\n";
 
                 m_stream << "void " << node.callee_unmarshal_visitor
-                    << "(\n\tstruct glue_message*,\n\tstruct " << node.real_name << "*);\n\n";
+                    << "(\n\tstruct fipc_message*, struct ext_registers*,\n\tstruct " << node.real_name << "*);\n\n";
 
                 m_stream << "void " << node.callee_marshal_visitor
-                    << "(\n\tstruct glue_message*,\n\tstruct " << node.real_name << " const*);\n\n";
+                    << "(\n\tstruct fipc_message*, struct ext_registers*,\n\tstruct " << node.real_name << " const*);\n\n";
 
                 m_stream << "void " << node.caller_unmarshal_visitor
-                    << "(\n\tstruct glue_message*,\n\tstruct " << node.real_name << "*);\n\n";
+                    << "(\n\tstruct fipc_message*, struct ext_registers*,\n\tstruct " << node.real_name << "*);\n\n";
 
                 return true;
             }
@@ -80,7 +80,7 @@ namespace idlc {
 
             file << "};\n\n";
 
-            file << "int try_dispatch(enum RPC_ID id, struct glue_message* msg);\n\n";
+            file << "int try_dispatch(enum RPC_ID id, struct fipc_message* msg);\n\n";
 
             generate_visitor_prototypes(file, projections);
             for (const auto& rpc : rpcs) {
@@ -176,7 +176,8 @@ namespace idlc {
 
         auto generate_caller_glue_prologue(std::ostream& os, rpc_def& rpc)
         {
-            os << "\tstruct glue_message *msg = glue_init_msg();\n\n";
+            os << "\tstruct fipc_message buffer = {0};";
+            os << "\tstruct fipc_message *msg = &buffer;\n\n";
 
             const auto n_args = rpc.arg_pgraphs.size();
             const auto roots = generate_root_ptrs(rpc, os);
@@ -285,7 +286,7 @@ namespace idlc {
 
         void generate_indirect_rpc_callee(std::ostream& os, rpc_def& rpc)
         {
-            os << "void " << rpc.callee_id << "(struct glue_message* msg)\n{\n";
+            os << "void " << rpc.callee_id << "(struct fipc_message* msg, struct ext_registers* ext)\n{\n";
             generate_callee_glue(rpc, os);
             os << "}\n\n";            
         }
@@ -315,7 +316,7 @@ namespace idlc {
         template<rpc_side side>
         void generate_dispatch_fn(std::ostream& os, rpc_vec_view rpcs)
         {
-            os << "int try_dispatch(enum RPC_ID id, struct glue_message* msg)\n";
+            os << "int try_dispatch(enum RPC_ID id, struct fipc_message* msg, struct ext_registers* ext)\n";
             os << "{\n";
             os << "\tswitch(id) {\n";
             if constexpr (side == rpc_side::client) {
@@ -339,7 +340,7 @@ namespace idlc {
                 
                 os << "\tcase " << rpc->enum_id << ":\n";
                 os << "\t\tglue_user_trace(\"" << rpc->name << "\\n\");\n";
-                os << "\t\t" << rpc->callee_id << "(msg);\n";
+                os << "\t\t" << rpc->callee_id << "(msg, ext);\n";
                 os << "\t\tbreak;\n\n";
             }
 
@@ -387,7 +388,7 @@ namespace idlc {
                     break;
 
                 case rpc_def_kind::direct:
-                    file << "void " << rpc->callee_id << "(struct glue_message* msg)\n{\n";
+                    file << "void " << rpc->callee_id << "(struct fipc_message*, struct ext_registers*)\n{\n";
                     generate_callee_glue(*rpc, file);
                     file << "}\n\n";
                     break;                    
@@ -449,8 +450,9 @@ namespace idlc {
 
         void generate_caller_marshal_visitor(std::ostream& file, projection& node)
         {
-            file << "void " << node.caller_marshal_visitor << "(\n\tstruct glue_message* msg,\n\tstruct "
-                << node.real_name << " const* ptr)\n{\n";
+            file << "void " << node.caller_marshal_visitor
+                << "(\n\tstruct fipc_message* msg,\n\tstruct ext_registers* ext,\n\tstruct " << node.real_name
+                << " const* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::marshaling, marshal_side::caller>(file, node, "ptr");
             const auto n_fields = node.fields.size();
@@ -464,7 +466,8 @@ namespace idlc {
 
         void generate_callee_unmarshal_visitor(std::ostream& file, projection& node)
         {
-            file << "void " << node.callee_unmarshal_visitor << "(\n\tstruct glue_message* msg,\n\tstruct "
+            file << "void " << node.callee_unmarshal_visitor
+                << "(\n\tconst struct fipc_message* msg,\n\tconst struct ext_registers* ext,\n\tstruct "
                 << node.real_name << "* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::callee>(file, node, "ptr");
@@ -480,7 +483,8 @@ namespace idlc {
         void generate_callee_marshal_visitor(std::ostream& file, projection& node)
         {
             file << "void " << node.callee_marshal_visitor
-                    << "(\n\tstruct glue_message* msg,\n\tstruct " << node.real_name << " const* ptr)\n{\n";
+                    << "(\n\tstruct fipc_message* msg,\n\tstruct ext_registers* ext,\n\tstruct "
+                    << node.real_name << " const* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::marshaling, marshal_side::callee>(file, node, "ptr");
             const auto n_fields = node.fields.size();
@@ -495,7 +499,8 @@ namespace idlc {
         void generate_caller_unmarshal_visitor(std::ostream& file, projection& node)
         {
             file << "void " << node.caller_unmarshal_visitor
-                    << "(\n\tstruct glue_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
+                << "(\n\tconst struct fipc_message* msg,\n\tconst struct ext_registers* ext,\n\tstruct "
+                << node.real_name << "* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::caller>(file, node, "ptr");
             const auto n_fields = node.fields.size();
@@ -514,7 +519,6 @@ namespace idlc {
             file << "#include <lcd_config/pre_hook.h>\n\n";
             file << "#include \"common.h\"\n\n";
             file << "#include <lcd_config/post_hook.h>\n\n";
-            file << "struct glue_message shared_buffer = {0};\n\n";
             for (const auto& projection : projections) {
                 // TODO: make these optional
                 generate_caller_marshal_visitor(file, *projection);
