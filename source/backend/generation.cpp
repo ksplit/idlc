@@ -198,6 +198,8 @@ namespace idlc {
 
         void generate_caller_glue_epilogue(std::ostream& os, rpc_def& rpc, marshal_roots roots)
         {
+            os << "\tmsg->position = 0;\n";
+
             for (const auto& [name, type] : roots.arguments) {
                 unmarshaling_walk<marshal_side::caller> arg_unremarshal {os, name, 1};
                 arg_unremarshal.visit_value(*type);
