@@ -113,9 +113,9 @@ namespace idlc {
         {
             if (m_should_marshal) {
                 if (should_bind(node.pointer_annots))
-                    this->new_line() << "glue_pack_shadow(msg, *" << this->subject() << ");\n";
+                    this->new_line() << "glue_pack_shadow(pos, msg, ext, *" << this->subject() << ");\n";
                 else
-                    this->new_line() << "glue_pack(msg, *" << this->subject() << ");\n";
+                    this->new_line() << "glue_pack(pos, msg, ext, *" << this->subject() << ");\n";
             }
             
             // This is done to absorb any unused variables
@@ -133,19 +133,19 @@ namespace idlc {
 
         bool visit_primitive(primitive node)
         {
-            this->new_line() << "glue_pack(msg, *" << this->subject() << ");\n";
+            this->new_line() << "glue_pack(pos, msg, ext, *" << this->subject() << ");\n";
             return true;
         }
 
         bool visit_rpc_ptr(rpc_ptr& node)
         {
-            this->new_line() << "glue_pack(msg, *" << this->subject() << ");\n";
+            this->new_line() << "glue_pack(pos, msg, ext, *" << this->subject() << ");\n";
             return true;
         }
 
         bool visit_projection(projection& node)
         {
-            this->new_line() << get_visitor_name(node) << "(msg, " << this->subject() << ");\n";
+            this->new_line() << get_visitor_name(node) << "(pos, msg, ext, " << this->subject() << ");\n";
             return true;
         }
 
@@ -158,7 +158,7 @@ namespace idlc {
             this->new_line() << ptr_type << " array = "	<< this->subject() << ";\n";
             this->new_line() << "for (len = 0; array[len]; ++len);\n";
             // The size slot is used for allocation, so we have a +1 for the null terminator
-            this->new_line() << "glue_pack(msg, len + 1);\n";
+            this->new_line() << "glue_pack(pos, msg, ext, len + 1);\n";
             this->new_line() << "for (i = 0; i < len; ++i) {\n";
             this->new_line() << "\t" << ptr_type << " element = &array[i];\n";
             if (!this->marshal("element", node))
@@ -176,7 +176,7 @@ namespace idlc {
 
             this->new_line() << "size_t i, len = " << node.size << ";\n";
             this->new_line() << ptr_type << " array = "	<< this->subject() << ";\n";
-            this->new_line() << "glue_pack(msg, len);\n";
+            this->new_line() << "glue_pack(pos, msg, ext, len);\n";
             this->new_line() << "// Warning: see David if this breaks\n";
             this->new_line() << "glue_user_trace(\"Warning: see David if this breaks\");\n";
             this->new_line() << "for (i = 0; i < len; ++i) {\n";
@@ -278,7 +278,7 @@ namespace idlc {
 
         bool visit_primitive(primitive node)
         {
-            this->new_line() << "*" << this->subject() << " = glue_unpack(msg, " << m_c_specifier << ");\n";
+            this->new_line() << "*" << this->subject() << " = glue_unpack(pos, msg, ext, " << m_c_specifier << ");\n";
             return true;
         }
 
@@ -306,7 +306,7 @@ namespace idlc {
             this->new_line() << "size_t i, len;\n";
             this->new_line() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
             // The size slot is used for allocation, so we have a +1 for the null terminator
-            this->new_line() << "len = glue_unpack(msg, size_t) - 1;\n";
+            this->new_line() << "len = glue_unpack(pos, msg, ext, size_t) - 1;\n";
             this->new_line() << "array[len] = '\\0';\n";
             this->new_line() << "for (i = 0; i < len; ++i) {\n";
             this->new_line() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
@@ -323,7 +323,7 @@ namespace idlc {
         {
             this->new_line() << "int i;\n";
             this->new_line() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
-            this->new_line() << "size_t len = glue_unpack(msg, size_t);\n";
+            this->new_line() << "size_t len = glue_unpack(pos, msg, ext, size_t);\n";
             this->new_line() << "// Warning: see David if this breaks\n";
             this->new_line() << "glue_user_trace(\"Warning: see David if this breaks\");\n";
             this->new_line() << "for (i = 0; i < len; ++i) {\n";
@@ -338,7 +338,7 @@ namespace idlc {
 
         bool visit_rpc_ptr(rpc_ptr& node)
         {
-            this->new_line() << "*" << this->subject() << " = glue_unpack_rpc_ptr(msg, "
+            this->new_line() << "*" << this->subject() << " = glue_unpack_rpc_ptr(pos, msg, ext, "
                 << node.definition->name << ");\n";
 
             return true;
@@ -346,7 +346,7 @@ namespace idlc {
 
         bool visit_projection(projection& node)
         {
-            this->new_line() << get_visitor_name(node) << "(msg, " << this->subject() << ");\n";
+            this->new_line() << get_visitor_name(node) << "(pos, msg, ext, " << this->subject() << ");\n";
             return true;
         }
 
@@ -397,14 +397,14 @@ namespace idlc {
         {
             this->new_line() << "*" << this->subject() << " = ";
             if (should_bind(node.pointer_annots)) {
-                this->stream() << "glue_unpack_shadow(msg, " << m_c_specifier << ")";
+                this->stream() << "glue_unpack_shadow(pos, msg, ext, " << m_c_specifier << ")";
             }
             else if (should_alloc(node.pointer_annots)) {
-                this->stream() << "glue_unpack_new_shadow(msg, " << m_c_specifier << ", "
+                this->stream() << "glue_unpack_new_shadow(pos, msg, ext, " << m_c_specifier << ", "
                     << get_size_expr(*node.referent) << ")";
             }
             else {
-                this->stream() << "glue_unpack(msg, " << m_c_specifier << ")";
+                this->stream() << "glue_unpack(pos, msg, ext, " << m_c_specifier << ")";
             }
 
             this->stream() << ";\n";

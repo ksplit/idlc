@@ -26,10 +26,10 @@ void idlc::generate_helpers(std::ostream& file)
 
     file << "#define glue_peek(pos, msg, ext) glue_peek_impl(pos, msg, ext)\n";
     file << "#define glue_call_server(pos, msg, rpc_id) \\\n"
-        << "\tmsg->regs[0] = pos; pos = 0; glue_user_call_server(msg, rpc_id);\n\n";
+        << "\tmsg->regs[0] = *pos; *pos = 0; glue_user_call_server(msg, rpc_id);\n\n";
 
     file << "#define glue_call_client(pos, msg, rpc_id) \\\n"
-        << "\tmsg->regs[0] = pos; pos = 0; glue_user_call_client(msg, rpc_id);\n\n";
+        << "\tmsg->regs[0] = *pos; *pos = 0; glue_user_call_client(msg, rpc_id);\n\n";
 
     file << "void glue_user_init(void);\n";
     file << "void glue_user_panic(const char* msg);\n";
