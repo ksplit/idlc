@@ -189,6 +189,27 @@ namespace idlc {
             return true;
         }
 
+        bool visit_dyn_array(dyn_array& node)
+        {
+            const auto star = node.element->is_const ? " const*" : "*";
+            const auto ptr_type = concat(node.element->c_specifier, star);
+
+            // HACK: this depends on the root pointer naming convention
+            this->new_line() << "size_t i, len = " << node.size << "_ptr;\n";
+            this->new_line() << ptr_type << " array = "	<< this->subject() << ";\n";
+            this->new_line() << "glue_pack(msg, len);\n";
+            this->new_line() << "// Warning: see David if this breaks\n";
+            this->new_line() << "glue_user_trace(\"Warning: see David if this breaks\");\n";
+            this->new_line() << "for (i = 0; i < len; ++i) {\n";
+            this->new_line() << "\t" << ptr_type << " element = &array[i];\n";
+            if (!this->marshal("element", node))
+                return false;
+
+            this->new_line() << "}\n\n";
+
+            return true;
+        }
+
         bool visit_value(value& node)
         {
             if (should_walk<marshal_role::marshaling, side>(node)) {
@@ -320,6 +341,24 @@ namespace idlc {
 
         // FIXME: we pack the array size before the array elements, but this is redundant
         bool visit_static_array(static_array& node)
+        {
+            this->new_line() << "int i;\n";
+            this->new_line() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
+            this->new_line() << "size_t len = glue_unpack(msg, size_t);\n";
+            this->new_line() << "// Warning: see David if this breaks\n";
+            this->new_line() << "glue_user_trace(\"Warning: see David if this breaks\");\n";
+            this->new_line() << "for (i = 0; i < len; ++i) {\n";
+            this->new_line() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
+            if (!this->marshal("element", node))
+                return false;
+
+            this->new_line() << "}\n\n";
+
+            return true;
+        }
+
+        // FIXME: we pack the array size before the array elements, but this is redundant
+        bool visit_dyn_array(dyn_array& node)
         {
             this->new_line() << "int i;\n";
             this->new_line() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
