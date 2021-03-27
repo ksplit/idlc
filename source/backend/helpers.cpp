@@ -57,9 +57,12 @@ void idlc::generate_helpers(std::ostream& file)
         << "glue_pack_impl(size_t* pos, struct fipc_message* msg, struct ext_registers* ext, uint64_t value)\n";
 
     file << "{\n";
-    file << "\tif (*pos >= FIPC_NR_REGS - 1)\n";
+    file << "\tif (*pos >= 128)\n";
     file << "\t\tglue_user_panic(\"Glue message was too large\");\n";
-    file << "\tmsg->regs[(*pos)++ + 1] = value;\n";
+    file << "\tif (*pos < 6)\n";
+    file << "\t\tmsg->regs[(*pos)++ + 1] = value;\n";
+    file << "\telse\n";
+    file << "\t\text->regs[(*pos)++ + 1] = value;\n";
     file << "}\n";
     file << "\n";
     file << "static inline uint64_t\n"
@@ -68,7 +71,10 @@ void idlc::generate_helpers(std::ostream& file)
     file << "{\n";
     file << "\tif (*pos >= msg->regs[0])\n";
     file << "\t\tglue_user_panic(\"Unpacked past end of glue message\");\n";
-    file << "\treturn msg->regs[(*pos)++ + 1];\n";
+    file << "\tif (*pos < 6)\n";
+    file << "\t\treturn msg->regs[(*pos)++ + 1];\n";
+    file << "\telse\n";
+    file << "\t\treturn ext->regs[(*pos)++ + 1];\n";
     file << "}\n";
     file << "\n";
     file << "static inline uint64_t\n"
@@ -77,7 +83,10 @@ void idlc::generate_helpers(std::ostream& file)
     file << "{\n";
     file << "\tif (*pos >= msg->regs[0])\n";
     file << "\t\tglue_user_panic(\"Peeked past end of glue message\");\n";
-    file << "\treturn msg->regs[(*pos) + 2];\n";
+    file << "\tif (*pos < 5)\n";
+    file << "\t\treturn msg->regs[(*pos)++ + 2];\n";
+    file << "\telse\n";
+    file << "\t\treturn ext->regs[(*pos)++ + 2];\n";
     file << "}\n";
     file << "\n";
     file << "static inline void* glue_unpack_new_shadow_impl(const void* ptr, size_t size)\n";
