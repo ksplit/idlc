@@ -84,9 +84,9 @@ void idlc::generate_helpers(std::ostream& file)
     file << "\tif (*pos >= msg->regs[0])\n";
     file << "\t\tglue_user_panic(\"Peeked past end of glue message\");\n";
     file << "\tif (*pos < 5)\n";
-    file << "\t\treturn msg->regs[(*pos)++ + 2];\n";
+    file << "\t\treturn msg->regs[*pos + 2];\n";
     file << "\telse\n";
-    file << "\t\treturn ext->regs[(*pos)++ + 2];\n";
+    file << "\t\treturn ext->regs[*pos + 2];\n";
     file << "}\n";
     file << "\n";
     file << "static inline void* glue_unpack_new_shadow_impl(const void* ptr, size_t size)\n";
