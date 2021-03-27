@@ -246,7 +246,7 @@ namespace idlc {
                 std::is_same_v<node_type, node_ref<null_terminated_array>>
                 || std::is_same_v<node_type, node_ref<dyn_array>>
                 || std::is_same_v<node_type, node_ref<static_array>>)
-                return concat("sizeof(", node.c_specifier, ") * glue_peek(msg)");
+                return concat("sizeof(", node.c_specifier, ") * glue_peek(pos, msg, ext)");
             else
                 return concat("sizeof(", node.c_specifier, ")");
         };

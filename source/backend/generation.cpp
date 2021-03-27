@@ -41,7 +41,7 @@ namespace idlc {
                     << "\tconst struct fipc_message* msg,\n"
                     << "\tconst struct ext_registers* ext,\n"
                     << "\tstruct " << node.real_name
-                    << " const* ptr);\n\n";
+                    << "* ptr);\n\n";
 
                 m_stream << "void " << node.callee_marshal_visitor << "(\n"
                     << "\tsize_t* pos,\n"
@@ -55,7 +55,7 @@ namespace idlc {
                     << "\tconst struct fipc_message* msg,\n"
                     << "\tconst struct ext_registers* ext,\n"
                     << "\tstruct " << node.real_name
-                    << " const* ptr);\n\n";
+                    << "* ptr);\n\n";
 
                 return true;
             }
@@ -499,7 +499,7 @@ namespace idlc {
                 << "\tconst struct fipc_message* msg,\n"
                 << "\tconst struct ext_registers* ext,\n"
                 << "\tstruct " << node.real_name
-                << " const* ptr)\n{\n";
+                << "* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::callee>(file, node, "ptr");
             const auto n_fields = node.fields.size();
@@ -537,7 +537,7 @@ namespace idlc {
                 << "\tconst struct fipc_message* msg,\n"
                 << "\tconst struct ext_registers* ext,\n"
                 << "\tstruct " << node.real_name
-                << " const* ptr)\n{\n";
+                << "* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::caller>(file, node, "ptr");
             const auto n_fields = node.fields.size();

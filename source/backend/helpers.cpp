@@ -53,7 +53,9 @@ void idlc::generate_helpers(std::ostream& file)
     file << "\treturn LCD_HANDLE_TO_TRAMPOLINE(handle);\n";
     file << "}\n";
     file << "\n";
-    file << "static inline void glue_pack_impl(size_t* pos, struct fipc_message* msg, struct ext_registers* ext, uint64_t value)\n";
+    file << "static inline void\n"
+        << "glue_pack_impl(size_t* pos, struct fipc_message* msg, struct ext_registers* ext, uint64_t value)\n";
+        
     file << "{\n";
     file << "\tif (*pos >= FIPC_NR_REGS - 1)\n";
     file << "\t\tglue_user_panic(\"Glue message was too large\");\n";
@@ -61,7 +63,7 @@ void idlc::generate_helpers(std::ostream& file)
     file << "}\n";
     file << "\n";
     file << "static inline uint64_t\n"
-        << "glue_unpack_impl(size_t* pos, struct fipc_message* msg, struct ext_registers* ext)\n";
+        << "glue_unpack_impl(size_t* pos, const struct fipc_message* msg, const struct ext_registers* ext)\n";
 
     file << "{\n";
     file << "\tif (*pos >= msg->regs[0])\n";
@@ -69,7 +71,9 @@ void idlc::generate_helpers(std::ostream& file)
     file << "\treturn msg->regs[(*pos)++ + 1];\n";
     file << "}\n";
     file << "\n";
-    file << "static inline uint64_t glue_peek_impl(size_t* pos, struct fipc_message* msg, struct ext_registers* ext)\n";
+    file << "static inline uint64_t\n"
+        << "glue_peek_impl(size_t* pos, const struct fipc_message* msg, const struct ext_registers* ext)\n";
+
     file << "{\n";
     file << "\tif (*pos >= msg->regs[0])\n";
     file << "\t\tglue_user_panic(\"Peeked past end of glue message\");\n";
