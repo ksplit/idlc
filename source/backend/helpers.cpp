@@ -16,7 +16,7 @@ void idlc::generate_helpers(std::ostream& file)
 
     file << "#ifndef LCD_ISOLATE\n";
     file << "#define glue_unpack_rpc_ptr(pos, msg, ext, name) \\\n"
-        << "\tglue_peek(msg) ? (fptr_##name)glue_unpack_rpc_ptr_impl(glue_unpack(pos, msg, ext, void*), "
+        << "\tglue_peek(pos, msg, ext) ? (fptr_##name)glue_unpack_rpc_ptr_impl(glue_unpack(pos, msg, ext, void*), "
         << "LCD_DUP_TRAMPOLINE(trmp_##name), LCD_TRAMPOLINE_SIZE(trmp_##name)) : NULL\n\n";
 
     file << "#else\n";
@@ -55,7 +55,7 @@ void idlc::generate_helpers(std::ostream& file)
     file << "\n";
     file << "static inline void\n"
         << "glue_pack_impl(size_t* pos, struct fipc_message* msg, struct ext_registers* ext, uint64_t value)\n";
-        
+
     file << "{\n";
     file << "\tif (*pos >= FIPC_NR_REGS - 1)\n";
     file << "\t\tglue_user_panic(\"Glue message was too large\");\n";

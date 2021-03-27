@@ -207,8 +207,10 @@ namespace idlc {
             os << "\tif (verbose_debug) {\n";
             os << "\t\tprintk(\"%s:%d, entered!\\n\", __func__, __LINE__);\n" << "\t}\n\n";
 
-            if (rpc.kind == rpc_def_kind::indirect)
-                os << "\tglue_pack(msg, target);\n"; // make sure we marshal the target pointer before everything
+            if (rpc.kind == rpc_def_kind::indirect) {
+                // make sure we marshal the target pointer before everything
+                os << "\tglue_pack(pos, msg, ext, target);\n";
+            }
 
             for (const auto& [name, type] : roots.arguments) {
                 marshaling_walk<marshal_side::caller> arg_marshal {os, name, 1};
@@ -413,7 +415,7 @@ namespace idlc {
                     break;
 
                 case rpc_def_kind::direct:
-                    file << "void " << rpc->callee_id << "(struct fipc_message*, struct ext_registers*)\n{\n";
+                    file << "void " << rpc->callee_id << "(struct fipc_message* msg, struct ext_registers* ext)\n{\n";
                     generate_callee_glue(*rpc, file);
                     file << "}\n\n";
                     break;                    
