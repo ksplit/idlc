@@ -29,17 +29,33 @@ namespace idlc {
 
             bool visit_projection(projection& node)
             {
-                m_stream << "void " << node.caller_marshal_visitor
-                    << "(\n\tstruct glue_message*,\n\tstruct " << node.real_name << " const*);\n\n";
+                m_stream << "void " << node.caller_marshal_visitor << "(\n"
+                    << "\tsize_t* pos,\n"
+                    << "\tstruct fipc_message* msg,\n"
+                    << "\tstruct ext_registers* ext,\n"
+                    << "\tstruct " << node.real_name
+                    << " const* ptr);\n\n";
 
-                m_stream << "void " << node.callee_unmarshal_visitor
-                    << "(\n\tstruct glue_message*,\n\tstruct " << node.real_name << "*);\n\n";
+                m_stream << "void " << node.callee_unmarshal_visitor << "(\n"
+                    << "\tsize_t* pos,\n"
+                    << "\tconst struct fipc_message* msg,\n"
+                    << "\tconst struct ext_registers* ext,\n"
+                    << "\tstruct " << node.real_name
+                    << "* ptr);\n\n";
 
-                m_stream << "void " << node.callee_marshal_visitor
-                    << "(\n\tstruct glue_message*,\n\tstruct " << node.real_name << " const*);\n\n";
+                m_stream << "void " << node.callee_marshal_visitor << "(\n"
+                    << "\tsize_t* pos,\n"
+                    << "\tstruct fipc_message* msg,\n"
+                    << "\tstruct ext_registers* ext,\n"
+                    << "\tstruct " << node.real_name
+                    << " const* ptr);\n\n";
 
-                m_stream << "void " << node.caller_unmarshal_visitor
-                    << "(\n\tstruct glue_message*,\n\tstruct " << node.real_name << "*);\n\n";
+                m_stream << "void " << node.caller_unmarshal_visitor << "(\n"
+                    << "\tsize_t* pos,\n"
+                    << "\tconst struct fipc_message* msg,\n"
+                    << "\tconst struct ext_registers* ext,\n"
+                    << "\tstruct " << node.real_name
+                    << "* ptr);\n\n";
 
                 return true;
             }
@@ -62,6 +78,8 @@ namespace idlc {
 
             file << "#ifndef COMMON_H\n#define COMMON_H\n\n";
             file << "#include <liblcd/trampoline.h>\n";
+            file << "#include <libfipc.h>\n";
+            file << "#include <liblcd/boot_info.h>\n";
             file << "#include <asm/cacheflush.h>\n";
             file << "\n";
             file << "#include \"glue_user.h\"\n";
@@ -80,7 +98,7 @@ namespace idlc {
 
             file << "};\n\n";
 
-            file << "int try_dispatch(enum RPC_ID id, struct glue_message* msg);\n\n";
+            file << "int try_dispatch(enum RPC_ID id, struct fipc_message* msg, struct ext_registers* ext);\n\n";
 
             generate_visitor_prototypes(file, projections);
             for (const auto& rpc : rpcs) {
@@ -176,17 +194,23 @@ namespace idlc {
 
         auto generate_caller_glue_prologue(std::ostream& os, rpc_def& rpc)
         {
-            os << "\tstruct glue_message *msg = glue_init_msg();\n\n";
-
+            os << "\tstruct fipc_message buffer = {0};\n";
+            os << "\tstruct fipc_message *msg = &buffer;\n";
+            os << "\tstruct ext_registers* ext = get_register_page(smp_processor_id());\n";
+            os << "\tsize_t n_pos = 0;\n";
+            os << "\tsize_t* pos = &n_pos;\n\n";
             const auto n_args = rpc.arg_pgraphs.size();
             const auto roots = generate_root_ptrs(rpc, os);
+            os << "\t(void)ext;\n\n";
 
             // Add verbose printk's while entering
             os << "\tif (verbose_debug) {\n";
             os << "\t\tprintk(\"%s:%d, entered!\\n\", __func__, __LINE__);\n" << "\t}\n\n";
 
-            if (rpc.kind == rpc_def_kind::indirect)
-                os << "\tglue_pack(msg, target);\n"; // make sure we marshal the target pointer before everything
+            if (rpc.kind == rpc_def_kind::indirect) {
+                // make sure we marshal the target pointer before everything
+                os << "\tglue_pack(pos, msg, ext, target);\n";
+            }
 
             for (const auto& [name, type] : roots.arguments) {
                 marshaling_walk<marshal_side::caller> arg_marshal {os, name, 1};
@@ -198,6 +222,8 @@ namespace idlc {
 
         void generate_caller_glue_epilogue(std::ostream& os, rpc_def& rpc, marshal_roots roots)
         {
+            os << "\t*pos = 0;\n";
+
             for (const auto& [name, type] : roots.arguments) {
                 unmarshaling_walk<marshal_side::caller> arg_unremarshal {os, name, 1};
                 arg_unremarshal.visit_value(*type);
@@ -221,11 +247,11 @@ namespace idlc {
             const auto roots = generate_caller_glue_prologue(os, rpc);
             switch (side) {
             case rpc_side::client:
-                os << "\tglue_call_server(msg, " << rpc.enum_id << ");\n\n";
+                os << "\tglue_call_server(pos, msg, " << rpc.enum_id << ");\n\n";
                 break;
 
             case rpc_side::server:
-                os << "\tglue_call_client(msg, " << rpc.enum_id << ");\n\n";
+                os << "\tglue_call_client(pos, msg, " << rpc.enum_id << ");\n\n";
                 break;
             }
 
@@ -235,8 +261,12 @@ namespace idlc {
         // TODO: large and complex, needs splitting
         void generate_callee_glue(rpc_def& rpc, std::ostream& os)
         {
-            if (rpc.kind == rpc_def_kind::indirect)
-                os << "\t" << rpc.typedef_id << " function_ptr = glue_unpack(msg, " << rpc.typedef_id << ");\n";
+            os << "\tsize_t n_pos = 0;\n";
+            os << "\tsize_t* pos = &n_pos;\n\n";
+            if (rpc.kind == rpc_def_kind::indirect) {
+                os << "\t" << rpc.typedef_id << " function_ptr = glue_unpack(pos, msg, ext, " << rpc.typedef_id
+                    << ");\n";
+            }
 
             const auto n_args = gsl::narrow<gsl::index>(rpc.arg_pgraphs.size());
             for (gsl::index i {}; i < n_args; ++i) {
@@ -262,7 +292,7 @@ namespace idlc {
 
             const auto impl_name = (rpc.kind == rpc_def_kind::direct) ? rpc.name : "function_ptr";
             os << impl_name << "(" << rpc.params_string << ");\n\n";
-            os << "\tmsg->position = 0;\n";
+            os << "\t*pos = 0;\n";
 
             for (const auto& [name, type] : roots.arguments) {
                 marshaling_walk<marshal_side::callee> arg_remarshal {os, name, 1};
@@ -274,7 +304,7 @@ namespace idlc {
                 ret_marshal.visit_value(*rpc.ret_pgraph);
             }
 
-            os << "\tmsg->slots[0] = msg->position;\n";
+            os << "\tmsg->regs[0] = *pos;\n";
 
             // Add verbose printk's while returning
             os << "\tif (verbose_debug) {\n";
@@ -283,7 +313,7 @@ namespace idlc {
 
         void generate_indirect_rpc_callee(std::ostream& os, rpc_def& rpc)
         {
-            os << "void " << rpc.callee_id << "(struct glue_message* msg)\n{\n";
+            os << "void " << rpc.callee_id << "(struct fipc_message* msg, struct ext_registers* ext)\n{\n";
             generate_callee_glue(rpc, os);
             os << "}\n\n";            
         }
@@ -313,7 +343,7 @@ namespace idlc {
         template<rpc_side side>
         void generate_dispatch_fn(std::ostream& os, rpc_vec_view rpcs)
         {
-            os << "int try_dispatch(enum RPC_ID id, struct glue_message* msg)\n";
+            os << "int try_dispatch(enum RPC_ID id, struct fipc_message* msg, struct ext_registers* ext)\n";
             os << "{\n";
             os << "\tswitch(id) {\n";
             if constexpr (side == rpc_side::client) {
@@ -337,7 +367,7 @@ namespace idlc {
                 
                 os << "\tcase " << rpc->enum_id << ":\n";
                 os << "\t\tglue_user_trace(\"" << rpc->name << "\\n\");\n";
-                os << "\t\t" << rpc->callee_id << "(msg);\n";
+                os << "\t\t" << rpc->callee_id << "(msg, ext);\n";
                 os << "\t\tbreak;\n\n";
             }
 
@@ -385,7 +415,7 @@ namespace idlc {
                     break;
 
                 case rpc_def_kind::direct:
-                    file << "void " << rpc->callee_id << "(struct glue_message* msg)\n{\n";
+                    file << "void " << rpc->callee_id << "(struct fipc_message* msg, struct ext_registers* ext)\n{\n";
                     generate_callee_glue(*rpc, file);
                     file << "}\n\n";
                     break;                    
@@ -447,8 +477,12 @@ namespace idlc {
 
         void generate_caller_marshal_visitor(std::ostream& file, projection& node)
         {
-            file << "void " << node.caller_marshal_visitor << "(\n\tstruct glue_message* msg,\n\tstruct "
-                << node.real_name << " const* ptr)\n{\n";
+            file << "void " << node.caller_marshal_visitor << "(\n"
+                << "\tsize_t* pos,\n"
+                << "\tstruct fipc_message* msg,\n"
+                << "\tstruct ext_registers* ext,\n"
+                << "\tstruct " << node.real_name
+                << " const* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::marshaling, marshal_side::caller>(file, node, "ptr");
             const auto n_fields = node.fields.size();
@@ -462,8 +496,12 @@ namespace idlc {
 
         void generate_callee_unmarshal_visitor(std::ostream& file, projection& node)
         {
-            file << "void " << node.callee_unmarshal_visitor << "(\n\tstruct glue_message* msg,\n\tstruct "
-                << node.real_name << "* ptr)\n{\n";
+            file << "void " << node.callee_unmarshal_visitor << "(\n"
+                << "\tsize_t* pos,\n"
+                << "\tconst struct fipc_message* msg,\n"
+                << "\tconst struct ext_registers* ext,\n"
+                << "\tstruct " << node.real_name
+                << "* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::callee>(file, node, "ptr");
             const auto n_fields = node.fields.size();
@@ -477,8 +515,12 @@ namespace idlc {
 
         void generate_callee_marshal_visitor(std::ostream& file, projection& node)
         {
-            file << "void " << node.callee_marshal_visitor
-                    << "(\n\tstruct glue_message* msg,\n\tstruct " << node.real_name << " const* ptr)\n{\n";
+            file << "void " << node.callee_marshal_visitor << "(\n"
+                << "\tsize_t* pos,\n"
+                << "\tstruct fipc_message* msg,\n"
+                << "\tstruct ext_registers* ext,\n"
+                << "\tstruct " << node.real_name
+                << " const* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::marshaling, marshal_side::callee>(file, node, "ptr");
             const auto n_fields = node.fields.size();
@@ -492,8 +534,12 @@ namespace idlc {
 
         void generate_caller_unmarshal_visitor(std::ostream& file, projection& node)
         {
-            file << "void " << node.caller_unmarshal_visitor
-                    << "(\n\tstruct glue_message* msg,\n\tstruct " << node.real_name << "* ptr)\n{\n";
+            file << "void " << node.caller_unmarshal_visitor << "(\n"
+                << "\tsize_t* pos,\n"
+                << "\tconst struct fipc_message* msg,\n"
+                << "\tconst struct ext_registers* ext,\n"
+                << "\tstruct " << node.real_name
+                << "* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::caller>(file, node, "ptr");
             const auto n_fields = node.fields.size();
@@ -512,7 +558,6 @@ namespace idlc {
             file << "#include <lcd_config/pre_hook.h>\n\n";
             file << "#include \"common.h\"\n\n";
             file << "#include <lcd_config/post_hook.h>\n\n";
-            file << "struct glue_message shared_buffer = {0};\n\n";
             for (const auto& projection : projections) {
                 // TODO: make these optional
                 generate_caller_marshal_visitor(file, *projection);
