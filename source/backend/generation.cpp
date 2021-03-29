@@ -168,7 +168,7 @@ namespace idlc {
         {
             std::vector<std::tuple<std::string, value*>> roots;
             roots.reserve(projection.fields.size());
-            const auto is_const_context {role == marshal_role::marshaling};
+            constexpr auto is_const_context = role == marshal_role::marshaling;
             for (const auto& [name, type] : projection.fields) {
                 // This is an identical check to that conducted in the marshaling walks
                 if (!should_walk<role, side>(*type))
@@ -177,9 +177,7 @@ namespace idlc {
                 const auto specifier = concat(type->c_specifier, is_const_context ? " const*" : "*");
                 auto ptr_name = concat(name, "_ptr");
                 const auto assign = std::get_if<node_ref<static_array>>(&type->type) ? " = " : " = &";
-                os << "\t" << specifier << " " << ptr_name << assign << source_var << "->"
-                    << name << ";\n";
-
+                os << "\t" << specifier << " " << ptr_name << assign << source_var << "->" << name << ";\n";
                 roots.emplace_back(std::move(ptr_name), type.get());
             }
 
