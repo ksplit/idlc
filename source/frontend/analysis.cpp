@@ -335,16 +335,60 @@ namespace idlc {
 			}
 		}
 
+		class const_walk : public pgraph_walk<const_walk> {
+		public:
+			bool visit_null_terminated_array(null_terminated_array& node)
+			{
+				node.element->is_const = m_const;
+				return traverse(*this, node);
+			}
+
+			bool visit_dyn_array(dyn_array& node)
+			{
+				node.element->is_const = m_const;
+				return traverse(*this, node);
+			}
+
+			bool visit_static_array(static_array& node)
+			{
+				node.element->is_const = m_const;
+				return traverse(*this, node);
+			}
+
+			bool visit_value(value& node)
+			{
+				const auto old = m_const;
+				m_const = node.is_const;
+				if (!traverse(*this, node))
+					return false;
+
+				m_const = old;
+
+				return true;
+			}
+
+		private:
+			bool m_const {};
+		};
+
 		bool annotate_pgraphs(rpc_def& rpc)
 		{
 			if (rpc.ret_type) {
 				if (!annotate_pgraph(*rpc.ret_pgraph, annotation::out))
 					return false;
+				
+				const_walk const_propagator {};
+				const auto succeeded = const_propagator.visit_value(*rpc.ret_pgraph);
+				assert(succeeded);
 			}
 
 			for (const auto& pgraph : rpc.arg_pgraphs) {
 				if (!annotate_pgraph(*pgraph, annotation::in))
 					return false;
+
+				const_walk const_propagator {};
+				const auto succeeded = const_propagator.visit_value(*pgraph);
+				assert(succeeded);
 			}
 
 			return true;
@@ -370,11 +414,11 @@ namespace idlc {
 
 std::optional<idlc::rpc_vec> idlc::generate_rpc_pgraphs(file& root)
 {
-	rpc_collection_walk walk {};
-	const auto succeeded = walk.visit_file(root);
+	rpc_collection_walk rpc_walk {};
+	const auto succeeded = rpc_walk.visit_file(root);
 	assert(succeeded);
 
-	auto& rpcs = walk.get();
+	auto& rpcs = rpc_walk.get();
 	if (!generate_pgraphs(rpcs))
 		return std::nullopt;
 

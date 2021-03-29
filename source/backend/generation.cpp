@@ -168,7 +168,7 @@ namespace idlc {
         {
             std::vector<std::tuple<std::string, value*>> roots;
             roots.reserve(projection.fields.size());
-            const auto is_const_context {role == marshal_role::marshaling};
+            constexpr auto is_const_context = role == marshal_role::marshaling;
             for (const auto& [name, type] : projection.fields) {
                 // This is an identical check to that conducted in the marshaling walks
                 if (!should_walk<role, side>(*type))
@@ -176,9 +176,8 @@ namespace idlc {
 
                 const auto specifier = concat(type->c_specifier, is_const_context ? " const*" : "*");
                 auto ptr_name = concat(name, "_ptr");
-                os << "\t" << specifier << " " << ptr_name << " = &" << source_var << "->"
-                    << name << ";\n";
-
+                const auto assign = std::get_if<node_ref<static_array>>(&type->type) ? " = " : " = &";
+                os << "\t" << specifier << " " << ptr_name << assign << source_var << "->" << name << ";\n";
                 roots.emplace_back(std::move(ptr_name), type.get());
             }
 
@@ -213,8 +212,10 @@ namespace idlc {
             }
 
             for (const auto& [name, type] : roots.arguments) {
-                marshaling_walk<marshal_side::caller> arg_marshal {os, name, 1};
+                os << "\t{\n";
+                marshaling_walk<marshal_side::caller> arg_marshal {os, name, 2};
                 arg_marshal.visit_value(*type);
+                os << "\t}\n\n";
             }
 
             return roots;
@@ -225,13 +226,17 @@ namespace idlc {
             os << "\t*pos = 0;\n";
 
             for (const auto& [name, type] : roots.arguments) {
-                unmarshaling_walk<marshal_side::caller> arg_unremarshal {os, name, 1};
+                os << "\t{\n";
+                unmarshaling_walk<marshal_side::caller> arg_unremarshal {os, name, 2};
                 arg_unremarshal.visit_value(*type);
+                os << "\t}\n\n";
             }
 
             if (rpc.ret_pgraph) {
-                unmarshaling_walk<marshal_side::caller> ret_unmarshal {os, roots.return_value, 1};
+                os << "\t{\n";
+                unmarshaling_walk<marshal_side::caller> ret_unmarshal {os, roots.return_value, 2};
                 ret_unmarshal.visit_value(*rpc.ret_pgraph);
+                os << "\t}\n\n";
             }
 
             // Add verbose printk's while returning
@@ -282,8 +287,10 @@ namespace idlc {
             os << "\t\tprintk(\"%s:%d, entered!\\n\", __func__, __LINE__);\n" << "\t}\n\n";
 
             for (const auto& [name, type] : roots.arguments) {
-                unmarshaling_walk<marshal_side::callee> arg_unmarshal {os, name, 1};
+                os << "\t{\n";
+                unmarshaling_walk<marshal_side::callee> arg_unmarshal {os, name, 2};
                 arg_unmarshal.visit_value(*type);
+                os << "\t}\n\n";
             }
 
             os << "\t";
@@ -295,13 +302,17 @@ namespace idlc {
             os << "\t*pos = 0;\n";
 
             for (const auto& [name, type] : roots.arguments) {
-                marshaling_walk<marshal_side::callee> arg_remarshal {os, name, 1};
+                os << "\t{\n";
+                marshaling_walk<marshal_side::callee> arg_remarshal {os, name, 2};
                 arg_remarshal.visit_value(*type);
+                os << "\t}\n\n";
             }
 
             if (rpc.ret_pgraph) {
-                marshaling_walk<marshal_side::callee> ret_marshal {os, roots.return_value, 1};
+                os << "\t{\n";
+                marshaling_walk<marshal_side::callee> ret_marshal {os, roots.return_value, 2};
                 ret_marshal.visit_value(*rpc.ret_pgraph);
+                os << "\t}\n\n";
             }
 
             os << "\tmsg->regs[0] = *pos;\n";
@@ -487,8 +498,10 @@ namespace idlc {
             const auto roots = generate_root_ptrs<marshal_role::marshaling, marshal_side::caller>(file, node, "ptr");
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
-                marshaling_walk<marshal_side::caller> walk {file, name, 1};
+                file << "\t{\n";
+                marshaling_walk<marshal_side::caller> walk {file, name, 2};
                 walk.visit_value(*type);
+                file << "\t}\n\n";
             }
 
             file << "}\n\n";
@@ -506,8 +519,10 @@ namespace idlc {
             const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::callee>(file, node, "ptr");
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
-                unmarshaling_walk<marshal_side::callee> walk {file, name, 1};
+                file << "\t{\n";
+                unmarshaling_walk<marshal_side::callee> walk {file, name, 2};
                 walk.visit_value(*type);
+                file << "\t}\n\n";
             }
 
             file << "}\n\n";
@@ -525,8 +540,10 @@ namespace idlc {
             const auto roots = generate_root_ptrs<marshal_role::marshaling, marshal_side::callee>(file, node, "ptr");
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
-                marshaling_walk<marshal_side::callee> walk {file, name, 1};
+                file << "\t{\n";
+                marshaling_walk<marshal_side::callee> walk {file, name, 2};
                 walk.visit_value(*type);
+                file << "\t}\n\n";
             }
 
             file << "}\n\n";
@@ -544,8 +561,10 @@ namespace idlc {
             const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::caller>(file, node, "ptr");
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
-                unmarshaling_walk<marshal_side::caller> walk {file, name, 1};
+                file << "\t{\n";
+                unmarshaling_walk<marshal_side::caller> walk {file, name, 2};
                 walk.visit_value(*type);
+                file << "\t}\n\n";
             }
 
             file << "}\n\n";

@@ -151,16 +151,13 @@ namespace idlc {
 
         bool visit_null_terminated_array(null_terminated_array& node)
         {
-            const auto star = node.element->is_const ? " const*" : "*";
-            const auto ptr_type = concat(node.element->c_specifier, star);
-
             this->new_line() << "size_t i, len;\n";
-            this->new_line() << ptr_type << " array = "	<< this->subject() << ";\n";
+            this->new_line() << node.element->c_specifier << " const* array = "	<< this->subject() << ";\n";
             this->new_line() << "for (len = 0; array[len]; ++len);\n";
             // The size slot is used for allocation, so we have a +1 for the null terminator
             this->new_line() << "glue_pack(pos, msg, ext, len + 1);\n";
             this->new_line() << "for (i = 0; i < len; ++i) {\n";
-            this->new_line() << "\t" << ptr_type << " element = &array[i];\n";
+            this->new_line() << "\t" << node.element->c_specifier << " const* element = &array[i];\n";
             if (!this->marshal("element", node))
                 return false;
 
@@ -171,16 +168,13 @@ namespace idlc {
 
         bool visit_static_array(static_array& node)
         {
-            const auto star = node.element->is_const ? " const*" : "*";
-            const auto ptr_type = concat(node.element->c_specifier, star);
-
             this->new_line() << "size_t i, len = " << node.size << ";\n";
-            this->new_line() << ptr_type << " array = "	<< this->subject() << ";\n";
+            this->new_line() << node.element->c_specifier << " const* array = "	<< this->subject() << ";\n";
             this->new_line() << "glue_pack(pos, msg, ext, len);\n";
             this->new_line() << "// Warning: see David if this breaks\n";
             this->new_line() << "glue_user_trace(\"Warning: see David if this breaks\");\n";
             this->new_line() << "for (i = 0; i < len; ++i) {\n";
-            this->new_line() << "\t" << ptr_type << " element = &array[i];\n";
+            this->new_line() << "\t" << node.element->c_specifier << " const* element = &array[i];\n";
             if (!this->marshal("element", node))
                 return false;
 

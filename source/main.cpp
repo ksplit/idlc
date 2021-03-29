@@ -52,6 +52,8 @@
 // TODO: ndo_start_xmit uncovered an issue with enum promotion not being applicable to function pointers, i.e. the IDL
 // needs a concept of enums (so does the pgraph, etc.)
 
+// TODO: array constness propagation to element (the two are linker): add a walk for it
+
 int main(int argc, char** argv)
 {
     const gsl::span<gsl::zstring<>> args {argv, gsl::narrow<std::size_t>(argc)};
