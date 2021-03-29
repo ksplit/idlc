@@ -168,7 +168,7 @@ namespace idlc {
 		{
 			return true;
 		}
-
+		
 	protected:
 		pgraph_traverse<derived> traverse {};
 		
