@@ -126,6 +126,11 @@ namespace idlc {
             root_vec arguments;
         };
 
+        bool is_return(const value& node)
+        {
+            return !std::get_if<none>(&node.type);
+        }
+
         /*
             Some explanation: C usually has two different ways of accessing variables, depnding on if they're a value
             or a pointer, i.e. foo_ptr->a_field vs. foo_ptr.a_field. To avoid unnecessary copying, and also because in
@@ -149,7 +154,7 @@ namespace idlc {
                 roots.emplace_back(std::move(ptr_name), pgraph.get());
             }
 
-            if (rpc.ret_pgraph) {
+            if (is_return(*rpc.ret_pgraph)) {
                 os << "\t" << rpc.ret_pgraph->c_specifier << " ret = 0;\n";
                 os << "\t" << rpc.ret_pgraph->c_specifier << "* ret_ptr = &ret;\n";
             }
@@ -232,18 +237,16 @@ namespace idlc {
                 os << "\t}\n\n";
             }
 
-            if (rpc.ret_pgraph) {
-                os << "\t{\n";
-                unmarshaling_walk<marshal_side::caller> ret_unmarshal {os, roots.return_value, 2};
-                ret_unmarshal.visit_value(*rpc.ret_pgraph);
-                os << "\t}\n\n";
-            }
+            os << "\t{\n";
+            unmarshaling_walk<marshal_side::caller> ret_unmarshal {os, roots.return_value, 2};
+            ret_unmarshal.visit_value(*rpc.ret_pgraph);
+            os << "\t}\n\n";
 
             // Add verbose printk's while returning
             os << "\tif (verbose_debug) {\n";
             os << "\t\tprintk(\"%s:%d, returned!\\n\", __func__, __LINE__);\n" << "\t}\n";
 
-            os << (rpc.ret_pgraph ? concat("\treturn ret;\n") : "");
+            os << (is_return(*rpc.ret_pgraph) ? concat("\treturn ret;\n") : "");
         }
 
         template<rpc_side side>
@@ -294,7 +297,7 @@ namespace idlc {
             }
 
             os << "\t";
-            if (rpc.ret_pgraph)
+            if (is_return(*rpc.ret_pgraph))
                 os << "ret = ";
 
             const auto impl_name = (rpc.kind == rpc_def_kind::direct) ? rpc.name : "function_ptr";
@@ -307,14 +310,11 @@ namespace idlc {
                 arg_remarshal.visit_value(*type);
                 os << "\t}\n\n";
             }
-
-            if (rpc.ret_pgraph) {
-                os << "\t{\n";
-                marshaling_walk<marshal_side::callee> ret_marshal {os, roots.return_value, 2};
-                ret_marshal.visit_value(*rpc.ret_pgraph);
-                os << "\t}\n\n";
-            }
-
+            
+            os << "\t{\n";
+            marshaling_walk<marshal_side::callee> ret_marshal {os, roots.return_value, 2};
+            ret_marshal.visit_value(*rpc.ret_pgraph);
+            os << "\t}\n\n";
             os << "\tmsg->regs[0] = *pos;\n";
 
             // Add verbose printk's while returning
@@ -457,11 +457,7 @@ namespace idlc {
         void create_function_strings(rpc_vec_view rpcs)
         {
             for (auto& rpc : rpcs) {
-                if (rpc->ret_type)
-                    rpc->ret_string = rpc->ret_pgraph->c_specifier;
-                else
-                    rpc->ret_string = "void";
-
+                rpc->ret_string = rpc->ret_pgraph->c_specifier;
                 if (rpc->arguments) {
                     bool is_first {true};
                     auto& args_str = rpc->args_string;
