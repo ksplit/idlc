@@ -14,4 +14,5 @@ module foo {
     }
 
     rpc projection simp_circ* foo(projection circ_a [out]* a, projection circ_b* b) {}
+    rpc u32 [ioremap(caller)]* bar() {}
 }
