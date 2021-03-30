@@ -16,5 +16,6 @@ module foo {
     rpc void* foo() {}
     rpc void foo() {}
 
-    rpc projection simp_circ* foo(projection circ_a [out]* a, projection circ_b* b) {}
+    rpc projection simp_circ* foo0(projection circ_a [out]* a, projection circ_b* b) {}
+    rpc void foo1(void* meep) {}
 }
