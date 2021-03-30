@@ -237,10 +237,12 @@ namespace idlc {
                 os << "\t}\n\n";
             }
 
-            os << "\t{\n";
-            unmarshaling_walk<marshal_side::caller> ret_unmarshal {os, roots.return_value, 2};
-            ret_unmarshal.visit_value(*rpc.ret_pgraph);
-            os << "\t}\n\n";
+            if (is_return(*rpc.ret_pgraph)) {
+                os << "\t{\n";
+                unmarshaling_walk<marshal_side::caller> ret_unmarshal {os, roots.return_value, 2};
+                ret_unmarshal.visit_value(*rpc.ret_pgraph);
+                os << "\t}\n\n";
+            }
 
             // Add verbose printk's while returning
             os << "\tif (verbose_debug) {\n";
@@ -311,10 +313,13 @@ namespace idlc {
                 os << "\t}\n\n";
             }
             
-            os << "\t{\n";
-            marshaling_walk<marshal_side::callee> ret_marshal {os, roots.return_value, 2};
-            ret_marshal.visit_value(*rpc.ret_pgraph);
-            os << "\t}\n\n";
+            if (is_return(*rpc.ret_pgraph)) {
+                os << "\t{\n";
+                marshaling_walk<marshal_side::callee> ret_marshal {os, roots.return_value, 2};
+                ret_marshal.visit_value(*rpc.ret_pgraph);
+                os << "\t}\n\n";
+            }
+        
             os << "\tmsg->regs[0] = *pos;\n";
 
             // Add verbose printk's while returning
