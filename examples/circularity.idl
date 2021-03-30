@@ -16,5 +16,5 @@ module foo {
     rpc void* foo0() {}
     rpc void foo1() {}
     rpc projection simp_circ* foo2(projection circ_a [out]* a, projection circ_b* b) {}
-    rpc void [ioremap(caller)]* foo3() {}
+    rpc void [ioremap(callee)]* foo3(string* str) {}
 }

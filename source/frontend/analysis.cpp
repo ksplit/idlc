@@ -30,7 +30,7 @@ namespace idlc {
 		passed_type generate_string_type()
 		{
 			return std::make_unique<null_terminated_array>(
-				std::make_unique<value>(primitive::ty_char, annotation::use_default, true) // TODO: assumes const
+				std::make_unique<value>(primitive::ty_char, annotation::use_default, false)
 			);
 		}
 
