@@ -138,7 +138,7 @@ namespace idlc {
 		annotation attrs; // Contextually, both ptr and value attrs
 		bool is_const;
 
-		indirection(annotation attrs, bool is_const) :
+		indirection(annotation_kind attrs, bool is_const) :
 			attrs {attrs},
 			is_const {is_const}
 		{}
@@ -147,13 +147,13 @@ namespace idlc {
 	struct type_spec {
 		node_ref<type_stem> stem;
 		ref_vec<indirection> indirs;
-		annotation attrs; // Will only ever have value attrs in it
+		annotation_kind attrs; // Will only ever have value attrs in it
 		bool is_const;
 
 		type_spec(
 			node_ref<type_stem> stem,
 			ref_vec<indirection> indirs,
-			annotation attrs,
+			annotation_kind attrs,
 			bool is_const
 		) :
 			stem {stem},

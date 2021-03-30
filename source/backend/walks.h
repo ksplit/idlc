@@ -64,10 +64,10 @@ namespace idlc {
         const auto flags = node.value_annots;
         switch (side) {
         case marshal_side::caller:
-            return flags_set(flags, annotation::in);
+            return flags_set(flags, annotation_kind::in);
 
         case marshal_side::callee:
-            return flags_set(flags, annotation::out);
+            return flags_set(flags, annotation_kind::out);
         }
 
         std::terminate();
@@ -79,10 +79,10 @@ namespace idlc {
         const auto flags = node.value_annots;
         switch (side) {
         case marshal_side::callee:
-            return flags_set(flags, annotation::in);
+            return flags_set(flags, annotation_kind::in);
 
         case marshal_side::caller:
-            return flags_set(flags, annotation::out);
+            return flags_set(flags, annotation_kind::out);
         }
 
         std::terminate();
@@ -205,14 +205,14 @@ namespace idlc {
             Bind annotations indicate which side of the call has the shadow copy (statically)
             Whether or not they are bound on a side is irrespective of whether we are marshaling or unmarshaling
         */
-        static constexpr bool should_bind(annotation flags)
+        static constexpr bool should_bind(const annotation& ann)
         {
             switch (side) {
             case marshal_side::caller:
-                return flags_set(flags, annotation::bind_caller);
+                return flags_set(ann.kind, annotation_kind::bind_caller);
 
             case marshal_side::callee:
-                return flags_set(flags, annotation::bind_callee);
+                return flags_set(ann.kind, annotation_kind::bind_callee);
             }
 
             std::terminate();
@@ -348,27 +348,27 @@ namespace idlc {
         absl::string_view m_c_specifier {};
         bool m_should_marshal {};
 
-        static constexpr bool should_bind(annotation flags)
+        static constexpr bool should_bind(const annotation& ann)
         {
             switch (side) {
             case marshal_side::caller:
-                return flags_set(flags, annotation::bind_caller);
+                return flags_set(ann.kind, annotation_kind::bind_caller);
 
             case marshal_side::callee:
-                return flags_set(flags, annotation::bind_callee);
+                return flags_set(ann.kind, annotation_kind::bind_callee);
             }
 
             std::terminate();
         }
 
-        static constexpr bool should_alloc(annotation flags)
+        static constexpr bool should_alloc(const annotation& ann)
         {
             switch (side) {
             case marshal_side::caller:
-                return flags_set(flags, annotation::alloc_caller);
+                return flags_set(ann.kind, annotation_kind::alloc_caller);
 
             case marshal_side::callee:
-                return flags_set(flags, annotation::alloc_callee);
+                return flags_set(ann.kind, annotation_kind::alloc_callee);
             }
 
             std::terminate();

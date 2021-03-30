@@ -30,7 +30,7 @@ namespace idlc {
 		passed_type generate_string_type()
 		{
 			return std::make_unique<null_terminated_array>(
-				std::make_unique<value>(primitive::ty_char, annotation::use_default, false)
+				std::make_unique<value>(primitive::ty_char, annotation_kind::use_default, false)
 			);
 		}
 
@@ -141,14 +141,16 @@ namespace idlc {
 			bool is_const {node.is_const};
 			for (const auto& ptr_node : node.indirs) {
 				const auto annots = ptr_node->attrs;
-				const auto ptr_annots = annots & annotation::is_ptr;
-				const auto val_annots = annots & annotation::is_val;
+				const auto val_annots = annots.kind & annotation_kind::is_val;
 				auto field = std::make_unique<value>(std::move(type), val_annots, is_const);
-				type = std::make_unique<pointer>(std::move(field), ptr_annots);
+				type = std::make_unique<pointer>(
+					std::move(field),
+					annotation {annots.kind & annotation_kind::is_ptr, annots.share_global});
+
 				is_const = ptr_node->is_const;
 			}
 
-			assert((node.attrs & annotation::is_val) == node.attrs);
+			assert((node.attrs & annotation_kind::is_val) == node.attrs);
 			auto field = std::make_unique<value>(std::move(type), node.attrs, is_const);
 
 			return std::move(field);
@@ -213,23 +215,23 @@ namespace idlc {
 			std::vector<gsl::not_null<rpc_def*>> m_defs {};
 		};
 
-		bool annotate_pgraph(value& node, annotation default_with);
-		passed_type instantiate_projection(proj_def& node, annotation default_with);
+		bool annotate_pgraph(value& node, annotation_kind default_with);
+		passed_type instantiate_projection(proj_def& node, annotation_kind default_with);
 
 		// TODO: implement error checking, currently focused on generating defaults
 		class annotation_walk : public pgraph_walk<annotation_walk> {
 		public:
-			annotation_walk(annotation default_with) : m_default_with {default_with}
+			annotation_walk(annotation_kind default_with) : m_default_with {default_with}
 			{
 				// We only support propagating a default value annotation
-				assert(is_clear(default_with & annotation::ptr_only));
+				assert(is_clear(default_with & annotation_kind::ptr_only));
 			}
 
 			bool visit_value(value& node)
 			{
 				// The core logic of propagating a top-level value annotation until an explicit one is found, and
 				// continuing
-				if (!is_clear(node.value_annots & annotation::val_only)) {
+				if (!is_clear(node.value_annots & annotation_kind::val_only)) {
 					m_default_with = node.value_annots;				
 				}
 				else {
@@ -243,13 +245,13 @@ namespace idlc {
 			{
 				// Default if no pointer annotations are set
 				// TODO: what are the correct defaults here?
-				if (is_clear(node.pointer_annots & annotation::ptr_only)) {
-					if (m_default_with == annotation::in)
-						node.pointer_annots = annotation::bind_caller;
-					else if (m_default_with == annotation::out)
-						node.pointer_annots = annotation::bind_callee;
-					else if (m_default_with == (annotation::in | annotation::out))
-						node.pointer_annots = (annotation::bind_callee | annotation::bind_caller); // FIXME
+				if (is_clear(node.pointer_annots.kind & annotation_kind::ptr_only)) {
+					if (m_default_with == annotation_kind::in)
+						node.pointer_annots.kind = annotation_kind::bind_caller;
+					else if (m_default_with == annotation_kind::out)
+						node.pointer_annots.kind = annotation_kind::bind_callee;
+					else if (m_default_with == (annotation_kind::in | annotation_kind::out))
+						node.pointer_annots.kind = (annotation_kind::bind_callee | annotation_kind::bind_caller);
 				}
 				else {
 					// Annotation already set, ignore
@@ -281,29 +283,29 @@ namespace idlc {
 			}
 
 		private:
-			annotation m_default_with {};
+			annotation_kind m_default_with {};
 		};
 
-		bool annotate_pgraph(value& node, annotation default_with)
+		bool annotate_pgraph(value& node, annotation_kind default_with)
 		{
 			annotation_walk annotator {default_with};
 			return annotator.visit_value(node);
 		}
 
-		std::string get_instance_name(absl::string_view base_name, annotation default_with)
+		std::string get_instance_name(absl::string_view base_name, annotation_kind default_with)
 		{
 			// double underscore used to reduce odds of collisions
 			std::string instance_name {base_name};
 			switch (default_with) {
-			case annotation::in:
+			case annotation_kind::in:
 				instance_name += "__in";
 				break;
 
-			case annotation::out:
+			case annotation_kind::out:
 				instance_name += "__out";
 				break;
 
-			case annotation::in | annotation::out:
+			case annotation_kind::in | annotation_kind::out:
 				instance_name += "__io";
 				break;
 
@@ -314,7 +316,7 @@ namespace idlc {
 			return instance_name;
 		}
 
-		passed_type instantiate_projection(proj_def& node, node_ptr<projection>& cached, annotation default_with)
+		passed_type instantiate_projection(proj_def& node, node_ptr<projection>& cached, annotation_kind default_with)
 		{
 			if (cached) {
 				// NOTE: It's important that we don't try and modify the cached copy, as it could be a partial one
@@ -334,19 +336,19 @@ namespace idlc {
 			return pgraph;
 		}
 
-		passed_type instantiate_projection(proj_def& node, annotation default_with)
+		passed_type instantiate_projection(proj_def& node, annotation_kind default_with)
 		{
 			std::cout << "Debug: Non-lowered projection \"" << node.name << "\"\n";
 			switch (default_with) {
-			case annotation::in | annotation::out:
+			case annotation_kind::in | annotation_kind::out:
 				std::cout << "Debug: Need \"in/out\" instance\n";
 				return instantiate_projection(node, node.in_out_proj, default_with);
 
-			case annotation::in:
+			case annotation_kind::in:
 				std::cout << "Debug: Need \"in\" instance\n";
 				return instantiate_projection(node, node.in_proj, default_with);
 
-			case annotation::out:
+			case annotation_kind::out:
 				std::cout << "Debug: Need \"out\" instance\n";
 				return instantiate_projection(node, node.out_proj, default_with);
 
@@ -393,7 +395,7 @@ namespace idlc {
 
 		bool annotate_pgraphs(rpc_def& rpc)
 		{
-			if (!annotate_pgraph(*rpc.ret_pgraph, annotation::out))
+			if (!annotate_pgraph(*rpc.ret_pgraph, annotation_kind::out))
 				return false;
 			
 			const_walk const_propagator {};
@@ -401,7 +403,7 @@ namespace idlc {
 			assert(succeeded);
 
 			for (const auto& pgraph : rpc.arg_pgraphs) {
-				if (!annotate_pgraph(*pgraph, annotation::in))
+				if (!annotate_pgraph(*pgraph, annotation_kind::in))
 					return false;
 
 				const_walk const_propagator {};

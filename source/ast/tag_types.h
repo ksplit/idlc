@@ -3,13 +3,15 @@
 
 #include <cstdint>
 
+#include "../string_heap.h"
+
 // These types are used in both the pgraph and ast
 
 namespace idlc {
 	// TODO: clean this up?
 	// TODO: I'd prefer strong-typing the val / pointer distinction
 	// TODO: bitfield isn't really the sanest choice
-	enum class annotation {
+	enum class annotation_kind {
 		alloc_caller	= 0b000000000001,
 		alloc_callee	= 0b000000000010,
 		dealloc_caller	= 0b000000000100,
@@ -34,33 +36,38 @@ namespace idlc {
 		use_default		= 0b000000000 // will not set the is_set flag, thus ensuring it will be defaulted
 	};
 
-	constexpr auto operator|(annotation a, annotation b)
+	struct annotation {
+		annotation_kind kind;
+		ident share_global;
+	};
+
+	constexpr auto operator|(annotation_kind a, annotation_kind b)
 	{
-		return static_cast<annotation>(static_cast<std::uintptr_t>(a) | static_cast<std::uintptr_t>(b));
+		return static_cast<annotation_kind>(static_cast<std::uintptr_t>(a) | static_cast<std::uintptr_t>(b));
 	}
 
-	constexpr auto& operator|=(annotation& a, annotation b)
+	constexpr auto& operator|=(annotation_kind& a, annotation_kind b)
 	{
 		a = a | b;
 		return a;
 	}
 
-	constexpr auto operator&(annotation a, annotation b)
+	constexpr auto operator&(annotation_kind a, annotation_kind b)
 	{
-		return static_cast<annotation>(static_cast<std::uintptr_t>(a) & static_cast<std::uintptr_t>(b));
+		return static_cast<annotation_kind>(static_cast<std::uintptr_t>(a) & static_cast<std::uintptr_t>(b));
 	}
 
-	constexpr auto operator~(annotation a)
+	constexpr auto operator~(annotation_kind a)
 	{
-		return static_cast<annotation>(~static_cast<std::uintptr_t>(a));
+		return static_cast<annotation_kind>(~static_cast<std::uintptr_t>(a));
 	}
 
-	constexpr auto is_clear(annotation a)
+	constexpr auto is_clear(annotation_kind a)
 	{
 		return static_cast<std::uintptr_t>(a) == 0;
 	}
 
-	constexpr auto flags_set(annotation field, annotation flags)
+	constexpr auto flags_set(annotation_kind field, annotation_kind flags)
 	{
 		return (field & flags) == flags;
 	}
