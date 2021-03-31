@@ -90,7 +90,7 @@ tok_kw_bind = "bind"
 tok_kw_caller = "caller"
 tok_kw_callee = "callee"
 tok_kw_any_of = "any_of"
-tok_kw_share = "share"
+tok_kw_shared = "shared"
 tok_kw_ioremap = "ioremap"
 
 tok_space = lex_blank+
@@ -355,11 +355,8 @@ ptr_attr = tok_kw_in {{ value = reinterpret_cast<void*>(annotation_kind::in); }}
 	| tok_kw_ioremap tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
 		value = reinterpret_cast<void*>(annotation_kind::ioremap_callee);
 	}}
-	| tok_kw_share tok_space? tok_langle tok_space? id:tok_ident tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = reinterpret_cast<void*>(annotation_kind::share_caller);
-	}}
-	| tok_kw_share tok_space? tok_langle tok_space? id:tok_ident tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = reinterpret_cast<void*>(annotation_kind::share_callee);
+	| tok_kw_shared tok_space? tok_langle tok_space? id:tok_ident tok_space? tok_rangle {{
+		value = reinterpret_cast<void*>(annotation_kind::shared);
 	}}
 	| tok_kw_alloc {{ value = reinterpret_cast<void*>(annotation_kind::is_alloc); }}
 	| tok_kw_dealloc {{ value = reinterpret_cast<void*>(annotation_kind::is_dealloc); }}

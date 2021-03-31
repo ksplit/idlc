@@ -22,18 +22,16 @@ namespace idlc {
 		out				= 0b000010000000,
 		ioremap_caller	= 0b000100000000,
 		ioremap_callee	= 0b001000000000,
-		share_caller	= 0b010000000000,
-		share_callee	= 0b100000000000,
+		shared			= 0b010000000000,
 		is_bind			= (bind_callee | bind_caller),
 		is_dealloc		= (dealloc_callee | dealloc_caller),
 		is_alloc		= (alloc_callee | alloc_caller),
 		is_ioremap		= (ioremap_callee | ioremap_caller),
-		is_share		= (share_callee | share_caller),
-		is_ptr			= is_bind | is_dealloc | is_alloc | is_ioremap | is_share,
+		is_ptr			= is_bind | is_dealloc | is_alloc | is_ioremap | shared,
 		is_val			= (out | in),
 		ptr_only		= is_ptr,
 		val_only		= is_val,
-		use_default		= 0b000000000 // will not set the is_set flag, thus ensuring it will be defaulted
+		use_default		= 0b000000000
 	};
 
 	struct annotation {

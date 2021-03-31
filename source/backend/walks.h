@@ -112,10 +112,18 @@ namespace idlc {
         bool visit_pointer(pointer& node)
         {
             if (m_should_marshal) {
-                if (should_bind(node.pointer_annots))
+                if (should_bind(node.pointer_annots)) {
                     this->new_line() << "glue_pack_shadow(pos, msg, ext, *" << this->subject() << ");\n";
-                else
+                }
+                else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
+                    // TODO
+                    this->new_line() << "glue_pack(pos, msg, ext, (char*)*" << this->subject() << " - NULL);\n";
+                    //    << node.pointer_annots.share_global << ");\n";
+                    return true; // No need to walk these (yet)
+                }
+                else {
                     this->new_line() << "glue_pack(pos, msg, ext, *" << this->subject() << ");\n";
+                }
             }
             
             // This is done to absorb any unused variables
