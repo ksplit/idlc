@@ -116,9 +116,8 @@ namespace idlc {
                     this->new_line() << "glue_pack_shadow(pos, msg, ext, *" << this->subject() << ");\n";
                 }
                 else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
-                    // TODO
-                    this->new_line() << "glue_pack(pos, msg, ext, (char*)*" << this->subject() << " - NULL);\n";
-                    //    << node.pointer_annots.share_global << ");\n";
+                    this->new_line() << "glue_pack(pos, msg, ext, (char*)*" << this->subject() << " - "
+                        << node.pointer_annots.share_global << ");\n";
                     return true; // No need to walk these (yet)
                 }
                 else {

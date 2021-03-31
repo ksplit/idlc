@@ -135,10 +135,10 @@ namespace idlc {
 	struct type_string {};
 
 	struct indirection {
-		annotation attrs; // Contextually, both ptr and value attrs
+		node_ref<annotation> attrs; // Contextually, both ptr and value attrs
 		bool is_const;
 
-		indirection(annotation_kind attrs, bool is_const) :
+		indirection(node_ref<annotation> attrs, bool is_const) :
 			attrs {attrs},
 			is_const {is_const}
 		{}

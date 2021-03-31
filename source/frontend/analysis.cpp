@@ -141,11 +141,11 @@ namespace idlc {
 			bool is_const {node.is_const};
 			for (const auto& ptr_node : node.indirs) {
 				const auto annots = ptr_node->attrs;
-				const auto val_annots = annots.kind & annotation_kind::is_val;
+				const auto val_annots = annots->kind & annotation_kind::is_val;
 				auto field = std::make_unique<value>(std::move(type), val_annots, is_const);
 				type = std::make_unique<pointer>(
 					std::move(field),
-					annotation {annots.kind & annotation_kind::is_ptr, annots.share_global});
+					annotation {annots->kind & annotation_kind::is_ptr, annots->share_global});
 
 				is_const = ptr_node->is_const;
 			}

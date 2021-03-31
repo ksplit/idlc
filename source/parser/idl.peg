@@ -329,38 +329,38 @@ naked_proj_decl = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_stru
 val_attr = tok_kw_in {{ value = reinterpret_cast<void*>(annotation_kind::in); }}
 	| tok_kw_out {{ value = reinterpret_cast<void*>(annotation_kind::out); }}
 
-ptr_attr = tok_kw_in {{ value = reinterpret_cast<void*>(annotation_kind::in); }}
-	| tok_kw_out {{ value = reinterpret_cast<void*>(annotation_kind::out); }}
+ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in, nullptr}); }}
+	| tok_kw_out {{ value = share(annotation {annotation_kind::out, nullptr}); }}
 	| tok_kw_alloc tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = reinterpret_cast<void*>(annotation_kind::alloc_caller);
+		value = share(annotation {annotation_kind::alloc_caller, nullptr});
 	}}
 	| tok_kw_alloc tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = reinterpret_cast<void*>(annotation_kind::alloc_callee);
+		value = share(annotation {annotation_kind::alloc_callee, nullptr});
 	}}
 	| tok_kw_dealloc tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = reinterpret_cast<void*>(annotation_kind::dealloc_caller);
+		value = share(annotation {annotation_kind::dealloc_caller, nullptr});
 	}}
 	| tok_kw_dealloc tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = reinterpret_cast<void*>(annotation_kind::dealloc_callee);
+		value = share(annotation {annotation_kind::dealloc_callee, nullptr});
 	}}
 	| tok_kw_bind tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = reinterpret_cast<void*>(annotation_kind::bind_caller);
+		value = share(annotation {annotation_kind::bind_caller, nullptr});
 	}}
 	| tok_kw_bind tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = reinterpret_cast<void*>(annotation_kind::bind_callee);
+		value = share(annotation {annotation_kind::bind_callee, nullptr});
 	}}
 	| tok_kw_ioremap tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = reinterpret_cast<void*>(annotation_kind::ioremap_caller);
+		value = share(annotation {annotation_kind::ioremap_caller, nullptr});
 	}}
 	| tok_kw_ioremap tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = reinterpret_cast<void*>(annotation_kind::ioremap_callee);
+		value = share(annotation {annotation_kind::ioremap_callee, nullptr});
 	}}
 	| tok_kw_shared tok_space? tok_langle tok_space? id:tok_ident tok_space? tok_rangle {{
-		value = reinterpret_cast<void*>(annotation_kind::shared);
+		value = share(annotation {annotation_kind::shared, to_ptr<ident>(id)});
 	}}
-	| tok_kw_alloc {{ value = reinterpret_cast<void*>(annotation_kind::is_alloc); }}
-	| tok_kw_dealloc {{ value = reinterpret_cast<void*>(annotation_kind::is_dealloc); }}
-	| tok_kw_bind {{ value = reinterpret_cast<void*>(annotation_kind::is_bind); }}
+	| tok_kw_alloc {{ value = share(annotation {annotation_kind::is_alloc, nullptr}); }}
+	| tok_kw_dealloc {{ value = share(annotation {annotation_kind::is_dealloc, nullptr}); }}
+	| tok_kw_bind {{ value = share(annotation {annotation_kind::is_bind, nullptr}); }}
 
 val_attrs = tok_lbrack tok_space? list:val_attr_list tok_space? tok_rbrack {{ value = list; }}
 
@@ -376,12 +376,12 @@ val_attr_list = first:val_attr rest:(tok_space? tok_comma tok_space? val_attr)* 
 }}
 
 ptr_attr_list = first:ptr_attr rest:(tok_space? tok_comma tok_space? ptr_attr)* {{
-	auto f = to_int<annotation_kind>(first);
+	auto f = get_shared<annotation>(first);
 	for (const auto r : rest.getValues()) {
-		f |= to_int<annotation_kind>(r);
+		f->kind |= get_shared<annotation>(r)->kind;
 	}
 
-	value = reinterpret_cast<void*>(f);
+	value = first;
 }}
 
 # NOTE: we don't need type spacing rules for parsing since that parse will just fail in contexts where it's needed
@@ -485,8 +485,10 @@ type_stem = arr:type_array {{
 	value = share(type_stem {type_none {} });
 }}
 
-indirection = attrs:(val:ptr_attrs tok_space? {{ value = val; }})? tok_star is_c:(tok_space? tok_kw_const)? {{
-	value = share(indirection {to_int<annotation_kind>(attrs), gsl::narrow_cast<bool>(is_c.getValue())});
+indirection_attrs = val:ptr_attrs tok_space? {{ value = val; }} | <void> {{ value = share(annotation {}); }}
+
+indirection = attrs:indirection_attrs tok_star is_c:(tok_space? tok_kw_const)? {{
+	value = share(indirection {get_shared<annotation>(attrs), gsl::narrow_cast<bool>(is_c.getValue())});
 }}
 
 type_spec = is_c:(tok_kw_const tok_space {{	value = $1; }})? stem:type_stem indirs:(tok_space? indirection)* val_annotation_kind:(tok_space? val_attrs)? {{
