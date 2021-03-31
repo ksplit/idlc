@@ -118,6 +118,7 @@ namespace idlc {
                 else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
                     this->new_line() << "glue_pack(pos, msg, ext, (char*)*" << this->subject() << " - "
                         << node.pointer_annots.share_global << ");\n";
+                        
                     return true; // No need to walk these (yet)
                 }
                 else {
@@ -283,12 +284,14 @@ namespace idlc {
             return true;
         }
 
-        // TODO: long an complex, could use some splitting
         // TODO: need to automatically free shadows as they're replaced?
         bool visit_pointer(pointer& node)
         {
-            if (m_should_marshal)
-                marshal_pointer_value(node);
+            if (m_should_marshal) {
+                // NOTE: will return false if no need to walk further (i.e., the pointer is "opaque")
+                if (!marshal_pointer_value(node))
+                    return true;
+            }
 
             if (!should_walk<marshal_role::unmarshaling, side>(*node.referent)) {
                 this->new_line() << "(void)" << this->subject() << ";\n";
@@ -394,21 +397,27 @@ namespace idlc {
             std::terminate();
         }
 
-        void marshal_pointer_value(pointer& node)
+        [[nodiscard]] bool marshal_pointer_value(pointer& node)
         {
             this->new_line() << "*" << this->subject() << " = ";
             if (should_bind(node.pointer_annots)) {
-                this->stream() << "glue_unpack_shadow(pos, msg, ext, " << m_c_specifier << ")";
+                this->stream() << "glue_unpack_shadow(pos, msg, ext, " << m_c_specifier << ");\n";
             }
             else if (should_alloc(node.pointer_annots)) {
                 this->stream() << "glue_unpack_new_shadow(pos, msg, ext, " << m_c_specifier << ", "
-                    << get_size_expr(*node.referent) << ")";
+                    << get_size_expr(*node.referent) << ");\n";
+            }
+            else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
+                this->stream() << m_c_specifier << "(glue_unpack_shadow(pos, msg, ext, char*) + "
+                    << node.pointer_annots.share_global << ");\n";
+
+                return false;
             }
             else {
-                this->stream() << "glue_unpack(pos, msg, ext, " << m_c_specifier << ")";
+                this->stream() << "glue_unpack(pos, msg, ext, " << m_c_specifier << ");\n";
             }
 
-            this->stream() << ";\n";
+            return true;
         }
 
         bool marshal_pointer_child(pointer& node)
