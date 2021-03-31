@@ -4,15 +4,19 @@
 
 void idlc::generate_helpers(std::ostream& file)
 {
-    file << "#define verbose_debug 0\n";
+    file << "#define verbose_debug 1\n";
     file << "#define glue_pack(pos, msg, ext, value) glue_pack_impl((pos), (msg), (ext), (uint64_t)(value))\n";
     file << "#define glue_pack_shadow(pos, msg, ext, value) glue_pack_shadow_impl((pos), (msg), (ext), (value))\n";
     file << "#define glue_unpack(pos, msg, ext, type) (type)glue_unpack_impl((pos), (msg), (ext))\n";
-    file << "#define glue_unpack_shadow(pos, msg, ext, type) \\\n"
-        << "(type)glue_unpack_shadow_impl(glue_unpack(pos, msg, ext, void*));\n\n";
+    file << "#define glue_unpack_shadow(pos, msg, ext, type) ({ \\\n"
+        << "\tif (verbose_debug) \\\n"
+        << "\t\tprintk(\"%s:%d, unpack shadow for type %s\\n\", __func__, __LINE__, __stringify(type)); \\\n"
+        << "\t(type)glue_unpack_shadow_impl(glue_unpack(pos, msg, ext, void*)); })\n\n";
 
-    file << "#define glue_unpack_new_shadow(pos, msg, ext, type, size) \\\n"
-        << "\t(type)glue_unpack_new_shadow_impl(glue_unpack(pos, msg, ext, void*), size)\n\n";
+    file << "#define glue_unpack_new_shadow(pos, msg, ext, type, size) ({ \\\n"
+        << "\tif (verbose_debug) \\\n"
+        << "\t\tprintk(\"%s:%d, unpack new shadow for type %s | size %llu\\n\", __func__, __LINE__, __stringify(type), (uint64_t) size); \\\n"
+        << "\t(type)glue_unpack_new_shadow_impl(glue_unpack(pos, msg, ext, void*), size); })\n\n";
 
     file << "#ifndef LCD_ISOLATE\n";
     file << "#define glue_unpack_rpc_ptr(pos, msg, ext, name) \\\n"
