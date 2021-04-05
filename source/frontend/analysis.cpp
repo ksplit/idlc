@@ -231,7 +231,7 @@ namespace idlc {
 			{
 				// The core logic of propagating a top-level value annotation until an explicit one is found, and
 				// continuing
-				if (!is_clear(node.value_annots & annotation_kind::val_only)) {
+				if (!is_clear(node.value_annots & annotation_kind::io_only)) {
 					m_default_with = node.value_annots & annotation_kind::io_only;			
 				}
 				else {
