@@ -91,6 +91,9 @@ namespace idlc {
     template<marshal_role role, marshal_side side>
     constexpr bool should_walk(const value& node)
     {
+        if (flags_set(node.value_annots, annotation_kind::unused))
+            return false;
+
         switch (role) {
         case marshal_role::marshaling:
             return is_nonterminal(node) || should_marshal<side>(node);

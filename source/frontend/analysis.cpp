@@ -231,11 +231,11 @@ namespace idlc {
 			{
 				// The core logic of propagating a top-level value annotation until an explicit one is found, and
 				// continuing
-				if (!is_clear(node.value_annots & annotation_kind::val_only)) {
-					m_default_with = node.value_annots;				
+				if (!is_clear(node.value_annots & annotation_kind::io_only)) {
+					m_default_with = node.value_annots & annotation_kind::io_only;			
 				}
 				else {
-					node.value_annots = m_default_with;
+					node.value_annots = m_default_with; // FIXME
 				}
 
 				return traverse(*this, node);
@@ -305,7 +305,7 @@ namespace idlc {
 				instance_name += "__out";
 				break;
 
-			case annotation_kind::in | annotation_kind::out:
+			case annotation_kind::in_out:
 				instance_name += "__io";
 				break;
 
@@ -340,7 +340,7 @@ namespace idlc {
 		{
 			std::cout << "Debug: Non-lowered projection \"" << node.name << "\"\n";
 			switch (default_with) {
-			case annotation_kind::in | annotation_kind::out:
+			case annotation_kind::in_out:
 				std::cout << "Debug: Need \"in/out\" instance\n";
 				return instantiate_projection(node, node.in_out_proj, default_with);
 
