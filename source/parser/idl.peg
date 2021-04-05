@@ -92,6 +92,7 @@ tok_kw_callee = "callee"
 tok_kw_any_of = "any_of"
 tok_kw_shared = "shared"
 tok_kw_ioremap = "ioremap"
+tok_kw_unused = "unused"
 
 tok_space = lex_blank+
 tok_arrow = "->"
@@ -326,11 +327,13 @@ naked_proj_decl = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_stru
 	});
 }}
 
-val_attr = tok_kw_in {{ value = reinterpret_cast<void*>(annotation_kind::in); }}
+val_attr = tok_kw_unused {{ value = reinterpret_cast<void*>(annotation_kind::unused); }}
+	| tok_kw_in {{ value = reinterpret_cast<void*>(annotation_kind::in); }}
 	| tok_kw_out {{ value = reinterpret_cast<void*>(annotation_kind::out); }}
 
 ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in, nullptr}); }}
 	| tok_kw_out {{ value = share(annotation {annotation_kind::out, nullptr}); }}
+	| tok_kw_unused {{ value = share(annotation {annotation_kind::unused, nullptr}); }}
 	| tok_kw_alloc tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
 		value = share(annotation {annotation_kind::alloc_caller, nullptr});
 	}}
