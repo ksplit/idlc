@@ -5,7 +5,7 @@ module kernel {
             //string [alloc(caller), out] *error;
         }
     }
-    rpc_ptr int map( projection ti [unused] * ti, projection bio [alloc(callee)] * bio ) {
+    rpc_ptr int map( projection ti * [unused] ti, projection bio [alloc(callee)] * bio ) {
         projection < struct dm_target > ti {
         }
         projection < struct bio > bio {

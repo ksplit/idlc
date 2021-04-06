@@ -235,7 +235,7 @@ namespace idlc {
 					m_default_with = node.value_annots & annotation_kind::io_only;			
 				}
 				else {
-					node.value_annots = m_default_with; // FIXME
+					node.value_annots |= m_default_with; // FIXME
 				}
 
 				return traverse(*this, node);
