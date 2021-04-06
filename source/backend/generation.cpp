@@ -148,6 +148,9 @@ namespace idlc {
             for (gsl::index i {}; i < n_args; ++i) {
                 const auto& name = rpc.arguments->at(i)->name;
                 const auto& pgraph = rpc.arg_pgraphs.at(i);
+                if (flags_set(pgraph->value_annots, annotation_kind::unused))
+                    continue;
+
                 const auto& specifier = pgraph->c_specifier;
                 auto ptr_name = concat(name, "_ptr");
                 os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
