@@ -147,6 +147,10 @@ namespace idlc {
 		std::string callee_marshal_visitor {};
 		std::string caller_unmarshal_visitor {};
 
+		// Only used in unions
+		std::string discriminator_stub {};
+		std::vector<std::string> field_ids {};
+
 		projection(ident real_name, projection_kind kind, const std::string& name) :
 			real_name {real_name},
 			kind {kind},

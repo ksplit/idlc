@@ -69,6 +69,36 @@ namespace idlc {
             visitor_proto_walk visit_walk {file};
             for (const auto& proj : projections)
                 visit_walk.visit_projection(*proj);
+        }        
+
+        projection_vec get_unions(projection_vec_view projections)
+        {
+            projection_vec unions {};
+            for (const auto& proj : projections) {
+                if (proj->kind == projection_kind::union_kind)
+                    unions.push_back(proj);
+            }
+
+            return unions;
+        }
+
+        void generate_union_helpers(std::ostream& file, projection_vec_view projections)
+        {
+            for (const auto& uni : projections) {
+                const auto enum_id = concat("FIELD_ID_", uni->real_name);
+                file << "enum " << enum_id << " {\n";
+                for (const auto& [name, field] : uni->fields) {
+                    const auto new_id = concat(enum_id, "__", name);
+                    file << "\t" << new_id << ",\n";
+                    uni->field_ids.push_back(new_id);
+                }
+
+                file << "};\n\n";
+
+                const auto helper_id = concat("active_field_of_", uni->real_name);
+                uni->discriminator_stub = helper_id;
+                file << enum_id << " " << helper_id << "(uint64_t discrim);\n\n";
+            }
         }
 
         void generate_common_header(rpc_vec_view rpcs, projection_vec_view projections)
@@ -101,6 +131,7 @@ namespace idlc {
 
             file << "int try_dispatch(enum RPC_ID id, struct fipc_message* msg, struct ext_registers* ext);\n\n";
 
+            generate_union_helpers(file, get_unions(projections));
             generate_visitor_prototypes(file, projections);
             for (const auto& rpc : rpcs) {
                 if (rpc->kind == rpc_def_kind::indirect) {
@@ -510,12 +541,29 @@ namespace idlc {
 
             const auto roots = generate_root_ptrs<marshal_role::marshaling, marshal_side::caller>(file, node, "ptr");
             const auto n_fields = node.fields.size();
-            for (const auto& [name, type] : roots) {
-                file << "\t{\n";
+            const bool is_union = node.kind == projection_kind::union_kind;
+
+            if (is_union)
+                file << "\tswitch (" << node.discriminator_stub << "(ptr->" << node.fields.front().first << ")) {\n";
+
+            for (gsl::index i {}; i < node.fields.size(); ++i) {
+                const auto& [name, type] = node.fields.at(i);
+                if (is_union)
+                    file << "\tcase " << node.field_ids.at(i) << ": {\n";
+                else
+                    file << "\t{\n";
+                
                 marshaling_walk<marshal_side::caller> walk {file, name, 2};
                 walk.visit_value(*type);
+
+                if (is_union)
+                    file << "\t\tbreak;\n";
+
                 file << "\t}\n\n";
             }
+
+            if (is_union)
+                file << "\t}\n";
 
             file << "}\n\n";
         }
@@ -531,12 +579,29 @@ namespace idlc {
 
             const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::callee>(file, node, "ptr");
             const auto n_fields = node.fields.size();
-            for (const auto& [name, type] : roots) {
-                file << "\t{\n";
+            const bool is_union = node.kind == projection_kind::union_kind;
+
+            if (is_union)
+                file << "\tswitch (" << node.discriminator_stub << "(ptr->" << node.fields.front().first << ")) {\n";
+
+            for (gsl::index i {}; i < node.fields.size(); ++i) {
+                const auto& [name, type] = node.fields.at(i);
+                if (is_union)
+                    file << "\tcase " << node.field_ids.at(i) << ": {\n";
+                else
+                    file << "\t{\n";
+                
                 unmarshaling_walk<marshal_side::callee> walk {file, name, 2};
                 walk.visit_value(*type);
+
+                if (is_union)
+                    file << "\t\tbreak;\n";
+
                 file << "\t}\n\n";
             }
+
+            if (is_union)
+                file << "\t}\n";
 
             file << "}\n\n";
         }
@@ -552,12 +617,29 @@ namespace idlc {
 
             const auto roots = generate_root_ptrs<marshal_role::marshaling, marshal_side::callee>(file, node, "ptr");
             const auto n_fields = node.fields.size();
-            for (const auto& [name, type] : roots) {
-                file << "\t{\n";
+            const bool is_union = node.kind == projection_kind::union_kind;
+
+            if (is_union)
+                file << "\tswitch (" << node.discriminator_stub << "(ptr->" << node.fields.front().first << ")) {\n";
+
+            for (gsl::index i {}; i < node.fields.size(); ++i) {
+                const auto& [name, type] = node.fields.at(i);
+                if (is_union)
+                    file << "\tcase " << node.field_ids.at(i) << ": {\n";
+                else
+                    file << "\t{\n";
+                
                 marshaling_walk<marshal_side::callee> walk {file, name, 2};
                 walk.visit_value(*type);
+
+                if (is_union)
+                    file << "\t\tbreak;\n";
+
                 file << "\t}\n\n";
             }
+
+            if (is_union)
+                file << "\t}\n";
 
             file << "}\n\n";
         }
@@ -573,12 +655,29 @@ namespace idlc {
 
             const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::caller>(file, node, "ptr");
             const auto n_fields = node.fields.size();
-            for (const auto& [name, type] : roots) {
-                file << "\t{\n";
+            const bool is_union = node.kind == projection_kind::union_kind;
+
+            if (is_union)
+                file << "\tswitch (" << node.discriminator_stub << "(ptr->" << node.fields.front().first << ")) {\n";
+
+            for (gsl::index i {}; i < node.fields.size(); ++i) {
+                const auto& [name, type] = node.fields.at(i);
+                if (is_union)
+                    file << "\tcase " << node.field_ids.at(i) << ": {\n";
+                else
+                    file << "\t{\n";
+                
                 unmarshaling_walk<marshal_side::caller> walk {file, name, 2};
                 walk.visit_value(*type);
+
+                if (is_union)
+                    file << "\t\tbreak;\n";
+
                 file << "\t}\n\n";
             }
+
+            if (is_union)
+                file << "\t}\n";
 
             file << "}\n\n";
         }
