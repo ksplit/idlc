@@ -92,6 +92,7 @@ namespace idlc {
             // the module
             file << "\tMODULE_INIT,\n";
             file << "\tMODULE_EXIT,\n";
+            file << "\tRPC_ID_shared_mem_init,\n";
 
             for (const auto& rpc : rpcs)
                 file << "\t" << rpc->enum_id << ",\n";
@@ -369,11 +370,19 @@ namespace idlc {
                 os << "\tcase MODULE_INIT:\n";
                 os << "\t\tglue_user_trace(\"MODULE_INIT\");\n";
                 os << "\t\t__module_lcd_init();\n";
+                os << "\t\tshared_mem_init();\n";
                 os << "\t\tbreak;\n\n";
 
-                 os << "\tcase MODULE_EXIT:\n";
+                os << "\tcase MODULE_EXIT:\n";
                 os << "\t\tglue_user_trace(\"MODULE_EXIT\");\n";
                 os << "\t\t__module_lcd_exit();\n";
+                os << "\t\tbreak;\n\n";
+            }
+
+            if constexpr (side == rpc_side::server) {
+                os << "\tcase RPC_ID_shared_mem_init:\n";
+                os << "\t\tglue_user_trace(\"shared_mem_init\\n\");\n";
+                os << "\t\tshared_mem_init_callee(msg, ext);\n";
                 os << "\t\tbreak;\n\n";
             }
 
@@ -588,6 +597,16 @@ namespace idlc {
                 generate_callee_marshal_visitor(file, *projection);
                 generate_caller_unmarshal_visitor(file, *projection);
             }
+
+            file << "\n#ifdef LCD_ISOLATE\n";
+            file << "__attribute__((weak)) void shared_mem_init(void) {\n";
+            file << "\tLIBLCD_MSG(\"Weak shared_mem_init does nothing! Override if you want!\");\n";
+            file << "}\n";
+            file << "#else\n";
+            file << "__attribute__((weak)) void shared_mem_init_callee(struct fipc_message *msg, struct ext_registers* ext) {\n";
+            file << "\tLIBLCD_MSG(\"Weak shared_mem_init_callee does nothing! Override if you want!\");\n";
+            file << "}\n";
+            file << "#endif\t/* LCD_ISOLATE */\n\n";
         }
 
         class projection_collection_walk : public pgraph_walk<projection_collection_walk> {
