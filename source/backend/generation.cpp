@@ -97,7 +97,7 @@ namespace idlc {
 
                 const auto helper_id = concat("active_field_of_", uni->real_name);
                 uni->discriminator_stub = helper_id;
-                file << enum_id << " " << helper_id << "(uint64_t discrim);\n\n";
+                file << "enum " << enum_id << " " << helper_id << "(uint64_t discrim);\n\n";
             }
         }
 
