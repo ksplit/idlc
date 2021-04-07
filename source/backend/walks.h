@@ -116,7 +116,7 @@ namespace idlc {
                     this->new_line() << "glue_pack_shadow(pos, msg, ext, *" << this->subject() << ");\n";
                 }
                 else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
-                    this->new_line() << "glue_pack(pos, msg, ext, (char*)*" << this->subject() << " - "
+                    this->new_line() << "glue_pack(pos, msg, ext, (void*)*" << this->subject() << " - "
                         << node.pointer_annots.share_global << ");\n";
 
                     return true; // No need to walk these (yet)
@@ -408,7 +408,7 @@ namespace idlc {
                     << get_size_expr(*node.referent) << ");\n";
             }
             else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
-                this->stream() << "(" << m_c_specifier << ")(glue_unpack(pos, msg, ext, char*) + "
+                this->stream() << "(" << m_c_specifier << ")(glue_unpack(pos, msg, ext, size_t) + "
                     << node.pointer_annots.share_global << ");\n";
 
                 return false;
