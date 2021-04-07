@@ -124,6 +124,9 @@ namespace idlc {
 
                     return true; // No need to walk these (yet)
                 }
+                else if (should_dealloc(node.pointer_annots)) {
+                    this->new_line() << "glue_pack_release_shadow(pos, msg, ext, *" << this->subject() << ");\n";
+                }
                 else {
                     this->new_line() << "glue_pack(pos, msg, ext, *" << this->subject() << ");\n";
                 }
@@ -224,6 +227,19 @@ namespace idlc {
 
             case marshal_side::callee:
                 return flags_set(ann.kind, annotation_kind::bind_callee);
+            }
+
+            std::terminate();
+        }
+
+        static constexpr bool should_dealloc(const annotation& ann)
+        {
+            switch (side) {
+            case marshal_side::caller:
+                return flags_set(ann.kind, annotation_kind::dealloc_caller);
+
+            case marshal_side::callee:
+                return flags_set(ann.kind, annotation_kind::dealloc_callee);
             }
 
             std::terminate();
