@@ -45,12 +45,12 @@ namespace idlc {
 
 	struct value {
 		passed_type type;
-		annotation value_annots;
+		annotation_kind value_annots;
 		bool is_const;
 
 		std::string c_specifier;
 
-		value(passed_type&& type, annotation value_annots, bool is_const) :
+		value(passed_type&& type, annotation_kind value_annots, bool is_const) :
 			type {std::move(type)},
 			value_annots {value_annots},
 			is_const {is_const},
@@ -118,9 +118,9 @@ namespace idlc {
 	// TODO: this has no syntax
 	struct static_void_ptr {
 		node_ptr<value> referent;
-		annotation pointer_annots;
+		annotation_kind pointer_annots;
 
-		static_void_ptr(node_ptr<value> referent, annotation pointer_annots) :
+		static_void_ptr(node_ptr<value> referent, annotation_kind pointer_annots) :
 			referent {std::move(referent)},
 			pointer_annots {pointer_annots}
 		{}

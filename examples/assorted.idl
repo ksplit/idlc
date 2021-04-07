@@ -1,4 +1,3 @@
-// NOTE: see notes in main.cpp as to how we will support this
 module foo {
 	projection < struct net_device > simp_circ {
         projection simp_circ *a;
@@ -13,8 +12,8 @@ module foo {
         const signed char* c;
     }
 
-    rpc projection simp_circ* foo0(projection circ_a [out]* a, projection circ_b* b) {}
-    rpc void foo1(void* meep) {}
-    rpc void* foo2() {}
-    rpc void foo3() {}
+    rpc void* foo0() {}
+    rpc void foo1() {}
+    rpc projection simp_circ* foo2(projection circ_a [out]* a, projection circ_b* b) {}
+    rpc void [shared<buf>]* foo3(string* str) {}
 }

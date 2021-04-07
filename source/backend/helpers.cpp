@@ -113,4 +113,9 @@ void idlc::generate_helpers(std::ostream& file)
     file << "{\n";
     file << "\tglue_pack(pos, msg, ext, ptr ? glue_user_map_from_shadow(ptr) : NULL);\n";
     file << "}\n";
+    file << "\n#ifdef LCD_ISOLATE\n";
+    file << "void shared_mem_init(void);\n";
+    file << "#else\n";
+    file << "void shared_mem_init_callee(struct fipc_message *msg, struct ext_registers* ext);\n";
+    file << "#endif\t/* LCD_ISOLATE */\n\n";
 }
