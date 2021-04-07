@@ -1,4 +1,3 @@
-// NOTE: see notes in main.cpp as to how we will support this
 module foo {
 	projection < struct net_device > simp_circ {
         projection simp_circ *a;
