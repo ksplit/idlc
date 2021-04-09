@@ -1,5 +1,5 @@
 module foo {
-	projection < struct net_device > simp_circ {
+	/*projection < struct net_device > simp_circ {
         projection simp_circ *a;
     }
 
@@ -14,6 +14,10 @@ module foo {
 
     rpc void* foo0() {}
     rpc void foo1() {}
-    rpc projection simp_circ* foo2(projection circ_a [out]* a, projection circ_b* b) {}
-    rpc void [shared<buf>]* foo3(string * [unused] str) {}
+    rpc projection simp_circ* foo2(projection circ_a [out]* a, projection circ_b* b) {}*/
+    
+    rpc void [shared<buf>]* foo3(string [dealloc(callee)]* str) {}
+    rpc void foo_callee_dealloc(string [dealloc(callee)]* str) {}
+    rpc void foo_callee_alloc_dealloc(string [alloc(callee), dealloc(callee)]* str) {}
+    rpc void foo_caller_dealloc(string [dealloc(caller)]* str) {}
 }
