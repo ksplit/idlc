@@ -713,9 +713,7 @@ namespace idlc {
             projection_vec projs {};
             projection_collection_walk walk {projs};
             for (const auto& rpc : rpcs) {
-                if (rpc->ret_pgraph)
-                    walk.visit_value(*rpc->ret_pgraph);
-
+                walk.visit_value(*rpc->ret_pgraph);
                 for (const auto& arg : rpc->arg_pgraphs)
                     walk.visit_value(*arg);
             }
