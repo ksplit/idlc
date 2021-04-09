@@ -21,6 +21,7 @@ namespace idlc {
 	struct module_def;
 	struct driver_def;
 	struct driver_file;
+	struct type_none;
 	struct type_rpc;
 	struct type_proj;
 	struct type_array;
@@ -42,15 +43,18 @@ namespace idlc {
 	using type_stem = std::variant<
 		type_primitive,
 		type_string,
+		type_none,
 		node_ref<type_rpc>,
 		node_ref<type_proj>,
 		node_ref<type_array>,
 		node_ref<type_any_of>
 	>;
 
+	struct type_none {};
+
 	struct driver_def {
-		const ident name;
-		const node_ptr<ident_vec> imports;
+		ident name;
+		node_ptr<ident_vec> imports;
 
 		driver_def(ident name, node_ptr<ident_vec> imports) :
 			name {name},
@@ -59,9 +63,9 @@ namespace idlc {
 	};
 
 	struct driver_file {
-		const node_ptr<ident_vec> former;
-		const node_ref<driver_def> driver;
-		const node_ptr<ident_vec> latter;
+		node_ptr<ident_vec> former;
+		node_ref<driver_def> driver;
+		node_ptr<ident_vec> latter;
 
 		driver_file(node_ptr<ident_vec> former,
 			node_ref<driver_def> driver,
@@ -74,7 +78,7 @@ namespace idlc {
 	};
 
 	struct type_proj {
-		const ident name;
+		ident name;
 
 		proj_def* definition;
 
@@ -85,7 +89,7 @@ namespace idlc {
 	};
 
 	struct type_rpc {
-		const ident name;
+		ident name;
 
 		rpc_def* definition;
 
@@ -96,8 +100,8 @@ namespace idlc {
 	};
 
 	struct type_array {
-		const node_ref<type_spec> element;
-		const node_ref<array_size> size;
+		node_ref<type_spec> element;
+		node_ref<array_size> size;
 
 		type_array(node_ref<type_spec> element, node_ref<array_size> size) :
 			element {element},
@@ -106,8 +110,8 @@ namespace idlc {
 	};
 
 	struct type_any_of {
-		const ident discrim;
-		const node_ref<ref_vec<type_spec>> types;
+		ident discrim;
+		node_ref<ref_vec<type_spec>> types;
 
 		type_any_of(
 			ident discrim,
@@ -131,25 +135,25 @@ namespace idlc {
 	struct type_string {};
 
 	struct indirection {
-		const annotation attrs; // Contextually, both ptr and value attrs
-		const bool is_const;
+		node_ref<annotation> attrs; // Contextually, both ptr and value attrs
+		bool is_const;
 
-		indirection(annotation attrs, bool is_const) :
+		indirection(node_ref<annotation> attrs, bool is_const) :
 			attrs {attrs},
 			is_const {is_const}
 		{}
 	};
 
 	struct type_spec {
-		const node_ref<type_stem> stem;
-		const ref_vec<indirection> indirs;
-		const annotation attrs; // Will only ever have value attrs in it
-		const bool is_const;
+		node_ref<type_stem> stem;
+		ref_vec<indirection> indirs;
+		annotation_kind attrs; // Will only ever have value attrs in it
+		bool is_const;
 
 		type_spec(
 			node_ref<type_stem> stem,
 			ref_vec<indirection> indirs,
-			annotation attrs,
+			annotation_kind attrs,
 			bool is_const
 		) :
 			stem {stem},
@@ -160,8 +164,8 @@ namespace idlc {
 	};
 
 	struct var_decl {
-		const node_ref<type_spec> type;
-		const ident name;
+		node_ref<type_spec> type;
+		ident name;
 
 		var_decl(node_ref<type_spec> type, ident name) :
 			type {type},
@@ -170,8 +174,8 @@ namespace idlc {
 	};
 
 	struct naked_proj_decl {
-		const node_ptr<ref_vec<proj_field>> fields;
-		const ident name;
+		node_ptr<ref_vec<proj_field>> fields;
+		ident name;
 
 		naked_proj_decl(node_ptr<ref_vec<proj_field>> fields, ident name) :
 			fields {fields},
@@ -185,10 +189,10 @@ namespace idlc {
 	};
 
 	struct proj_def {
-		const ident name;
-		const ident type;
-		const node_ptr<ref_vec<proj_field>> fields;
-		const proj_def_kind kind;
+		ident name;
+		ident type;
+		node_ptr<ref_vec<proj_field>> fields;
+		proj_def_kind kind;
 
 		std::string scoped_name;
 		std::shared_ptr<projection> in_proj;
@@ -219,11 +223,11 @@ namespace idlc {
 	};
 
 	struct rpc_def {
-		const node_ptr<type_spec> ret_type; // null type is used for <void>
-		const ident name;
-		const node_ptr<ref_vec<var_decl>> arguments;
-		const node_ptr<ref_vec<rpc_item>> items;
-		const rpc_def_kind kind;
+		node_ref<type_spec> ret_type;
+		ident name;
+		node_ptr<ref_vec<var_decl>> arguments;
+		node_ptr<ref_vec<rpc_item>> items;
+		rpc_def_kind kind;
 
 		names_scope scope;
 		node_ptr<value> ret_pgraph;
@@ -287,8 +291,8 @@ namespace idlc {
 	>;
 
 	struct module_def {
-		const ident name;
-		const node_ptr<ref_vec<module_item>> items;
+		ident name;
+		node_ptr<ref_vec<module_item>> items;
 
 		names_scope scope;
 

@@ -54,6 +54,21 @@
 
 // TODO: array constness propagation to element (the two are linker): add a walk for it
 
+namespace idlc {
+	namespace {
+		class string_const_walk : public ast_walk<string_const_walk> {
+		public:
+			bool visit_type_spec(type_spec& node)
+			{
+				if (std::get_if<type_string>(node.stem.get().get()))
+					node.is_const = true;
+
+				return true;
+			}
+		};
+	}
+}
+
 int main(int argc, char** argv)
 {
     const gsl::span<gsl::zstring<>> args {argv, gsl::narrow<std::size_t>(argc)};
@@ -71,6 +86,10 @@ int main(int argc, char** argv)
 		std::cout << "Error: Not all names were bound\n";
 		return 1;
 	}
+
+	idlc::string_const_walk string_walk {};
+	if (!string_walk.visit_file(*file))
+		std::terminate();
 
 	const auto rpcs = idlc::generate_rpc_pgraphs(*file);
 	if (!rpcs) {

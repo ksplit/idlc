@@ -81,6 +81,8 @@ namespace idlc {
             file << "#include <libfipc.h>\n";
             file << "#include <liblcd/boot_info.h>\n";
             file << "#include <asm/cacheflush.h>\n";
+            file << "#include <lcd_domains/microkernel.h>\n";
+            file << "#include <liblcd/liblcd.h>\n";
             file << "\n";
             file << "#include \"glue_user.h\"\n";
             file << "\n";
@@ -92,6 +94,7 @@ namespace idlc {
             // the module
             file << "\tMODULE_INIT,\n";
             file << "\tMODULE_EXIT,\n";
+            file << "\tRPC_ID_shared_mem_init,\n";
 
             for (const auto& rpc : rpcs)
                 file << "\t" << rpc->enum_id << ",\n";
@@ -126,6 +129,19 @@ namespace idlc {
             root_vec arguments;
         };
 
+        bool is_return(const value& node)
+        {
+            return !std::get_if<none>(&node.type);
+        }
+
+        annotation_kind get_ptr_annotation(const value& node)
+        {
+            auto p = std::get_if<node_ref<pointer>>(&node.type);
+            if (p)
+                return p->get()->pointer_annots.kind;
+            else
+                return annotation_kind::use_default;
+        }
         /*
             Some explanation: C usually has two different ways of accessing variables, depnding on if they're a value
             or a pointer, i.e. foo_ptr->a_field vs. foo_ptr.a_field. To avoid unnecessary copying, and also because in
@@ -135,6 +151,7 @@ namespace idlc {
             creates pointers to all the arguments of the RPC. That way the marshaling system can be written to only
             deal with pointers.
         */
+        template<marshal_side side>
         marshal_roots generate_root_ptrs(rpc_def& rpc, std::ostream& os)
         {
             const auto n_args = gsl::narrow<gsl::index>(rpc.arg_pgraphs.size());
@@ -143,13 +160,30 @@ namespace idlc {
             for (gsl::index i {}; i < n_args; ++i) {
                 const auto& name = rpc.arguments->at(i)->name;
                 const auto& pgraph = rpc.arg_pgraphs.at(i);
+                if (flags_set(pgraph->value_annots, annotation_kind::unused))
+                    continue;
+
                 const auto& specifier = pgraph->c_specifier;
                 auto ptr_name = concat(name, "_ptr");
                 os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
                 roots.emplace_back(std::move(ptr_name), pgraph.get());
             }
 
-            if (rpc.ret_pgraph) {
+            if (is_return(*rpc.ret_pgraph)) {
+                if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
+                    switch (side) {
+                    case marshal_side::caller:
+                        os << "\tcptr_t ioremap_cptr;\n";
+                        os << "\tgpa_t ioremap_gpa;\n";
+                        os << "\tuint64_t ioremap_len;\n";
+                        break;
+                    case marshal_side::callee:
+                        os << "\tcptr_t resource_cptr;\n";
+                        os << "\t__maybe_unused unsigned int resource_len;\n";
+                        os << "\tcptr_t lcd_resource_cptr;\n";
+                        break;
+                    }
+                }
                 os << "\t" << rpc.ret_pgraph->c_specifier << " ret = 0;\n";
                 os << "\t" << rpc.ret_pgraph->c_specifier << "* ret_ptr = &ret;\n";
             }
@@ -199,7 +233,7 @@ namespace idlc {
             os << "\tsize_t n_pos = 0;\n";
             os << "\tsize_t* pos = &n_pos;\n\n";
             const auto n_args = rpc.arg_pgraphs.size();
-            const auto roots = generate_root_ptrs(rpc, os);
+            const auto roots = generate_root_ptrs<marshal_side::caller>(rpc, os);
             os << "\t(void)ext;\n\n";
 
             // Add verbose printk's while entering
@@ -209,6 +243,15 @@ namespace idlc {
             if (rpc.kind == rpc_def_kind::indirect) {
                 // make sure we marshal the target pointer before everything
                 os << "\tglue_pack(pos, msg, ext, target);\n";
+            }
+
+            if (is_return(*rpc.ret_pgraph)) {
+                if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
+                    os << "\t{\n";
+                    os << "\t\tlcd_cptr_alloc(&ioremap_cptr);\n";
+                    os << "\t\tglue_pack(pos, msg, ext, cptr_val(ioremap_cptr));\n";
+                    os << "\t}\n\n";
+                }
             }
 
             for (const auto& [name, type] : roots.arguments) {
@@ -225,6 +268,16 @@ namespace idlc {
         {
             os << "\t*pos = 0;\n";
 
+            if (is_return(*rpc.ret_pgraph)) {
+                if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
+                        os << "\t{\n";
+                        os << "\t\tioremap_len = glue_unpack(pos, msg, ext, uint64_t);\n";
+                        os << "\t\tlcd_ioremap_phys(ioremap_cptr, ioremap_len, &ioremap_gpa);\n";
+                        os << "\t\t*ret_ptr = lcd_ioremap(gpa_val(ioremap_gpa), ioremap_len);\n";
+                        os << "\t}\n\n";
+                    }
+            }
+
             for (const auto& [name, type] : roots.arguments) {
                 os << "\t{\n";
                 unmarshaling_walk<marshal_side::caller> arg_unremarshal {os, name, 2};
@@ -232,18 +285,21 @@ namespace idlc {
                 os << "\t}\n\n";
             }
 
-            if (rpc.ret_pgraph) {
-                os << "\t{\n";
-                unmarshaling_walk<marshal_side::caller> ret_unmarshal {os, roots.return_value, 2};
-                ret_unmarshal.visit_value(*rpc.ret_pgraph);
-                os << "\t}\n\n";
+            if (is_return(*rpc.ret_pgraph)) {
+                // Unmarshal return pointer only if it's NOT an ioremap annotation
+                if (!flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
+                    os << "\t{\n";
+                    unmarshaling_walk<marshal_side::caller> ret_unmarshal {os, roots.return_value, 2};
+                    ret_unmarshal.visit_value(*rpc.ret_pgraph);
+                    os << "\t}\n\n";
+                }
             }
 
             // Add verbose printk's while returning
             os << "\tif (verbose_debug) {\n";
             os << "\t\tprintk(\"%s:%d, returned!\\n\", __func__, __LINE__);\n" << "\t}\n";
 
-            os << (rpc.ret_pgraph ? concat("\treturn ret;\n") : "");
+            os << (is_return(*rpc.ret_pgraph) ? concat("\treturn ret;\n") : "");
         }
 
         template<rpc_side side>
@@ -268,6 +324,7 @@ namespace idlc {
         {
             os << "\tsize_t n_pos = 0;\n";
             os << "\tsize_t* pos = &n_pos;\n\n";
+
             if (rpc.kind == rpc_def_kind::indirect) {
                 os << "\t" << rpc.typedef_id << " function_ptr = glue_unpack(pos, msg, ext, " << rpc.typedef_id
                     << ");\n";
@@ -280,11 +337,20 @@ namespace idlc {
                 os << "\t" << type << " " << name << " = 0;\n";
             }
 
-            const auto roots = generate_root_ptrs(rpc, os);
+            const auto roots = generate_root_ptrs<marshal_side::callee>(rpc, os);
 
             // Add verbose printk's while entering
             os << "\tif (verbose_debug) {\n";
             os << "\t\tprintk(\"%s:%d, entered!\\n\", __func__, __LINE__);\n" << "\t}\n\n";
+
+            // Unmarshal cptr from the driver domain
+            if (is_return(*rpc.ret_pgraph)) {
+                if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
+                    os << "\t{\n";
+                    os << "\t\tlcd_resource_cptr.cptr = glue_unpack(pos, msg, ext, uint64_t);\n";
+                    os << "\t}\n\n";
+                }
+            }
 
             for (const auto& [name, type] : roots.arguments) {
                 os << "\t{\n";
@@ -294,12 +360,31 @@ namespace idlc {
             }
 
             os << "\t";
-            if (rpc.ret_pgraph)
+            if (is_return(*rpc.ret_pgraph))
                 os << "ret = ";
 
             const auto impl_name = (rpc.kind == rpc_def_kind::direct) ? rpc.name : "function_ptr";
             os << impl_name << "(" << rpc.params_string << ");\n\n";
             os << "\t*pos = 0;\n";
+
+            // Marshal the resource len back to the caller domain for ioremapping the region
+            if (is_return(*rpc.ret_pgraph)) {
+                if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
+                    ident resource_len = "unknown";
+
+                    if ((rpc.name == std::string("pci_iomap")) || (rpc.name == std::string("pci_ioremap_bar"))) {
+                        resource_len = "pci_resource_len(pdev, bar)";
+                    } else if (rpc.name == std::string("ioremap_nocache")) {
+                        resource_len = "size";
+                    }
+
+                    os << "\n\t{\n";
+                    os << "\t\tlcd_volunteer_dev_mem(__gpa((uint64_t)*ret_ptr), get_order(" << resource_len << "), &resource_cptr);\n";
+                    os << "\t\tcopy_msg_cap_vmfunc(current->lcd, current->vmfunc_lcd, resource_cptr, lcd_resource_cptr);\n";
+                    os << "\t\tglue_pack(pos, msg, ext, " << resource_len << ");\n";
+                    os << "\t}\n\n";
+                }
+            }
 
             for (const auto& [name, type] : roots.arguments) {
                 os << "\t{\n";
@@ -307,14 +392,17 @@ namespace idlc {
                 arg_remarshal.visit_value(*type);
                 os << "\t}\n\n";
             }
-
-            if (rpc.ret_pgraph) {
-                os << "\t{\n";
-                marshaling_walk<marshal_side::callee> ret_marshal {os, roots.return_value, 2};
-                ret_marshal.visit_value(*rpc.ret_pgraph);
-                os << "\t}\n\n";
+            
+            if (is_return(*rpc.ret_pgraph)) {
+                // Marshal return pointer only if it's NOT an ioremap annotation
+                if (!flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
+                    os << "\t{\n";
+                    marshaling_walk<marshal_side::callee> ret_marshal {os, roots.return_value, 2};
+                    ret_marshal.visit_value(*rpc.ret_pgraph);
+                    os << "\t}\n\n";
+                }
             }
-
+        
             os << "\tmsg->regs[0] = *pos;\n";
 
             // Add verbose printk's while returning
@@ -361,11 +449,19 @@ namespace idlc {
                 os << "\tcase MODULE_INIT:\n";
                 os << "\t\tglue_user_trace(\"MODULE_INIT\");\n";
                 os << "\t\t__module_lcd_init();\n";
+                os << "\t\tshared_mem_init();\n";
                 os << "\t\tbreak;\n\n";
 
-                 os << "\tcase MODULE_EXIT:\n";
+                os << "\tcase MODULE_EXIT:\n";
                 os << "\t\tglue_user_trace(\"MODULE_EXIT\");\n";
                 os << "\t\t__module_lcd_exit();\n";
+                os << "\t\tbreak;\n\n";
+            }
+
+            if constexpr (side == rpc_side::server) {
+                os << "\tcase RPC_ID_shared_mem_init:\n";
+                os << "\t\tglue_user_trace(\"shared_mem_init\\n\");\n";
+                os << "\t\tshared_mem_init_callee(msg, ext);\n";
                 os << "\t\tbreak;\n\n";
             }
 
@@ -457,11 +553,7 @@ namespace idlc {
         void create_function_strings(rpc_vec_view rpcs)
         {
             for (auto& rpc : rpcs) {
-                if (rpc->ret_type)
-                    rpc->ret_string = rpc->ret_pgraph->c_specifier;
-                else
-                    rpc->ret_string = "void";
-
+                rpc->ret_string = rpc->ret_pgraph->c_specifier;
                 if (rpc->arguments) {
                     bool is_first {true};
                     auto& args_str = rpc->args_string;
@@ -584,6 +676,16 @@ namespace idlc {
                 generate_callee_marshal_visitor(file, *projection);
                 generate_caller_unmarshal_visitor(file, *projection);
             }
+
+            file << "\n#ifdef LCD_ISOLATE\n";
+            file << "__attribute__((weak)) void shared_mem_init(void) {\n";
+            file << "\tLIBLCD_MSG(\"Weak shared_mem_init does nothing! Override if you want!\");\n";
+            file << "}\n";
+            file << "#else\n";
+            file << "__attribute__((weak)) void shared_mem_init_callee(struct fipc_message *msg, struct ext_registers* ext) {\n";
+            file << "\tLIBLCD_MSG(\"Weak shared_mem_init_callee does nothing! Override if you want!\");\n";
+            file << "}\n";
+            file << "#endif\t/* LCD_ISOLATE */\n\n";
         }
 
         class projection_collection_walk : public pgraph_walk<projection_collection_walk> {

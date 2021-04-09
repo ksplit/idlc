@@ -54,6 +54,9 @@ namespace idlc {
 				else if constexpr (std::is_same_v<type, gsl::not_null<proj_def*>>) {
 					return pass.visit_proj_def(*item);
 				}
+				else if constexpr (std::is_same_v<type, none>) {
+					return pass.visit_none(item);
+				}
 				
 				std::terminate();
 			};
@@ -168,7 +171,12 @@ namespace idlc {
 		{
 			return true;
 		}
-		
+
+		bool visit_none(none)
+		{
+			return true;
+		}
+
 	protected:
 		pgraph_traverse<derived> traverse {};
 		

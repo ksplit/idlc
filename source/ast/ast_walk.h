@@ -101,10 +101,8 @@ namespace idlc {
 	template<typename walk>
 	bool traverse(walk&& self, const rpc_def& node)
 	{
-		if (node.ret_type) {
-			if (!self.visit_type_spec(*node.ret_type))
-				return false;
-		}
+		if (!self.visit_type_spec(*node.ret_type))
+			return false;
 
 		if (node.arguments) {
 			for (const auto& item : *node.arguments) {
@@ -180,6 +178,8 @@ namespace idlc {
 				return self.visit_type_array(*subnode);
 			else if constexpr (std::is_same_v<type, node_ref<type_any_of>>)
 				return self.visit_type_any_of(*subnode);
+			else if constexpr (std::is_same_v<type, type_none>)
+				return self.visit_type_none(subnode);
 			else if constexpr (std::is_same_v<type, type_string>) // FIXME: how to properly walk these "folded" nodes?
 				return true;
 			else if constexpr (std::is_same_v<type, type_primitive>)
@@ -353,6 +353,11 @@ namespace idlc {
 		bool visit_rpc_item(rpc_item& node)
 		{
 			return traverse(self(), node);
+		}
+
+		bool visit_type_none(type_none)
+		{
+			return true;
 		}
 
 	private:

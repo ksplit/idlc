@@ -25,12 +25,14 @@ namespace idlc {
 	struct static_void_ptr; // a void* that is "actually" a pointer to some other type
 	class projection;
 	struct rpc_ptr;
+	struct none {};
 
 	struct value;
 
 	// TODO: much of these are exclusively owned (except projection nodes), but node_ptrs/node_refs are shared
 	using passed_type = std::variant<
 		primitive,
+		none,
 		node_ref<null_terminated_array>,
 		node_ref<static_array>,
 		node_ref<dyn_array>,
@@ -43,12 +45,12 @@ namespace idlc {
 
 	struct value {
 		passed_type type;
-		annotation value_annots;
+		annotation_kind value_annots;
 		bool is_const;
 
 		std::string c_specifier;
 
-		value(passed_type&& type, annotation value_annots, bool is_const) :
+		value(passed_type&& type, annotation_kind value_annots, bool is_const) :
 			type {std::move(type)},
 			value_annots {value_annots},
 			is_const {is_const},
@@ -116,9 +118,9 @@ namespace idlc {
 	// TODO: this has no syntax
 	struct static_void_ptr {
 		node_ptr<value> referent;
-		annotation pointer_annots;
+		annotation_kind pointer_annots;
 
-		static_void_ptr(node_ptr<value> referent, annotation pointer_annots) :
+		static_void_ptr(node_ptr<value> referent, annotation_kind pointer_annots) :
 			referent {std::move(referent)},
 			pointer_annots {pointer_annots}
 		{}

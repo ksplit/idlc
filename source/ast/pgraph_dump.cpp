@@ -93,6 +93,12 @@ namespace idlc {
 				return true;
 			}
 
+			bool visit_none(none)
+			{
+				indent(std::cout, m_indent_level) << "none\n";
+				return true;
+			}
+
 		private:
 			unsigned m_indent_level {1};
 		};
