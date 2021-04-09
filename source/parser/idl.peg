@@ -392,9 +392,13 @@ ptr_attr_list = first:ptr_attr rest:(tok_space? tok_comma tok_space? ptr_attr)* 
 
 type_primitive = tok_kw_unsigned tok_space tok_kw_long tok_space tok_kw_long {{
 	value = reinterpret_cast<void*>(type_primitive::ty_ullong);
+}} | tok_kw_long tok_space tok_kw_long tok_space tok_kw_unsigned tok_space tok_kw_int {{
+	value = reinterpret_cast<void*>(type_primitive::ty_ullong);
 }} | tok_kw_long tok_space tok_kw_long {{
 	value = reinterpret_cast<void*>(type_primitive::ty_llong);
 }} | tok_kw_unsigned tok_space tok_kw_long {{
+	value = reinterpret_cast<void*>(type_primitive::ty_ulong);
+}} | tok_kw_long tok_space tok_kw_unsigned tok_space tok_kw_int {{
 	value = reinterpret_cast<void*>(type_primitive::ty_ulong);
 }} | tok_kw_unsigned tok_space tok_kw_int {{
 	value = reinterpret_cast<void*>(type_primitive::ty_uint);
