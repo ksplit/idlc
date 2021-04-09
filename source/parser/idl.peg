@@ -85,6 +85,7 @@ tok_kw_this = "this"
 tok_kw_in = "in"
 tok_kw_out = "out"
 tok_kw_alloc = "alloc"
+tok_kw_alloc_once = "alloc_once"
 tok_kw_dealloc = "dealloc"
 tok_kw_bind = "bind"
 tok_kw_caller = "caller"
@@ -334,6 +335,12 @@ val_attr = tok_kw_unused {{ value = reinterpret_cast<void*>(annotation_kind::unu
 ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in, nullptr}); }}
 	| tok_kw_out {{ value = share(annotation {annotation_kind::out, nullptr}); }}
 	| tok_kw_unused {{ value = share(annotation {annotation_kind::unused, nullptr}); }}
+	| tok_kw_alloc_once tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
+		value = share(annotation {annotation_kind::alloc_once_caller, nullptr});
+	}}
+	| tok_kw_alloc_once tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
+		value = share(annotation {annotation_kind::alloc_once_callee, nullptr});
+	}}
 	| tok_kw_alloc tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
 		value = share(annotation {annotation_kind::alloc_caller, nullptr});
 	}}
