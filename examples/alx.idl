@@ -226,7 +226,8 @@ module kernel {
 		projection < struct net_device > dev {
 		}
 	}
-	rpc_ptr projection ret_rtnl_link_stats64* ndo_get_stats64( projection dev [bind(callee)] * dev, projection net_stats [alloc(callee)] * net_stats ) {
+	rpc_ptr projection ret_rtnl_link_stats64* ndo_get_stats64( projection dev [bind(callee)] * dev,
+			projection net_stats [alloc_once(callee)] * net_stats ) {
 		projection < struct rtnl_link_stats64 > ret_rtnl_link_stats64 {
 			long long unsigned int [out] rx_packets;
 			long long unsigned int [out] tx_packets;
