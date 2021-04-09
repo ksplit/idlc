@@ -132,12 +132,12 @@ namespace idlc {
             // This is done to absorb any unused variables
             if (!should_walk<marshal_role::marshaling, side>(*node.referent)) {
                 this->new_line() << "(void)" << this->subject() << ";\n";
-                return true;
             }
-
-            this->new_line() << "if (*" << this->subject() << ") {\n";
-            this->marshal("*" + this->subject(), node);
-            this->new_line() << "}\n\n";
+            else {
+                this->new_line() << "if (*" << this->subject() << ") {\n";
+                this->marshal("*" + this->subject(), node);
+                this->new_line() << "}\n\n";
+            }
 
             if (should_dealloc(node.pointer_annots))
                 this->new_line() << "glue_remove_shadow(*" << this->subject() << ");\n";
