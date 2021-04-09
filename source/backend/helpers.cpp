@@ -32,6 +32,7 @@ void idlc::generate_helpers(std::ostream& file)
     file << "#define glue_call_server(pos, msg, rpc_id) \\\n"
         << "\tmsg->regs[0] = *pos; *pos = 0; glue_user_call_server(msg, rpc_id);\n\n";
 
+    file << "#define glue_remove_shadow(shadow) glue_user_remove_shadow(shadow)\n";
     file << "#define glue_call_client(pos, msg, rpc_id) \\\n"
         << "\tmsg->regs[0] = *pos; *pos = 0; glue_user_call_client(msg, rpc_id);\n\n";
 
@@ -45,6 +46,7 @@ void idlc::generate_helpers(std::ostream& file)
     file << "void glue_user_free(void* ptr);\n";
     file << "void glue_user_call_server(struct fipc_message* msg, size_t rpc_id);\n";
     file << "void glue_user_call_client(struct fipc_message* msg, size_t rpc_id);\n";
+    file << "void glue_user_remove_shadow(void* shadow);\n";
     file << "\n";
     file << "static inline void* glue_unpack_rpc_ptr_impl(void* target, "
         << "struct lcd_trampoline_handle* handle, size_t size)\n";

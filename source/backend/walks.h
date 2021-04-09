@@ -132,12 +132,15 @@ namespace idlc {
             // This is done to absorb any unused variables
             if (!should_walk<marshal_role::marshaling, side>(*node.referent)) {
                 this->new_line() << "(void)" << this->subject() << ";\n";
-                return true;
+            }
+            else {
+                this->new_line() << "if (*" << this->subject() << ") {\n";
+                this->marshal("*" + this->subject(), node);
+                this->new_line() << "}\n\n";
             }
 
-            this->new_line() << "if (*" << this->subject() << ") {\n";
-            this->marshal("*" + this->subject(), node);
-            this->new_line() << "}\n\n";
+            if (should_dealloc(node.pointer_annots))
+                this->new_line() << "glue_remove_shadow(*" << this->subject() << ");\n";
 
             return true;
         }
@@ -229,6 +232,13 @@ namespace idlc {
             std::terminate();
         }
 
+        static constexpr bool should_dealloc(const annotation& ann)
+        {
+            if (side == marshal_side::callee)
+                return flags_set(ann.kind, annotation_kind::dealloc_callee);
+            return false;
+        }
+
         static constexpr absl::string_view get_visitor_name(projection& node)
         {
             switch (side) {
@@ -266,6 +276,14 @@ namespace idlc {
             generation_walk<unmarshaling_walk<side>> {os, holder, level}
         {}
 
+        static constexpr bool should_dealloc(const annotation& ann)
+        {
+            if (side == marshal_side::caller)
+                return flags_set(ann.kind, annotation_kind::dealloc_caller);
+            return false;
+        }
+
+
         bool visit_value(value& node)
         {
             if (should_walk<marshal_role::unmarshaling, side>(node)) {
@@ -290,10 +308,16 @@ namespace idlc {
         // TODO: need to automatically free shadows as they're replaced?
         bool visit_pointer(pointer& node)
         {
+
+            if (should_dealloc(node.pointer_annots))
+                this->new_line() << "glue_remove_shadow(*" << this->subject() << ");\n";
+
             if (m_should_marshal) {
+
                 // NOTE: will return false if no need to walk further (i.e., the pointer is "opaque")
                 if (!marshal_pointer_value(node))
                     return true;
+
             }
 
             if (!should_walk<marshal_role::unmarshaling, side>(*node.referent)) {
