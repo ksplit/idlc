@@ -98,11 +98,8 @@ int main(int argc, char** argv)
 	}
 
 	for (const auto& rpc : *rpcs) {
-		if (rpc->ret_pgraph) {
-			std::cout << rpc->name << "::__return\n";
-			idlc::dump_pgraph(*rpc->ret_pgraph);
-		}
-		
+		std::cout << rpc->name << "::__return\n";
+		idlc::dump_pgraph(*rpc->ret_pgraph);		
 		std::size_t index {};
 		for (const auto& arg : rpc->arg_pgraphs) {
 			std::cout << rpc->name << "::" << rpc->arguments->at(index)->name << "\n";
