@@ -32,9 +32,7 @@ void idlc::generate_helpers(std::ostream& file)
     file << "#define glue_call_server(pos, msg, rpc_id) \\\n"
         << "\tmsg->regs[0] = *pos; *pos = 0; glue_user_call_server(msg, rpc_id);\n\n";
 
-    file << "#define glue_release_shadow(pos, msg, ext, value) \\\n"
-        << "\tdo {glue_pack_shadow(pos, msg, ext, value); glue_user_remove_shadow(value);} while(0)\n\n";
-
+    file << "#define glue_remove_shadow(shadow) glue_user_remove_shadow(shadow)\n";
     file << "#define glue_call_client(pos, msg, rpc_id) \\\n"
         << "\tmsg->regs[0] = *pos; *pos = 0; glue_user_call_client(msg, rpc_id);\n\n";
 

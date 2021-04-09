@@ -124,9 +124,6 @@ namespace idlc {
 
                     return true; // No need to walk these (yet)
                 }
-                else if (should_dealloc(node.pointer_annots)) {
-                    this->new_line() << "glue_pack_release_shadow(pos, msg, ext, *" << this->subject() << ");\n";
-                }
                 else {
                     this->new_line() << "glue_pack(pos, msg, ext, *" << this->subject() << ");\n";
                 }
@@ -141,6 +138,9 @@ namespace idlc {
             this->new_line() << "if (*" << this->subject() << ") {\n";
             this->marshal("*" + this->subject(), node);
             this->new_line() << "}\n\n";
+
+            if (should_dealloc(node.pointer_annots))
+                this->new_line() << "glue_remove_shadow(*" << this->subject() << ");\n";
 
             return true;
         }
