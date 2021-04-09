@@ -234,15 +234,9 @@ namespace idlc {
 
         static constexpr bool should_dealloc(const annotation& ann)
         {
-            switch (side) {
-            case marshal_side::caller:
-                return flags_set(ann.kind, annotation_kind::dealloc_caller);
-
-            case marshal_side::callee:
+            if (side == marshal_side::callee)
                 return flags_set(ann.kind, annotation_kind::dealloc_callee);
-            }
-
-            std::terminate();
+            return false;
         }
 
         static constexpr absl::string_view get_visitor_name(projection& node)
@@ -282,6 +276,14 @@ namespace idlc {
             generation_walk<unmarshaling_walk<side>> {os, holder, level}
         {}
 
+        static constexpr bool should_dealloc(const annotation& ann)
+        {
+            if (side == marshal_side::caller)
+                return flags_set(ann.kind, annotation_kind::dealloc_caller);
+            return false;
+        }
+
+
         bool visit_value(value& node)
         {
             if (should_walk<marshal_role::unmarshaling, side>(node)) {
@@ -306,10 +308,16 @@ namespace idlc {
         // TODO: need to automatically free shadows as they're replaced?
         bool visit_pointer(pointer& node)
         {
+
+            if (should_dealloc(node.pointer_annots))
+                this->new_line() << "glue_remove_shadow(*" << this->subject() << ");\n";
+
             if (m_should_marshal) {
+
                 // NOTE: will return false if no need to walk further (i.e., the pointer is "opaque")
                 if (!marshal_pointer_value(node))
                     return true;
+
             }
 
             if (!should_walk<marshal_role::unmarshaling, side>(*node.referent)) {
