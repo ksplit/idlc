@@ -1,10 +1,13 @@
+// NOTE: see notes in main.cpp as to how we will support this
 module foo {
-	/*projection < struct net_device > simp_circ {
+	projection < struct net_device > simp_circ {
         projection simp_circ *a;
     }
 
     projection < struct net_device > circ_a {
         projection circ_b [in] *a;
+        unsigned int arr_len;
+        array<u32, arr_len> arr;
     }
 
     projection < struct net_device > circ_b {
@@ -12,12 +15,5 @@ module foo {
         const signed char* c;
     }
 
-    rpc void* foo0() {}
-    rpc void foo1() {}
-    rpc projection simp_circ* foo2(projection circ_a [out]* a, projection circ_b* b) {}*/
-    
-    rpc void [shared<buf>]* foo3(string [dealloc(callee)]* str) {}
-    rpc void foo_callee_dealloc(string [dealloc(callee)]* str) {}
-    rpc void foo_callee_alloc_dealloc(string [alloc(callee), dealloc(callee)]* str) {}
-    rpc void foo_caller_dealloc(string [dealloc(caller)]* str) {}
+    rpc projection simp_circ* foo(projection circ_a [out]* a, projection circ_b* b) {}
 }
