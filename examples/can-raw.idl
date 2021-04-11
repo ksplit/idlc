@@ -1,0 +1,502 @@
+module kernel {
+
+	// FIXME: Need alloc_sized
+	rpc_ptr int init( projection sk [alloc(callee)] *  sk ) {
+		projection < struct sock > sk {
+		}
+	}
+
+	// FIXME: first arg is init_net - global
+	rpc projection ret_net_device [alloc(caller)]
+			* dev_get_by_index( projection net *  net, int  ifindex ) {
+		projection < struct net_device > ret_net_device {
+		}
+		projection < struct net > net {
+		}
+	}
+
+	rpc_ptr int bind(projection socket [bind(callee)] *sock, projection sockaddr *uaddr,
+		projection < struct socket > sock {
+			projection sk* sk;
+		}
+		projection < struct sock > sk {
+		}
+		projection < struct sockaddr > uaddr {
+		}
+	}
+
+	rpc_ptr int release(projection socket [bind(callee)] *sock) {
+		projection < struct socket > sock {
+			projection sk* sk;
+		}
+		projection < struct sock > sk {
+		}
+	}
+
+	rpc_ptr int connect( projection sock * [unused] sock,
+			projection saddr * [unused] saddr,
+			int [unused] len, int [unused] flags ) {
+		projection < struct socket > sock {
+		}
+		projection < struct sockaddr > saddr {
+		}
+	}
+
+	rpc_ptr int socketpair( projection sock1 * [unused] sock1,
+			projection sock2 * [unused] sock2 ) {
+		projection <struct socket> sock1 {
+		}
+		projection <struct socket> sock2 {
+		}
+	}
+
+	rpc_ptr int accept( projection sock * [unused] sock,
+		projection newsock * [unused] newsock, int [unused] flags ) {
+		projection < struct socket > sock {
+		}
+		projection < struct socket > newsock {
+		}
+	}
+
+	// FIXME: Wild pointer. Non-trivial to fix
+	rpc_ptr int getname( projection sock *  sock,
+			projection uaddr *  uaddr, int* [out] len, int  peer ) {
+		projection < struct socket > sock {
+			projection sk* sk;
+		}
+		projection < struct sock > sk {
+		}
+		projection < struct sockaddr > uaddr {
+		}
+	}
+
+
+	rpc_ptr unsigned int poll(projection file *file, projection socket *sock,
+				      projection poll_table_struct *wait) {
+
+		projection <struct file> file {
+		}
+
+		projection <struct socket> socket {
+		}
+
+		projection <struct poll_table_struct> poll_table_struct {
+		}
+	}
+
+	rpc_ptr int ioctl(projection socket *sock, unsigned int cmd,
+				      unsigned long arg) {
+		projection <struct socket> socket {
+		}
+	}
+
+	rpc_ptr int listen( projection sock * [unused] sock, int [unused] backlog ) {
+		projection <struct socket> socket {
+		}
+	}
+
+	rpc_ptr int shutdown( projection sock * [unused] sock, int [unused] how ) {
+		projection <struct socket> socket {
+		}
+	}
+
+	// FIXME: optval is an user pointer
+	rpc_ptr int setsockopt( projection sock [bind(callee)] *  sock,
+			int  level, int  optname,
+			char*  optval, unsigned int  optlen ) {
+		projection < struct socket > sock {
+			projection sk* sk;
+		}
+		projection < struct sock > sk {
+		}
+	}
+
+	// FIXME: optval is an user pointer
+	rpc_ptr int getsockopt( projection sock [bind(callee)] *  sock,
+			int  level, int  optname,
+			char*  optval, int*  optlen ) {
+		projection < struct socket > sock {
+			projection sk* sk;
+		}
+		projection < struct sock > sk {
+		}
+	}
+
+	rpc_ptr int sendmsg( projection sock *  sock, projection msg *  msg,
+			long unsigned int  size ) {
+		projection < struct socket > sock {
+			projection sk* sk;
+		}
+		projection < struct sock > sk {
+		}
+		projection < struct iov_iter> iov_iter{
+		}
+		projection < struct msghdr > msg {
+			void*  msg_name;
+			int  msg_namelen;
+			projection iov_iter msg_iter;
+			unsigned int  msg_flags;
+		}
+	}
+
+	rpc_ptr int recvmsg( projection sock *  sock, projection msg *  msg,
+			long unsigned int  size, int  flags ) {
+		projection < struct socket > sock {
+			projection sk* sk;
+		}
+		projection < struct sock > sk {
+		}
+		projection < struct iov_iter> iov_iter{
+		}
+		projection < struct msghdr > msg {
+			void*  msg_name;
+			int  msg_namelen;
+			projection iov_iter msg_iter;
+			unsigned int  msg_flags;
+		}
+	}
+
+	rpc_ptr int mmap(projection file *file, projection socket *sock,
+				      projection vm_area_struct * vma) {
+		projection <struct file> file {
+		}
+
+		projection <struct socket> socket {
+		}
+
+		projection <struct vm_area_struct> vm_area_struct {
+		}
+	}
+
+	rpc_ptr long sendpage(projection socket *sock, projection page *page,
+				      int offset, size_t size, int flags) {
+		projection <struct socket> socket {
+		}
+
+		projection <struct page> page {
+		}
+	}
+
+	rpc int sock_no_mmap( projection file * [unused] file,
+		projection sock * [unused] sock, projection vma * [unused] vma ) {
+		projection < struct file > file {
+		}
+		projection < struct socket > sock {
+		}
+		projection < struct vm_area_struct > vma {
+		}
+	}
+
+	rpc int sock_no_shutdown( projection sock * [unused] sock, int [unused] how ) {
+		projection < struct socket > sock {
+		}
+	}
+
+	rpc int sock_no_listen( projection sock * [unused] sock, int [unused] backlog ) {
+		projection < struct socket > sock {
+		}
+	}
+
+	rpc int sock_no_accept( projection sock * [unused] sock,
+		projection newsock * [unused] newsock, int [unused] flags ) {
+		projection < struct socket > sock {
+		}
+		projection < struct socket > newsock {
+		}
+	}
+
+	rpc int sock_no_socketpair( projection sock1 * [unused] sock1,
+			projection sock2 * [unused] sock2 ) {
+		projection < struct socket > sock1 {
+		}
+		projection < struct socket > sock2 {
+		}
+	}
+
+	rpc int sock_no_connect( projection sock * [unused] sock,
+			projection saddr * [unused] saddr,
+			int [unused] len, int [unused] flags ) {
+		projection < struct socket > sock {
+		}
+		projection < struct sockaddr > saddr {
+		}
+	}
+
+	// FIXME: Allocation has to do both skb and skb->data
+	rpc projection ret_sk_buff [alloc(caller)] *
+			sock_alloc_send_skb( projection sk *  sk,
+			long unsigned int  size, int  noblock, int*  errcode ) {
+		projection < struct sk_buff > ret_sk_buff {
+		}
+		projection < struct sock > sk {
+		}
+	}
+
+	rpc int register_netdevice_notifier( projection nb [alloc(callee)] *  nb ) {
+		projection < struct notifier_block > nb {
+		}
+	}
+
+	rpc int unregister_netdevice_notifier( projection nb [bind(callee)] *  nb ) {
+		projection < struct notifier_block > nb {
+		}
+	}
+
+rpc void kfree_skb( projection skb *  skb ) {
+projection < struct > {
+		}
+	projection < struct sk_buff > skb {
+		projection  ;
+		unsigned char*  head;
+	}
+}
+rpc projection ret_sk_buff* skb_clone( projection skb * [out] skb, unsigned int  gfp_mask ) {
+	projection < struct sk_buff > ret_sk_buff {
+	}
+projection < struct > {
+		}
+	projection < struct sk_buff > skb {
+		projection  ;
+		projection sk* sk;
+		projection dev* dev;
+		array< char, 48> [out] cb;
+		unsigned int [out] len;
+		array<unsigned int, 0> [out] headers_end;
+		unsigned int [out] tail;
+		unsigned int [out] end;
+		unsigned char* [out] head;
+		unsigned char* [out] data;
+	}
+	projection < struct sock > sk {
+	}
+	projection < struct net_device > dev {
+	}
+}
+
+	// FIXME: Shouldn't really be here? check if there's a warning for this
+	rpc void _raw_write_lock_bh( projection lock *  lock ) {
+		projection < struct  > lock {
+		}
+	}
+	rpc void _raw_write_unlock_bh( projection lock *  lock ) {
+		projection < struct  > lock {
+		}
+	}
+/*
+rpc void* __alloc_percpu( long unsigned int  size, long unsigned int  align ) {
+}
+rpc void free_percpu( void*  ptr ) {
+}*/
+	rpc int sock_queue_rcv_skb( projection sk *  sk, projection skb *  skb ) {
+		projection < struct sock_common> sock_common{
+		}
+
+		projection < struct sock > sk {
+			projection sock_common __sk_common;
+		}
+
+		projection < struct sk_buff > skb {
+		}
+	}
+
+	rpc void can_proto_unregister( projection cp [dealloc(callee)] *  cp ) {
+		projection < struct can_proto > cp {
+			int  protocol;
+			projection prot* prot;
+		}
+		projection < struct proto > prot {
+			rpc_ptr init init;
+			rpc_ptr setsockopt setsockopt;
+			rpc_ptr getsockopt getsockopt;
+			rpc_ptr Sendmsg sendmsg;
+			rpc_ptr recvmsg recvmsg;
+			rpc_ptr bind bind;
+		}
+	}
+
+
+	// XXX: Missing proto_ops struct that is accessed asynchronously
+	rpc int can_proto_register( projection cp [alloc(callee)] *  cp ) {
+		projection < struct can_proto > cp {
+			int  protocol;
+			projection prot [alloc(callee)] * prot;
+			projection ops [alloc(callee)] * ops;
+		}
+		projection < struct proto > prot {
+			array<unsigned char, 32> name;
+			projection owner [alloc(callee)] *owner;
+			unsigned int obj_size;
+			rpc_ptr init init;
+		}
+		projection <struct proto_ops> ops {
+			int family;
+			rpc_ptr release release;
+			rpc_ptr bind bind;
+			rpc_ptr connect connect;
+			rpc_ptr socketpair socketpair;
+			rpc_ptr accept accept;
+			rpc_ptr getname getname;
+			rpc_ptr poll poll;
+			rpc_ptr ioctl ioctl;
+			rpc_ptr listen listen;
+			rpc_ptr shutdown shutdown;
+			rpc_ptr getsockopt getsockopt;
+			rpc_ptr setsockopt setsockopt;
+			rpc_ptr sendmsg sendmsg;
+			rpc_ptr recvmsg recvmsg;
+			rpc_ptr mmap mmap;
+			rpc_ptr sendpage sendpage;
+		}
+
+		projection <struct module> owner {
+
+		}
+	}
+
+	// FIXME: what's out here?
+	// Missing rpc_ptr func
+	rpc void can_rx_unregister( projection dev * [out] dev,
+		unsigned int  can_id, unsigned int  mask, rpc_ptr  func func, void*  data ) {
+		projection < struct net_device > dev {
+			unsigned short  type;
+		}
+	}
+
+	// FIXME: what's out here?
+	// Missing rpc_ptr func
+	rpc int can_rx_register( projection dev *  dev, unsigned int  can_id,
+		unsigned int  mask, rpc_ptr  func func, void*  data, char*  ident ) {
+		projection < struct net_device > dev {
+			unsigned short  type;
+		}
+	}
+	// FIXME: What's out here? what is can_send updating on this skb?
+	rpc int can_send( projection skb * [out] skb, int  loop ) {
+		projection < struct > {
+		}
+		projection < struct > {
+		}
+		projection < struct sk_buff > skb {
+			projection  ;
+			projection sk* sk;
+			projection dev* dev;
+			array< char, 48> [out] cb;
+			unsigned int [out] len;
+			projection  ;
+			array<unsigned int, 0> [out] headers_end;
+			unsigned int [out] tail;
+			unsigned int [out] end;
+			unsigned char* [out] head;
+			unsigned char* [out] data;
+		}
+		projection < struct sock > sk {
+		}
+		projection < struct net_device > dev {
+			unsigned int [out] flags;
+			unsigned short [out] type;
+		}
+	}
+
+	rpc int can_ioctl( projection sock *  sock, unsigned int  cmd, long unsigned int  arg ) {
+		projection < struct socket > sock {
+			projection sk* sk;
+		}
+		projection < struct sock > sk {
+		}
+	}
+
+rpc long unsigned int copy_from_iter( void* [out] addr, long unsigned int  bytes, projection i *  i ) {
+	projection < struct iov_iter > i {
+	}
+}
+rpc long unsigned int copy_to_iter( const nullptr*  addr, long unsigned int  bytes, projection i *  i ) {
+	projection < struct iov_iter > i {
+	}
+}
+	rpc unsigned int datagram_poll( projection file *  file,
+		projection sock *  sock, projection wait *  wait ) {
+		projection < struct file > file {
+		}
+		projection < struct socket > sock {
+			projection sk* sk;
+		}
+		projection < struct sock > sk {
+		}
+		projection < struct poll_table_struct > wait {
+		}
+	}
+
+	rpc void release_sock( projection sk *  sk ) {
+		/*projection < struct sock_common> sock_common{
+		}*/
+		projection < struct sock > sk {
+			//projection sock_common __sk_common;
+		}
+	}
+
+	rpc void skb_free_datagram( projection sk *  sk, projection skb *  skb ) {
+		projection < struct sock_common> sock_common{
+		}
+		projection < struct sock > sk {
+			projection sock_common __sk_common;
+		}
+		projection < struct > {
+		}
+		projection < struct sk_buff > skb {
+			projection  ;
+			unsigned char*  head;
+		}
+	}
+
+	// FIXME: should skb be allocated on shared region?
+	rpc projection ret_sk_buff [alloc(caller)] * skb_recv_datagram( projection sk *  sk,
+			unsigned int  flags, int  noblock, int*  err ) {
+		projection < struct sk_buff > ret_sk_buff {
+		}
+		projection < struct sock_common> sock_common{
+		}
+		projection < struct sock > sk {
+			projection sock_common __sk_common;
+		}
+	}
+
+	rpc long int sock_no_sendpage( projection sock *  sock,
+		projection page *  page, int  offset, long unsigned int  size, int  flags ) {
+		projection < struct socket > sock {
+		}
+		projection < struct page > page {
+		}
+	}
+
+rpc void lock_sock_nested( projection sk *  sk, int [unused] subclass ) {
+	projection < struct sock > sk {
+	}
+}
+	rpc void __sock_recv_ts_and_drops( projection msg *  msg, projection sk *  sk, projection skb *  skb ) {
+		projection < struct msghdr > msg {
+		}
+		projection < struct sock > sk {
+		}
+		projection < struct sk_buff > skb {
+		}
+	}
+	rpc void __sock_tx_timestamp( unsigned short  tsflags, unsigned char* [out] tx_flags ) {
+	}
+
+rpc unsigned char* skb_put( projection skb *  skb, unsigned int  len ) {
+	projection < struct sk_buff > skb {
+		unsigned int  len;
+		array<unsigned int, 0>  headers_end;
+		unsigned int  tail;
+		unsigned int  end;
+	}
+}
+
+	rpc void sk_free( projection sk * [out] sk ) {
+		projection < struct sock_common> sock_common{
+		}
+		projection < struct sock > sk {
+			projection sock_common __sk_common;
+		}
+	}
+}

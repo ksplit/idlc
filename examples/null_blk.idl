@@ -1,0 +1,265 @@
+module kernel {
+rpc_ptr void release( projection disk * disk, u32 mode ) {
+	projection < struct gendisk > disk {
+	}
+}
+
+rpc int register_blkdev( unsigned int major, char* [string]name ) {
+}
+
+rpc void del_gendisk( projection disk * disk ) {
+	projection < struct hd_struct> hd_struct{
+		u64 [out] nr_sects;
+	}
+	projection < struct gendisk > disk {
+		projection hd_struct part0;
+		//int [out] flags;
+	}
+}
+rpc void device_add_disk( projection parent * parent, projection disk * disk ) {
+	projection < struct device > parent {
+		rpc_ptr release release;
+	}
+projection < struct hd_struct> hd_struct{
+		}
+	projection < struct gendisk > disk {
+		s32 [out] major;
+		s32 [out] first_minor;
+		projection hd_struct part0;
+		projection queue* queue;
+		s32 [out] flags;
+	}
+	projection < struct request_queue > queue {
+	}
+}
+rpc projection ret_request_queue* blk_init_queue_node( rpc_ptr rfn rfn, projection lock * lock, s32 node_id ) {
+	projection < struct request_queue > ret_request_queue {
+	}
+	projection < struct spinlock > lock {
+	}
+}
+rpc projection ret_request_queue* blk_alloc_queue_node( u32 gfp_mask, s32 node_id ) {
+	projection < struct request_queue > ret_request_queue {
+		projection queue_lock* queue_lock;
+	}
+	projection < struct spinlock > ret_queue_lock {
+	}
+}
+rpc void blk_cleanup_queue( projection q * q ) {
+	projection < struct request_queue > q {
+		projection queue_lock* queue_lock;	
+	}
+	projection < struct spinlock > queue_lock {
+	}
+}
+rpc void blk_mq_end_request( projection rq * rq, s32 error ) {
+	projection < struct request > rq {
+		projection q* q;
+		s32  errors;
+	}
+	projection < struct request_queue > q {
+	}
+}
+rpc_ptr void complete( projection rq * rq ) {
+	projection < struct request > rq {
+		void*  special;
+	}
+}
+rpc_ptr s32 open( projection bdev * bdev, u32 mode ) {
+	projection < struct block_device > bdev {
+	}
+}
+rpc void put_disk( projection disk * disk ) {
+projection < struct hd_struct> hd_struct{
+		}
+	projection < struct gendisk > disk {
+		projection hd_struct part0;
+	}
+}
+rpc projection ret_gendisk* alloc_disk_node( s32 minors, s32 node_id ) {
+projection < struct hd_struct> hd_struct{
+		}
+	projection < struct gendisk > ret_gendisk {
+		projection hd_struct part0;
+	}
+}
+rpc void blk_end_request_all( projection rq * rq, s32 error ) {
+projection < struct list_head> list_head{
+		}
+	projection < struct request > rq {
+		projection list_head queuelist;
+		projection q* q;
+		s32  errors;
+	}
+	projection < struct request_queue > q {
+		u64  queue_flags;
+	}
+}
+rpc projection ret_request* blk_fetch_request( projection q * q ) {
+	projection < struct request > ret_request {
+	}
+	projection < struct request_queue > q {
+	}
+}
+rpc_ptr s32 queue_rq( projection hctx * hctx, projection bd * bd ) {
+	projection < struct blk_mq_hw_ctx > hctx {
+	}
+	projection < struct blk_mq_queue_data > bd {
+		projection rq* rq;
+	}
+	projection < struct request > rq {
+	}
+}
+rpc_ptr s32 init_hctx( projection hctx * hctx, void* data, u32 index ) {
+	projection < struct blk_mq_hw_ctx > hctx {
+	}
+}
+rpc s32 null_set_irqmode( s8* str, projection kp * kp ) {
+	projection < struct kernel_param > kp {
+	}
+}
+rpc_ptr s32 set( s8* str, projection kp * kp ) {
+	projection < struct kernel_param > kp {
+	}
+}
+rpc void blk_complete_request( projection req * req ) {
+	projection < struct request > req {
+		projection q* q;
+	}
+	projection < struct request_queue > q {
+	}
+}
+rpc void __raw_spin_lock_init( projection lock * lock, s8* name, projection key * key ) {
+	projection < struct raw_spinlock > lock {
+	}
+	projection < struct lock_class_key > key {
+	}
+}
+rpc void _raw_spin_unlock_irq( projection lock * lock ) {
+	projection < struct raw_spinlock > lock {
+	}
+}
+rpc s32 param_get_int( s8* buffer, projection kp * kp ) {
+	projection < struct kernel_param > kp {
+	}
+}
+rpc void prepare_to_wait( projection q * q, projection wait * wait, s32 state ) {
+	projection < struct __wait_queue_head > q {
+	}
+	projection < struct __wait_queue > wait {
+		u32 [out] flags;
+	}
+}
+rpc void finish_wait( projection q * q, projection wait * wait ) {
+	projection < struct __wait_queue_head > q {
+	}
+	projection < struct __wait_queue > wait {
+	}
+}
+rpc s32 autoremove_wake_function( projection wait * wait, u32 mode, s32 sync, void* key ) {
+	projection < struct __wait_queue > wait {
+	}
+}
+
+rpc void unregister_blkdev( unsigned int major, char* [string]name ) {
+}
+
+rpc void hrtimer_start_range_ns( projection timer * timer, ktime tim, u64 delta_ns, u32 mode ) {
+	projection < struct hrtimer > timer {
+	}
+	projection < struct ktime > tim {
+	}
+}
+rpc void hrtimer_init( projection timer * timer, s32 clock_id, u32 mode ) {
+	projection < struct hrtimer > timer {
+	}
+}
+rpc void blk_queue_make_request( projection q * q, rpc_ptr mfn mfn ) {
+	projection < struct request_queue > q {
+	}
+}
+rpc void blk_stop_queue( projection q * q ) {
+	projection < struct request_queue > q {
+	}
+}
+rpc void blk_start_queue_async( projection q * q ) {
+	projection < struct request_queue > q {
+	}
+}
+rpc void blk_mq_free_tag_set( projection set * set ) {
+	projection < struct blk_mq_tag_set > set {
+	}
+}
+rpc s32 blk_mq_alloc_tag_set( projection set [alloc(callee)] * set ) {
+	projection < struct blk_mq_tag_set > set {
+		projection _global_blk_mq_ops* ops;
+		u32 [out] nr_hw_queues;
+		u32 [out] queue_depth;
+		s32  numa_node;
+		array<projection tags *, nr_hw_queues> [alloc(caller)] *tags;
+	}
+	projection <struct blk_mq_tags> tags {
+		// FIXME: not supported yet
+		// array<projection request *, set->queue_depth> *rqs;
+		int alloc_policy;
+		unsigned int nr_tags;
+		unsigned int nr_reserved_tags;
+	}
+	projection <struct request> request {
+
+	}
+}
+rpc void blk_queue_softirq_done( projection q * q, rpc_ptr fn fn ) {
+	projection < struct request_queue > q {
+	}
+}
+rpc projection ret_request_queue [alloc(caller)] * blk_mq_init_queue( projection set * set ) {
+	projection < struct request_queue > ret_request_queue {
+		// FIXME: not supported yet
+		// array<projection hw_ctx*, set->queue_depth> [alloc(caller)] *queue_hw_ctx;
+	}
+	projection < struct blk_mq_tag_set > set {
+		s32  numa_node;
+	}
+}
+rpc projection ret_blk_mq_hw_ctx* blk_mq_map_queue( projection q * q, s32 cpu ) {
+	projection < struct blk_mq_hw_ctx > ret_blk_mq_hw_ctx {
+	}
+	projection < struct request_queue > q {
+	}
+}
+rpc void blk_mq_start_request( projection rq * rq ) {
+	projection < struct request > rq {
+		projection q* q;
+	}
+	projection < struct request_queue > q {
+	}
+}
+rpc void blk_mq_complete_request( projection rq * rq, s32 error ) {
+	projection < struct request > rq {
+		projection q* q;
+		s32 [out] errors;
+	}
+	projection < struct request_queue > q {
+	}
+}
+rpc void blk_queue_physical_block_size( projection q * q, u32 size ) {
+	projection < struct request_queue > q {
+	}
+}
+rpc void blk_queue_logical_block_size( projection q * q, u16 size ) {
+	projection < struct request_queue > q {
+	}
+}
+rpc void blk_queue_prep_rq( projection q * q, rpc_ptr pfn pfn ) {
+	projection < struct request_queue > q {
+	}
+}
+projection < struct blk_mq_ops > _global_blk_mq_ops {
+	rpc_ptr complete complete;
+	rpc_ptr init_hctx init_hctx;
+	rpc_ptr queue_rq queue_rq;
+};
+
+
+}
