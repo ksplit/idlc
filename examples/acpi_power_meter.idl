@@ -1,0 +1,225 @@
+module kernel {
+	// FIXME: member_of for 1st param
+	rpc projection ret_device [alloc(caller)] * hwmon_device_register( projection dev *  dev ) {
+		projection < struct device > ret_device {
+		}
+		projection < struct device > dev {
+		}
+	}
+
+	// FIXME: member_of for 1st param
+	rpc void sysfs_notify( projection kobj *  kobj, char * [unused]  dir,
+			string [alloc(callee)] *  attr ) {
+		projection < struct kobject > kobj {
+		}
+	}
+
+	rpc int acpi_bus_get_device( void*  handle, projection device [alloc(callee)] *  device ) {
+		projection < struct acpi_device > device {
+		}
+	}
+
+	rpc projection ret_device [alloc(caller)] * get_device( projection dev *  dev ) {
+		projection < struct device > ret_device {
+		}
+		projection < struct kobject> kobject{
+		}
+		projection < struct device > dev {
+			projection kobject kobj;
+		}
+	}
+
+	rpc void put_device( projection dev *  dev ) {
+		projection < struct kobject> kobject{
+		}
+		projection < struct device > dev {
+			projection kobject kobj;
+		}
+	}
+
+	rpc int dmi_check_system( array<projection list, null> [alloc(callee)] list ) {
+		projection < struct dmi_system_id > list {
+			rpc_ptr callback callback;
+			string [alloc(callee)] *ident;	
+			array<projection dmi_strmatch, 4> matches;
+		}
+		projection <struct dmi_strmatch> dmi_strmatch {
+			unsigned char slot;
+			array<unsigned char, 79> substr;
+		}
+	}
+
+	// FIXME: Need member_of for the second parameter
+	rpc projection ret_kobject [alloc(caller)] * kobject_create_and_add(
+			string [alloc(callee)] *  name,
+			projection parent *  parent ) {
+		projection < struct kobject > ret_kobject {
+		}
+		projection < struct kobject > parent {
+		}
+	}
+
+	rpc void kobject_put( projection kobj *  kobj ) {
+		projection < struct kobject > kobj {
+		}
+	}
+
+	// FIXME: member_of for 1st param
+	rpc void sysfs_remove_link( projection kobj *  kobj, string [alloc(callee)] *  name ) {
+		projection < struct kobject > kobj {
+		}
+	}
+
+	// FIXME: Need member_of for 2nd parameter
+	rpc int sysfs_create_link( projection kobj *  kobj,
+		projection target *  target, string [alloc(callee)]*  name ) {
+		projection < struct kobject > kobj {
+		}
+		projection < struct kobject > target {
+		}
+	}
+
+	rpc void hwmon_device_unregister( projection dev *  dev ) {
+		projection < struct kobject> kobject{
+		}
+		projection < struct device > dev {
+			projection kobject kobj;
+			char*  init_name;
+		}
+	}
+
+	// FIXME: member_of for 1st param
+	rpc void device_remove_file( projection dev *  dev, projection attr *  attr ) {
+		projection < struct kobject> kobject{
+		}
+		projection < struct device > dev {
+			projection kobject kobj;
+		}
+		projection < struct attribute> attribute{
+		}
+		projection < struct device_attribute > attr {
+			projection attribute attr;
+		}
+	}
+
+	// FIXME: member_of for 1st param
+	rpc int device_create_file( projection dev *  dev,
+			projection attr [alloc(callee)] *  attr ) {
+		projection < struct kobject> kobject{
+		}
+		projection < struct device > dev {
+			projection kobject kobj;
+		}
+		// FIXME: Populate show rpc_ptr
+		projection < struct attribute> attribute{
+			string [alloc(callee)] *  name;
+			unsigned short  mode;
+		}
+		projection < struct device_attribute > attr {
+			projection attribute attr;
+		}
+	}
+
+	// FIXME: the package param is processed as a union on the kernel side
+	rpc unsigned int acpi_extract_package(projection acpi_object*  package,
+		projection format [alloc(callee)] *  format, projection buffer * [out] buffer ) {
+		projection < union acpi_object > package {
+		}
+		projection < struct acpi_buffer > format {
+			long long unsigned int  length;
+			void [alloc(callee)] *  pointer;
+		}
+		projection < struct acpi_buffer > buffer {
+			long long unsigned int [out] length;
+			void* [out] pointer;
+		}
+	}
+
+	// FIXME: Need globals
+	rpc long unsigned int __msecs_to_jiffies( unsigned int  m ) {
+	}
+
+	rpc int acpi_bus_generate_netlink_event(  string [alloc(callee)] *device_class,
+			string [alloc(callee)] *bus_id, unsigned char  type, int  data ) {
+	}
+
+	rpc unsigned int acpi_evaluate_object( void*  handle,
+		string [alloc(callee)] *  pathname,
+		projection external_params * [unused]  external_params,
+		projection return_buffer [alloc(callee)] * [out] return_buffer ) {
+		projection < struct acpi_object_list > external_params {
+			unsigned int  count;
+			acpi_object*  pointer;
+		}
+		projection < struct acpi_buffer > return_buffer {
+			long long unsigned int [out] length;
+			void [alloc_sized<length>(caller)] *pointer;
+		}
+	}
+
+	// FIXME: the definition is missing in the IDL
+	rpc void acpi_exception(  ) {
+	}
+
+	rpc void acpi_bus_unregister_driver( projection driver [bind(callee)] *  driver ) {
+		projection < struct device_driver> device_driver{
+		}
+		projection < struct acpi_driver > driver {
+			projection device_driver drv;
+		}
+	}
+
+	rpc_ptr int acpi_op_add(projection acpi_device [alloc(callee)] * device) {
+		projection <struct acpi_device> acpi_device {
+		}
+	}
+
+	rpc_ptr int acpi_op_remove(projection acpi_device [bind(callee)] * device) {
+		projection <struct acpi_device> acpi_device {
+		}
+	}
+
+	rpc_ptr void acpi_op_notify(projection acpi_device [bind(callee)] * device, u32 event) {
+		projection <struct acpi_device> acpi_device {
+		}
+	}
+
+	// FIXME: This is marked as out as the function populates driver->drv.foo
+	rpc int acpi_bus_register_driver( projection driver [alloc(callee)] * [out] driver ) {
+		projection < struct device_driver> device_driver{
+		}
+		projection < struct acpi_driver > driver {
+			array< char, 80>  name;
+			array< char, 80>  class;
+			array< projection acpi_device_id, null> ids;
+			projection acpi_device_ops ops;
+			projection device_driver drv;
+			projection owner [alloc(callee)] * owner;
+		}
+
+		projection <struct acpi_device_ops> acpi_device_ops {
+			rpc_ptr acpi_op_add add;
+			rpc_ptr acpi_op_remove remove;
+			rpc_ptr acpi_op_notify notify;
+		}
+
+		projection < struct acpi_device_id > acpi_device_id {
+			array<unsigned char, 9> id;
+			unsigned long long driver_data;
+			unsigned int cls;
+			unsigned int cls_msk;
+		}
+
+		projection < struct module > owner {
+		}
+	}
+
+	// FIXME: member_of for the 1st param
+	rpc unsigned int acpi_evaluate_integer( void*  handle,
+		string [alloc(callee)] *  pathname,
+		projection arguments * [unused] arguments,
+		long long unsigned int* [out] data ) {
+		projection < struct acpi_object_list > arguments {
+		}
+	}
+}
