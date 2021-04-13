@@ -74,12 +74,11 @@ namespace idlc {
         void generate_contexts(std::ostream& file, rpc_vec_view rpcs)
         {
             for (const auto& rpc : rpcs) {
-                const auto name = concat(rpc->name, "_call_context");
-                file << "struct " << name << " {\n";
+                file << "struct " << rpc->ctx_id << " {\n";
                 for (gsl::index i {}; i < rpc->arg_pgraphs.size(); ++i)
                     file << "\t" << rpc->arg_pgraphs.at(i)->c_specifier << " " << rpc->arguments->at(i)->name << ";\n";
 
-                file << "}\n\n";
+                file << "};\n\n";
             }
         }
 
@@ -245,6 +244,9 @@ namespace idlc {
             os << "\tstruct ext_registers* ext = get_register_page(smp_processor_id());\n";
             os << "\tsize_t n_pos = 0;\n";
             os << "\tsize_t* pos = &n_pos;\n\n";
+
+            os << "\tstruct " << rpc.ctx_id << " call_ctx = {" << rpc.params_string << "};\n\n";
+
             const auto n_args = rpc.arg_pgraphs.size();
             const auto roots = generate_root_ptrs<marshal_side::caller>(rpc, os);
             os << "\t(void)ext;\n\n";
