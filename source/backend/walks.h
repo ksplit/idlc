@@ -165,9 +165,21 @@ namespace idlc {
 
         bool visit_null_terminated_array(null_terminated_array& node)
         {
+            auto p = std::get_if<node_ref<projection>>(&node.element->type);
             this->new_line() << "size_t i, len;\n";
+
+            // If it's a projection type, define sentinel
+            if (p)
+                this->new_line() << node.element->c_specifier << " sentinel = { 0 };\n";
+
             this->new_line() << node.element->c_specifier << " const* array = "	<< this->subject() << ";\n";
-            this->new_line() << "for (len = 0; array[len]; ++len);\n";
+
+            // XXX: Caution! This assumes the sentinels end with a zero-filled element!
+            if (p)
+                this->new_line() << "for (len = 0; memcmp(&array[len], &sentinel, sizeof(array[0])); ++len) ;\n";
+            else
+                this->new_line() << "for (len = 0; array[len]; ++len);\n";
+
             // The size slot is used for allocation, so we have a +1 for the null terminator
             this->new_line() << "glue_pack(pos, msg, ext, len + 1);\n";
             this->new_line() << "for (i = 0; i < len; ++i) {\n";
@@ -355,11 +367,20 @@ namespace idlc {
         // FIXME: consider the fact that these can change size
         bool visit_null_terminated_array(null_terminated_array& node)
         {
+            auto p = std::get_if<node_ref<projection>>(&node.element->type);
+
             this->new_line() << "size_t i, len;\n";
             this->new_line() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
+
             // The size slot is used for allocation, so we have a +1 for the null terminator
             this->new_line() << "len = glue_unpack(pos, msg, ext, size_t) - 1;\n";
-            this->new_line() << "array[len] = '\\0';\n";
+
+            // zero-fill the last element of the shadow-ed projection to make it a sentinel
+            if (p)
+                this->new_line() << "memset(&array[len], 0x0, sizeof(array[len]));\n";
+            else
+                this->new_line() << "array[len] = '\\0';\n";
+
             this->new_line() << "for (i = 0; i < len; ++i) {\n";
             this->new_line() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
             if (!this->marshal("element", node))
