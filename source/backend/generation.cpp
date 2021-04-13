@@ -32,29 +32,45 @@ namespace idlc {
                 m_stream << "void " << node.caller_marshal_visitor << "(\n"
                     << "\tsize_t* pos,\n"
                     << "\tstruct fipc_message* msg,\n"
-                    << "\tstruct ext_registers* ext,\n"
-                    << "\tstruct " << node.real_name
+                    << "\tstruct ext_registers* ext,\n";
+                
+                if (node.def->parent)
+                    m_stream << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
+                    
+                m_stream << "\tstruct " << node.real_name
                     << " const* ptr);\n\n";
 
                 m_stream << "void " << node.callee_unmarshal_visitor << "(\n"
                     << "\tsize_t* pos,\n"
                     << "\tconst struct fipc_message* msg,\n"
-                    << "\tconst struct ext_registers* ext,\n"
-                    << "\tstruct " << node.real_name
+                    << "\tconst struct ext_registers* ext,\n";
+                    
+                if (node.def->parent)
+                    m_stream << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
+                    
+                m_stream << "\tstruct " << node.real_name
                     << "* ptr);\n\n";
 
                 m_stream << "void " << node.callee_marshal_visitor << "(\n"
                     << "\tsize_t* pos,\n"
                     << "\tstruct fipc_message* msg,\n"
-                    << "\tstruct ext_registers* ext,\n"
-                    << "\tstruct " << node.real_name
+                    << "\tstruct ext_registers* ext,\n";
+                    
+                if (node.def->parent)
+                    m_stream << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
+                    
+                m_stream << "\tstruct " << node.real_name
                     << " const* ptr);\n\n";
 
                 m_stream << "void " << node.caller_unmarshal_visitor << "(\n"
                     << "\tsize_t* pos,\n"
                     << "\tconst struct fipc_message* msg,\n"
-                    << "\tconst struct ext_registers* ext,\n"
-                    << "\tstruct " << node.real_name
+                    << "\tconst struct ext_registers* ext,\n";
+                    
+                if (node.def->parent)
+                    m_stream << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
+                    
+                m_stream << "\tstruct " << node.real_name
                     << "* ptr);\n\n";
 
                 return true;
@@ -598,8 +614,12 @@ namespace idlc {
             file << "void " << node.caller_marshal_visitor << "(\n"
                 << "\tsize_t* pos,\n"
                 << "\tstruct fipc_message* msg,\n"
-                << "\tstruct ext_registers* ext,\n"
-                << "\tstruct " << node.real_name
+                << "\tstruct ext_registers* ext,\n";
+                
+            if (node.def->parent)
+                file << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
+                
+            file << "\tstruct " << node.real_name
                 << " const* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::marshaling, marshal_side::caller>(file, node, "ptr");
@@ -619,8 +639,12 @@ namespace idlc {
             file << "void " << node.callee_unmarshal_visitor << "(\n"
                 << "\tsize_t* pos,\n"
                 << "\tconst struct fipc_message* msg,\n"
-                << "\tconst struct ext_registers* ext,\n"
-                << "\tstruct " << node.real_name
+                << "\tconst struct ext_registers* ext,\n";
+                
+            if (node.def->parent)
+                file << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
+                
+            file << "\tstruct " << node.real_name
                 << "* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::callee>(file, node, "ptr");
@@ -640,8 +664,12 @@ namespace idlc {
             file << "void " << node.callee_marshal_visitor << "(\n"
                 << "\tsize_t* pos,\n"
                 << "\tstruct fipc_message* msg,\n"
-                << "\tstruct ext_registers* ext,\n"
-                << "\tstruct " << node.real_name
+                << "\tstruct ext_registers* ext,\n";
+                
+            if (node.def->parent)
+                file << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
+                
+            file << "\tstruct " << node.real_name
                 << " const* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::marshaling, marshal_side::callee>(file, node, "ptr");
@@ -661,8 +689,12 @@ namespace idlc {
             file << "void " << node.caller_unmarshal_visitor << "(\n"
                 << "\tsize_t* pos,\n"
                 << "\tconst struct fipc_message* msg,\n"
-                << "\tconst struct ext_registers* ext,\n"
-                << "\tstruct " << node.real_name
+                << "\tconst struct ext_registers* ext,\n";
+                
+            if (node.def->parent)
+                file << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
+                
+            file << "\tstruct " << node.real_name
                 << "* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::caller>(file, node, "ptr");

@@ -199,6 +199,8 @@ namespace idlc {
 		std::shared_ptr<projection> out_proj;
 		std::shared_ptr<projection> in_out_proj;
 
+		const rpc_def* parent;
+
 		proj_def(
 			ident name,
 			ident type,

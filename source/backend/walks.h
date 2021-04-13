@@ -159,7 +159,9 @@ namespace idlc {
 
         bool visit_projection(projection& node)
         {
-            this->new_line() << get_visitor_name(node) << "(pos, msg, ext, " << this->subject() << ");\n";
+            this->new_line() << get_visitor_name(node) << "(pos, msg, ext, "
+                << ((node.def->parent) ? "ctx, " : "") << this->subject() << ");\n";
+                
             return true;
         }
 
@@ -416,7 +418,9 @@ namespace idlc {
 
         bool visit_projection(projection& node)
         {
-            this->new_line() << get_visitor_name(node) << "(pos, msg, ext, " << this->subject() << ");\n";
+            this->new_line() << get_visitor_name(node) << "(pos, msg, ext, "
+                << ((node.def->parent) ? "ctx, " : "") << this->subject() << ");\n";
+            
             return true;
         }
 
