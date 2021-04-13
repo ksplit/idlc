@@ -87,11 +87,11 @@ namespace idlc {
 
 	struct dyn_array {
 		node_ptr<value> element;
-		ident size;
+		ident size_expr;
 
 		dyn_array(node_ptr<value> element, ident size) :
 			element {std::move(element)},
-			size {size}
+			size_expr {size}
 		{}
 	};
 

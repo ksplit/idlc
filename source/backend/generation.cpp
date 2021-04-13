@@ -71,6 +71,18 @@ namespace idlc {
                 visit_walk.visit_projection(*proj);
         }
 
+        void generate_contexts(std::ostream& file, rpc_vec_view rpcs)
+        {
+            for (const auto& rpc : rpcs) {
+                const auto name = concat(rpc->name, "_call_context");
+                file << "struct " << name << " {\n";
+                for (gsl::index i {}; i < rpc->arg_pgraphs.size(); ++i)
+                    file << "\t" << rpc->arg_pgraphs.at(i)->c_specifier << " " << rpc->arguments->at(i)->name << ";\n";
+
+                file << "}\n\n";
+            }
+        }
+
         void generate_common_header(rpc_vec_view rpcs, projection_vec_view projections)
         {
             std::ofstream file {"common.h"};
@@ -103,6 +115,7 @@ namespace idlc {
 
             file << "int try_dispatch(enum RPC_ID id, struct fipc_message* msg, struct ext_registers* ext);\n\n";
 
+            generate_contexts(file, rpcs);
             generate_visitor_prototypes(file, projections);
             for (const auto& rpc : rpcs) {
                 if (rpc->kind == rpc_def_kind::indirect) {
