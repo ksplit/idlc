@@ -7,7 +7,7 @@ module foo {
     projection < struct net_device > circ_a {
         projection circ_b [in] *a;
         unsigned int arr_len;
-        array<u32, arr_len> arr;
+        array<u32, {{arr_len}}> arr;
     }
 
     projection < struct net_device > circ_b {

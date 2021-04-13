@@ -108,6 +108,8 @@ tok_rpar = ")"
 tok_star = "*"
 tok_semi = ";"
 tok_comma = ","
+tok_dlbrace = "{{"
+tok_drbrace = "}}"
 
 tok_path = "<" chars:lex_path_char+ ">" {{
 	std::string path {};
@@ -160,6 +162,16 @@ lex_blank = lex_whitespace+ | lex_comment
 
 lex_ident_start = [_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]
 lex_ident_rest = [01234567890] | lex_ident_start
+
+lex_varbatim_expr_char = [ !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz|~] | lex_whitespace | <ascii 93>
+
+tok_verbatim_expr = tok_dlbrace chs:lex_varbatim_expr_char* tok_drbrace {{
+	std::string expr {};
+	for (const auto& c : chs.getValues())
+		expr += to_int<char>(c);
+
+	value = idents.intern(expr);
+}}
 
 # PARSER
 
@@ -452,7 +464,7 @@ array_size = n:tok_number {{
 	value = share(array_size {to_int<unsigned>(n)});
 }} | tok_kw_null {{
 	value = share(array_size {tok_kw_null {} });
-}} | ref:tok_ident {{
+}} | ref:tok_verbatim_expr {{
 	value = share(array_size {to_ptr<ident>(ref)});
 }}
 
