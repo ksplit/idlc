@@ -310,12 +310,13 @@ module kernel {
 		}
 	}
 
-	// FIXME:
+	// FIXME: need member_of
 	rpc int pci_bus_read_config_word( projection bus * bus,
 		unsigned int devfn, int pos, unsigned short* value ) {
 		projection < struct pci_bus > bus {
 		}
 	}
+	// FIXME: need member_of(projection dev, bus)
 	rpc int pci_bus_write_config_word( projection bus * bus,
 		unsigned int devfn, int pos, unsigned short value ) {
 		projection < struct pci_bus > bus {
