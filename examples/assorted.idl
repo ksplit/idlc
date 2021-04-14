@@ -15,5 +15,9 @@ module foo {
         const signed char* c;
     }
 
-    rpc projection simp_circ* foo(projection circ_a [out]* a, projection circ_b* b) {}
+    rpc projection simp_circ* foo(projection circ_a [out]* a, projection circ_b* b, projection call_proj* c) {
+        projection <struct net_device> call_proj {
+            array<int, {{call_ctx->a->arr_len}}> dyn_array;
+        }
+    }
 }
