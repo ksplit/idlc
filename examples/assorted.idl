@@ -13,6 +13,7 @@ module foo {
     projection < struct net_device > circ_b {
         projection circ_a *a;
         const signed char* c;
+        projection circ_a [alloc<{{sizeof(int) * 128}}>(callee)]* but_bigger;
     }
 
     rpc projection simp_circ* foo(projection circ_a [out]* a, projection circ_b* b, projection call_proj* c) {

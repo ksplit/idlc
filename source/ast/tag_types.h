@@ -41,9 +41,17 @@ namespace idlc {
 	};
 
 	struct annotation {
-		annotation_kind kind;
-		ident share_global;
-		ident verbatim; // this really shouldn't be an ident
+		annotation_kind kind {};
+		ident share_global {};
+		ident verbatim {}; // this really shouldn't be an ident
+
+		annotation(annotation_kind kind, ident share_global, ident verbatim) :
+			kind {kind},
+			share_global {share_global},
+			verbatim {verbatim}
+		{}
+
+		annotation() = default;
 	};
 
 	constexpr auto operator|(annotation_kind a, annotation_kind b)
