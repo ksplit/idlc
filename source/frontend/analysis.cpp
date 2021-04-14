@@ -145,7 +145,7 @@ namespace idlc {
 				auto field = std::make_unique<value>(std::move(type), val_annots, is_const);
 				type = std::make_unique<pointer>(
 					std::move(field),
-					annotation {annots->kind & annotation_kind::is_ptr, annots->share_global});
+					annotation {annots->kind & annotation_kind::is_ptr, annots->share_global, annots->verbatim});
 
 				is_const = ptr_node->is_const;
 			}
@@ -194,6 +194,8 @@ namespace idlc {
 				else
 					return generate_struct(node, std::move(name));
 			}();
+
+			pgraph_node->def = &node;
 
 			return std::move(pgraph_node);
 		}
@@ -424,6 +426,30 @@ namespace idlc {
 			return true;
 		}
 
+		class rpc_context_walk : public ast_walk<rpc_context_walk> {
+		public:
+			bool visit_rpc_def(rpc_def& node)
+			{
+				const auto old = m_current;
+				m_current = &node;
+				if (!traverse(*this, node))
+					return false;
+
+				m_current = old;
+
+				return true;
+			}
+
+			bool visit_proj_def(proj_def& node)
+			{
+				node.parent = m_current;
+				return traverse(*this, node);
+			}
+
+		private:
+			const rpc_def* m_current {};
+		};
+
 		bool generate_pgraphs(rpc_vec_view rpcs)
 		{
 			create_pgraphs_from_types(rpcs);
@@ -435,7 +461,11 @@ namespace idlc {
 std::optional<idlc::rpc_vec> idlc::generate_rpc_pgraphs(file& root)
 {
 	rpc_collection_walk rpc_walk {};
-	const auto succeeded = rpc_walk.visit_file(root);
+	auto succeeded = rpc_walk.visit_file(root);
+	assert(succeeded);
+
+	rpc_context_walk ctx_walk {};
+	succeeded = ctx_walk.visit_file(root);
 	assert(succeeded);
 
 	auto& rpcs = rpc_walk.get();

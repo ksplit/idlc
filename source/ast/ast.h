@@ -199,6 +199,8 @@ namespace idlc {
 		std::shared_ptr<projection> out_proj;
 		std::shared_ptr<projection> in_out_proj;
 
+		const rpc_def* parent;
+
 		proj_def(
 			ident name,
 			ident type,
@@ -235,6 +237,7 @@ namespace idlc {
 
 		std::string enum_id;
 		std::string callee_id;
+		std::string ctx_id;
 
 		std::string typedef_id;
 		std::string impl_typedef_id;
@@ -244,6 +247,7 @@ namespace idlc {
 		std::string ret_string;
 		std::string args_string;
 		std::string params_string;
+
 
 		rpc_def(
 			node_ptr<type_spec> ret_type,
@@ -271,6 +275,7 @@ namespace idlc {
 		{
 			append(enum_id, "RPC_ID_", name);
 			append(callee_id, name, "_callee");
+			append(ctx_id, name, "_call_ctx");
 			if (kind == rpc_def_kind::indirect) {
 				append(trmp_id, "trmp_", name);
 				append(impl_id, "trmp_impl_", name);

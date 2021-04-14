@@ -87,11 +87,11 @@ namespace idlc {
 
 	struct dyn_array {
 		node_ptr<value> element;
-		ident size;
+		ident size_expr;
 
 		dyn_array(node_ptr<value> element, ident size) :
 			element {std::move(element)},
-			size {size}
+			size_expr {size}
 		{}
 	};
 
@@ -143,6 +143,8 @@ namespace idlc {
 		std::string callee_unmarshal_visitor {};
 		std::string callee_marshal_visitor {};
 		std::string caller_unmarshal_visitor {};
+
+		proj_def* def {};
 
 		projection(ident real_name, const std::string& name) :
 			real_name {real_name},
