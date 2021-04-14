@@ -161,7 +161,7 @@ namespace idlc {
         {
             this->new_line() << get_visitor_name(node) << "(pos, msg, ext, "
                 << ((node.def->parent) ? "ctx, " : "") << this->subject() << ");\n";
-                
+
             return true;
         }
 
@@ -487,8 +487,13 @@ namespace idlc {
                 this->stream() << "glue_unpack_shadow(pos, msg, ext, " << m_c_specifier << ");\n";
             }
             else if (should_alloc(node.pointer_annots)) {
-                this->stream() << "glue_unpack_new_shadow(pos, msg, ext, " << m_c_specifier << ", "
-                    << get_size_expr(*node.referent) << ");\n";
+                if (!node.pointer_annots.verbatim) {
+                    this->stream() << "glue_unpack_new_shadow(pos, msg, ext, " << m_c_specifier << ", "
+                        << get_size_expr(*node.referent) << ");\n";
+                } else {
+                    this->stream() << "glue_unpack_new_shadow(pos, msg, ext, " << m_c_specifier << ", ("
+                        << node.pointer_annots.verbatim << "));\n";
+                }
             }
             else if (should_alloc_once(node.pointer_annots)) {
                 this->stream() << "glue_unpack_bind_or_new_shadow(pos, msg, ext, " << m_c_specifier << ", "
