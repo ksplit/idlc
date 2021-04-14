@@ -85,6 +85,7 @@ tok_kw_this = "this"
 tok_kw_in = "in"
 tok_kw_out = "out"
 tok_kw_alloc = "alloc"
+tok_kw_alloc_once = "alloc_once"
 tok_kw_dealloc = "dealloc"
 tok_kw_bind = "bind"
 tok_kw_caller = "caller"
@@ -107,6 +108,8 @@ tok_rpar = ")"
 tok_star = "*"
 tok_semi = ";"
 tok_comma = ","
+tok_dlbrace = "{{"
+tok_drbrace = "}}"
 
 tok_path = "<" chars:lex_path_char+ ">" {{
 	std::string path {};
@@ -159,6 +162,16 @@ lex_blank = lex_whitespace+ | lex_comment
 
 lex_ident_start = [_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]
 lex_ident_rest = [01234567890] | lex_ident_start
+
+lex_varbatim_expr_char = [ !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz|~] | lex_whitespace | <ascii 93>
+
+tok_verbatim_expr = tok_dlbrace chs:lex_varbatim_expr_char* tok_drbrace {{
+	std::string expr {};
+	for (const auto& c : chs.getValues())
+		expr += to_int<char>(c);
+
+	value = idents.intern(expr);
+}}
 
 # PARSER
 
@@ -331,39 +344,51 @@ val_attr = tok_kw_unused {{ value = reinterpret_cast<void*>(annotation_kind::unu
 	| tok_kw_in {{ value = reinterpret_cast<void*>(annotation_kind::in); }}
 	| tok_kw_out {{ value = reinterpret_cast<void*>(annotation_kind::out); }}
 
-ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in, nullptr}); }}
-	| tok_kw_out {{ value = share(annotation {annotation_kind::out, nullptr}); }}
-	| tok_kw_unused {{ value = share(annotation {annotation_kind::unused, nullptr}); }}
+ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in, nullptr, nullptr}); }}
+	| tok_kw_out {{ value = share(annotation {annotation_kind::out, nullptr, nullptr}); }}
+	| tok_kw_unused {{ value = share(annotation {annotation_kind::unused, nullptr, nullptr}); }}
+	| tok_kw_alloc_once tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
+		value = share(annotation {annotation_kind::alloc_once_caller, nullptr, nullptr});
+	}}
+	| tok_kw_alloc_once tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
+		value = share(annotation {annotation_kind::alloc_once_callee, nullptr, nullptr});
+	}}
 	| tok_kw_alloc tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::alloc_caller, nullptr});
+		value = share(annotation {annotation_kind::alloc_caller, nullptr, nullptr});
 	}}
 	| tok_kw_alloc tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::alloc_callee, nullptr});
+		value = share(annotation {annotation_kind::alloc_callee, nullptr, nullptr});
+	}}
+	| tok_kw_alloc tok_space? tok_langle tok_space? expr:tok_verbatim_expr tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
+		value = share(annotation {annotation_kind::alloc_caller, nullptr, to_ptr<ident>(expr)});
+	}}
+	| tok_kw_alloc tok_space? tok_langle tok_space? expr:tok_verbatim_expr tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
+		value = share(annotation {annotation_kind::alloc_callee, nullptr, to_ptr<ident>(expr)});
 	}}
 	| tok_kw_dealloc tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::dealloc_caller, nullptr});
+		value = share(annotation {annotation_kind::dealloc_caller, nullptr, nullptr});
 	}}
 	| tok_kw_dealloc tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::dealloc_callee, nullptr});
+		value = share(annotation {annotation_kind::dealloc_callee, nullptr, nullptr});
 	}}
 	| tok_kw_bind tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::bind_caller, nullptr});
+		value = share(annotation {annotation_kind::bind_caller, nullptr, nullptr});
 	}}
 	| tok_kw_bind tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::bind_callee, nullptr});
+		value = share(annotation {annotation_kind::bind_callee, nullptr, nullptr});
 	}}
 	| tok_kw_ioremap tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::ioremap_caller, nullptr});
+		value = share(annotation {annotation_kind::ioremap_caller, nullptr, nullptr});
 	}}
 	| tok_kw_ioremap tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::ioremap_callee, nullptr});
+		value = share(annotation {annotation_kind::ioremap_callee, nullptr, nullptr});
 	}}
 	| tok_kw_shared tok_space? tok_langle tok_space? id:tok_ident tok_space? tok_rangle {{
-		value = share(annotation {annotation_kind::shared, to_ptr<ident>(id)});
+		value = share(annotation {annotation_kind::shared, to_ptr<ident>(id), nullptr});
 	}}
-	| tok_kw_alloc {{ value = share(annotation {annotation_kind::is_alloc, nullptr}); }}
-	| tok_kw_dealloc {{ value = share(annotation {annotation_kind::is_dealloc, nullptr}); }}
-	| tok_kw_bind {{ value = share(annotation {annotation_kind::is_bind, nullptr}); }}
+	| tok_kw_alloc tok_space? tok_langle tok_space? tok_verbatim_expr tok_space? tok_rangle {{ value = share(annotation {annotation_kind::is_alloc, nullptr, to_ptr<ident>(expr)}); }}
+	| tok_kw_dealloc {{ value = share(annotation {annotation_kind::is_dealloc, nullptr, nullptr}); }}
+	| tok_kw_bind {{ value = share(annotation {annotation_kind::is_bind, nullptr, nullptr}); }}
 
 val_attrs = tok_lbrack tok_space? list:val_attr_list tok_space? tok_rbrack {{ value = list; }}
 
@@ -392,9 +417,13 @@ ptr_attr_list = first:ptr_attr rest:(tok_space? tok_comma tok_space? ptr_attr)* 
 
 type_primitive = tok_kw_unsigned tok_space tok_kw_long tok_space tok_kw_long {{
 	value = reinterpret_cast<void*>(type_primitive::ty_ullong);
+}} | tok_kw_long tok_space tok_kw_long tok_space tok_kw_unsigned tok_space tok_kw_int {{
+	value = reinterpret_cast<void*>(type_primitive::ty_ullong);
 }} | tok_kw_long tok_space tok_kw_long {{
 	value = reinterpret_cast<void*>(type_primitive::ty_llong);
 }} | tok_kw_unsigned tok_space tok_kw_long {{
+	value = reinterpret_cast<void*>(type_primitive::ty_ulong);
+}} | tok_kw_long tok_space tok_kw_unsigned tok_space tok_kw_int {{
 	value = reinterpret_cast<void*>(type_primitive::ty_ulong);
 }} | tok_kw_unsigned tok_space tok_kw_int {{
 	value = reinterpret_cast<void*>(type_primitive::ty_uint);
@@ -441,7 +470,7 @@ array_size = n:tok_number {{
 	value = share(array_size {to_int<unsigned>(n)});
 }} | tok_kw_null {{
 	value = share(array_size {tok_kw_null {} });
-}} | ref:tok_ident {{
+}} | ref:tok_verbatim_expr {{
 	value = share(array_size {to_ptr<ident>(ref)});
 }}
 

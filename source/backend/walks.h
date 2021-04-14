@@ -116,16 +116,16 @@ namespace idlc {
         {
             if (m_should_marshal) {
                 if (should_bind(node.pointer_annots)) {
-                    this->new_line() << "glue_pack_shadow(pos, msg, ext, *" << this->subject() << ");\n";
+                    this->new_line() << "glue_pack_shadow(__pos, msg, ext, *" << this->subject() << ");\n";
                 }
                 else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
-                    this->new_line() << "glue_pack(pos, msg, ext, (void*)*" << this->subject() << " - "
+                    this->new_line() << "glue_pack(__pos, msg, ext, (void*)*" << this->subject() << " - "
                         << node.pointer_annots.share_global << ");\n";
 
                     return true; // No need to walk these (yet)
                 }
                 else {
-                    this->new_line() << "glue_pack(pos, msg, ext, *" << this->subject() << ");\n";
+                    this->new_line() << "glue_pack(__pos, msg, ext, *" << this->subject() << ");\n";
                 }
             }
             
@@ -147,29 +147,43 @@ namespace idlc {
 
         bool visit_primitive(primitive node)
         {
-            this->new_line() << "glue_pack(pos, msg, ext, *" << this->subject() << ");\n";
+            this->new_line() << "glue_pack(__pos, msg, ext, *" << this->subject() << ");\n";
             return true;
         }
 
         bool visit_rpc_ptr(rpc_ptr& node)
         {
-            this->new_line() << "glue_pack(pos, msg, ext, *" << this->subject() << ");\n";
+            this->new_line() << "glue_pack(__pos, msg, ext, *" << this->subject() << ");\n";
             return true;
         }
 
         bool visit_projection(projection& node)
         {
-            this->new_line() << get_visitor_name(node) << "(pos, msg, ext, " << this->subject() << ");\n";
+            this->new_line() << get_visitor_name(node) << "(__pos, msg, ext, "
+                << ((node.def->parent) ? "ctx, " : "") << this->subject() << ");\n";
+
             return true;
         }
 
         bool visit_null_terminated_array(null_terminated_array& node)
         {
+            auto p = std::get_if<node_ref<projection>>(&node.element->type);
             this->new_line() << "size_t i, len;\n";
+
+            // If it's a projection type, define sentinel
+            if (p)
+                this->new_line() << node.element->c_specifier << " sentinel = { 0 };\n";
+
             this->new_line() << node.element->c_specifier << " const* array = "	<< this->subject() << ";\n";
-            this->new_line() << "for (len = 0; array[len]; ++len);\n";
+
+            // XXX: Caution! This assumes the sentinels end with a zero-filled element!
+            if (p)
+                this->new_line() << "for (len = 0; memcmp(&array[len], &sentinel, sizeof(array[0])); ++len) ;\n";
+            else
+                this->new_line() << "for (len = 0; array[len]; ++len);\n";
+
             // The size slot is used for allocation, so we have a +1 for the null terminator
-            this->new_line() << "glue_pack(pos, msg, ext, len + 1);\n";
+            this->new_line() << "glue_pack(__pos, msg, ext, len + 1);\n";
             this->new_line() << "for (i = 0; i < len; ++i) {\n";
             this->new_line() << "\t" << node.element->c_specifier << " const* element = &array[i];\n";
             if (!this->marshal("element", node))
@@ -184,11 +198,32 @@ namespace idlc {
         {
             this->new_line() << "size_t i, len = " << node.size << ";\n";
             this->new_line() << node.element->c_specifier << " const* array = "	<< this->subject() << ";\n";
-            this->new_line() << "glue_pack(pos, msg, ext, len);\n";
+            this->new_line() << "glue_pack(__pos, msg, ext, len);\n";
             this->new_line() << "// Warning: see David if this breaks\n";
             this->new_line() << "glue_user_trace(\"Warning: see David if this breaks\");\n";
             this->new_line() << "for (i = 0; i < len; ++i) {\n";
             this->new_line() << "\t" << node.element->c_specifier << " const* element = &array[i];\n";
+            if (!this->marshal("element", node))
+                return false;
+
+            this->new_line() << "}\n\n";
+
+            return true;
+        }
+
+        bool visit_dyn_array(dyn_array& node)
+        {
+            const auto star = node.element->is_const ? " const*" : "*";
+            const auto ptr_type = concat(node.element->c_specifier, star);
+
+            // HACK: this depends on the root pointer naming convention
+            this->new_line() << "size_t i, len = (" << node.size_expr << ");\n";
+            this->new_line() << ptr_type << " array = "	<< this->subject() << ";\n";
+            this->new_line() << "glue_pack(msg, len);\n";
+            this->new_line() << "// Warning: see David if this breaks\n";
+            this->new_line() << "glue_user_trace(\"Warning: see David if this breaks\");\n";
+            this->new_line() << "for (i = 0; i < len; ++i) {\n";
+            this->new_line() << "\t" << ptr_type << " element = &array[i];\n";
             if (!this->marshal("element", node))
                 return false;
 
@@ -261,7 +296,7 @@ namespace idlc {
                 std::is_same_v<node_type, node_ref<null_terminated_array>>
                 || std::is_same_v<node_type, node_ref<dyn_array>>
                 || std::is_same_v<node_type, node_ref<static_array>>)
-                return concat("sizeof(", node.c_specifier, ") * glue_peek(pos, msg, ext)");
+                return concat("sizeof(", node.c_specifier, ") * glue_peek(__pos, msg, ext)");
             else
                 return concat("sizeof(", node.c_specifier, ")");
         };
@@ -301,7 +336,7 @@ namespace idlc {
 
         bool visit_primitive(primitive node)
         {
-            this->new_line() << "*" << this->subject() << " = glue_unpack(pos, msg, ext, " << m_c_specifier << ");\n";
+            this->new_line() << "*" << this->subject() << " = glue_unpack(__pos, msg, ext, " << m_c_specifier << ");\n";
             return true;
         }
 
@@ -334,11 +369,20 @@ namespace idlc {
         // FIXME: consider the fact that these can change size
         bool visit_null_terminated_array(null_terminated_array& node)
         {
+            auto p = std::get_if<node_ref<projection>>(&node.element->type);
+
             this->new_line() << "size_t i, len;\n";
             this->new_line() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
+
             // The size slot is used for allocation, so we have a +1 for the null terminator
-            this->new_line() << "len = glue_unpack(pos, msg, ext, size_t) - 1;\n";
-            this->new_line() << "array[len] = '\\0';\n";
+            this->new_line() << "len = glue_unpack(__pos, msg, ext, size_t) - 1;\n";
+
+            // zero-fill the last element of the shadow-ed projection to make it a sentinel
+            if (p)
+                this->new_line() << "memset(&array[len], 0x0, sizeof(array[len]));\n";
+            else
+                this->new_line() << "array[len] = '\\0';\n";
+
             this->new_line() << "for (i = 0; i < len; ++i) {\n";
             this->new_line() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
             if (!this->marshal("element", node))
@@ -354,7 +398,25 @@ namespace idlc {
         {
             this->new_line() << "int i;\n";
             this->new_line() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
-            this->new_line() << "size_t len = glue_unpack(pos, msg, ext, size_t);\n";
+            this->new_line() << "size_t len = glue_unpack(__pos, msg, ext, size_t);\n";
+            this->new_line() << "// Warning: see David if this breaks\n";
+            this->new_line() << "glue_user_trace(\"Warning: see David if this breaks\");\n";
+            this->new_line() << "for (i = 0; i < len; ++i) {\n";
+            this->new_line() << "\t" << node.element->c_specifier << "* element = &array[i];\n";
+            if (!this->marshal("element", node))
+                return false;
+
+            this->new_line() << "}\n\n";
+
+            return true;
+        }
+
+        // FIXME: we pack the array size before the array elements, but this is redundant
+        bool visit_dyn_array(dyn_array& node)
+        {
+            this->new_line() << "int i;\n";
+            this->new_line() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
+            this->new_line() << "size_t len = glue_unpack(msg, size_t);\n";
             this->new_line() << "// Warning: see David if this breaks\n";
             this->new_line() << "glue_user_trace(\"Warning: see David if this breaks\");\n";
             this->new_line() << "for (i = 0; i < len; ++i) {\n";
@@ -369,7 +431,7 @@ namespace idlc {
 
         bool visit_rpc_ptr(rpc_ptr& node)
         {
-            this->new_line() << "*" << this->subject() << " = glue_unpack_rpc_ptr(pos, msg, ext, "
+            this->new_line() << "*" << this->subject() << " = glue_unpack_rpc_ptr(__pos, msg, ext, "
                 << node.definition->name << ");\n";
 
             return true;
@@ -377,7 +439,9 @@ namespace idlc {
 
         bool visit_projection(projection& node)
         {
-            this->new_line() << get_visitor_name(node) << "(pos, msg, ext, " << this->subject() << ");\n";
+            this->new_line() << get_visitor_name(node) << "(__pos, msg, ext, "
+                << ((node.def->parent) ? "ctx, " : "") << this->subject() << ");\n";
+            
             return true;
         }
 
@@ -411,6 +475,19 @@ namespace idlc {
             std::terminate();
         }
 
+        static constexpr bool should_alloc_once(const annotation& ann)
+        {
+            switch (side) {
+            case marshal_side::caller:
+                return flags_set(ann.kind, annotation_kind::alloc_once_caller);
+
+            case marshal_side::callee:
+                return flags_set(ann.kind, annotation_kind::alloc_once_callee);
+            }
+
+            std::terminate();
+        }
+
         static constexpr absl::string_view get_visitor_name(projection& node)
         {
             switch (side) {
@@ -428,20 +505,29 @@ namespace idlc {
         {
             this->new_line() << "*" << this->subject() << " = ";
             if (should_bind(node.pointer_annots)) {
-                this->stream() << "glue_unpack_shadow(pos, msg, ext, " << m_c_specifier << ");\n";
+                this->stream() << "glue_unpack_shadow(__pos, msg, ext, " << m_c_specifier << ");\n";
             }
             else if (should_alloc(node.pointer_annots)) {
-                this->stream() << "glue_unpack_new_shadow(pos, msg, ext, " << m_c_specifier << ", "
+                if (!node.pointer_annots.verbatim) {
+                    this->stream() << "glue_unpack_new_shadow(__pos, msg, ext, " << m_c_specifier << ", "
+                        << get_size_expr(*node.referent) << ");\n";
+                } else {
+                    this->stream() << "glue_unpack_new_shadow(__pos, msg, ext, " << m_c_specifier << ", ("
+                        << node.pointer_annots.verbatim << "));\n";
+                }
+            }
+            else if (should_alloc_once(node.pointer_annots)) {
+                this->stream() << "glue_unpack_bind_or_new_shadow(__pos, msg, ext, " << m_c_specifier << ", "
                     << get_size_expr(*node.referent) << ");\n";
             }
             else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
-                this->stream() << "(" << m_c_specifier << ")(glue_unpack(pos, msg, ext, size_t) + "
+                this->stream() << "(" << m_c_specifier << ")(glue_unpack(__pos, msg, ext, size_t) + "
                     << node.pointer_annots.share_global << ");\n";
 
                 return false;
             }
             else {
-                this->stream() << "glue_unpack(pos, msg, ext, " << m_c_specifier << ");\n";
+                this->stream() << "glue_unpack(__pos, msg, ext, " << m_c_specifier << ");\n";
             }
 
             return true;

@@ -87,11 +87,11 @@ namespace idlc {
 
 	struct dyn_array {
 		node_ptr<value> element;
-		ident size;
+		ident size_expr;
 
 		dyn_array(node_ptr<value> element, ident size) :
 			element {std::move(element)},
-			size {size}
+			size_expr {size}
 		{}
 	};
 
@@ -151,6 +151,8 @@ namespace idlc {
 		std::string discriminator_stub {};
 		std::vector<std::string> field_ids {};
 
+		proj_def* def {};
+
 		projection(ident real_name, projection_kind kind, const std::string& name) :
 			real_name {real_name},
 			kind {kind},
@@ -158,7 +160,10 @@ namespace idlc {
 			caller_marshal_visitor {},
 			callee_unmarshal_visitor {},
 			callee_marshal_visitor {},
-			caller_unmarshal_visitor {}
+			caller_unmarshal_visitor {},
+			discriminator_stub {},
+			field_ids {},
+			def {}
 		{
 			populate_names(name);
 		};
@@ -170,7 +175,10 @@ namespace idlc {
 			caller_marshal_visitor {},
 			callee_unmarshal_visitor {},
 			callee_marshal_visitor {},
-			caller_unmarshal_visitor {}
+			caller_unmarshal_visitor {},
+			discriminator_stub {},
+			field_ids {},
+			def {}
 		{
 			populate_names(name);
 		}

@@ -120,7 +120,7 @@ namespace idlc {
 				auto field = std::make_unique<value>(std::move(type), val_annots, is_const);
 				type = std::make_unique<pointer>(
 					std::move(field),
-					annotation {annots->kind & annotation_kind::is_ptr, annots->share_global});
+					annotation {annots->kind & annotation_kind::is_ptr, annots->share_global, annots->verbatim});
 
 				is_const = ptr_node->is_const;
 			}
@@ -161,8 +161,9 @@ namespace idlc {
 			proj_def& def,
 			const std::string& name)
 		{
+			node_ptr<projection> pgraph_node {};
 			if (!def.fields) {
-				return std::make_shared<projection>(def.type, projection_kind::struct_kind, std::move(name));
+				pgraph_node = std::make_shared<projection>(def.type, projection_kind::struct_kind, std::move(name));
 			}
 			else {
 				const auto& field_nodes = *def.fields;
@@ -173,12 +174,16 @@ namespace idlc {
 					fields.emplace_back(std::move(pgraph));
 				}
 
-				return std::make_shared<projection>(
+				pgraph_node = std::make_shared<projection>(
 					def.type,
 					def.kind,
 					std::move(name),
 					std::move(fields));
 			}
+
+			pgraph_node->def = &def;
+
+			return std::move(pgraph_node);
 		}
 
 		class rpc_collection_walk : public ast_walk<rpc_collection_walk> {
@@ -407,6 +412,30 @@ namespace idlc {
 			return true;
 		}
 
+		class rpc_context_walk : public ast_walk<rpc_context_walk> {
+		public:
+			bool visit_rpc_def(rpc_def& node)
+			{
+				const auto old = m_current;
+				m_current = &node;
+				if (!traverse(*this, node))
+					return false;
+
+				m_current = old;
+
+				return true;
+			}
+
+			bool visit_proj_def(proj_def& node)
+			{
+				node.parent = m_current;
+				return traverse(*this, node);
+			}
+
+		private:
+			const rpc_def* m_current {};
+		};
+
 		bool generate_pgraphs(rpc_vec_view rpcs)
 		{
 			create_pgraphs_from_types(rpcs);
@@ -418,7 +447,11 @@ namespace idlc {
 std::optional<idlc::rpc_vec> idlc::generate_rpc_pgraphs(file& root)
 {
 	rpc_collection_walk rpc_walk {};
-	const auto succeeded = rpc_walk.visit_file(root);
+	auto succeeded = rpc_walk.visit_file(root);
+	assert(succeeded);
+
+	rpc_context_walk ctx_walk {};
+	succeeded = ctx_walk.visit_file(root);
 	assert(succeeded);
 
 	auto& rpcs = rpc_walk.get();

@@ -1,10 +1,13 @@
+// NOTE: see notes in main.cpp as to how we will support this
 module foo {
-	/*projection < struct net_device > simp_circ {
+	projection < struct net_device > simp_circ {
         projection simp_circ *a;
     }
 
     projection < struct net_device > circ_a {
         projection circ_b [in] *a;
+        unsigned int arr_len;
+        array<u32, {{ptr->arr_len}}> arr;
     }
 
     projection <union foo_union> unifoo {
@@ -16,15 +19,21 @@ module foo {
     projection < struct net_device > circ_b {
         projection circ_a *a;
         const signed char* c;
+        projection circ_a [alloc<{{sizeof(int) * 128}}>(callee)]* but_bigger;
     }
 
     rpc projection simp_circ* foo(projection unifoo* c, projection circ_a [out]* a, projection circ_b* b) {}
     rpc void* foo0() {}
     rpc void foo1() {}
-    rpc projection simp_circ* foo2(projection circ_a [out]* a, projection circ_b* b) {}*/
+    rpc projection simp_circ* foo2(projection circ_a [out]* a, projection circ_b* b) {}
     
     rpc void [shared<buf>]* foo3(string [dealloc(callee)]* str) {}
     rpc void foo_callee_dealloc(string [dealloc(callee)]* str) {}
     rpc void foo_callee_alloc_dealloc(string [alloc(callee), dealloc(callee)]* str) {}
     rpc void foo_caller_dealloc(string [dealloc(caller)]* str) {}
+    rpc projection simp_circ* foo4(projection circ_a [out]* a, projection circ_b* b, projection call_proj* c) {
+        projection <struct net_device> call_proj {
+            array<int, {{call_ctx->a->arr_len}}> dyn_array;
+        }
+    }
 }
