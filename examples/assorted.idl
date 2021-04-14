@@ -8,6 +8,7 @@ module foo {
         projection circ_b [in] *a;
         unsigned int arr_len;
         array<u32, {{ptr->arr_len}}> arr;
+        unsigned int bitfield_me: 4;
     }
 
     projection < struct net_device > circ_b {
