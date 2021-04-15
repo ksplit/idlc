@@ -94,6 +94,7 @@ tok_kw_any_of = "any_of"
 tok_kw_shared = "shared"
 tok_kw_ioremap = "ioremap"
 tok_kw_unused = "unused"
+tok_kw_bind_memberof = "bind_memberof"
 
 tok_space = lex_blank+
 tok_arrow = "->"
@@ -371,6 +372,12 @@ ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in, nullptr, 
 	| tok_kw_dealloc tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
 		value = share(annotation {annotation_kind::dealloc_callee, nullptr, nullptr});
 	}}
+	| tok_kw_bind_memberof tok_space? tok_langle tok_space? tok_kw_struct tok_space type:tok_ident tok_space? tok_comma tok_space? tok_ident tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
+		value = share(annotation {annotation_kind::bind_caller, nullptr, nullptr});
+	}}
+	| tok_kw_bind_memberof tok_space? tok_langle tok_space? tok_kw_struct tok_space type:tok_ident tok_space? tok_comma tok_space? tok_ident tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
+		value = share(annotation {annotation_kind::bind_callee, nullptr, nullptr});
+	}}
 	| tok_kw_bind tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
 		value = share(annotation {annotation_kind::bind_caller, nullptr, nullptr});
 	}}
@@ -389,6 +396,9 @@ ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in, nullptr, 
 	| tok_kw_alloc tok_space? tok_langle tok_space? tok_verbatim_expr tok_space? tok_rangle {{ value = share(annotation {annotation_kind::is_alloc, nullptr, to_ptr<ident>(expr)}); }}
 	| tok_kw_dealloc {{ value = share(annotation {annotation_kind::is_dealloc, nullptr, nullptr}); }}
 	| tok_kw_bind {{ value = share(annotation {annotation_kind::is_bind, nullptr, nullptr}); }}
+	| tok_kw_bind_memberof tok_space? tok_langle tok_space? tok_kw_struct tok_space type:tok_ident tok_space? tok_comma tok_space? tok_ident tok_space? tok_rangle {{
+		value = share(annotation {annotation_kind::is_bind, nullptr, nullptr});
+	}}
 
 val_attrs = tok_lbrack tok_space? list:val_attr_list tok_space? tok_rbrack {{ value = list; }}
 
