@@ -223,7 +223,7 @@ namespace idlc {
             // HACK: this depends on the root pointer naming convention
             this->new_line() << "size_t i, len = (" << node.size_expr << ");\n";
             this->new_line() << ptr_type << " array = "	<< this->subject() << ";\n";
-            this->new_line() << "glue_pack(msg, len);\n";
+            this->new_line() << "glue_pack(__pos, msg, ext, len);\n";
             this->new_line() << "// Warning: see David if this breaks\n";
             this->new_line() << "glue_user_trace(\"Warning: see David if this breaks\");\n";
             this->new_line() << "for (i = 0; i < len; ++i) {\n";
@@ -420,7 +420,7 @@ namespace idlc {
         {
             this->new_line() << "int i;\n";
             this->new_line() << node.element->c_specifier << "* array = " << this->subject() << ";\n";
-            this->new_line() << "size_t len = glue_unpack(msg, size_t);\n";
+            this->new_line() << "size_t len = glue_unpack(__pos, msg, ext, size_t);\n";
             this->new_line() << "// Warning: see David if this breaks\n";
             this->new_line() << "glue_user_trace(\"Warning: see David if this breaks\");\n";
             this->new_line() << "for (i = 0; i < len; ++i) {\n";
