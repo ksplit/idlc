@@ -148,7 +148,7 @@ namespace idlc {
                     this->new_line() << "const void* __adjusted = *" << this->subject() << ";\n";
                 }
 
-                if (should_bind<side>(node.pointer_annots)) {                                     
+                if (should_bind<side>(node.pointer_annots)) {
                     this->new_line() << "glue_pack_shadow(__pos, msg, ext, __adjusted);\n";
                 }
                 else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
@@ -505,22 +505,29 @@ namespace idlc {
 
         [[nodiscard]] bool marshal_pointer_value(pointer& node)
         {
-            if (is_clear(node.pointer_annots.kind & annotation_kind::is_bind_memberof)) {
-                this->new_line() << "*" << this->subject() << " = ";
-            }
-
-            if (should_bind<side>(node.pointer_annots)) {
-                // Should_bind takes care of the details, so we only check if either of these flags are set
-                if (!is_clear(node.pointer_annots.kind & annotation_kind::is_bind_memberof)) {
-                    const auto& offset = node.pointer_annots.member;
-                    this->new_line() << "struct " << offset.struct_type << "* __" << offset.struct_type
-                        << " = (struct " << offset.struct_type << " *) ";
+            if (!is_clear(node.pointer_annots.kind & annotation_kind::is_bind_memberof)) {
+                const auto& offset = node.pointer_annots.member;
+                this->new_line() << "struct " << offset.struct_type << "* __" << offset.struct_type
+                    << " = (struct " << offset.struct_type << " *) ";
+                if (flags_set(node.pointer_annots.kind, annotation_kind::bind_memberof_callee)) {
                     this->stream() << "glue_unpack_shadow(__pos, msg, ext, " << m_c_specifier << ");\n";
                     this->new_line() << "*" << this->subject() << " = &__" << offset.struct_type
                         << "->" << offset.field << ";\n";
-                } else {
-                    this->stream() << "glue_unpack_shadow(__pos, msg, ext, " << m_c_specifier << ");\n";
                 }
+                else if (flags_set(node.pointer_annots.kind, annotation_kind::bind_memberof_caller)) {
+                    this->stream() << "glue_unpack(__pos, msg, ext, " << m_c_specifier << ");\n";
+                    this->new_line() << "*" << this->subject() << " = &__" << offset.struct_type
+                        << "->" << offset.field << ";\n";
+                }
+                // special case! early return
+                return true;
+            }
+
+            this->new_line() << "*" << this->subject() << " = ";
+
+            if (should_bind<side>(node.pointer_annots)) {
+                // Should_bind takes care of the details, so we only check if either of these flags are set
+                this->stream() << "glue_unpack_shadow(__pos, msg, ext, " << m_c_specifier << ");\n";
             }
             else if (should_alloc(node.pointer_annots)) {
                 if (!node.pointer_annots.size_verbatim) {
