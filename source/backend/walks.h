@@ -506,20 +506,8 @@ namespace idlc {
         [[nodiscard]] bool marshal_pointer_value(pointer& node)
         {
             if (!is_clear(node.pointer_annots.kind & annotation_kind::is_bind_memberof)) {
-                const auto& offset = node.pointer_annots.member;
-                this->new_line() << "struct " << offset.struct_type << "* __" << offset.struct_type
-                    << " = (struct " << offset.struct_type << " *) ";
-                if (flags_set(node.pointer_annots.kind, annotation_kind::bind_memberof_callee)) {
-                    this->stream() << "glue_unpack_shadow(__pos, msg, ext, " << m_c_specifier << ");\n";
-                    this->new_line() << "*" << this->subject() << " = &__" << offset.struct_type
-                        << "->" << offset.field << ";\n";
-                }
-                else if (flags_set(node.pointer_annots.kind, annotation_kind::bind_memberof_caller)) {
-                    this->stream() << "glue_unpack(__pos, msg, ext, " << m_c_specifier << ");\n";
-                    this->new_line() << "*" << this->subject() << " = &__" << offset.struct_type
-                        << "->" << offset.field << ";\n";
-                }
                 // special case! early return
+                marshal_bind_memberof_pointer(node);
                 return true;
             }
 
@@ -553,6 +541,22 @@ namespace idlc {
             }
 
             return true;
+        }
+
+        void marshal_bind_memberof_pointer(pointer& node)
+        {
+            const auto& offset = node.pointer_annots.member;
+            this->new_line() << "struct " << offset.struct_type << "* __" << offset.struct_type << " = ";
+
+            if (flags_set(node.pointer_annots.kind, annotation_kind::bind_memberof_callee))
+                this->stream() << "glue_unpack_shadow(__pos, msg, ext, struct " << offset.struct_type << "*);\n";
+            else if (flags_set(node.pointer_annots.kind, annotation_kind::bind_memberof_caller))
+                this->stream() << "glue_unpack(__pos, msg, ext, struct " << offset.struct_type << "*);\n";
+            else
+                std::terminate();
+
+            this->new_line() << "*" << this->subject() << " = &__" << offset.struct_type
+                << "->" << offset.field << ";\n";
         }
 
         bool marshal_pointer_child(pointer& node)
