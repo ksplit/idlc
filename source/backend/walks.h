@@ -136,25 +136,28 @@ namespace idlc {
         bool visit_pointer(pointer& node)
         {
             if (m_should_marshal) {
-                if (should_bind<side>(node.pointer_annots)) {
-                    // Should_bind takes care of the details, so we only check if either of these flags are set
-                    if (!is_clear(node.pointer_annots.kind & annotation_kind::is_bind_memberof)) {
-                        const auto& offset = node.pointer_annots.member;
-                        this->new_line() << "glue_pack_shadow(__pos, msg, ext, *" << this->subject()
-                            << " - offsetof(struct " << offset.struct_type << ", " << offset.field << "));\n";
-                    }
-                    else {                        
-                        this->new_line() << "glue_pack_shadow(__pos, msg, ext, *" << this->subject() << ");\n";
-                    }
+                // Should_bind takes care of the details, so we only check if either of these flags are set
+                // NOTE: adjustment is mandatory! Currently undefined outside of bind, but still
+                if (!is_clear(node.pointer_annots.kind & annotation_kind::is_bind_memberof)) {
+                    const auto& offset = node.pointer_annots.member;
+                    this->new_line() << "void* __adjusted = *" << this->subject()
+                        << " - offsetof(struct " << offset.struct_type << ", " << offset.field << ");\n";
+                }
+                else {
+                    this->new_line() << "void* __adjusted = *" << this->subject() << ";\n";
+                }
+
+                if (should_bind<side>(node.pointer_annots)) {                                     
+                    this->new_line() << "glue_pack_shadow(__pos, msg, ext, __adjusted);\n";
                 }
                 else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
-                    this->new_line() << "glue_pack(__pos, msg, ext, (void*)*" << this->subject() << " - "
+                    this->new_line() << "glue_pack(__pos, msg, ext, (void*)__adjusted - "
                         << node.pointer_annots.share_global << ");\n";
 
                     return true; // No need to walk these (yet)
                 }
                 else {
-                    this->new_line() << "glue_pack(__pos, msg, ext, *" << this->subject() << ");\n";
+                    this->new_line() << "glue_pack(__pos, msg, ext, __adjusted);\n";
                 }
             }
             

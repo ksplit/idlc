@@ -22,6 +22,6 @@ module foo {
         }
     }
 
-    rpc void bind_member_rpc(array<u32, {{ptr->arr_len}}> [unused, bind_memberof<struct net_device, arr>(caller)]* arr)
+    rpc void bind_member_rpc(array<u32, {{ptr->arr_len}}> [unused, bind_memberof<struct net_device, arr>(callee)]* arr)
     {}
 }
