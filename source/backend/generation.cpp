@@ -199,10 +199,7 @@ namespace idlc {
 
                 if (p && (side == marshal_side::callee)) {
                     auto p_array = std::get_if<node_ref<static_array>>(&p->get()->referent->type);
-                    auto raw_specifier = specifier;
-                    if (specifier.back() == '*') {
-                        raw_specifier.pop_back();
-                    }
+                    auto raw_specifier = p->get()->referent->c_specifier;
 
                     if (flags_set(p->get()->pointer_annots.kind, annotation_kind::alloc_stack_callee)) {
                         if (p_array) {

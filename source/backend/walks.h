@@ -124,6 +124,10 @@ namespace idlc {
 
                     return true; // No need to walk these (yet)
                 }
+                else if (flags_set(node.pointer_annots.kind, annotation_kind::alloc_stack_callee)) {
+                    // No need to pack the pointer if it's a stack allocation on the other side
+                    return true;
+                }
                 else {
                     this->new_line() << "glue_pack(__pos, msg, ext, *" << this->subject() << ");\n";
                 }
@@ -516,10 +520,12 @@ namespace idlc {
 
         [[nodiscard]] bool marshal_pointer_value(pointer& node)
         {
-            if (!should_alloc_stack(node.pointer_annots)) {
-                this->new_line() << "*" << this->subject() << " = ";
+            // No need to unpack the pointer for stack allocation
+            if (should_alloc_stack(node.pointer_annots)) {
+                return true;
             }
 
+            this->new_line() << "*" << this->subject() << " = ";
             if (should_bind(node.pointer_annots)) {
                 this->stream() << "glue_unpack_shadow(__pos, msg, ext, " << m_c_specifier << ");\n";
             }
@@ -535,10 +541,6 @@ namespace idlc {
             else if (should_alloc_once(node.pointer_annots)) {
                 this->stream() << "glue_unpack_bind_or_new_shadow(__pos, msg, ext, " << m_c_specifier << ", "
                     << get_size_expr(*node.referent) << ");\n";
-            }
-            else if (should_alloc_stack(node.pointer_annots)) {
-                this->new_line() << "// Stack allocation for " << m_c_specifier << "\n";
-                this->new_line() << "__maybe_unused uint64_t __dummy = glue_unpack(__pos, msg, ext, uint64_t);\n";
             }
             else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
                 this->stream() << "(" << m_c_specifier << ")(glue_unpack(__pos, msg, ext, size_t) + "
