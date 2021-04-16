@@ -140,11 +140,12 @@ namespace idlc {
                 // NOTE: adjustment is mandatory! Currently undefined outside of bind, but still
                 if (!is_clear(node.pointer_annots.kind & annotation_kind::is_bind_memberof)) {
                     const auto& offset = node.pointer_annots.member;
-                    this->new_line() << "void* __adjusted = *" << this->subject()
-                        << " - offsetof(struct " << offset.struct_type << ", " << offset.field << ");\n";
+                    // Use container_of as it abstracts away the arithmetic and also typecasts the pointer
+                    this->new_line() << "struct " << offset.struct_type << "* __adjusted = container_of(*" << this->subject()
+                        << ", " << "struct " << offset.struct_type << ", " << offset.field << ");\n";
                 }
                 else {
-                    this->new_line() << "void* __adjusted = *" << this->subject() << ";\n";
+                    this->new_line() << "const void* __adjusted = *" << this->subject() << ";\n";
                 }
 
                 if (should_bind<side>(node.pointer_annots)) {                                     
@@ -504,15 +505,21 @@ namespace idlc {
 
         [[nodiscard]] bool marshal_pointer_value(pointer& node)
         {
-            this->new_line() << "*" << this->subject() << " = ";
-            if (should_bind<side>(node.pointer_annots)) {
-                this->stream() << "glue_unpack_shadow(__pos, msg, ext, " << m_c_specifier << ");\n";
+            if (is_clear(node.pointer_annots.kind & annotation_kind::is_bind_memberof)) {
+                this->new_line() << "*" << this->subject() << " = ";
+            }
 
+            if (should_bind<side>(node.pointer_annots)) {
                 // Should_bind takes care of the details, so we only check if either of these flags are set
                 if (!is_clear(node.pointer_annots.kind & annotation_kind::is_bind_memberof)) {
                     const auto& offset = node.pointer_annots.member;
-                    this->new_line() << "*" << this->subject() << " += offsetof(struct "
-                        << offset.struct_type << ", " << offset.field << ");\n";
+                    this->new_line() << "struct " << offset.struct_type << "* __" << offset.struct_type
+                        << " = (struct " << offset.struct_type << " *) ";
+                    this->stream() << "glue_unpack_shadow(__pos, msg, ext, " << m_c_specifier << ");\n";
+                    this->new_line() << "*" << this->subject() << " = &__" << offset.struct_type
+                        << "->" << offset.field << ";\n";
+                } else {
+                    this->stream() << "glue_unpack_shadow(__pos, msg, ext, " << m_c_specifier << ");\n";
                 }
             }
             else if (should_alloc(node.pointer_annots)) {
