@@ -80,7 +80,6 @@ namespace idlc {
 					return std::make_shared<static_array>(generate_value(*node.element), item);
 				}
 				else if constexpr (std::is_same_v<type, ident>) {
-					std::cout << "Warning: dynamic-sized arrays are not yet fully supported\n";
 					return std::make_unique<dyn_array>(generate_value(*node.element), item);
 				}
 
@@ -143,6 +142,7 @@ namespace idlc {
 				const auto annots = ptr_node->attrs;
 				const auto val_annots = annots->kind & annotation_kind::is_val;
 				auto field = std::make_unique<value>(std::move(type), val_annots, is_const);
+
 				type = std::make_unique<pointer>(
 					std::move(field),
 					annotation {

@@ -381,12 +381,17 @@ ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in}); }}
 		});
 	}}
 	| tok_kw_bind_memberof tok_space? tok_langle tok_space? tok_kw_struct tok_space type:tok_ident tok_space? tok_comma tok_space? field:tok_ident tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation {
+		std::cout << "[DEBUG] " << to_ptr<ident>(type) << ", " << to_ptr<ident>(field) << "\n";
+		const auto tmp = annotation {
 			annotation_kind::bind_memberof_callee,
 			nullptr,
 			nullptr,
 			{to_ptr<ident>(type), to_ptr<ident>(field)}
-		});
+		};
+
+		std::cout << "[DEBUG] After: " << to_ptr<ident>(type) << ", " << to_ptr<ident>(field) << "\n";
+
+		value = share(tmp);
 	}}
 	| tok_kw_bind tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
 		value = share(annotation {annotation_kind::bind_caller});
@@ -420,7 +425,14 @@ val_attr_list = first:val_attr rest:(tok_space? tok_comma tok_space? val_attr)* 
 ptr_attr_list = first:ptr_attr rest:(tok_space? tok_comma tok_space? ptr_attr)* {{
 	auto f = get_shared<annotation>(first);
 	for (const auto r : rest.getValues()) {
-		f->kind |= get_shared<annotation>(r)->kind;
+		const auto& tmp = get_shared<annotation>(r);
+		f->kind |= tmp->kind;
+		assert(!f->share_global);
+		assert(!f->size_verbatim);
+		assert(!f->member.struct_type && !f->member.field);
+		f->share_global = tmp->share_global;
+		f->size_verbatim = tmp->size_verbatim;
+		f->member = tmp->member;
 	}
 
 	value = first;
