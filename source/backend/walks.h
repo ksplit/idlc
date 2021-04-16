@@ -488,6 +488,19 @@ namespace idlc {
             std::terminate();
         }
 
+        static constexpr bool should_alloc_stack(const annotation& ann)
+        {
+            switch (side) {
+            case marshal_side::caller:
+                return flags_set(ann.kind, annotation_kind::alloc_stack_caller);
+
+            case marshal_side::callee:
+                return flags_set(ann.kind, annotation_kind::alloc_stack_callee);
+            }
+
+            std::terminate();
+        }
+
         static constexpr absl::string_view get_visitor_name(projection& node)
         {
             switch (side) {
@@ -503,7 +516,10 @@ namespace idlc {
 
         [[nodiscard]] bool marshal_pointer_value(pointer& node)
         {
-            this->new_line() << "*" << this->subject() << " = ";
+            if (!should_alloc_stack(node.pointer_annots)) {
+                this->new_line() << "*" << this->subject() << " = ";
+            }
+
             if (should_bind(node.pointer_annots)) {
                 this->stream() << "glue_unpack_shadow(__pos, msg, ext, " << m_c_specifier << ");\n";
             }
@@ -519,6 +535,10 @@ namespace idlc {
             else if (should_alloc_once(node.pointer_annots)) {
                 this->stream() << "glue_unpack_bind_or_new_shadow(__pos, msg, ext, " << m_c_specifier << ", "
                     << get_size_expr(*node.referent) << ");\n";
+            }
+            else if (should_alloc_stack(node.pointer_annots)) {
+                this->new_line() << "// Stack allocation for " << m_c_specifier << "\n";
+                this->new_line() << "__maybe_unused uint64_t __dummy = glue_unpack(__pos, msg, ext, uint64_t);\n";
             }
             else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
                 this->stream() << "(" << m_c_specifier << ")(glue_unpack(__pos, msg, ext, size_t) + "

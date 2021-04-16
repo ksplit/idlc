@@ -193,7 +193,26 @@ namespace idlc {
 
                 const auto& specifier = pgraph->c_specifier;
                 auto ptr_name = concat(name, "_ptr");
-                os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
+
+                // TODO: Doesn't really work for multi-dimensional arrays
+                auto p = std::get_if<node_ref<pointer>>(&pgraph->type);
+
+                if (p && (side == marshal_side::callee)) {
+                    auto p_array = std::get_if<node_ref<static_array>>(&p->get()->referent->type);
+
+                    if (p_array && flags_set(p->get()->pointer_annots.kind, annotation_kind::alloc_stack_callee)) {
+                        auto raw_specifier = specifier;
+                        if (specifier.back() == '*') {
+                            raw_specifier.pop_back();
+                        }
+                        os << "\t" << raw_specifier << " "  << name << "[" << p_array->get()->size << "];\n";
+                        os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
+                    } else {
+                        os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
+                    }
+                } else {
+                    os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
+                }
                 roots.emplace_back(std::move(ptr_name), pgraph.get());
             }
 
