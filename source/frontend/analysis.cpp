@@ -145,7 +145,13 @@ namespace idlc {
 				auto field = std::make_unique<value>(std::move(type), val_annots, is_const);
 				type = std::make_unique<pointer>(
 					std::move(field),
-					annotation {annots->kind & annotation_kind::is_ptr, annots->share_global, annots->verbatim});
+					annotation {
+						annots->kind & annotation_kind::is_ptr,
+						annots->share_global,
+						annots->size_verbatim,
+						annots->member
+					}
+				);
 
 				is_const = ptr_node->is_const;
 			}

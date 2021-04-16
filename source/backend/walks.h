@@ -258,10 +258,12 @@ namespace idlc {
         {
             switch (side) {
             case marshal_side::caller:
-                return flags_set(ann.kind, annotation_kind::bind_caller);
+                return flags_set(ann.kind, annotation_kind::bind_caller)
+                    | flags_set(ann.kind, annotation_kind::bind_memberof_caller);
 
             case marshal_side::callee:
-                return flags_set(ann.kind, annotation_kind::bind_callee);
+                return flags_set(ann.kind, annotation_kind::bind_callee)
+                    | flags_set(ann.kind, annotation_kind::bind_memberof_callee);
             }
 
             std::terminate();
@@ -453,10 +455,12 @@ namespace idlc {
         {
             switch (side) {
             case marshal_side::caller:
-                return flags_set(ann.kind, annotation_kind::bind_caller);
+                return flags_set(ann.kind, annotation_kind::bind_caller)
+                    | flags_set(ann.kind, annotation_kind::bind_memberof_caller);
 
             case marshal_side::callee:
-                return flags_set(ann.kind, annotation_kind::bind_callee);
+                return flags_set(ann.kind, annotation_kind::bind_callee)
+                    | flags_set(ann.kind, annotation_kind::bind_memberof_callee);
             }
 
             std::terminate();
@@ -508,12 +512,12 @@ namespace idlc {
                 this->stream() << "glue_unpack_shadow(__pos, msg, ext, " << m_c_specifier << ");\n";
             }
             else if (should_alloc(node.pointer_annots)) {
-                if (!node.pointer_annots.verbatim) {
+                if (!node.pointer_annots.size_verbatim) {
                     this->stream() << "glue_unpack_new_shadow(__pos, msg, ext, " << m_c_specifier << ", "
                         << get_size_expr(*node.referent) << ");\n";
                 } else {
                     this->stream() << "glue_unpack_new_shadow(__pos, msg, ext, " << m_c_specifier << ", ("
-                        << node.pointer_annots.verbatim << "));\n";
+                        << node.pointer_annots.size_verbatim << "));\n";
                 }
             }
             else if (should_alloc_once(node.pointer_annots)) {
