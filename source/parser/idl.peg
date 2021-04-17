@@ -147,6 +147,15 @@ tok_ident = lex_ident_start rest:lex_ident_rest* {{
 	value = idents.intern(ident);
 }}
 
+tok_ident_dot = lex_ident_start rest:lex_ident_rest_dot* {{
+	std::string ident {};
+	ident += to_int<char>($1);
+	for (const auto& c : rest.getValues())
+		ident += to_int<char>(c);
+
+	value = idents.intern(ident);
+}}
+
 # TODO: clean this up
 lex_path_char = [ !\"#$%&\'()*+,-./0123456789:;<=?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz{|}~] | <ascii 93>
 lex_string_char = [ !#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz{|}~] | <ascii 93>
@@ -163,6 +172,7 @@ lex_blank = lex_whitespace+ | lex_comment
 
 lex_ident_start = [_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]
 lex_ident_rest = [01234567890] | lex_ident_start
+lex_ident_rest_dot = [01234567890] | lex_ident_start | [.]
 
 lex_varbatim_expr_char = [ !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\^_`abcdefghijklmnopqrstuvwxyz|~] | lex_whitespace | <ascii 93>
 
@@ -372,7 +382,7 @@ ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in}); }}
 	| tok_kw_dealloc tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
 		value = share(annotation {annotation_kind::dealloc_callee});
 	}}
-	| tok_kw_bind_memberof tok_space? tok_langle tok_space? tok_kw_struct tok_space type:tok_ident tok_space? tok_comma tok_space? field:tok_ident tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
+	| tok_kw_bind_memberof tok_space? tok_langle tok_space? tok_kw_struct tok_space type:tok_ident tok_space? tok_comma tok_space? field:tok_ident_dot tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
 		value = share(annotation {
 			annotation_kind::bind_memberof_caller,
 			nullptr,
@@ -380,7 +390,7 @@ ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in}); }}
 			{to_ptr<ident>(type), to_ptr<ident>(field)}
 		});
 	}}
-	| tok_kw_bind_memberof tok_space? tok_langle tok_space? tok_kw_struct tok_space type:tok_ident tok_space? tok_comma tok_space? field:tok_ident tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
+	| tok_kw_bind_memberof tok_space? tok_langle tok_space? tok_kw_struct tok_space type:tok_ident tok_space? tok_comma tok_space? field:tok_ident_dot tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
 		std::cout << "[DEBUG] " << to_ptr<ident>(type) << ", " << to_ptr<ident>(field) << "\n";
 		const auto tmp = annotation {
 			annotation_kind::bind_memberof_callee,
