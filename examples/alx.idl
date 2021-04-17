@@ -310,14 +310,13 @@ module kernel {
 		}
 	}
 
-	// FIXME: need member_of
-	rpc int pci_bus_read_config_word( projection bus * bus,
+	rpc int pci_bus_read_config_word( projection bus [bind_memberof<struct pci_dev, bus>(caller)] * bus,
 		unsigned int devfn, int pos, unsigned short* value ) {
 		projection < struct pci_bus > bus {
 		}
 	}
-	// FIXME: need member_of(projection dev, bus)
-	rpc int pci_bus_write_config_word( projection bus * bus,
+
+	rpc int pci_bus_write_config_word( projection bus [bind_memberof<struct pci_dev, bus>(caller)] * bus,
 		unsigned int devfn, int pos, unsigned short value ) {
 		projection < struct pci_bus > bus {
 		}
@@ -384,7 +383,7 @@ module kernel {
 	}
 
 	// FIXME: need member_of
-	rpc void netif_schedule_queue( projection txq * txq ) {
+	rpc void netif_schedule_queue( projection txq [bind_memberof<struct net_device, _tx>(caller)] * txq ) {
 		projection < struct netdev_queue > txq {
 			long unsigned int  state;
 		}
@@ -400,7 +399,7 @@ module kernel {
 	}
 
 	// FIXME: need member_of
-	rpc void netif_tx_wake_queue( projection dev_queue * dev_queue ) {
+	rpc void netif_tx_wake_queue( projection dev_queue [bind_memberof<struct net_device, _tx>(caller)] * dev_queue ) {
 		projection < struct netdev_queue > dev_queue {
 		}
 	}
