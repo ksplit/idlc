@@ -662,11 +662,15 @@ namespace idlc {
             const auto roots = generate_root_ptrs<marshal_role::marshaling, marshal_side::caller>(file, node, "ptr");
             const auto n_fields = node.fields.size();
             const bool is_union = node.kind == projection_kind::union_kind;
+            gsl::index i {0};
 
-            if (is_union)
+            // For unions, we assume the first field is the discriminator. switch/case the rest!
+            if (is_union) {
                 file << "\tswitch (" << node.discriminator_stub << "(ptr->" << node.fields.front().first << ")) {\n";
+                i = 1;
+            }
 
-            for (gsl::index i {}; i < node.fields.size(); ++i) {
+            for (; i < node.fields.size(); ++i) {
                 const auto& [name, type] = node.fields.at(i);
                 if (is_union)
                     file << "\tcase " << node.field_ids.at(i) << ": {\n";
@@ -704,11 +708,14 @@ namespace idlc {
             const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::callee>(file, node, "ptr");
             const auto n_fields = node.fields.size();
             const bool is_union = node.kind == projection_kind::union_kind;
+            gsl::index i {0};
 
-            if (is_union)
+            if (is_union) {
                 file << "\tswitch (" << node.discriminator_stub << "(ptr->" << node.fields.front().first << ")) {\n";
+                i = 1;
+            }
 
-            for (gsl::index i {}; i < node.fields.size(); ++i) {
+            for (; i < node.fields.size(); ++i) {
                 const auto& [name, type] = node.fields.at(i);
                 if (is_union)
                     file << "\tcase " << node.field_ids.at(i) << ": {\n";
@@ -746,11 +753,14 @@ namespace idlc {
             const auto roots = generate_root_ptrs<marshal_role::marshaling, marshal_side::callee>(file, node, "ptr");
             const auto n_fields = node.fields.size();
             const bool is_union = node.kind == projection_kind::union_kind;
+            gsl::index i {0};
 
-            if (is_union)
+            if (is_union) {
                 file << "\tswitch (" << node.discriminator_stub << "(ptr->" << node.fields.front().first << ")) {\n";
+                i = 1;
+            }
 
-            for (gsl::index i {}; i < node.fields.size(); ++i) {
+            for (; i < node.fields.size(); ++i) {
                 const auto& [name, type] = node.fields.at(i);
                 if (is_union)
                     file << "\tcase " << node.field_ids.at(i) << ": {\n";
@@ -788,11 +798,14 @@ namespace idlc {
             const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::caller>(file, node, "ptr");
             const auto n_fields = node.fields.size();
             const bool is_union = node.kind == projection_kind::union_kind;
+            gsl::index i {0};
 
-            if (is_union)
+            if (is_union) {
                 file << "\tswitch (" << node.discriminator_stub << "(ptr->" << node.fields.front().first << ")) {\n";
+                i = 1;
+            }
 
-            for (gsl::index i {}; i < node.fields.size(); ++i) {
+            for (; i < node.fields.size(); ++i) {
                 const auto& [name, type] = node.fields.at(i);
                 if (is_union)
                     file << "\tcase " << node.field_ids.at(i) << ": {\n";
