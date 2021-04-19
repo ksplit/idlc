@@ -105,6 +105,27 @@ namespace idlc {
         std::terminate();
     }
 
+    /*
+        NOTE: This confused me today; it will confuse you too
+        Bind annotations indicate which side of the call has the shadow copy (statically)
+        Whether or not they are bound on a side is irrespective of whether we are marshaling or unmarshaling
+    */
+    template<marshal_side side>
+    static constexpr bool should_bind(const annotation& ann)
+    {
+        switch (side) {
+        case marshal_side::caller:
+            return flags_set(ann.kind, annotation_kind::bind_caller)
+                | flags_set(ann.kind, annotation_kind::bind_memberof_caller);
+
+        case marshal_side::callee:
+            return flags_set(ann.kind, annotation_kind::bind_callee)
+                | flags_set(ann.kind, annotation_kind::bind_memberof_callee);
+        }
+
+        std::terminate();
+    }
+
     template<marshal_side side>
     class marshaling_walk : public generation_walk<marshaling_walk<side>> {
     public:
@@ -115,17 +136,29 @@ namespace idlc {
         bool visit_pointer(pointer& node)
         {
             if (m_should_marshal) {
-                if (should_bind(node.pointer_annots)) {
-                    this->new_line() << "glue_pack_shadow(__pos, msg, ext, *" << this->subject() << ");\n";
+                // Should_bind takes care of the details, so we only check if either of these flags are set
+                // NOTE: adjustment is mandatory! Currently undefined outside of bind, but still
+                if (!is_clear(node.pointer_annots.kind & annotation_kind::is_bind_memberof)) {
+                    const auto& offset = node.pointer_annots.member;
+                    // Use container_of as it abstracts away the arithmetic and also typecasts the pointer
+                    this->new_line() << "struct " << offset.struct_type << "* __adjusted = container_of(*" << this->subject()
+                        << ", " << "struct " << offset.struct_type << ", " << offset.field << ");\n";
+                }
+                else {
+                    this->new_line() << "const void* __adjusted = *" << this->subject() << ";\n";
+                }
+
+                if (should_bind<side>(node.pointer_annots)) {
+                    this->new_line() << "glue_pack_shadow(__pos, msg, ext, __adjusted);\n";
                 }
                 else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
-                    this->new_line() << "glue_pack(__pos, msg, ext, (void*)*" << this->subject() << " - "
+                    this->new_line() << "glue_pack(__pos, msg, ext, (void*)__adjusted - "
                         << node.pointer_annots.share_global << ");\n";
 
                     return true; // No need to walk these (yet)
                 }
                 else {
-                    this->new_line() << "glue_pack(__pos, msg, ext, *" << this->subject() << ");\n";
+                    this->new_line() << "glue_pack(__pos, msg, ext, __adjusted);\n";
                 }
             }
             
@@ -248,24 +281,6 @@ namespace idlc {
 
     private:
         bool m_should_marshal {};
-
-        /*
-            NOTE: This confused me today; it will confuse you too
-            Bind annotations indicate which side of the call has the shadow copy (statically)
-            Whether or not they are bound on a side is irrespective of whether we are marshaling or unmarshaling
-        */
-        static constexpr bool should_bind(const annotation& ann)
-        {
-            switch (side) {
-            case marshal_side::caller:
-                return flags_set(ann.kind, annotation_kind::bind_caller);
-
-            case marshal_side::callee:
-                return flags_set(ann.kind, annotation_kind::bind_callee);
-            }
-
-            std::terminate();
-        }
 
         static constexpr bool should_dealloc(const annotation& ann)
         {
@@ -449,19 +464,6 @@ namespace idlc {
         absl::string_view m_c_specifier {};
         bool m_should_marshal {};
 
-        static constexpr bool should_bind(const annotation& ann)
-        {
-            switch (side) {
-            case marshal_side::caller:
-                return flags_set(ann.kind, annotation_kind::bind_caller);
-
-            case marshal_side::callee:
-                return flags_set(ann.kind, annotation_kind::bind_callee);
-            }
-
-            std::terminate();
-        }
-
         static constexpr bool should_alloc(const annotation& ann)
         {
             switch (side) {
@@ -503,17 +505,25 @@ namespace idlc {
 
         [[nodiscard]] bool marshal_pointer_value(pointer& node)
         {
+            if (!is_clear(node.pointer_annots.kind & annotation_kind::is_bind_memberof)) {
+                // special case! early return
+                marshal_bind_memberof_pointer(node);
+                return true;
+            }
+
             this->new_line() << "*" << this->subject() << " = ";
-            if (should_bind(node.pointer_annots)) {
+
+            if (should_bind<side>(node.pointer_annots)) {
+                // Should_bind takes care of the details, so we only check if either of these flags are set
                 this->stream() << "glue_unpack_shadow(__pos, msg, ext, " << m_c_specifier << ");\n";
             }
             else if (should_alloc(node.pointer_annots)) {
-                if (!node.pointer_annots.verbatim) {
+                if (!node.pointer_annots.size_verbatim) {
                     this->stream() << "glue_unpack_new_shadow(__pos, msg, ext, " << m_c_specifier << ", "
                         << get_size_expr(*node.referent) << ");\n";
                 } else {
                     this->stream() << "glue_unpack_new_shadow(__pos, msg, ext, " << m_c_specifier << ", ("
-                        << node.pointer_annots.verbatim << "));\n";
+                        << node.pointer_annots.size_verbatim << "));\n";
                 }
             }
             else if (should_alloc_once(node.pointer_annots)) {
@@ -531,6 +541,22 @@ namespace idlc {
             }
 
             return true;
+        }
+
+        void marshal_bind_memberof_pointer(pointer& node)
+        {
+            const auto& offset = node.pointer_annots.member;
+            this->new_line() << "struct " << offset.struct_type << "* __" << offset.struct_type << " = ";
+
+            if (flags_set(node.pointer_annots.kind, annotation_kind::bind_memberof_callee))
+                this->stream() << "glue_unpack_shadow(__pos, msg, ext, struct " << offset.struct_type << "*);\n";
+            else if (flags_set(node.pointer_annots.kind, annotation_kind::bind_memberof_caller))
+                this->stream() << "glue_unpack(__pos, msg, ext, struct " << offset.struct_type << "*);\n";
+            else
+                std::terminate();
+
+            this->new_line() << "*" << this->subject() << " = &__" << offset.struct_type
+                << "->" << offset.field << ";\n";
         }
 
         bool marshal_pointer_child(pointer& node)
