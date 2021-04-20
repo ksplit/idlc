@@ -1,35 +1,21 @@
-MODUle kernel {
+module kernel {
 
 	rpc_ptr int notifier_call( projection nb * [unused] nb,
 			long unsigned int [unused] val,
-			void [alloc(callee), sizeof(struct mce)] *  data ) {
+			void [alloc<{{sizeof(struct mce)}}>(callee)] *  data ) {
 
 		projection < struct notifier_block > nb {
 			rpc_ptr notifier_call notifier_call;
 		}
 	}
 
-	/*
-	rpc_ptr int open( projection inode *  inode, projection file *  file ) {
-		projection < struct inode > inode {
-		}
-		projection < struct file > file {
-		}
-	}*/
-
 	rpc int pci_enable_device( projection dev *  dev ) {
 		projection < struct pci_dev > dev {
 		}
 	}
 
-	/* FIXME: Disable debugfs for now
-	rpc void debugfs_remove_recursive( projection dentry *  dentry ) {
-		projection < struct dentry > dentry {
-		}
-	}*/
-
 	rpc projection ret_x86_cpu_id [alloc(caller)] * x86_match_cpu(
-			array<projection match, null> [alloc(callee)] match ) {
+			array<projection match, null> [alloc(callee)] *match ) {
 		projection < struct x86_cpu_id > ret_x86_cpu_id {
 			unsigned short vendor;
 			unsigned short family;
@@ -50,12 +36,12 @@ MODUle kernel {
 		projection < struct device> device{
 		}
 		projection < struct pci_dev > ret_pci_dev {
-			projection device dev;
+			//projection device dev;
 		}
 		projection < struct device> device{
 		}
 		projection < struct pci_dev > dev {
-			projection device dev;
+			//projection device dev;
 		}
 	}
 
@@ -63,18 +49,33 @@ MODUle kernel {
 		projection < struct device> device{
 		}
 		projection < struct pci_dev > dev {
-			projection device dev;
+			//projection device dev;
 		}
 	}
 
 	rpc void mce_unregister_decode_chain( 
 		projection notifier_block [bind(callee), dealloc(callee)] *nb) {
+
+		projection < struct notifier_block > notifier_block {
+		}
 	}
 
 	rpc void mce_register_decode_chain( projection notifier_block [alloc(callee)] *nb) {
+		projection < struct notifier_block > notifier_block {
+		}
 	}
 
-	/* FIXME: Let's discard debugfs for now
+	/* XXX: Let's NOT worry about debugfs for now
+	rpc_ptr int open( projection inode *  inode, projection file *  file ) {
+		projection < struct inode > inode {
+		}
+		projection < struct file > file {
+		}
+	}
+	rpc void debugfs_remove_recursive( projection dentry *  dentry ) {
+		projection < struct dentry > dentry {
+		}
+	}
 	rpc projection ret_dentry* debugfs_create_dir( char*  name, projection parent *  parent ) {
 		projection < struct dentry > ret_dentry {
 		}
@@ -114,6 +115,7 @@ MODUle kernel {
 		projection < struct file > file {
 		}
 	} */
+
 	rpc void edac_mc_handle_error( unsigned int  type,
 		projection mci * mci, unsigned short  error_count,
 		long unsigned int  page_frame_number, long unsigned int  offset_in_page,
@@ -140,12 +142,13 @@ MODUle kernel {
 		projection < struct device > dev {
 		}
 	}
-		har*  dev_name;
+
 	rpc int edac_mc_add_mc_with_groups( projection mci *  mci,
 			projection groups ** [unused]  groups ) {
 		projection < struct mem_ctl_info > mci {
 			int  mc_idx;
-			projection dimms * dimms;
+			unsigned int tot_dimms;
+			array<projection dimms, {{ctx->mci->tot_dimms}}> ** dimms;
 			string [alloc(callee)] *  ctl_name;
 			unsigned long mtype_cap;
 			unsigned long edac_ctl_cap;
@@ -154,6 +157,9 @@ MODUle kernel {
 			string [alloc(callee)] *  dev_name;
 			string [alloc(callee)] *  mod_ver;
 			projection device [alloc(callee)] *pdev;	
+		}
+
+		projection < struct device > device {
 		}
 
 		projection < struct dimm_info > dimms {
@@ -174,24 +180,28 @@ MODUle kernel {
 		}
 	}
 
-	// FIXME: need array_sized
+	// need array_sized
 	rpc projection ret_mem_ctl_info [alloc(caller)] * edac_mc_alloc(
 		unsigned int  mc_num,
 		unsigned int  n_layers,
-		array<projection layers, n_layers> [out] layers,
+		array<projection layers, {{ctx->n_layers}}> [alloc(callee), in, out] *layers,
 		unsigned int  sz_pvt ) {
 
 		projection < struct mem_ctl_info > ret_mem_ctl_info {
 			int  mc_idx;
 			unsigned int  n_layers;
 			unsigned int tot_dimms;
-			// FIXME: need alloc_sized
-			projection ret_layers [alloc_sized<n_layers>(caller)] * layers;
-			projection ret_dimms [alloc_sized<tot_dimms>(caller)] * dimms;
+			// need alloc_sized
+			projection ret_layers [alloc<{{ptr->n_layers}}>(caller)] * layers;
+			array<projection ret_dimms, {{ptr->tot_dimms}}>  [alloc(caller)] * [alloc<{{sizeof(struct dimm_info*) * ptr->tot_dimms}}>(caller)]* dimms;
+			//array<projection ret_dimms, {{ptr->tot_dimms}}>  [alloc<{{ptr->tot_dimms}}>(caller)] * [alloc<{{sizeof(struct dimm_info*) * ptr->tot_dimms}}>(caller)]* dimms;
 			void*  pvt_info;
 		}
 
 		projection < struct edac_mc_layer > ret_layers {
+			int type;
+			unsigned int size;
+			bool is_virt_csrow;
 		}
 
 		// TODO:
@@ -199,18 +209,23 @@ MODUle kernel {
 		}
 
 		projection < struct edac_mc_layer > layers {
+			int type;
+			unsigned int size;
+			bool is_virt_csrow;
 		}
 	}
 
-	rpc projection ret_pci_dev [alloc(caller)] * pci_get_device( unsigned int  vendor,
+	rpc projection ret_pci_dev [alloc_once(caller)] * pci_get_device( unsigned int  vendor,
 			unsigned int  device, projection from * [unused] from ) {
 		projection < struct pci_dev > ret_pci_dev {
+			projection bus [alloc_once(caller)] *bus;
 		}
 		projection < struct pci_dev > from {
 		}
+		projection < struct pci_bus > bus {
+		}
 	}
 
-	// FIXME: need member_of
 	rpc int pci_bus_read_config_dword( projection bus *  bus,
 			unsigned int  devfn, int  pos, unsigned int* [out] value ) {
 		projection < struct pci_bus > bus {
