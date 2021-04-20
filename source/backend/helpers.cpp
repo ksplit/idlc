@@ -44,7 +44,7 @@ void idlc::generate_helpers(std::ostream& file)
     file << "void glue_user_init(void);\n";
     file << "void glue_user_panic(const char* msg);\n";
     file << "void glue_user_trace(const char* msg);\n";
-    file << "void* glue_user_map_to_shadow(const void* obj);\n";
+    file << "void* glue_user_map_to_shadow(const void* obj, bool fail);\n";
     file << "const void* glue_user_map_from_shadow(const void* shadow);\n";
     file << "void glue_user_add_shadow(const void* ptr, void* shadow);\n";
     file << "void* glue_user_alloc(size_t size);\n";
@@ -118,7 +118,7 @@ void idlc::generate_helpers(std::ostream& file)
 	    "\tvoid* shadow = 0;\n"
 	    "\tif (!ptr)\n"
 	    "\t\treturn NULL;\n\n"
-	    "\tshadow = glue_user_map_to_shadow(ptr);\n"
+	    "\tshadow = glue_user_map_to_shadow(ptr, false);\n"
 	    "\tif (!shadow) {\n"
 	    "\t\tshadow = glue_user_alloc(size);\n"
 	    "\t\tglue_user_add_shadow(ptr, shadow);\n"
@@ -130,7 +130,7 @@ void idlc::generate_helpers(std::ostream& file)
 
     file << "static inline void* glue_unpack_shadow_impl(const void* ptr)\n";
     file << "{\n";
-    file << "\treturn ptr ? glue_user_map_to_shadow(ptr) : NULL;\n";
+    file << "\treturn ptr ? glue_user_map_to_shadow(ptr, true) : NULL;\n";
     file << "}\n";
     file << "\n";
     file << "static inline void glue_pack_shadow_impl(size_t* pos, struct fipc_message* msg, struct ext_registers* ext, const void* ptr)\n";
