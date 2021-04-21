@@ -58,17 +58,20 @@ namespace idlc {
 		annotation_kind kind {};
 		ident share_global {};
 		ident size_verbatim {}; // this really shouldn't be an ident
+		ident flags_verbatim {}; // this really shouldn't be an ident ;)
 		bind_memberof member {};
 
 		annotation(
 			annotation_kind kind,
 			ident share_global = nullptr,
-			ident verbatim = nullptr,
+			ident size_verbatim = nullptr,
+			ident flags_verbatim = nullptr,
 			bind_memberof member = {}
 		) :
 			kind {kind},
 			share_global {share_global},
-			size_verbatim {verbatim},
+			size_verbatim {size_verbatim},
+			flags_verbatim {flags_verbatim},
 			member {member}
 		{}
 

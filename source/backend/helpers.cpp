@@ -4,6 +4,7 @@
 
 void idlc::generate_helpers(std::ostream& file)
 {
+    file << "#define DEFAULT_GFP_FLAGS  (GFP_KERNEL)\n";
     file << "#define verbose_debug 1\n";
     file << "#define glue_pack(pos, msg, ext, value) glue_pack_impl((pos), (msg), (ext), (uint64_t)(value))\n";
     file << "#define glue_pack_shadow(pos, msg, ext, value) glue_pack_shadow_impl((pos), (msg), (ext), (value))\n";
@@ -13,10 +14,10 @@ void idlc::generate_helpers(std::ostream& file)
         << "\t\tprintk(\"%s:%d, unpack shadow for type %s\\n\", __func__, __LINE__, __stringify(type)); \\\n"
         << "\t(type)glue_unpack_shadow_impl(glue_unpack(pos, msg, ext, void*)); })\n\n";
 
-    file << "#define glue_unpack_new_shadow(pos, msg, ext, type, size) ({ \\\n"
+    file << "#define glue_unpack_new_shadow(pos, msg, ext, type, size, flags) ({ \\\n"
         << "\tif (verbose_debug) \\\n"
         << "\t\tprintk(\"%s:%d, unpack new shadow for type %s | size %llu\\n\", __func__, __LINE__, __stringify(type), (uint64_t) size); \\\n"
-        << "\t(type)glue_unpack_new_shadow_impl(glue_unpack(pos, msg, ext, void*), size); })\n\n";
+        << "\t(type)glue_unpack_new_shadow_impl(glue_unpack(pos, msg, ext, void*), size, flags); })\n\n";
 
     file << "#define glue_unpack_bind_or_new_shadow(pos, msg, ext, type, size) ({ \\\n"
         << "\tif (verbose_debug) \\\n"
@@ -47,7 +48,7 @@ void idlc::generate_helpers(std::ostream& file)
     file << "void* glue_user_map_to_shadow(const void* obj, bool fail);\n";
     file << "const void* glue_user_map_from_shadow(const void* shadow);\n";
     file << "void glue_user_add_shadow(const void* ptr, void* shadow);\n";
-    file << "void* glue_user_alloc(size_t size);\n";
+    file << "void* glue_user_alloc(size_t size, gfp_t flags);\n";
     file << "void glue_user_free(void* ptr);\n";
     file << "void glue_user_call_server(struct fipc_message* msg, size_t rpc_id);\n";
     file << "void glue_user_call_client(struct fipc_message* msg, size_t rpc_id);\n";
@@ -100,13 +101,13 @@ void idlc::generate_helpers(std::ostream& file)
     file << "\t\treturn ext->regs[*pos + 2];\n";
     file << "}\n";
     file << "\n";
-    file << "static inline void* glue_unpack_new_shadow_impl(const void* ptr, size_t size)\n";
+    file << "static inline void* glue_unpack_new_shadow_impl(const void* ptr, size_t size, gfp_t flags)\n";
     file << "{\n";
     file << "\tvoid* shadow = 0;\n";
     file << "\tif (!ptr)\n";
     file << "\t\treturn NULL;\n";
     file << "\n";
-    file << "\tshadow = glue_user_alloc(size);\n";
+    file << "\tshadow = glue_user_alloc(size, flags);\n";
     file << "\tglue_user_add_shadow(ptr, shadow);\n";
     file << "\treturn shadow;\n";
     file << "}\n";
@@ -120,7 +121,7 @@ void idlc::generate_helpers(std::ostream& file)
 	    "\t\treturn NULL;\n\n"
 	    "\tshadow = glue_user_map_to_shadow(ptr, false);\n"
 	    "\tif (!shadow) {\n"
-	    "\t\tshadow = glue_user_alloc(size);\n"
+	    "\t\tshadow = glue_user_alloc(size, DEFAULT_GFP_FLAGS);\n"
 	    "\t\tglue_user_add_shadow(ptr, shadow);\n"
 	    "\t}\n"
 	    "\treturn shadow;\n"

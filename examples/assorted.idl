@@ -25,9 +25,9 @@ module foo {
     rpc void bind_member_rpc(array<u32, {{ptr->arr_len}}> [unused, bind_memberof<struct net_device, arr>(callee)]* arr)
     {}
 
-    rpc void alloc_sized(array<u32, {{ptr->arr_len}}> [alloc<{{sizeof(foo)}}>(caller)] * arr)
+    rpc void alloc_sized(array<u32, {{ptr->arr_len}}> [alloc<{{sizeof(foo)}}>(callee)] * arr)
     {}
 
-    rpc void alloc_sized_with_flags(array<u32, {{ptr->arr_len}}> [alloc<{{sizeof(foo)}}, {{0xCAD}}>(caller)] * arr)
+    rpc void alloc_sized_with_flags(array<u32, {{ptr->arr_len}}> [alloc<{{sizeof(foo)}}, {{0xCAD}}>(callee)] * arr)
     {}
 }
