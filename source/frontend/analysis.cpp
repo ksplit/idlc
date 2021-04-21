@@ -149,6 +149,7 @@ namespace idlc {
 						annots->kind & annotation_kind::is_ptr,
 						annots->share_global,
 						annots->size_verbatim,
+						annots->flags_verbatim,
 						annots->member
 					}
 				);

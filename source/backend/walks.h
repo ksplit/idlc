@@ -518,13 +518,11 @@ namespace idlc {
                 this->stream() << "glue_unpack_shadow(__pos, msg, ext, " << m_c_specifier << ");\n";
             }
             else if (should_alloc(node.pointer_annots)) {
-                if (!node.pointer_annots.size_verbatim) {
-                    this->stream() << "glue_unpack_new_shadow(__pos, msg, ext, " << m_c_specifier << ", "
-                        << get_size_expr(*node.referent) << ");\n";
-                } else {
-                    this->stream() << "glue_unpack_new_shadow(__pos, msg, ext, " << m_c_specifier << ", ("
-                        << node.pointer_annots.size_verbatim << "));\n";
-                }
+                auto alloc_flags = node.pointer_annots.flags_verbatim ? node.pointer_annots.flags_verbatim : "DEFAULT_GFP_FLAGS";
+                auto alloc_size = node.pointer_annots.size_verbatim ? node.pointer_annots.size_verbatim : get_size_expr(*node.referent);
+
+                this->stream() << "glue_unpack_new_shadow(__pos, msg, ext, " << m_c_specifier << ", ("
+                    << alloc_size << ", (" << alloc_flags << "));\n";
             }
             else if (should_alloc_once(node.pointer_annots)) {
                 this->stream() << "glue_unpack_bind_or_new_shadow(__pos, msg, ext, " << m_c_specifier << ", "
