@@ -33,6 +33,7 @@ namespace idlc {
 	struct var_decl;
 	
 	struct rpc_def;
+	struct global_def;
 
 	struct tok_kw_null {}; // Doesn't exist in parse rules, used as marker (represents tok_kw_null)
 	
@@ -292,7 +293,8 @@ namespace idlc {
 	using module_item = std::variant<
 		header_stmt,
 		node_ref<proj_def>,
-		node_ref<rpc_def>
+		node_ref<rpc_def>,
+		node_ref<global_def>
 	>;
 
 	struct module_def {
@@ -308,8 +310,21 @@ namespace idlc {
 		{}
 	};
 
+	struct global_def {
+		ident name {};
+		node_ptr<ref_vec<rpc_item>> items;
+
+		names_scope scope {};
+
+		global_def(ident name, node_ptr<ref_vec<rpc_item>> items) :
+			name {name},
+			items {items},
+			scope {}
+		{}
+	};
+
 	/*
-		Nodes that have scopes: module_defs, rpc_defs, proj_defs
+		Nodes that have scopes: module_defs, rpc_defs, proj_defs, global_defs
 	*/
 }
 

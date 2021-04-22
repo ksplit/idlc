@@ -78,6 +78,8 @@ namespace idlc {
 				return self.visit_proj_def(*subnode);
 			else if constexpr (std::is_same_v<type, node_ref<rpc_def>>)
 				return self.visit_rpc_def(*subnode);
+			else if constexpr (std::is_same_v<type, node_ref<global_def>>)
+				return self.visit_global_def(*subnode);
 			
 			std::terminate();
 		};
@@ -118,6 +120,13 @@ namespace idlc {
 			}
 		}
 
+		return true;
+	}
+
+	template<typename walk>
+	bool traverse(walk&& self, const global_def& node)
+	{
+		// TODO
 		return true;
 	}
 
@@ -351,6 +360,11 @@ namespace idlc {
 		}
 
 		bool visit_rpc_item(rpc_item& node)
+		{
+			return traverse(self(), node);
+		}
+
+		bool visit_global_def(global_def& node)
 		{
 			return traverse(self(), node);
 		}

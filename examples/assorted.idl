@@ -30,4 +30,10 @@ module foo {
 
     rpc void alloc_sized_with_flags(array<u32, {{ptr->arr_len}}> [alloc<{{sizeof(foo)}}, {{0xCAD}}>(callee)] * arr)
     {}
+
+    global projection glb_proj* my_global {
+        projection <struct foo_struct> glb_proj {
+            int a;
+        }
+    }
 }

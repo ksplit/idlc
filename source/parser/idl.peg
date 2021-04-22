@@ -95,6 +95,7 @@ tok_kw_shared = "shared"
 tok_kw_ioremap = "ioremap"
 tok_kw_unused = "unused"
 tok_kw_bind_memberof = "bind_memberof"
+tok_kw_global = "global"
 
 tok_space = lex_blank+
 tok_arrow = "->"
@@ -276,6 +277,8 @@ module_item = header_stmt {{
 	value = share(module_item {get_shared<rpc_def>(rpc)});
 }} | rpc_ptr:rpc_ptr_def {{
 	value = share(module_item {get_shared<rpc_def>(rpc_ptr)});
+}} | glb:global_def {{
+	value = share(module_item {get_shared<global_def>(glb)});
 }}
 
 header_stmt = tok_kw_header tok_space? tok_path tok_space? tok_semi
@@ -297,6 +300,10 @@ union_proj_def = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_union
 		get_shared<ref_vec<proj_field>>(items),
 		proj_def_kind::union_kind
 	});
+}}
+
+global_def = tok_kw_global tok_space type_spec tok_space? name:tok_ident tok_space? tok_lbrace items:(tok_space? rpc_item_list)? tok_space? tok_rbrace {{
+	value = share(global_def {to_ptr<ident>(name), get_shared<ref_vec<rpc_item>>(items)});
 }}
 
 # field_ref = aref:field_abs_ref {{
