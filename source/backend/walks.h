@@ -519,7 +519,7 @@ namespace idlc {
             }
             else if (should_alloc(node.pointer_annots)) {
                 auto alloc_flags = node.pointer_annots.flags_verbatim ? node.pointer_annots.flags_verbatim : "DEFAULT_GFP_FLAGS";
-                std::string alloc_size = node.pointer_annots.size_verbatim;
+                std::string alloc_size = node.pointer_annots.size_verbatim ? node.pointer_annots.size_verbatim : "";
 
                 // if the size field is empty (i.e., `{{}}`), use referent size
                 if (alloc_size.empty())
