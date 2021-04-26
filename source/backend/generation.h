@@ -5,7 +5,7 @@
 
 namespace idlc {
     using projection_vec_view = gsl::span<const gsl::not_null<projection*>>;
-    void generate(rpc_vec_view rpcs);
+    void generate(rpc_vec_view rpcs, global_vec_view globals);
 }
 
 #endif

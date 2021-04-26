@@ -32,7 +32,7 @@ namespace idlc {
     }
 }
 
-void idlc::populate_c_type_specifiers(rpc_vec_view rpcs, projection_vec_view projections)
+void idlc::populate_c_type_specifiers(rpc_vec_view rpcs, global_vec_view globals, projection_vec_view projections)
 {
     for (const auto& node : rpcs) {
         if (node->ret_pgraph)
@@ -41,6 +41,9 @@ void idlc::populate_c_type_specifiers(rpc_vec_view rpcs, projection_vec_view pro
         for (const auto& arg : node->arg_pgraphs)
             populate_c_type_specifiers(*arg);
     }
+
+    for (const auto& global : globals)
+        populate_c_type_specifiers(*global->pgraph);
 
     for (const auto& projection : projections) {
         for (const auto& [name, field] : projection->fields)

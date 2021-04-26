@@ -111,5 +111,5 @@ int main(int argc, char** argv)
 
 	// TODO: also dump pgraphs for globals
 
-	idlc::generate(rpcs);
+	idlc::generate(rpcs, globals);
 }

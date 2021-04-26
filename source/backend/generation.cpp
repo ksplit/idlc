@@ -760,7 +760,7 @@ namespace idlc {
             projection_vec& m_projections;
         };
 
-        projection_vec get_projections(rpc_vec_view rpcs)
+        projection_vec get_projections(rpc_vec_view rpcs, global_vec_view globals)
         {
             projection_vec projs {};
             projection_collection_walk walk {projs};
@@ -770,14 +770,19 @@ namespace idlc {
                     walk.visit_value(*arg);
             }
 
+            for (const auto& global : globals)
+                walk.visit_value(*global->pgraph);
+
             return projs;
         }
     }
 
-    void generate(rpc_vec_view rpcs)
+    void generate(rpc_vec_view rpcs, global_vec_view globals)
     {
-        const auto projections = idlc::get_projections(rpcs);
-        populate_c_type_specifiers(rpcs, projections);
+        // TODO: @Vikram; I've taken the liberty of setting up c specifier generation for globals, the rest is up to you
+
+        const auto projections = idlc::get_projections(rpcs, globals);
+        populate_c_type_specifiers(rpcs, globals, projections);
         create_function_strings(rpcs);
         generate_common_header(rpcs, projections);
         generate_common_source(rpcs, projections);
