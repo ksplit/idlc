@@ -126,7 +126,14 @@ namespace idlc {
 	template<typename walk>
 	bool traverse(walk&& self, const global_def& node)
 	{
-		// TODO
+		if (!self.visit_type_spec(*node.type))
+			return false;
+
+		for (const auto& item : *node.items) {
+			if (!self.visit_rpc_item(*item))
+				return false;
+		}
+
 		return true;
 	}
 

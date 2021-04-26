@@ -4,6 +4,7 @@
 #include <exception>
 #include <memory>
 #include <optional>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -163,29 +164,18 @@ namespace idlc {
 			return std::move(field);
 		}
 
-		class type_walk : public ast_walk<type_walk> {
-		public:
-			bool visit_rpc_def(rpc_def& node)
-			{
-				node.ret_pgraph = generate_value(*node.ret_type);
-				if (node.arguments) {
-					for (auto& argument : *node.arguments)
-						node.arg_pgraphs.emplace_back(generate_value(*argument->type));
-				}
-
-				return traverse(*this, node);
-			}
-
-			// TODO: support naked projections
-		};
-
-		void create_pgraphs_from_types(rpc_vec_view rpcs)
+		void create_pgraphs_from_types(rpc_vec_view rpcs, global_vec_view globals)
 		{
-			type_walk walk {};
 			for (const auto& rpc : rpcs) {
-				const auto succeeded = walk.visit_rpc_def(*rpc);
-				assert(succeeded);
+				rpc->ret_pgraph = generate_value(*rpc->ret_type);
+				if (rpc->arguments) {
+					for (auto& argument : *rpc->arguments)
+						rpc->arg_pgraphs.emplace_back(generate_value(*argument->type));
+				}
 			}
+
+			for (const auto& global : globals)
+				global->pgraph = generate_value(*global->type);
 		}
 
 		// TODO: is it necessary to detect if a projection self-references by value?
@@ -423,10 +413,15 @@ namespace idlc {
 			return true;
 		}
 
-		bool annotate_pgraphs(rpc_vec_view rpcs)
+		bool annotate_pgraphs(rpc_vec_view rpcs, global_vec_view globals)
 		{
 			for (const auto& rpc : rpcs) {
 				if (!annotate_pgraphs(*rpc))
+					return false;
+			}
+
+			for (const auto& global : globals) {
+				if (!annotate_pgraph(*global->pgraph, annotation_kind::out))
 					return false;
 			}
 
@@ -457,18 +452,39 @@ namespace idlc {
 			const rpc_def* m_current {};
 		};
 
-		bool generate_pgraphs(rpc_vec_view rpcs)
+		bool generate_pgraphs(rpc_vec_view rpcs, global_vec_view globals)
 		{
-			create_pgraphs_from_types(rpcs);
-			return annotate_pgraphs(rpcs);
+			create_pgraphs_from_types(rpcs, globals);
+			return annotate_pgraphs(rpcs, globals);
 		}
+
+		class global_collection_walk : public ast_walk<global_collection_walk> {
+		public:
+			bool visit_global_def(global_def& node)
+			{
+				m_globals.emplace_back(&node);
+				return true;
+			}
+
+			auto& get() const
+			{
+				return m_globals;
+			}
+
+		private:
+			global_vec m_globals {};
+		};
 	}
 }
 
-std::optional<idlc::rpc_vec> idlc::generate_rpc_pgraphs(file& root)
+std::optional<std::tuple<idlc::rpc_vec, idlc::global_vec>> idlc::generate_all_pgraphs(file& root)
 {
 	rpc_collection_walk rpc_walk {};
 	auto succeeded = rpc_walk.visit_file(root);
+	assert(succeeded);
+
+	global_collection_walk glb_walk {};
+	succeeded = glb_walk.visit_file(root);
 	assert(succeeded);
 
 	rpc_context_walk ctx_walk {};
@@ -476,8 +492,9 @@ std::optional<idlc::rpc_vec> idlc::generate_rpc_pgraphs(file& root)
 	assert(succeeded);
 
 	auto& rpcs = rpc_walk.get();
-	if (!generate_pgraphs(rpcs))
+	auto& globals = glb_walk.get();
+	if (!generate_pgraphs(rpcs, globals))
 		return std::nullopt;
 
-	return std::make_optional(std::move(rpcs));
+	return std::make_optional(std::make_tuple(std::move(rpcs), std::move(globals)));
 }

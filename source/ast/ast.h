@@ -311,15 +311,19 @@ namespace idlc {
 	};
 
 	struct global_def {
-		ident name {};
+		ident name;
+		node_ref<type_spec> type;
 		node_ptr<ref_vec<rpc_item>> items;
 
-		names_scope scope {};
+		names_scope scope;
+		node_ptr<value> pgraph;
 
-		global_def(ident name, node_ptr<ref_vec<rpc_item>> items) :
+		global_def(ident name, node_ref<type_spec> type, node_ptr<ref_vec<rpc_item>> items) :
 			name {name},
+			type {type},
 			items {items},
-			scope {}
+			scope {},
+			pgraph {}
 		{}
 	};
 

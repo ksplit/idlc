@@ -81,6 +81,7 @@ bool idlc::bind_walk::visit_rpc_def(rpc_def& node)
 bool idlc::bind_walk::visit_type_proj(type_proj& node)
 {
 	const auto def = try_resolve<proj_def>(node.name);
+	std::cout << "[DEBUG]" << node.name << "\n";
 	if (def) {
 		node.definition = def;
 		return traverse(*this, node);

@@ -91,13 +91,14 @@ int main(int argc, char** argv)
 	if (!string_walk.visit_file(*file))
 		std::terminate();
 
-	const auto rpcs = idlc::generate_rpc_pgraphs(*file);
-	if (!rpcs) {
+	const auto pgraph_nodes = idlc::generate_all_pgraphs(*file);
+	if (!pgraph_nodes) {
 		std::cout << "Error: pgraph generation failed\n";
 		return 1;
 	}
 
-	for (const auto& rpc : *rpcs) {
+	const auto& [rpcs, globals] = *pgraph_nodes;
+	for (const auto& rpc : rpcs) {
 		std::cout << rpc->name << "::__return\n";
 		idlc::dump_pgraph(*rpc->ret_pgraph);		
 		std::size_t index {};
@@ -108,5 +109,7 @@ int main(int argc, char** argv)
 		}
 	}
 
-	idlc::generate(*rpcs);
+	// TODO: also dump pgraphs for globals
+
+	idlc::generate(rpcs);
 }
