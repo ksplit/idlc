@@ -69,7 +69,7 @@ void idlc::generate_helpers(std::ostream& file)
         << "glue_pack_impl(size_t* pos, struct fipc_message* msg, struct ext_registers* ext, uint64_t value)\n";
 
     file << "{\n";
-    file << "\tif (*pos >= 128)\n";
+    file << "\tif (*pos >= 512)\n";
     file << "\t\tglue_user_panic(\"Glue message was too large\");\n";
     file << "\tif (*pos < 6)\n";
     file << "\t\tmsg->regs[(*pos)++ + 1] = value;\n";
