@@ -124,6 +124,7 @@ namespace idlc {
 	template<typename walk>
 	bool traverse(walk&& self, const proj_field& node)
 	{
+		const auto& [def, size] = node;
 		const auto visit = [&self](auto&& subnode) -> bool
 		{
 			using type = std::decay_t<decltype(subnode)>;
@@ -135,7 +136,7 @@ namespace idlc {
 			std::terminate();
 		};
 
-		return std::visit(visit, node);
+		return std::visit(visit, def);
 	}
 
 	template<typename walk>
