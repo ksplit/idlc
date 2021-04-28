@@ -231,19 +231,36 @@ namespace idlc {
             std::vector<std::tuple<std::string, value*>> roots;
             roots.reserve(projection.fields.size());
             constexpr auto is_const_context = role == marshal_role::marshaling;
+            ref_vec<proj_field> field_vec;
+            gsl::index i {0};
+
+            if (projection.def && projection.def->fields)
+                field_vec = *projection.def->fields;
+
             for (const auto& [name, type] : projection.fields) {
                 // This is an identical check to that conducted in the marshaling walks
                 if (!should_walk<role, side>(*type))
                     continue;
-
-                const auto specifier = concat(type->c_specifier, is_const_context ? " const*" : "*");
-                auto ptr_name = concat(name, "_ptr");
-                const auto assign = std::get_if<node_ref<static_array>>(&type->type) ? " = " : " = &";
-                os << "\t" << specifier << " " << ptr_name << assign << source_var << "->" << name << ";\n";
-                roots.emplace_back(std::move(ptr_name), type.get());
+                auto width = std::get<1>(*field_vec[i++]);
+                // cannot take address of bitfields. Handle it with plain variables
+                if (width > 0) {
+                    auto bitfield_name = std::string("__") + name;
+                    os << "\t" << type->c_specifier << " " << bitfield_name << " = " << source_var << "->" << name << ";\n";
+                    const auto specifier = concat(type->c_specifier, is_const_context ? " const*" : "*");
+                    auto bitfield_ptr_name = concat(bitfield_name, "_ptr");
+                    const auto assign = std::get_if<node_ref<static_array>>(&type->type) ? " = " : " = &";
+                    os << "\t" << specifier << " " << bitfield_ptr_name << assign << bitfield_name << ";\n";
+                    roots.emplace_back(std::move(bitfield_ptr_name), type.get());
+                } else {
+                    const auto specifier = concat(type->c_specifier, is_const_context ? " const*" : "*");
+                    auto ptr_name = concat(name, "_ptr");
+                    const auto assign = std::get_if<node_ref<static_array>>(&type->type) ? " = " : " = &";
+                    os << "\t" << specifier << " " << ptr_name << assign << source_var << "->" << name << ";\n";
+                    roots.emplace_back(std::move(ptr_name), type.get());
+                }
             }
 
-            os << "\t\n";
+            os << "\n";
 
             return roots;
         }
@@ -639,6 +656,28 @@ namespace idlc {
             file << "}\n\n";
         }
 
+        template <marshal_side side>
+        void fixup_bitfields(std::ostream& file, projection& node, absl::string_view source_var)
+        {
+            ref_vec<proj_field> field_vec;
+            gsl::index i {0};
+
+            if (node.def && node.def->fields) {
+                field_vec = *node.def->fields;
+            }
+
+            file << "\t{\n";
+            for (const auto& [name, type] : node.fields) {
+                const auto & [_, width] = *field_vec[i++];
+                auto bitfield_ptr_name = std::string("__") + name + std::string("_ptr");
+                if (!should_walk<marshal_role::unmarshaling, side>(*type))
+                    continue;
+                if (width > 0)
+                    file << "\t\t" << "ptr" << "->" << name << " = *" << bitfield_ptr_name << ";\n";
+            }
+            file << "\t}\n";
+        }
+
         void generate_callee_unmarshal_visitor(std::ostream& file, projection& node)
         {
             file << "void " << node.callee_unmarshal_visitor << "(\n"
@@ -660,6 +699,8 @@ namespace idlc {
                 walk.visit_value(*type);
                 file << "\t}\n\n";
             }
+
+            fixup_bitfields<marshal_side::callee>(file, node, "ptr");
 
             file << "}\n\n";
         }
@@ -710,6 +751,8 @@ namespace idlc {
                 walk.visit_value(*type);
                 file << "\t}\n\n";
             }
+
+            fixup_bitfields<marshal_side::caller>(file, node, "ptr");
 
             file << "}\n\n";
         }
