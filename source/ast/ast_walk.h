@@ -129,9 +129,11 @@ namespace idlc {
 		if (!self.visit_type_spec(*node.type))
 			return false;
 
-		for (const auto& item : *node.items) {
-			if (!self.visit_rpc_item(*item))
-				return false;
+		if (node.items) {
+			for (const auto& item : *node.items) {
+				if (!self.visit_rpc_item(*item))
+					return false;
+			}
 		}
 
 		return true;
