@@ -176,8 +176,6 @@ namespace idlc {
 				return self.visit_type_proj(*subnode);
 			else if constexpr (std::is_same_v<type, node_ref<type_array>>)
 				return self.visit_type_array(*subnode);
-			else if constexpr (std::is_same_v<type, node_ref<type_any_of>>)
-				return self.visit_type_any_of(*subnode);
 			else if constexpr (std::is_same_v<type, type_none>)
 				return self.visit_type_none(subnode);
 			else if constexpr (std::is_same_v<type, type_string>) // FIXME: how to properly walk these "folded" nodes?
@@ -189,17 +187,6 @@ namespace idlc {
 		};
 
 		return std::visit(visit, node);
-	}
-
-	template<typename walk>
-	bool traverse(walk&& self, const type_any_of& node)
-	{
-		for (const auto& item : *node.types) {
-			if (!self.visit_type_spec(*item))
-				return false;
-		}
-		
-		return true;
 	}
 
 	template<typename walk>
@@ -316,11 +303,6 @@ namespace idlc {
 		}
 
 		bool visit_type_stem(type_stem& node)
-		{
-			return traverse(self(), node);
-		}
-
-		bool visit_type_any_of(type_any_of& node)
 		{
 			return traverse(self(), node);
 		}

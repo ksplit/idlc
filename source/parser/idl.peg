@@ -90,7 +90,6 @@ tok_kw_dealloc = "dealloc"
 tok_kw_bind = "bind"
 tok_kw_caller = "caller"
 tok_kw_callee = "callee"
-tok_kw_any_of = "any_of"
 tok_kw_shared = "shared"
 tok_kw_ioremap = "ioremap"
 tok_kw_unused = "unused"
@@ -534,10 +533,6 @@ type_proj = tok_kw_projection tok_space name:tok_ident {{
 	value = share(type_proj {to_ptr<ident>(name)});
 }}
 
-type_any_of = tok_kw_any_of tok_space? tok_langle tok_space? ref:tok_ident tok_space? tok_comma tok_space? types:type_list tok_space? tok_rangle {{
-	value = share(type_any_of {to_ptr<ident>(ref), get_shared<ref_vec<type_spec>>(types)});
-}}
-
 type_list = head:type_spec rest:(tok_space? tok_comma tok_space? type_spec)* {{
 	const auto rvals = rest.getValues();
 	ref_vec<type_spec> types {};
@@ -560,8 +555,6 @@ type_stem = arr:type_array {{
 	value = share(type_stem {get_shared<type_proj>(proj)});
 }} | arith:type_primitive {{
 	value = share(type_stem {to_int<type_primitive>(arith)});
-}} | any:type_any_of {{
-	value = share(type_stem {get_shared<type_any_of>(any)});
 }} | tok_kw_void {{
 	value = share(type_stem {type_none {} });
 }}

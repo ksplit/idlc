@@ -25,7 +25,6 @@ namespace idlc {
 	struct type_rpc;
 	struct type_proj;
 	struct type_array;
-	struct type_any_of;
 	struct type_string;
 	struct type_spec;
 
@@ -46,8 +45,7 @@ namespace idlc {
 		type_none,
 		node_ref<type_rpc>,
 		node_ref<type_proj>,
-		node_ref<type_array>,
-		node_ref<type_any_of>
+		node_ref<type_array>
 	>;
 
 	struct type_none {};
@@ -106,19 +104,6 @@ namespace idlc {
 		type_array(node_ref<type_spec> element, node_ref<array_size> size) :
 			element {element},
 			size {size}
-		{}
-	};
-
-	struct type_any_of {
-		ident discrim;
-		node_ref<ref_vec<type_spec>> types;
-
-		type_any_of(
-			ident discrim,
-			node_ref<ref_vec<type_spec>> types
-		) :
-			discrim {discrim},
-			types {types}
 		{}
 	};
 
