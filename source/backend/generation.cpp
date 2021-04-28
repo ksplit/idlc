@@ -228,32 +228,35 @@ namespace idlc {
             projection& projection,
             absl::string_view source_var)
         {
+            constexpr auto is_const_context = role == marshal_role::marshaling;
             std::vector<std::tuple<std::string, value*>> roots;
             roots.reserve(projection.fields.size());
-            constexpr auto is_const_context = role == marshal_role::marshaling;
-            ref_vec<proj_field> field_vec;
-            gsl::index i {0};
+            const ref_vec<proj_field>* field_vec;
 
             if (projection.def && projection.def->fields)
-                field_vec = *projection.def->fields;
+                field_vec = projection.def->fields.get();
 
+            gsl::index i {0};
             for (const auto& [name, type] : projection.fields) {
                 // This is an identical check to that conducted in the marshaling walks
                 if (!should_walk<role, side>(*type))
                     continue;
-                auto width = std::get<1>(*field_vec[i++]);
+
+                const auto& [ast_type, width] = *(*field_vec)[i++];
                 // cannot take address of bitfields. Handle it with plain variables
                 if (width > 0) {
-                    auto bitfield_name = std::string("__") + name;
-                    os << "\t" << type->c_specifier << " " << bitfield_name << " = " << source_var << "->" << name << ";\n";
+                    const auto bitfield_name = concat("__", name);
+                    const auto bitfield_ptr_name = concat(bitfield_name, "_ptr");
+                    os << "\t" << type->c_specifier << " " << bitfield_name << " = " << source_var << "->" << name
+                        << ";\n";
+
                     const auto specifier = concat(type->c_specifier, is_const_context ? " const*" : "*");
-                    auto bitfield_ptr_name = concat(bitfield_name, "_ptr");
                     const auto assign = std::get_if<node_ref<static_array>>(&type->type) ? " = " : " = &";
                     os << "\t" << specifier << " " << bitfield_ptr_name << assign << bitfield_name << ";\n";
                     roots.emplace_back(std::move(bitfield_ptr_name), type.get());
                 } else {
                     const auto specifier = concat(type->c_specifier, is_const_context ? " const*" : "*");
-                    auto ptr_name = concat(name, "_ptr");
+                    const auto ptr_name = concat(name, "_ptr");
                     const auto assign = std::get_if<node_ref<static_array>>(&type->type) ? " = " : " = &";
                     os << "\t" << specifier << " " << ptr_name << assign << source_var << "->" << name << ";\n";
                     roots.emplace_back(std::move(ptr_name), type.get());
@@ -320,12 +323,12 @@ namespace idlc {
 
             if (is_return(*rpc.ret_pgraph)) {
                 if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
-                        os << "\t{\n";
-                        os << "\t\tioremap_len = glue_unpack(__pos, msg, ext, uint64_t);\n";
-                        os << "\t\tlcd_ioremap_phys(ioremap_cptr, ioremap_len, &ioremap_gpa);\n";
-                        os << "\t\t*ret_ptr = lcd_ioremap(gpa_val(ioremap_gpa), ioremap_len);\n";
-                        os << "\t}\n\n";
-                    }
+                    os << "\t{\n";
+                    os << "\t\tioremap_len = glue_unpack(__pos, msg, ext, uint64_t);\n";
+                    os << "\t\tlcd_ioremap_phys(ioremap_cptr, ioremap_len, &ioremap_gpa);\n";
+                    os << "\t\t*ret_ptr = lcd_ioremap(gpa_val(ioremap_gpa), ioremap_len);\n";
+                    os << "\t}\n\n";
+                }
             }
 
             for (const auto& [name, type] : roots.arguments) {
@@ -348,7 +351,6 @@ namespace idlc {
             // Add verbose printk's while returning
             os << "\tif (verbose_debug) {\n";
             os << "\t\tprintk(\"%s:%d, returned!\\n\", __func__, __LINE__);\n" << "\t}\n";
-
             os << (is_return(*rpc.ret_pgraph) ? concat("\treturn ret;\n") : "");
         }
 
@@ -432,8 +434,12 @@ namespace idlc {
                     }
 
                     os << "\n\t{\n";
-                    os << "\t\tlcd_volunteer_dev_mem(__gpa((uint64_t)*ret_ptr), get_order(" << resource_len << "), &resource_cptr);\n";
-                    os << "\t\tcopy_msg_cap_vmfunc(current->lcd, current->vmfunc_lcd, resource_cptr, lcd_resource_cptr);\n";
+                    os << "\t\tlcd_volunteer_dev_mem(__gpa((uint64_t)*ret_ptr), get_order(" << resource_len
+                        << "), &resource_cptr);\n";
+
+                    os << "\t\tcopy_msg_cap_vmfunc(current->lcd, current->vmfunc_lcd, resource_cptr, lcd_resource_cptr)"
+                        << ";\n";
+                        
                     os << "\t\tglue_pack(__pos, msg, ext, " << resource_len << ");\n";
                     os << "\t}\n\n";
                 }
