@@ -476,7 +476,7 @@ namespace idlc {
         }
 
         template<rpc_side side>
-        void generate_dispatch_fn(std::ostream& os, rpc_vec_view rpcs)
+        void generate_dispatch_fn(std::ostream& os, rpc_vec_view rpcs, global_vec_view globals)
         {
             os << "int try_dispatch(enum RPC_ID id, struct fipc_message* msg, struct ext_registers* ext)\n";
             os << "{\n";
@@ -486,6 +486,9 @@ namespace idlc {
                 os << "\t\tglue_user_trace(\"MODULE_INIT\");\n";
                 os << "\t\t__module_lcd_init();\n";
                 os << "\t\tshared_mem_init();\n";
+                for (const auto& g : globals) {
+                    os << "\t\t" << g->name << " = __global_init_var_" << g->name << "();\n";
+                }
                 os << "\t\tbreak;\n\n";
 
                 os << "\tcase MODULE_EXIT:\n";
@@ -518,7 +521,7 @@ namespace idlc {
             os << "\t}\n\n\treturn 1;\n}\n\n";
         }
 
-        void generate_client(rpc_vec_view rpcs)
+        void generate_client(rpc_vec_view rpcs, global_vec_view globals)
         {
             std::ofstream file {"client.c"};
             file.exceptions(file.badbit | file.failbit);
@@ -526,6 +529,14 @@ namespace idlc {
             file << "#include <lcd_config/pre_hook.h>\n\n";
             file << "#include \"common.h\"\n\n";
             file << "#include <lcd_config/post_hook.h>\n\n";
+
+            // Globals are externs in the client domain. Define the variables and sync it up with the
+            // other domain's global
+            for (const auto& g : globals) {
+                if (g->pgraph && !std::get_if<none>(&g->pgraph->type))
+                    file << g->pgraph->c_specifier << " " << g->name << ";\n\n";
+            }
+
             for (const auto& rpc : rpcs) {
                 switch (rpc->kind) {
                 case rpc_def_kind::direct:
@@ -540,10 +551,10 @@ namespace idlc {
                 }
             }
 
-            generate_dispatch_fn<rpc_side::client>(file, rpcs);
+            generate_dispatch_fn<rpc_side::client>(file, rpcs, globals);
         }
 
-        void generate_server(rpc_vec_view rpcs)
+        void generate_server(rpc_vec_view rpcs, global_vec_view globals)
         {
             std::ofstream file {"server.c"};
             file.exceptions(file.badbit | file.failbit);
@@ -565,7 +576,7 @@ namespace idlc {
                 }
             }
 
-            generate_dispatch_fn<rpc_side::server>(file, rpcs);
+            generate_dispatch_fn<rpc_side::server>(file, rpcs, globals);
         }
 
         void generate_linker_script(rpc_vec_view rpcs)
@@ -786,8 +797,8 @@ namespace idlc {
         create_function_strings(rpcs);
         generate_common_header(rpcs, projections);
         generate_common_source(rpcs, projections);
-        generate_client(rpcs);
-        generate_server(rpcs);
+        generate_client(rpcs, globals);
+        generate_server(rpcs, globals);
         generate_linker_script(rpcs);
     }
 }
