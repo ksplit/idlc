@@ -134,6 +134,15 @@ namespace idlc {
 				return true;
 			}
 
+			bool visit_type_casted(type_casted& node)
+			{
+				indent(std::cout, m_indent_level) << "type_casted" << std::endl;
+				++m_indent_level;
+				traverse(*this, node);
+				--m_indent_level;
+				return true;
+			}
+
 		private:
 			unsigned m_indent_level {};
 		};

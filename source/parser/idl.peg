@@ -560,6 +560,8 @@ type_stem = arr:type_array {{
 	value = share(type_stem {get_shared<type_proj>(proj)});
 }} | arith:type_primitive {{
 	value = share(type_stem {to_int<type_primitive>(arith)});
+}} | cast:type_casted {{
+	value = share(type_stem {get_shared<type_casted>(cast)});
 }} | tok_kw_void {{
 	value = share(type_stem {type_none {} });
 }}

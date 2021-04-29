@@ -180,6 +180,8 @@ namespace idlc {
 				return self.visit_type_none(subnode);
 			else if constexpr (std::is_same_v<type, type_string>) // FIXME: how to properly walk these "folded" nodes?
 				return true;
+			else if constexpr (std::is_same_v<type, node_ref<type_casted>>)
+				return self.visit_type_casted(*subnode);
 			else if constexpr (std::is_same_v<type, type_primitive>)
 				return true;
 			
@@ -242,6 +244,15 @@ namespace idlc {
 		};
 
 		return std::visit(visit, node);
+	}
+
+	template<typename walk>
+	bool traverse(walk&& self, const type_casted& node)
+	{
+		if (!self.visit_type_spec(*node.declared_type))
+			return false;
+
+		return self.visit_type_spec(*node.true_type);
 	}
 
 	template<typename derived>
@@ -340,6 +351,11 @@ namespace idlc {
 		bool visit_type_none(type_none)
 		{
 			return true;
+		}
+
+		bool visit_type_casted(type_casted& node)
+		{
+			return traverse(self(), node);
 		}
 
 	private:
