@@ -26,6 +26,7 @@ namespace idlc {
 	struct type_proj;
 	struct type_array;
 	struct type_string;
+	struct type_casted;
 	struct type_spec;
 
 	struct naked_proj_decl;
@@ -45,7 +46,8 @@ namespace idlc {
 		type_none,
 		node_ref<type_rpc>,
 		node_ref<type_proj>,
-		node_ref<type_array>
+		node_ref<type_array>,
+		node_ref<type_casted>
 	>;
 
 	struct type_none {};
@@ -107,17 +109,20 @@ namespace idlc {
 		{}
 	};
 
-	// struct field_abs_ref {
-	// 	node_ref<field_rel_ref> link;
-	// };
-
-	// struct field_rel_ref {
-	// 	idents links;
-	// };
-
 	// Another marker
 	// NOTE: since these don't actually exist in any meaningful sense, their own parse rules don't produce them
 	struct type_string {};
+
+	struct type_casted {
+		// NOTE: this type is only here for the benefit of making a c-specifier
+		node_ref<type_spec> declared_type;
+		node_ref<type_spec> true_type;
+
+		type_casted(node_ref<type_spec> declared_type, node_ref<type_spec> true_type) :
+			declared_type {declared_type},
+			true_type {true_type}
+		{}
+	};
 
 	struct indirection {
 		node_ref<annotation> attrs; // Contextually, both ptr and value attrs

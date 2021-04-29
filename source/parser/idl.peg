@@ -94,6 +94,7 @@ tok_kw_shared = "shared"
 tok_kw_ioremap = "ioremap"
 tok_kw_unused = "unused"
 tok_kw_bind_memberof = "bind_memberof"
+tok_kw_casted = "casted"
 
 tok_space = lex_blank+
 tok_arrow = "->"
@@ -531,6 +532,10 @@ type_rpc = tok_kw_rpc_ptr tok_space name:tok_ident {{
 
 type_proj = tok_kw_projection tok_space name:tok_ident {{
 	value = share(type_proj {to_ptr<ident>(name)});
+}}
+
+type_casted = tok_kw_casted tok_space? tok_langle tok_space? decl:type_spec tok_space? tok_comma tok_space? real:type_spec tok_space? tok_rangle {{
+	value = share(type_casted {get_shared<type_spec>(decl), get_shared<type_spec>(real)});
 }}
 
 type_list = head:type_spec rest:(tok_space? tok_comma tok_space? type_spec)* {{

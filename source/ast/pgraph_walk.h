@@ -45,7 +45,7 @@ namespace idlc {
 				else if constexpr (std::is_same_v<type, node_ref<pointer>>) {
 					return pass.visit_pointer(*item);
 				}
-				else if constexpr (std::is_same_v<type, node_ref<static_void_ptr>>) {
+				else if constexpr (std::is_same_v<type, node_ref<casted_type>>) {
 					// TODO: void<>
 				}
 				else if constexpr (std::is_same_v<type, node_ref<rpc_ptr>>) {
