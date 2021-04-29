@@ -193,7 +193,29 @@ namespace idlc {
 
                 const auto& specifier = pgraph->c_specifier;
                 auto ptr_name = concat(name, "_ptr");
-                os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
+
+                // TODO: Doesn't really work for multi-dimensional arrays
+                auto p = std::get_if<node_ref<pointer>>(&pgraph->type);
+
+                if (p && (side == marshal_side::callee)) {
+                    auto p_array = std::get_if<node_ref<static_array>>(&p->get()->referent->type);
+                    auto raw_specifier = p->get()->referent->c_specifier;
+
+                    if (flags_set(p->get()->pointer_annots.kind, annotation_kind::alloc_stack_callee)) {
+                        if (p_array) {
+                            os << "\t" << raw_specifier << " __"  << name << "[" << p_array->get()->size << "];\n";
+                            os << "\t" << specifier << " "  << name << " = __" << name << ";\n";
+                        } else {
+                            os << "\t" << raw_specifier << " __"  << name << ";\n";
+                            os << "\t" << specifier << " "  << name << " = &__" << name << ";\n";
+                        }
+                        os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
+                    } else {
+                        os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
+                    }
+                } else {
+                    os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
+                }
                 roots.emplace_back(std::move(ptr_name), pgraph.get());
             }
 
@@ -365,8 +387,13 @@ namespace idlc {
 
             const auto n_args = gsl::narrow<gsl::index>(rpc.arg_pgraphs.size());
             for (gsl::index i {}; i < n_args; ++i) {
-                const auto& type = rpc.arg_pgraphs.at(i)->c_specifier;
+                const auto& pgraph = rpc.arg_pgraphs.at(i);
+                const auto& type = pgraph->c_specifier;
                 const auto name = rpc.arguments->at(i)->name;
+
+                auto p = std::get_if<node_ref<pointer>>(&pgraph->type);
+                if (p && flags_set(p->get()->pointer_annots.kind, annotation_kind::alloc_stack_callee))
+                    continue;
                 os << "\t" << type << " " << name << " = 0;\n";
             }
 

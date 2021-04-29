@@ -157,6 +157,10 @@ namespace idlc {
 
                     return true; // No need to walk these (yet)
                 }
+                else if (flags_set(node.pointer_annots.kind, annotation_kind::alloc_stack_callee)) {
+                    // No need to pack the pointer if it's a stack allocation on the other side
+                    return true;
+                }
                 else {
                     this->new_line() << "glue_pack(__pos, msg, ext, __adjusted);\n";
                 }
@@ -490,6 +494,19 @@ namespace idlc {
             std::terminate();
         }
 
+        static constexpr bool should_alloc_stack(const annotation& ann)
+        {
+            switch (side) {
+            case marshal_side::caller:
+                return flags_set(ann.kind, annotation_kind::alloc_stack_caller);
+
+            case marshal_side::callee:
+                return flags_set(ann.kind, annotation_kind::alloc_stack_callee);
+            }
+
+            std::terminate();
+        }
+
         static constexpr absl::string_view get_visitor_name(projection& node)
         {
             switch (side) {
@@ -505,6 +522,10 @@ namespace idlc {
 
         [[nodiscard]] bool marshal_pointer_value(pointer& node)
         {
+            // No need to unpack the pointer for stack allocation
+            if (should_alloc_stack(node.pointer_annots))
+                return true;
+                
             if (!is_clear(node.pointer_annots.kind & annotation_kind::is_bind_memberof)) {
                 // special case! early return
                 marshal_bind_memberof_pointer(node);
