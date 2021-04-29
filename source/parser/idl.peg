@@ -86,6 +86,7 @@ tok_kw_in = "in"
 tok_kw_out = "out"
 tok_kw_alloc = "alloc"
 tok_kw_alloc_once = "alloc_once"
+tok_kw_alloc_stack = "alloc_stack"
 tok_kw_dealloc = "dealloc"
 tok_kw_bind = "bind"
 tok_kw_caller = "caller"
@@ -368,6 +369,12 @@ ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in}); }}
 	}}
 	| tok_kw_alloc_once tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
 		value = share(annotation {annotation_kind::alloc_once_callee});
+	}}
+	| tok_kw_alloc_stack tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
+		value = share(annotation {annotation_kind::alloc_stack_caller, nullptr, nullptr});
+	}}
+	| tok_kw_alloc_stack tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
+		value = share(annotation {annotation_kind::alloc_stack_callee, nullptr, nullptr});
 	}}
 	| tok_kw_alloc tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
 		value = share(annotation {annotation_kind::alloc_caller});
