@@ -75,6 +75,18 @@ namespace idlc {
 				return true;
 			}
 
+			bool visit_casted_type(casted_type& node)
+			{
+				indent(std::cout, m_indent_level) << "casted_type\n";
+				++m_indent_level;
+				if (!traverse(*this, node))
+					return false;
+
+				--m_indent_level;
+
+				return true;
+			}
+
 			bool visit_rpc_ptr(rpc_ptr& node)
 			{
 				indent(std::cout, m_indent_level) << "rpc_ptr\n";

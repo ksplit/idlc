@@ -115,14 +115,13 @@ namespace idlc {
 		{}
 	};
 
-	// TODO: this has no syntax
 	struct casted_type {
+		node_ptr<value> facade;
 		node_ptr<value> referent;
-		annotation_kind pointer_annots;
 
-		casted_type(node_ptr<value> referent, annotation_kind pointer_annots) :
-			referent {std::move(referent)},
-			pointer_annots {pointer_annots}
+		casted_type(node_ptr<value> facade, node_ptr<value> referent) :
+			facade {std::move(facade)},
+			referent {std::move(referent)}
 		{}
 	};
 

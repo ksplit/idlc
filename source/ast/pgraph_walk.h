@@ -46,7 +46,7 @@ namespace idlc {
 					return pass.visit_pointer(*item);
 				}
 				else if constexpr (std::is_same_v<type, node_ref<casted_type>>) {
-					// TODO: void<>
+					return pass.visit_casted_type(*item);
 				}
 				else if constexpr (std::is_same_v<type, node_ref<rpc_ptr>>) {
 					return pass.visit_rpc_ptr(*item);
@@ -106,6 +106,11 @@ namespace idlc {
 		bool operator()(walk& pass, rpc_ptr& node)
 		{
 			return true;
+		}
+
+		bool operator()(walk& pass, casted_type& node)
+		{
+			return pass.visit_value(*node.facade) && pass.visit_value(*node.referent);
 		}
 		
 		// TODO: currently the *only* outside client of this is the dump walk, not clear if this is useful
@@ -175,6 +180,11 @@ namespace idlc {
 		bool visit_none(none)
 		{
 			return true;
+		}
+
+		bool visit_casted_type(casted_type& node)
+		{
+			return traverse(self(), node);
 		}
 
 	protected:
