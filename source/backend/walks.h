@@ -18,13 +18,24 @@ namespace idlc {
             return m_marshaled_ptr;
         }
 
+        // TODO: why is the string an rref again?
         template<typename node_type>
         bool marshal(std::string&& new_ptr, node_type& type)
+        {
+            return marshal(
+                std::move(new_ptr),
+                type,
+                [this](auto&& node) { return this->traverse(this->self(), node); }
+            );
+        }
+
+        template<typename node_type, typename walker>
+        bool marshal(std::string&& new_ptr, node_type& type, walker fn)
         {
             const auto state = std::make_tuple(m_marshaled_ptr, m_indent_level);
             m_marshaled_ptr = new_ptr;
             ++m_indent_level;
-            if (!this->traverse(this->self(), type))
+            if (!fn(type))
                 return false;
 
             std::forward_as_tuple(m_marshaled_ptr, m_indent_level) = state;
@@ -461,6 +472,23 @@ namespace idlc {
             this->new_line() << get_visitor_name(node) << "(__pos, msg, ext, "
                 << ((node.def->parent) ? "ctx, " : "") << this->subject() << ");\n";
             
+            return true;
+        }
+
+        bool visit_casted_type(casted_type& node)
+        {
+            const auto ref_spec = node.referent->c_specifier;            
+            this->new_line() << ref_spec << " __casted = (" << ref_spec << ")*" << this->subject() << ";\n";
+            this->new_line() << ref_spec << "* __casted_ptr = &__casted;\n"; 
+            this->new_line() << "{\n";
+
+            // NOTE: the facade is technically meaningless and must be ignored during marshaling
+            if (!this->marshal("__casted_ptr", node, [this](auto&& type) { return this->visit_value(*type.referent); }))
+                return false;
+
+            this->new_line() << "}\n\n";
+            this->new_line() << "*" << this->subject() << " = (" << node.facade->c_specifier << ")__casted;\n";
+
             return true;
         }
 

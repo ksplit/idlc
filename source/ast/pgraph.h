@@ -116,8 +116,8 @@ namespace idlc {
 	};
 
 	struct casted_type {
-		node_ptr<value> facade;
 		node_ptr<value> referent;
+		node_ptr<value> facade; // NOTE: mostly meaningless
 
 		casted_type(node_ptr<value> facade, node_ptr<value> referent) :
 			facade {std::move(facade)},

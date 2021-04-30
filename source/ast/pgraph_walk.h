@@ -110,7 +110,8 @@ namespace idlc {
 
 		bool operator()(walk& pass, casted_type& node)
 		{
-			return pass.visit_value(*node.facade) && pass.visit_value(*node.referent);
+			// HACK: this order makes it play nice with the c_specifier walk
+			return pass.visit_value(*node.referent) && pass.visit_value(*node.facade);
 		}
 		
 		// TODO: currently the *only* outside client of this is the dump walk, not clear if this is useful
