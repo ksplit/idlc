@@ -294,6 +294,22 @@ namespace idlc {
             return true;
         }
 
+        bool visit_casted_type(casted_type& node)
+        {
+            const auto ref_spec = node.referent->c_specifier;            
+            this->new_line() << ref_spec << " __casted = (" << ref_spec << ")*" << this->subject() << ";\n";
+            this->new_line() << ref_spec << " const* __casted_ptr = &__casted;\n"; 
+            this->new_line() << "{\n";
+
+            // NOTE: the facade is technically meaningless and must be ignored during marshaling
+            if (!this->marshal("__casted_ptr", node, [this](auto&& type) { return this->visit_value(*type.referent); }))
+                return false;
+
+            this->new_line() << "}\n\n";
+
+            return true;
+        }
+
     private:
         bool m_should_marshal {};
 
