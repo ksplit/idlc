@@ -14,6 +14,7 @@
 #include "ast/pgraph_walk.h"
 #include "frontend/name_binding.h"
 #include "frontend/analysis.h"
+#include "frontend/injection.h"
 #include "backend/generation.h"
 #include "utility.h"
 
@@ -82,6 +83,7 @@ int main(int argc, char** argv)
         return 1;
 
 	idlc::dump_ast(*file);
+	idlc::inject_global_rpcs(*file);
 	if (!idlc::bind_all_names(*file)) {
 		std::cout << "Error: Not all names were bound\n";
 		return 1;
