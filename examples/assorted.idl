@@ -37,12 +37,4 @@ module foo {
             int a;
         }
     }
-
-    // FIXME: This should be injected automatically after seeing the above definition.
-    // Define it explicitly for now!
-    rpc projection foo * [unused] __global_init_var_my_global() {
-        projection <struct foo_struct> foo {
-            int a;
-        }
-    }
 }
