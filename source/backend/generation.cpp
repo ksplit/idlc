@@ -31,8 +31,8 @@ namespace idlc {
             {
                 m_stream << "void " << node.caller_marshal_visitor << "(\n"
                     << "\tsize_t* __pos,\n"
-                    << "\tstruct fipc_message* msg,\n"
-                    << "\tstruct ext_registers* ext,\n";
+                    << "\tstruct fipc_message* __msg,\n"
+                    << "\tstruct ext_registers* __ext,\n";
                 
                 if (node.def->parent)
                     m_stream << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
@@ -42,8 +42,8 @@ namespace idlc {
 
                 m_stream << "void " << node.callee_unmarshal_visitor << "(\n"
                     << "\tsize_t* __pos,\n"
-                    << "\tconst struct fipc_message* msg,\n"
-                    << "\tconst struct ext_registers* ext,\n";
+                    << "\tconst struct fipc_message* __msg,\n"
+                    << "\tconst struct ext_registers* __ext,\n";
                     
                 if (node.def->parent)
                     m_stream << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
@@ -53,8 +53,8 @@ namespace idlc {
 
                 m_stream << "void " << node.callee_marshal_visitor << "(\n"
                     << "\tsize_t* __pos,\n"
-                    << "\tstruct fipc_message* msg,\n"
-                    << "\tstruct ext_registers* ext,\n";
+                    << "\tstruct fipc_message* __msg,\n"
+                    << "\tstruct ext_registers* __ext,\n";
                     
                 if (node.def->parent)
                     m_stream << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
@@ -64,8 +64,8 @@ namespace idlc {
 
                 m_stream << "void " << node.caller_unmarshal_visitor << "(\n"
                     << "\tsize_t* __pos,\n"
-                    << "\tconst struct fipc_message* msg,\n"
-                    << "\tconst struct ext_registers* ext,\n";
+                    << "\tconst struct fipc_message* __msg,\n"
+                    << "\tconst struct ext_registers* __ext,\n";
                     
                 if (node.def->parent)
                     m_stream << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
@@ -128,7 +128,7 @@ namespace idlc {
 
             file << "};\n\n";
 
-            file << "int try_dispatch(enum RPC_ID id, struct fipc_message* msg, struct ext_registers* ext);\n\n";
+            file << "int try_dispatch(enum RPC_ID id, struct fipc_message* __msg, struct ext_registers* __ext);\n\n";
 
             for (const auto& rpc : rpcs) {
                 if (rpc->kind == rpc_def_kind::indirect) {
@@ -278,8 +278,8 @@ namespace idlc {
         auto generate_caller_glue_prologue(std::ostream& os, rpc_def& rpc)
         {
             os << "\tstruct fipc_message __buffer = {0};\n";
-            os << "\tstruct fipc_message *msg = &__buffer;\n";
-            os << "\tstruct ext_registers* ext = get_register_page(smp_processor_id());\n";
+            os << "\tstruct fipc_message *__msg = &__buffer;\n";
+            os << "\tstruct ext_registers* __ext = get_register_page(smp_processor_id());\n";
             os << "\tsize_t n_pos = 0;\n";
             os << "\tsize_t* __pos = &n_pos;\n\n";
 
@@ -289,7 +289,7 @@ namespace idlc {
             os << "\t__maybe_unused const struct " << rpc.ctx_id << " call_ctx = {" << rpc.params_string << "};\n";
             os << "\t__maybe_unused const struct " << rpc.ctx_id << " *ctx = &call_ctx;\n\n";
 
-            os << "\t(void)ext;\n\n";
+            os << "\t(void)__ext;\n\n";
 
             // Add verbose printk's while entering
             os << "\tif (verbose_debug) {\n";
@@ -297,14 +297,14 @@ namespace idlc {
 
             if (rpc.kind == rpc_def_kind::indirect) {
                 // make sure we marshal the target pointer before everything
-                os << "\tglue_pack(__pos, msg, ext, target);\n";
+                os << "\tglue_pack(__pos, __msg, __ext, target);\n";
             }
 
             if (is_return(*rpc.ret_pgraph)) {
                 if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
                     os << "\t{\n";
                     os << "\t\tlcd_cptr_alloc(&ioremap_cptr);\n";
-                    os << "\t\tglue_pack(__pos, msg, ext, cptr_val(ioremap_cptr));\n";
+                    os << "\t\tglue_pack(__pos, __msg, __ext, cptr_val(ioremap_cptr));\n";
                     os << "\t}\n\n";
                 }
             }
@@ -326,7 +326,7 @@ namespace idlc {
             if (is_return(*rpc.ret_pgraph)) {
                 if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
                         os << "\t{\n";
-                        os << "\t\tioremap_len = glue_unpack(__pos, msg, ext, uint64_t);\n";
+                        os << "\t\tioremap_len = glue_unpack(__pos, __msg, __ext, uint64_t);\n";
                         os << "\t\tlcd_ioremap_phys(ioremap_cptr, ioremap_len, &ioremap_gpa);\n";
                         os << "\t\t*ret_ptr = lcd_ioremap(gpa_val(ioremap_gpa), ioremap_len);\n";
                         os << "\t}\n\n";
@@ -363,11 +363,11 @@ namespace idlc {
             const auto roots = generate_caller_glue_prologue(os, rpc);
             switch (side) {
             case rpc_side::client:
-                os << "\tglue_call_server(__pos, msg, " << rpc.enum_id << ");\n\n";
+                os << "\tglue_call_server(__pos, __msg, " << rpc.enum_id << ");\n\n";
                 break;
 
             case rpc_side::server:
-                os << "\tglue_call_client(__pos, msg, " << rpc.enum_id << ");\n\n";
+                os << "\tglue_call_client(__pos, __msg, " << rpc.enum_id << ");\n\n";
                 break;
             }
 
@@ -381,7 +381,7 @@ namespace idlc {
             os << "\tsize_t* __pos = &n_pos;\n\n";
 
             if (rpc.kind == rpc_def_kind::indirect) {
-                os << "\t" << rpc.typedef_id << " function_ptr = glue_unpack(__pos, msg, ext, " << rpc.typedef_id
+                os << "\t" << rpc.typedef_id << " function_ptr = glue_unpack(__pos, __msg, __ext, " << rpc.typedef_id
                     << ");\n";
             }
 
@@ -410,7 +410,7 @@ namespace idlc {
             if (is_return(*rpc.ret_pgraph)) {
                 if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
                     os << "\t{\n";
-                    os << "\t\tlcd_resource_cptr.cptr = glue_unpack(__pos, msg, ext, uint64_t);\n";
+                    os << "\t\tlcd_resource_cptr.cptr = glue_unpack(__pos, __msg, __ext, uint64_t);\n";
                     os << "\t}\n\n";
                 }
             }
@@ -444,7 +444,7 @@ namespace idlc {
                     os << "\n\t{\n";
                     os << "\t\tlcd_volunteer_dev_mem(__gpa((uint64_t)*ret_ptr), get_order(" << resource_len << "), &resource_cptr);\n";
                     os << "\t\tcopy_msg_cap_vmfunc(current->lcd, current->vmfunc_lcd, resource_cptr, lcd_resource_cptr);\n";
-                    os << "\t\tglue_pack(__pos, msg, ext, " << resource_len << ");\n";
+                    os << "\t\tglue_pack(__pos, __msg, __ext, " << resource_len << ");\n";
                     os << "\t}\n\n";
                 }
             }
@@ -466,7 +466,7 @@ namespace idlc {
                 }
             }
         
-            os << "\tmsg->regs[0] = *__pos;\n";
+            os << "\t__msg->regs[0] = *__pos;\n";
 
             // Add verbose printk's while returning
             os << "\tif (verbose_debug) {\n";
@@ -475,7 +475,7 @@ namespace idlc {
 
         void generate_indirect_rpc_callee(std::ostream& os, rpc_def& rpc)
         {
-            os << "void " << rpc.callee_id << "(struct fipc_message* msg, struct ext_registers* ext)\n{\n";
+            os << "void " << rpc.callee_id << "(struct fipc_message* __msg, struct ext_registers* __ext)\n{\n";
             generate_callee_glue(rpc, os);
             os << "}\n\n";            
         }
@@ -505,7 +505,7 @@ namespace idlc {
         template<rpc_side side>
         void generate_dispatch_fn(std::ostream& os, rpc_vec_view rpcs)
         {
-            os << "int try_dispatch(enum RPC_ID id, struct fipc_message* msg, struct ext_registers* ext)\n";
+            os << "int try_dispatch(enum RPC_ID id, struct fipc_message* __msg, struct ext_registers* __ext)\n";
             os << "{\n";
             os << "\tswitch(id) {\n";
             if constexpr (side == rpc_side::client) {
@@ -524,7 +524,7 @@ namespace idlc {
             if constexpr (side == rpc_side::server) {
                 os << "\tcase RPC_ID_shared_mem_init:\n";
                 os << "\t\tglue_user_trace(\"shared_mem_init\\n\");\n";
-                os << "\t\tshared_mem_init_callee(msg, ext);\n";
+                os << "\t\tshared_mem_init_callee(__msg, __ext);\n";
                 os << "\t\tbreak;\n\n";
             }
 
@@ -537,7 +537,7 @@ namespace idlc {
                 
                 os << "\tcase " << rpc->enum_id << ":\n";
                 os << "\t\tglue_user_trace(\"" << rpc->name << "\\n\");\n";
-                os << "\t\t" << rpc->callee_id << "(msg, ext);\n";
+                os << "\t\t" << rpc->callee_id << "(__msg, __ext);\n";
                 os << "\t\tbreak;\n\n";
             }
 
@@ -585,7 +585,7 @@ namespace idlc {
                     break;
 
                 case rpc_def_kind::direct:
-                    file << "void " << rpc->callee_id << "(struct fipc_message* msg, struct ext_registers* ext)\n{\n";
+                    file << "void " << rpc->callee_id << "(struct fipc_message* __msg, struct ext_registers* __ext)\n{\n";
                     generate_callee_glue(*rpc, file);
                     file << "}\n\n";
                     break;                    
@@ -645,8 +645,8 @@ namespace idlc {
         {
             file << "void " << node.caller_marshal_visitor << "(\n"
                 << "\tsize_t* __pos,\n"
-                << "\tstruct fipc_message* msg,\n"
-                << "\tstruct ext_registers* ext,\n";
+                << "\tstruct fipc_message* __msg,\n"
+                << "\tstruct ext_registers* __ext,\n";
                 
             if (node.def->parent)
                 file << "\tstruct " << node.def->parent->ctx_id << " const* ctx,\n";
@@ -670,8 +670,8 @@ namespace idlc {
         {
             file << "void " << node.callee_unmarshal_visitor << "(\n"
                 << "\tsize_t* __pos,\n"
-                << "\tconst struct fipc_message* msg,\n"
-                << "\tconst struct ext_registers* ext,\n";
+                << "\tconst struct fipc_message* __msg,\n"
+                << "\tconst struct ext_registers* __ext,\n";
                 
             if (node.def->parent)
                 file << "\tstruct " << node.def->parent->ctx_id << " const* ctx,\n";
@@ -695,8 +695,8 @@ namespace idlc {
         {
             file << "void " << node.callee_marshal_visitor << "(\n"
                 << "\tsize_t* __pos,\n"
-                << "\tstruct fipc_message* msg,\n"
-                << "\tstruct ext_registers* ext,\n";
+                << "\tstruct fipc_message* __msg,\n"
+                << "\tstruct ext_registers* __ext,\n";
                 
             if (node.def->parent)
                 file << "\tstruct " << node.def->parent->ctx_id << " const* ctx,\n";
@@ -720,8 +720,8 @@ namespace idlc {
         {
             file << "void " << node.caller_unmarshal_visitor << "(\n"
                 << "\tsize_t* __pos,\n"
-                << "\tconst struct fipc_message* msg,\n"
-                << "\tconst struct ext_registers* ext,\n";
+                << "\tconst struct fipc_message* __msg,\n"
+                << "\tconst struct ext_registers* __ext,\n";
                 
             if (node.def->parent)
                 file << "\tstruct " << node.def->parent->ctx_id << " const* ctx,\n";
@@ -761,7 +761,7 @@ namespace idlc {
             file << "\tLIBLCD_MSG(\"Weak shared_mem_init does nothing! Override if you want!\");\n";
             file << "}\n";
             file << "#else\n";
-            file << "__attribute__((weak)) void shared_mem_init_callee(struct fipc_message *msg, struct ext_registers* ext) {\n";
+            file << "__attribute__((weak)) void shared_mem_init_callee(struct fipc_message *__msg, struct ext_registers* __ext) {\n";
             file << "\tLIBLCD_MSG(\"Weak shared_mem_init_callee does nothing! Override if you want!\");\n";
             file << "}\n";
             file << "#endif\t/* LCD_ISOLATE */\n\n";
