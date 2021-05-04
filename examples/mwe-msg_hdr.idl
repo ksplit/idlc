@@ -1,0 +1,24 @@
+module kernel {
+	rpc_ptr int  proto_ops_recvmsg( projection sock [alloc(callee)] *  sock, projection msg [alloc(callee), out] * [out] msg, long unsigned int  size, int  flags ) {
+		projection < struct socket > sock {
+			projection socket_sk [alloc(callee)] * sk;
+		}
+		projection < struct sock > socket_sk {
+		}
+		projection < struct msghdr > msg {
+			int [out] msg_namelen;
+			casted<void *, array<char, {{ptr->msg_namelen}}> [alloc(callee)] * [out] > msg_name;
+			unsigned int [in, out] msg_flags;
+		}
+	}
+
+	projection < struct proto_ops > _global_proto_ops {
+		rpc_ptr proto_ops_recvmsg recvmsg;
+	}
+
+	rpc int  can_proto_register( const projection cp [alloc(callee)] *  cp ) {
+		projection < struct can_proto > cp {
+			projection _global_proto_ops [alloc(callee)] * ops;
+		}
+	}	
+}
