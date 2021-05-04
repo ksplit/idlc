@@ -156,7 +156,7 @@ namespace idlc {
                         << ", " << "struct " << offset.struct_type << ", " << offset.field << ");\n";
                 }
                 else {
-                    this->new_line() << "const void* __adjusted = *" << this->subject() << ";\n";
+                    this->new_line() << "__maybe_unused const void* __adjusted = *" << this->subject() << ";\n";
                 }
 
                 if (should_bind<side>(node.pointer_annots)) {
@@ -576,9 +576,10 @@ namespace idlc {
                 return true;
             }
 
-            this->new_line() << "*" << this->subject() << " = ";
+            const auto subject = concat("*", this->subject(), " = ");
 
             if (should_bind<side>(node.pointer_annots)) {
+                this->new_line() << subject;
                 // Should_bind takes care of the details, so we only check if either of these flags are set
                 this->stream() << "glue_unpack_shadow(__pos, msg, ext, " << m_c_specifier << ");\n";
             }
@@ -590,20 +591,26 @@ namespace idlc {
                 if (alloc_size.empty())
                     alloc_size = get_size_expr(*node.referent);
 
+                this->new_line() << "size_t __size = " << alloc_size << ";\n";
+                this->new_line() << subject;
                 this->stream() << "glue_unpack_new_shadow(__pos, msg, ext, " << m_c_specifier << ", ("
-                    << alloc_size << "), (" << alloc_flags << "));\n";
+                    << "__size" << "), (" << alloc_flags << "));\n";
             }
             else if (should_alloc_once(node.pointer_annots)) {
+                this->new_line() << "size_t __size = " << get_size_expr(*node.referent) << ";\n";
+                this->new_line() << subject;
                 this->stream() << "glue_unpack_bind_or_new_shadow(__pos, msg, ext, " << m_c_specifier << ", "
-                    << get_size_expr(*node.referent) << ");\n";
+                    << "__size" << ");\n";
             }
             else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
+                this->new_line() << subject;
                 this->stream() << "(" << m_c_specifier << ")(glue_unpack(__pos, msg, ext, size_t) + "
                     << node.pointer_annots.share_global << ");\n";
 
                 return false;
             }
             else {
+                this->new_line() << subject;
                 this->stream() << "glue_unpack(__pos, msg, ext, " << m_c_specifier << ");\n";
             }
 
