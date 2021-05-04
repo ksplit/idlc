@@ -7,7 +7,7 @@ module kernel {
 		}
 		projection < struct msghdr > msg {
 			int [out] msg_namelen;
-			casted<void *, array<char, {{ptr->msg_namelen}}> [alloc(callee)] * [out] > msg_name;
+			casted<void *, array<char, {{ptr->msg_namelen}}> [alloc(callee), bind(callee)] *> [in, out] msg_name;
 			unsigned int [in, out] msg_flags;
 		}
 	}

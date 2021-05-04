@@ -302,7 +302,9 @@ namespace idlc {
             this->new_line() << "{\n";
 
             // NOTE: the facade is technically meaningless and must be ignored during marshaling
-            if (!this->marshal("__casted_ptr", node, [this](auto&& type) { return this->visit_value(*type.referent); }))
+            if (!this->marshal("__casted_ptr", node, [this](auto&& type) {
+                return this->visit_value(*type.referent);
+            }))
                 return false;
 
             this->new_line() << "}\n\n";
@@ -499,7 +501,9 @@ namespace idlc {
             this->new_line() << "{\n";
 
             // NOTE: the facade is technically meaningless and must be ignored during marshaling
-            if (!this->marshal("__casted_ptr", node, [this](auto&& type) { return this->visit_value(*type.referent); }))
+            if (!this->marshal("__casted_ptr", node, [this](auto&& type) {
+                return this->visit_value(*type.referent);
+            }))
                 return false;
 
             this->new_line() << "}\n\n";
@@ -578,12 +582,7 @@ namespace idlc {
 
             const auto subject = concat("*", this->subject(), " = ");
 
-            if (should_bind<side>(node.pointer_annots)) {
-                this->new_line() << subject;
-                // Should_bind takes care of the details, so we only check if either of these flags are set
-                this->stream() << "glue_unpack_shadow(__pos, msg, ext, " << m_c_specifier << ");\n";
-            }
-            else if (should_alloc(node.pointer_annots)) {
+            if (should_alloc(node.pointer_annots)) {
                 auto alloc_flags = node.pointer_annots.flags_verbatim ? node.pointer_annots.flags_verbatim : "DEFAULT_GFP_FLAGS";
                 std::string alloc_size = node.pointer_annots.size_verbatim ? node.pointer_annots.size_verbatim : "";
 
@@ -595,6 +594,11 @@ namespace idlc {
                 this->new_line() << subject;
                 this->stream() << "glue_unpack_new_shadow(__pos, msg, ext, " << m_c_specifier << ", ("
                     << "__size" << "), (" << alloc_flags << "));\n";
+            }
+            else if (should_bind<side>(node.pointer_annots)) {
+                this->new_line() << subject;
+                // Should_bind takes care of the details, so we only check if either of these flags are set
+                this->stream() << "glue_unpack_shadow(__pos, msg, ext, " << m_c_specifier << ");\n";
             }
             else if (should_alloc_once(node.pointer_annots)) {
                 this->new_line() << "size_t __size = " << get_size_expr(*node.referent) << ";\n";
