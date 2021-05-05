@@ -250,22 +250,42 @@ namespace idlc {
             projection& projection,
             absl::string_view source_var)
         {
+            constexpr auto is_const_context = role == marshal_role::marshaling;
             std::vector<std::tuple<std::string, value*>> roots;
             roots.reserve(projection.fields.size());
-            constexpr auto is_const_context = role == marshal_role::marshaling;
+            const ref_vec<proj_field>* field_vec;
+
+            if (projection.def && projection.def->fields)
+                field_vec = projection.def->fields.get();
+
+            gsl::index i {0};
             for (const auto& [name, type] : projection.fields) {
                 // This is an identical check to that conducted in the marshaling walks
                 if (!should_walk<role, side>(*type))
                     continue;
 
-                const auto specifier = concat(type->c_specifier, is_const_context ? " const*" : "*");
-                auto ptr_name = concat(name, "_ptr");
-                const auto assign = std::get_if<node_ref<static_array>>(&type->type) ? " = " : " = &";
-                os << "\t" << specifier << " " << ptr_name << assign << source_var << "->" << name << ";\n";
-                roots.emplace_back(std::move(ptr_name), type.get());
+                const auto& [ast_type, width] = *(*field_vec)[i++];
+                // cannot take address of bitfields. Handle it with plain variables
+                if (width > 0) {
+                    const auto bitfield_name = concat("__", name);
+                    const auto bitfield_ptr_name = concat(bitfield_name, "_ptr");
+                    os << "\t" << type->c_specifier << " " << bitfield_name << " = " << source_var << "->" << name
+                        << ";\n";
+
+                    const auto specifier = concat(type->c_specifier, is_const_context ? " const*" : "*");
+                    const auto assign = std::get_if<node_ref<static_array>>(&type->type) ? " = " : " = &";
+                    os << "\t" << specifier << " " << bitfield_ptr_name << assign << bitfield_name << ";\n";
+                    roots.emplace_back(std::move(bitfield_ptr_name), type.get());
+                } else {
+                    const auto specifier = concat(type->c_specifier, is_const_context ? " const*" : "*");
+                    const auto ptr_name = concat(name, "_ptr");
+                    const auto assign = std::get_if<node_ref<static_array>>(&type->type) ? " = " : " = &";
+                    os << "\t" << specifier << " " << ptr_name << assign << source_var << "->" << name << ";\n";
+                    roots.emplace_back(std::move(ptr_name), type.get());
+                }
             }
 
-            os << "\t\n";
+            os << "\n";
 
             return roots;
         }
@@ -353,7 +373,6 @@ namespace idlc {
             // Add verbose printk's while returning
             os << "\tif (verbose_debug) {\n";
             os << "\t\tprintk(\"%s:%d, returned!\\n\", __func__, __LINE__);\n" << "\t}\n";
-
             os << (is_return(*rpc.ret_pgraph) ? concat("\treturn ret;\n") : "");
         }
 
@@ -442,9 +461,13 @@ namespace idlc {
                     }
 
                     os << "\n\t{\n";
-                    os << "\t\tlcd_volunteer_dev_mem(__gpa((uint64_t)*ret_ptr), get_order(" << resource_len << "), &resource_cptr);\n";
-                    os << "\t\tcopy_msg_cap_vmfunc(current->lcd, current->vmfunc_lcd, resource_cptr, lcd_resource_cptr);\n";
-                    os << "\t\tglue_pack(__pos, __msg, __ext, " << resource_len << ");\n";
+                    os << "\t\tlcd_volunteer_dev_mem(__gpa((uint64_t)*ret_ptr), get_order(" << resource_len
+                        << "), &resource_cptr);\n";
+
+                    os << "\t\tcopy_msg_cap_vmfunc(current->lcd, current->vmfunc_lcd, resource_cptr, lcd_resource_cptr)"
+                        << ";\n";
+                        
+                    os << "\t\tglue_pack(__pos, __msg, ext, " << resource_len << ");\n";
                     os << "\t}\n\n";
                 }
             }
@@ -666,6 +689,28 @@ namespace idlc {
             file << "}\n\n";
         }
 
+        template <marshal_side side>
+        void fixup_bitfields(std::ostream& file, projection& node, absl::string_view source_var)
+        {
+            ref_vec<proj_field> field_vec;
+            gsl::index i {0};
+
+            if (node.def && node.def->fields) {
+                field_vec = *node.def->fields;
+            }
+
+            file << "\t{\n";
+            for (const auto& [name, type] : node.fields) {
+                const auto & [_, width] = *field_vec[i++];
+                auto bitfield_ptr_name = std::string("__") + name + std::string("_ptr");
+                if (!should_walk<marshal_role::unmarshaling, side>(*type))
+                    continue;
+                if (width > 0)
+                    file << "\t\t" << "ptr" << "->" << name << " = *" << bitfield_ptr_name << ";\n";
+            }
+            file << "\t}\n";
+        }
+
         void generate_callee_unmarshal_visitor(std::ostream& file, projection& node)
         {
             file << "void " << node.callee_unmarshal_visitor << "(\n"
@@ -687,6 +732,8 @@ namespace idlc {
                 walk.visit_value(*type);
                 file << "\t}\n\n";
             }
+
+            fixup_bitfields<marshal_side::callee>(file, node, "ptr");
 
             file << "}\n\n";
         }
@@ -737,6 +784,8 @@ namespace idlc {
                 walk.visit_value(*type);
                 file << "\t}\n\n";
             }
+
+            fixup_bitfields<marshal_side::caller>(file, node, "ptr");
 
             file << "}\n\n";
         }

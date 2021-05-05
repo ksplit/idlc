@@ -97,7 +97,8 @@ namespace idlc {
 
 		auto generate_field(proj_field& node)
 		{
-			const auto visit = [](auto&& item) -> std::pair<ident, node_ptr<value>>
+			const auto& [def, width] = node;
+			const auto visit = [](auto&& item) -> idlc::projection_field
 			{
 				using type = std::decay_t<decltype(item)>;
 				if constexpr (std::is_same_v<type, node_ref<naked_proj_decl>>) {
@@ -112,7 +113,7 @@ namespace idlc {
 				std::terminate();
 			};
 
-			return std::visit(visit, node);
+			return std::visit(visit, def);
 		}
 
 		auto generate_union_dummy(proj_def& def, const std::string& name)

@@ -39,7 +39,8 @@ namespace idlc {
 	using file = std::variant<node_ref<driver_file>, node_ref<ref_vec<module_def>>>;
 	// using field_ref = std::variant<node_ref<field_abs_ref>, node_ref<field_rel_ref>>;
 	using array_size = std::variant<unsigned, tok_kw_null, ident>;
-	using proj_field = std::variant<node_ref<var_decl>, node_ref<naked_proj_decl>>;
+	using proj_field = std::tuple<std::variant<node_ref<var_decl>, node_ref<naked_proj_decl>>, std::uint8_t>;
+	
 	using type_stem = std::variant<
 		type_primitive,
 		type_string,

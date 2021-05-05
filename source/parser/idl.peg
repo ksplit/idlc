@@ -336,14 +336,14 @@ proj_field_list = first:proj_field rest:(tok_space? proj_field)* {{
 
 var_field = decl:var_decl tok_space? tok_semi {{ value = decl; }}
 
-bitfield_field = decl:var_decl tok_space? tok_colon tok_space? width:tok_number tok_space? tok_semi {{ value = decl; }}
-
 proj_field = vf:var_field {{
-	value = share(proj_field {get_shared<var_decl>(vf)});
-}} | npd:naked_proj_decl {{
-	value = share(proj_field {get_shared<naked_proj_decl>(npd)});
-}} | bf:bitfield_field {{
-	value = share(proj_field {get_shared<var_decl>(bf)});
+	value = share(proj_field {get_shared<var_decl>(vf), 0});
+}}
+# | npd:naked_proj_decl {{
+# 	value = share(proj_field {get_shared<naked_proj_decl>(npd), 0});
+# }}
+| decl:var_decl tok_space? tok_colon tok_space? width:tok_number tok_space? tok_semi {{
+	value = share(proj_field {get_shared<var_decl>(decl), to_int<std::uint8_t>(width)});
 }}
 
 var_decl = ty:type_spec tok_space? name:tok_ident {{
