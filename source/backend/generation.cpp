@@ -576,6 +576,13 @@ namespace idlc {
                 }
             }
 
+            for (const auto& global : globals) {
+                file << global->pgraph->c_specifier << " __global_init_var_" << global->name << "()\n";
+                file << "{\n";
+                file << "\treturn " << global->name << ";\n";
+                file << "}\n\n";
+            }
+
             generate_dispatch_fn<rpc_side::server>(file, rpcs, globals);
         }
 
