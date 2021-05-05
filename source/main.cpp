@@ -20,39 +20,8 @@
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
 // NOTE: Currently we work at the scale of a single file. All modules within a file are treated as implicitly imported.
 // TODO: Support merging ASTs via import / use keywords.
-
-/*
-	Marshaling logic gets outputted as a per-passing-tree list of "blocks" that form a graph structure.
-	These are essentially visitors, which visit the fields at runtime to correctly pack them into the message buffer.
-	The goal is to encode enough information here that we could later do optimization passes over it. Such passes
-	would only be justified if it's places where the compiler cannot feasibly optimize it for us, or places where
-	said optimization improves debuggability. The major candidates are trampoline elision, static assignment of IPC
-	registers, (??)
-*/
-
-/*
-	NOTE: Vikram notes:
-	- initial pass recording IDs and types of every object in the graph
-	- serialize to flattened array of registers, pointers replaced by IDs
-	- unrealistic to build right now
-	- focus on subset of features
-		- static arrays
-		- pointers (non-cyclic?)
-		- unions
-		- structs
-		- minimum viable: focus on nullnet
-*/
-
-// NOTE: all marshaling logic is side-independent, needing only a side-dependent send() primitive
-// It's side-dependent where the dispatch loop gets hooked in, however
-// and kernel functions must not conflict with the generated marshaling code
-// it is the indirect RPCs that are truly side-independent
-
-// TODO: add static_void_ptr syntax (low priority)
 // TODO: ndo_start_xmit uncovered an issue with enum promotion not being applicable to function pointers, i.e. the IDL
 // needs a concept of enums (so does the pgraph, etc.)
-
-// TODO: array constness propagation to element (the two are linker): add a walk for it
 
 // TODO: @Vikram says: "do you remember the discussion we had before on accessing kernel exported rpc_ptrs from the driver (need trampolines on driver end). by any chance you remember which driver it was?"
 

@@ -29,8 +29,8 @@ namespace idlc {
 
 		passed_type generate_string_type()
 		{
-			return std::make_unique<null_terminated_array>(
-				std::make_unique<value>(primitive::ty_char, annotation_kind::use_default, false)
+			return std::make_shared<null_terminated_array>(
+				std::make_shared<value>(primitive::ty_char, annotation_kind::use_default, false)
 			);
 		}
 
@@ -54,7 +54,13 @@ namespace idlc {
 					return item->definition;
 				}
 				else if constexpr (std::is_same_v<type, node_ref<type_rpc>>) {
-					return std::make_unique<rpc_ptr>(item.get().get()->definition);
+					return std::make_shared<rpc_ptr>(item.get().get()->definition);
+				}
+				else if constexpr (std::is_same_v<type, node_ref<type_casted>>) {
+					return std::make_shared<casted_type>(
+						generate_value(*item->declared_type),
+						generate_value(*item->true_type)
+					);
 				}
 				else if constexpr (std::is_same_v<type, type_none>) {
 					return none {};
@@ -74,13 +80,13 @@ namespace idlc {
 			{
 				using type = std::decay_t<decltype(item)>;
 				if constexpr (std::is_same_v<type, tok_kw_null>) {
-					return std::make_unique<null_terminated_array>(generate_value(*node.element));
+					return std::make_shared<null_terminated_array>(generate_value(*node.element));
 				}
 				else if constexpr (std::is_same_v<type, unsigned>) {
 					return std::make_shared<static_array>(generate_value(*node.element), item);
 				}
 				else if constexpr (std::is_same_v<type, ident>) {
-					return std::make_unique<dyn_array>(generate_value(*node.element), item);
+					return std::make_shared<dyn_array>(generate_value(*node.element), item);
 				}
 
 				std::terminate();
@@ -91,7 +97,8 @@ namespace idlc {
 
 		auto generate_field(proj_field& node)
 		{
-			const auto visit = [](auto&& item) -> std::pair<ident, node_ptr<value>>
+			const auto& [def, width] = node;
+			const auto visit = [](auto&& item) -> idlc::projection_field
 			{
 				using type = std::decay_t<decltype(item)>;
 				if constexpr (std::is_same_v<type, node_ref<naked_proj_decl>>) {
@@ -106,7 +113,7 @@ namespace idlc {
 				std::terminate();
 			};
 
-			return std::visit(visit, node);
+			return std::visit(visit, def);
 		}
 
 		auto generate_union_dummy(proj_def& def, const std::string& name)
@@ -141,9 +148,9 @@ namespace idlc {
 			for (const auto& ptr_node : node.indirs) {
 				const auto annots = ptr_node->attrs;
 				const auto val_annots = annots->kind & annotation_kind::is_val;
-				auto field = std::make_unique<value>(std::move(type), val_annots, is_const);
+				auto field = std::make_shared<value>(std::move(type), val_annots, is_const);
 
-				type = std::make_unique<pointer>(
+				type = std::make_shared<pointer>(
 					std::move(field),
 					annotation {
 						annots->kind & annotation_kind::is_ptr,
@@ -158,7 +165,7 @@ namespace idlc {
 			}
 
 			assert((node.attrs & annotation_kind::is_val) == node.attrs);
-			auto field = std::make_unique<value>(std::move(type), node.attrs, is_const);
+			auto field = std::make_shared<value>(std::move(type), node.attrs, is_const);
 
 			return std::move(field);
 		}

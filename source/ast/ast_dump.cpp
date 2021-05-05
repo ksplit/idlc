@@ -83,15 +83,6 @@ namespace idlc {
 				return true;
 			}
 
-			bool visit_type_any_of(type_any_of& node)
-			{
-				indent(std::cout, m_indent_level) << "type_any_of" << std::endl;
-				++m_indent_level;
-				traverse(*this, node);
-				--m_indent_level;
-				return true;
-			}
-
 			bool visit_type_array(type_array& node)
 			{
 				indent(std::cout, m_indent_level) << "type_array" << std::endl;
@@ -140,6 +131,15 @@ namespace idlc {
 			bool visit_type_none(type_none)
 			{
 				indent(std::cout, m_indent_level) << "type_none" << std::endl;
+				return true;
+			}
+
+			bool visit_type_casted(type_casted& node)
+			{
+				indent(std::cout, m_indent_level) << "type_casted" << std::endl;
+				++m_indent_level;
+				traverse(*this, node);
+				--m_indent_level;
 				return true;
 			}
 

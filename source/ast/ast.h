@@ -25,8 +25,8 @@ namespace idlc {
 	struct type_rpc;
 	struct type_proj;
 	struct type_array;
-	struct type_any_of;
 	struct type_string;
+	struct type_casted;
 	struct type_spec;
 
 	struct naked_proj_decl;
@@ -39,7 +39,8 @@ namespace idlc {
 	using file = std::variant<node_ref<driver_file>, node_ref<ref_vec<module_def>>>;
 	// using field_ref = std::variant<node_ref<field_abs_ref>, node_ref<field_rel_ref>>;
 	using array_size = std::variant<unsigned, tok_kw_null, ident>;
-	using proj_field = std::variant<node_ref<var_decl>, node_ref<naked_proj_decl>>;
+	using proj_field = std::tuple<std::variant<node_ref<var_decl>, node_ref<naked_proj_decl>>, std::uint8_t>;
+	
 	using type_stem = std::variant<
 		type_primitive,
 		type_string,
@@ -47,7 +48,7 @@ namespace idlc {
 		node_ref<type_rpc>,
 		node_ref<type_proj>,
 		node_ref<type_array>,
-		node_ref<type_any_of>
+		node_ref<type_casted>
 	>;
 
 	struct type_none {};
@@ -109,30 +110,20 @@ namespace idlc {
 		{}
 	};
 
-	struct type_any_of {
-		ident discrim;
-		node_ref<ref_vec<type_spec>> types;
-
-		type_any_of(
-			ident discrim,
-			node_ref<ref_vec<type_spec>> types
-		) :
-			discrim {discrim},
-			types {types}
-		{}
-	};
-
-	// struct field_abs_ref {
-	// 	node_ref<field_rel_ref> link;
-	// };
-
-	// struct field_rel_ref {
-	// 	idents links;
-	// };
-
 	// Another marker
 	// NOTE: since these don't actually exist in any meaningful sense, their own parse rules don't produce them
 	struct type_string {};
+
+	struct type_casted {
+		// NOTE: this type is only here for the benefit of making a c-specifier
+		node_ref<type_spec> declared_type;
+		node_ref<type_spec> true_type;
+
+		type_casted(node_ref<type_spec> declared_type, node_ref<type_spec> true_type) :
+			declared_type {declared_type},
+			true_type {true_type}
+		{}
+	};
 
 	struct indirection {
 		node_ref<annotation> attrs; // Contextually, both ptr and value attrs
