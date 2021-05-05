@@ -15,6 +15,7 @@ module foo {
         projection circ_a *a;
         const signed char* c;
         projection circ_a [alloc<{{sizeof(int) * 128}}>(callee)]* but_bigger;
+        casted<void*, projection circ_a*> casted_field;
     }
 
     rpc projection simp_circ* foo(projection circ_a [out]* a, projection circ_b* b, projection call_proj* c) {

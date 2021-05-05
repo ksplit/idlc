@@ -142,6 +142,7 @@ namespace idlc {
 	template<typename walk>
 	bool traverse(walk&& self, const proj_field& node)
 	{
+		const auto& [def, size] = node;
 		const auto visit = [&self](auto&& subnode) -> bool
 		{
 			using type = std::decay_t<decltype(subnode)>;
@@ -153,7 +154,7 @@ namespace idlc {
 			std::terminate();
 		};
 
-		return std::visit(visit, node);
+		return std::visit(visit, def);
 	}
 
 	template<typename walk>
@@ -194,12 +195,12 @@ namespace idlc {
 				return self.visit_type_proj(*subnode);
 			else if constexpr (std::is_same_v<type, node_ref<type_array>>)
 				return self.visit_type_array(*subnode);
-			else if constexpr (std::is_same_v<type, node_ref<type_any_of>>)
-				return self.visit_type_any_of(*subnode);
 			else if constexpr (std::is_same_v<type, type_none>)
 				return self.visit_type_none(subnode);
 			else if constexpr (std::is_same_v<type, type_string>) // FIXME: how to properly walk these "folded" nodes?
 				return true;
+			else if constexpr (std::is_same_v<type, node_ref<type_casted>>)
+				return self.visit_type_casted(*subnode);
 			else if constexpr (std::is_same_v<type, type_primitive>)
 				return true;
 			
@@ -207,17 +208,6 @@ namespace idlc {
 		};
 
 		return std::visit(visit, node);
-	}
-
-	template<typename walk>
-	bool traverse(walk&& self, const type_any_of& node)
-	{
-		for (const auto& item : *node.types) {
-			if (!self.visit_type_spec(*item))
-				return false;
-		}
-		
-		return true;
 	}
 
 	template<typename walk>
@@ -273,6 +263,15 @@ namespace idlc {
 		};
 
 		return std::visit(visit, node);
+	}
+
+	template<typename walk>
+	bool traverse(walk&& self, const type_casted& node)
+	{
+		if (!self.visit_type_spec(*node.declared_type))
+			return false;
+
+		return self.visit_type_spec(*node.true_type);
 	}
 
 	template<typename derived>
@@ -338,11 +337,6 @@ namespace idlc {
 			return traverse(self(), node);
 		}
 
-		bool visit_type_any_of(type_any_of& node)
-		{
-			return traverse(self(), node);
-		}
-
 		bool visit_type_array(type_array& node)
 		{
 			return traverse(self(), node);
@@ -381,6 +375,11 @@ namespace idlc {
 		bool visit_type_none(type_none)
 		{
 			return true;
+		}
+
+		bool visit_type_casted(type_casted& node)
+		{
+			return traverse(self(), node);
 		}
 
 	private:

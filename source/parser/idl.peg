@@ -86,16 +86,17 @@ tok_kw_in = "in"
 tok_kw_out = "out"
 tok_kw_alloc = "alloc"
 tok_kw_alloc_once = "alloc_once"
+tok_kw_alloc_stack = "alloc_stack"
 tok_kw_dealloc = "dealloc"
 tok_kw_bind = "bind"
 tok_kw_caller = "caller"
 tok_kw_callee = "callee"
-tok_kw_any_of = "any_of"
 tok_kw_shared = "shared"
 tok_kw_ioremap = "ioremap"
 tok_kw_unused = "unused"
 tok_kw_bind_memberof = "bind_memberof"
 tok_kw_global = "global"
+tok_kw_casted = "casted"
 
 tok_space = lex_blank+
 tok_arrow = "->"
@@ -342,14 +343,14 @@ proj_field_list = first:proj_field rest:(tok_space? proj_field)* {{
 
 var_field = decl:var_decl tok_space? tok_semi {{ value = decl; }}
 
-bitfield_field = decl:var_decl tok_space? tok_colon tok_space? width:tok_number tok_space? tok_semi {{ value = decl; }}
-
 proj_field = vf:var_field {{
-	value = share(proj_field {get_shared<var_decl>(vf)});
-}} | npd:naked_proj_decl {{
-	value = share(proj_field {get_shared<naked_proj_decl>(npd)});
-}} | bf:bitfield_field {{
-	value = share(proj_field {get_shared<var_decl>(bf)});
+	value = share(proj_field {get_shared<var_decl>(vf), 0});
+}}
+# | npd:naked_proj_decl {{
+# 	value = share(proj_field {get_shared<naked_proj_decl>(npd), 0});
+# }}
+| decl:var_decl tok_space? tok_colon tok_space? width:tok_number tok_space? tok_semi {{
+	value = share(proj_field {get_shared<var_decl>(decl), to_int<std::uint8_t>(width)});
 }}
 
 var_decl = ty:type_spec tok_space? name:tok_ident {{
@@ -375,6 +376,12 @@ ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in}); }}
 	}}
 	| tok_kw_alloc_once tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
 		value = share(annotation {annotation_kind::alloc_once_callee});
+	}}
+	| tok_kw_alloc_stack tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
+		value = share(annotation {annotation_kind::alloc_stack_caller, nullptr, nullptr});
+	}}
+	| tok_kw_alloc_stack tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
+		value = share(annotation {annotation_kind::alloc_stack_callee, nullptr, nullptr});
 	}}
 	| tok_kw_alloc tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
 		value = share(annotation {annotation_kind::alloc_caller});
@@ -541,8 +548,8 @@ type_proj = tok_kw_projection tok_space name:tok_ident {{
 	value = share(type_proj {to_ptr<ident>(name)});
 }}
 
-type_any_of = tok_kw_any_of tok_space? tok_langle tok_space? ref:tok_ident tok_space? tok_comma tok_space? types:type_list tok_space? tok_rangle {{
-	value = share(type_any_of {to_ptr<ident>(ref), get_shared<ref_vec<type_spec>>(types)});
+type_casted = tok_kw_casted tok_space? tok_langle tok_space? decl:type_spec tok_space? tok_comma tok_space? real:type_spec tok_space? tok_rangle {{
+	value = share(type_casted {get_shared<type_spec>(decl), get_shared<type_spec>(real)});
 }}
 
 type_list = head:type_spec rest:(tok_space? tok_comma tok_space? type_spec)* {{
@@ -567,8 +574,8 @@ type_stem = arr:type_array {{
 	value = share(type_stem {get_shared<type_proj>(proj)});
 }} | arith:type_primitive {{
 	value = share(type_stem {to_int<type_primitive>(arith)});
-}} | any:type_any_of {{
-	value = share(type_stem {get_shared<type_any_of>(any)});
+}} | cast:type_casted {{
+	value = share(type_stem {get_shared<type_casted>(cast)});
 }} | tok_kw_void {{
 	value = share(type_stem {type_none {} });
 }}

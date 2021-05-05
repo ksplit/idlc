@@ -22,7 +22,7 @@ namespace idlc {
 	struct static_array;
 	struct dyn_array;
 	struct pointer;
-	struct static_void_ptr; // a void* that is "actually" a pointer to some other type
+	struct casted_type; // a void* that is "actually" a pointer to some other type
 	class projection;
 	struct rpc_ptr;
 	struct none {};
@@ -37,7 +37,7 @@ namespace idlc {
 		node_ref<static_array>,
 		node_ref<dyn_array>,
 		node_ref<pointer>,
-		node_ref<static_void_ptr>,
+		node_ref<casted_type>,
 		node_ref<rpc_ptr>,
 		node_ref<projection>,
 		gsl::not_null<proj_def*> // NOTE: will *never* appear in a finished pgraph, part of lowering
@@ -115,14 +115,13 @@ namespace idlc {
 		{}
 	};
 
-	// TODO: this has no syntax
-	struct static_void_ptr {
+	struct casted_type {
 		node_ptr<value> referent;
-		annotation_kind pointer_annots;
+		node_ptr<value> facade; // NOTE: mostly meaningless
 
-		static_void_ptr(node_ptr<value> referent, annotation_kind pointer_annots) :
-			referent {std::move(referent)},
-			pointer_annots {pointer_annots}
+		casted_type(node_ptr<value> facade, node_ptr<value> referent) :
+			facade {std::move(facade)},
+			referent {std::move(referent)}
 		{}
 	};
 
