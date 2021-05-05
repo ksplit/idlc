@@ -54,6 +54,8 @@
 
 // TODO: array constness propagation to element (the two are linker): add a walk for it
 
+// TODO: @Vikram says: "do you remember the discussion we had before on accessing kernel exported rpc_ptrs from the driver (need trampolines on driver end). by any chance you remember which driver it was?"
+
 namespace idlc {
 	namespace {
 		class string_const_walk : public ast_walk<string_const_walk> {
