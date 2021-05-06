@@ -346,9 +346,16 @@ namespace idlc {
             if (is_return(*rpc.ret_pgraph)) {
                 if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
                         os << "\t{\n";
+                        os << "\t\tint __ret;\n";
                         os << "\t\tioremap_len = glue_unpack(__pos, __msg, __ext, uint64_t);\n";
-                        os << "\t\tlcd_ioremap_phys(ioremap_cptr, ioremap_len, &ioremap_gpa);\n";
+                        os << "\t\t__ret = lcd_ioremap_phys(ioremap_cptr, ioremap_len, &ioremap_gpa);\n";
+                        os << "\t\tif (__ret) {\n";
+                        os << "\t\t\tLIBLCD_ERR(\"failed to remap bar region\");\n";
+                        os << "\t\t}\n";
                         os << "\t\t*ret_ptr = lcd_ioremap(gpa_val(ioremap_gpa), ioremap_len);\n";
+                        os << "\t\tif (!*ret_ptr) {\n";
+                        os << "\t\t\tLIBLCD_ERR(\"failed to ioremap virt\");\n";
+                        os << "\t\t}\n";
                         os << "\t}\n\n";
                     }
             }
@@ -445,9 +452,22 @@ namespace idlc {
             if (is_return(*rpc.ret_pgraph))
                 os << "ret = ";
 
-            const auto impl_name = (rpc.kind == rpc_def_kind::direct) ? rpc.name : "function_ptr";
-            os << impl_name << "(" << rpc.params_string << ");\n\n";
+            if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
+                std::string phys_addr;
+                if ((rpc.name == std::string("pci_iomap")) || (rpc.name == std::string("pci_ioremap_bar"))) {
+                    phys_addr = "pci_resource_start(pdev, bar)";
+                } else if (rpc.name == std::string("ioremap_nocache")) {
+                    phys_addr = "phys_addr";
+                }
+                os << "(void *) " << phys_addr <<";\n\n";
+            } else {
+
+                const auto impl_name = (rpc.kind == rpc_def_kind::direct) ? rpc.name : "function_ptr";
+                os << impl_name << "(" << rpc.params_string << ");\n\n";
+            }
+
             os << "\t*__pos = 0;\n";
+
 
             // Marshal the resource len back to the caller domain for ioremapping the region
             if (is_return(*rpc.ret_pgraph)) {
@@ -467,7 +487,7 @@ namespace idlc {
                     os << "\t\tcopy_msg_cap_vmfunc(current->lcd, current->vmfunc_lcd, resource_cptr, lcd_resource_cptr)"
                         << ";\n";
                         
-                    os << "\t\tglue_pack(__pos, __msg, ext, " << resource_len << ");\n";
+                    os << "\t\tglue_pack(__pos, __msg, __ext, " << resource_len << ");\n";
                     os << "\t}\n\n";
                 }
             }
