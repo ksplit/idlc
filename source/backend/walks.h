@@ -604,7 +604,7 @@ namespace idlc {
                 this->new_line() << "size_t __size = " << get_size_expr(*node.referent) << ";\n";
                 this->new_line() << subject;
                 this->stream() << "glue_unpack_bind_or_new_shadow(__pos, __msg, __ext, " << m_c_specifier << ", "
-                    << "__size" << ");\n";
+                    << "__size, " << "DEFAULT_GFP_FLAGS);\n";
             }
             else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
                 this->new_line() << subject;
