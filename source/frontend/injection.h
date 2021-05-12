@@ -20,7 +20,9 @@ namespace idlc {
 
 			for (const auto& def : m_defs) {
 				// HACK: extreme hackery abounds here: every global generates a corresponding `__global_init_*` rpc, and we abuse the scoping bug
-				def->type->indirs.back()->attrs->kind |= annotation_kind::unused;
+				if (!def->type->indirs.empty())
+					def->type->indirs.back()->attrs->kind |= annotation_kind::unused;
+
 				node.items->emplace_back(
 					std::make_shared<module_item>(
 						std::make_shared<rpc_def>(

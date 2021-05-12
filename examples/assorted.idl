@@ -38,4 +38,6 @@ module foo {
             int a;
         }
     }
+
+    global unsigned long jiffies {}
 }
