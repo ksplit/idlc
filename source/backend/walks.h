@@ -170,7 +170,7 @@ namespace idlc {
                 }
                 else if (flags_set(node.pointer_annots.kind, annotation_kind::alloc_stack_callee)) {
                     // No need to pack the pointer if it's a stack allocation on the other side
-                    return true;
+                    // do nothing for now, and jump to marshaling the members (if any)
                 }
                 else {
                     this->new_line() << "glue_pack(__pos, __msg, __ext, __adjusted);\n";
