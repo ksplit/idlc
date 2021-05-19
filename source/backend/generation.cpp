@@ -467,7 +467,7 @@ namespace idlc {
                     os << "\t\tcopy_msg_cap_vmfunc(current->lcd, current->vmfunc_lcd, resource_cptr, lcd_resource_cptr)"
                         << ";\n";
                         
-                    os << "\t\tglue_pack(__pos, __msg, ext, " << resource_len << ");\n";
+                    os << "\t\tglue_pack(__pos, __msg, __ext, " << resource_len << ");\n";
                     os << "\t}\n\n";
                 }
             }
@@ -534,11 +534,13 @@ namespace idlc {
             if constexpr (side == rpc_side::client) {
                 os << "\tcase MODULE_INIT:\n";
                 os << "\t\tglue_user_trace(\"MODULE_INIT\");\n";
-                os << "\t\t__module_lcd_init();\n";
-                os << "\t\tshared_mem_init();\n";
+                // globals like jiffies are used even before the init function.
+                // So, initialize globals before invoking module_init.
                 for (const auto& g : globals) {
                     os << "\t\t" << g->name << " = __global_init_var_" << g->name << "();\n";
                 }
+                os << "\t\t__module_lcd_init();\n";
+                os << "\t\tshared_mem_init();\n";
                 os << "\t\tbreak;\n\n";
 
                 os << "\tcase MODULE_EXIT:\n";
@@ -612,6 +614,11 @@ namespace idlc {
             file << "#include <lcd_config/pre_hook.h>\n\n";
             file << "#include \"common.h\"\n\n";
             file << "#include <lcd_config/post_hook.h>\n\n";
+
+            for (const auto& global : globals) {
+                file << global->pgraph->c_specifier << " __global_init_var_" << global->name << "(void);\n\n";
+            }
+
             for (const auto& rpc : rpcs) {
                 switch (rpc->kind) {
                 case rpc_def_kind::indirect:
