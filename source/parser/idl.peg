@@ -64,6 +64,7 @@ tok_kw_string = "string"
 tok_kw_projection = "projection"
 tok_kw_rpc = "rpc"
 tok_kw_rpc_ptr = "rpc_ptr"
+tok_kw_rpc_export = "rpc_export"
 tok_kw_driver = "driver"
 tok_kw_module = "module"
 tok_kw_header = "header"
@@ -278,6 +279,8 @@ module_item = header_stmt {{
 	value = share(module_item {get_shared<rpc_def>(rpc)});
 }} | rpc_ptr:rpc_ptr_def {{
 	value = share(module_item {get_shared<rpc_def>(rpc_ptr)});
+}} | rpc_export:rpc_export_def {{
+	value = share(module_item {get_shared<rpc_def>(rpc_export)});
 }}
 
 header_stmt = tok_kw_header tok_space? tok_path tok_space? tok_semi
@@ -611,6 +614,16 @@ rpc_ptr_def = tok_kw_rpc_ptr tok_space? ret_t:type_spec tok_space? name:tok_iden
 		get_shared<ref_vec<var_decl>>(args),
 		get_shared<ref_vec<rpc_item>>(projs),
 		rpc_def_kind::indirect
+	});
+}}
+
+rpc_export_def = tok_kw_rpc_export tok_space? ret_t:type_spec tok_space? name:tok_ident tok_space? tok_lpar args:(tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace projs:(tok_space? rpc_item_list)? tok_space? tok_rbrace {{
+	value = share(rpc_def {
+		get_shared<type_spec>(ret_t),
+		to_ptr<ident>(name),
+		get_shared<ref_vec<var_decl>>(args),
+		get_shared<ref_vec<rpc_item>>(projs),
+		rpc_def_kind::export_sym
 	});
 }}
 

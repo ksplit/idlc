@@ -461,8 +461,11 @@ namespace idlc {
                 }
                 os << "(void *) " << phys_addr <<";\n\n";
             } else {
+                auto impl_name = rpc.name;
 
-                const auto impl_name = (rpc.kind == rpc_def_kind::direct) ? rpc.name : "function_ptr";
+                if (rpc.kind == rpc_def_kind::indirect) {
+                  impl_name = "function_ptr";
+                }
                 os << impl_name << "(" << rpc.params_string << ");\n\n";
             }
 
@@ -523,6 +526,13 @@ namespace idlc {
             os << "}\n\n";            
         }
 
+        void generate_rpc_export_callee(std::ostream& os, rpc_def& rpc)
+        {
+            os << "void " << rpc.callee_id << "(struct fipc_message* __msg, struct ext_registers* __ext)\n{\n";
+            generate_callee_glue(rpc, os);
+            os << "}\n\n";
+        }
+
         void generate_indirect_rpc_caller(std::ostream& os, rpc_def& rpc)
         {
             os << rpc.ret_string << " " << rpc.impl_id << "(" << rpc.typedef_id << " target, "
@@ -544,6 +554,17 @@ namespace idlc {
 
             os << "}\n\n";
         }
+
+        void generate_rpc_export_caller(std::ostream& os, rpc_def& rpc)
+        {
+            os << rpc.ret_string << " " << rpc.name << "("
+                << rpc.args_string << ")\n{\n";
+
+            generate_caller_glue<rpc_side::server>(rpc, os);
+            os << "}\n";
+            os << "EXPORT_SYMBOL(" << rpc.name << ");\n\n";
+        }
+
 
         template<rpc_side side>
         void generate_dispatch_fn(std::ostream& os, rpc_vec_view rpcs)
@@ -607,6 +628,10 @@ namespace idlc {
                 case rpc_def_kind::indirect:
                     generate_indirect_rpc_callee(file, *rpc);
                     break;
+
+                case rpc_def_kind::export_sym:
+                    generate_rpc_export_callee(file, *rpc);
+                    break;
                 }
             }
 
@@ -632,6 +657,9 @@ namespace idlc {
                     generate_callee_glue(*rpc, file);
                     file << "}\n\n";
                     break;                    
+                case rpc_def_kind::export_sym:
+                    generate_rpc_export_caller(file, *rpc);
+                    break;
                 }
             }
 

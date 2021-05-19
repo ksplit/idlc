@@ -210,10 +210,11 @@ namespace idlc {
 
 	using rpc_item = std::variant<node_ref<proj_def>, node_ref<rpc_def>>;
 
-	enum rpc_def_kind {
-		direct,
-		indirect
-	};
+  enum rpc_def_kind {
+    direct,
+    indirect,
+    export_sym,
+  };
 
 	struct rpc_def {
 		node_ref<type_spec> ret_type;
