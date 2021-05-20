@@ -30,6 +30,7 @@ namespace idlc {
 		bind_memberof_callee	= 1 << 15,
 		alloc_stack_caller 		= 1 << 16,
 		alloc_stack_callee 		= 1 << 17,
+		user_ptr              = 1 << 18,
 		is_bind_memberof		= bind_memberof_caller | bind_memberof_callee,
 		is_bind					= (bind_callee | bind_caller),
 		is_dealloc				= (dealloc_callee | dealloc_caller),
@@ -38,7 +39,7 @@ namespace idlc {
 		is_alloc_stack			= (alloc_stack_callee | alloc_stack_caller),
 		is_ioremap				= (ioremap_callee | ioremap_caller),
 		is_ptr					= is_bind | is_dealloc | is_alloc | is_ioremap | is_alloc_once | shared
-			| is_bind_memberof | is_alloc_stack,			
+			| is_bind_memberof | is_alloc_stack | user_ptr,
 		is_val					= out | in | unused,
 		in_out					= out | in,
 		io_only					= in_out,
