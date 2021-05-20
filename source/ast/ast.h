@@ -140,17 +140,20 @@ namespace idlc {
 		ref_vec<indirection> indirs;
 		annotation_kind attrs; // Will only ever have value attrs in it
 		bool is_const;
+		bool is_volatile;
 
 		type_spec(
 			node_ref<type_stem> stem,
 			ref_vec<indirection> indirs,
 			annotation_kind attrs,
-			bool is_const
+			bool is_const,
+			bool is_volatile
 		) :
 			stem {stem},
 			indirs {indirs},
 			attrs {attrs},
-			is_const {is_const}
+			is_const {is_const},
+			is_volatile {is_volatile}
 		{}
 	};
 
