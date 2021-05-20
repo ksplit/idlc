@@ -59,6 +59,7 @@ rules:
 # LEXING: These are the logical "tokens" of the language
 
 tok_kw_const = "const"
+tok_kw_volatile = "volatile"
 tok_kw_void = "void"
 tok_kw_string = "string"
 tok_kw_projection = "projection"
@@ -582,7 +583,7 @@ indirection = attrs:indirection_attrs tok_star is_c:(tok_space? tok_kw_const)? {
 	value = share(indirection {get_shared<annotation>(attrs), gsl::narrow_cast<bool>(is_c.getValue())});
 }}
 
-type_spec = is_c:(tok_kw_const tok_space {{	value = $1; }})? stem:type_stem indirs:(tok_space? indirection)* val_annotation_kind:(tok_space? val_attrs)? {{
+type_spec = is_c:(tok_kw_const tok_space {{	value = $1; }})? is_vol:(tok_kw_volatile tok_space {{	value = $1; }})? stem:type_stem indirs:(tok_space? indirection)* val_annotation_kind:(tok_space? val_attrs)? {{
 	auto& ivals = indirs.getValues();
 	ref_vec<indirection> a {};
 	a.reserve(ivals.size());
@@ -593,7 +594,8 @@ type_spec = is_c:(tok_kw_const tok_space {{	value = $1; }})? stem:type_stem indi
 		get_shared<type_stem>(stem),
 		std::move(a),
 		to_int<annotation_kind>(val_annotation_kind),
-		gsl::narrow_cast<bool>(is_c.getValue())
+		gsl::narrow_cast<bool>(is_c.getValue()),
+		gsl::narrow_cast<bool>(is_vol.getValue())
 	});
 }}
 

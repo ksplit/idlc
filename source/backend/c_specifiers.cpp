@@ -58,7 +58,8 @@ bool idlc::c_specifier_walk::visit_value(value& node)
     if (!traverse(*this, node))
         return false;
 
-    node.c_specifier = m_specifier;
+    node.c_specifier = concat(node.is_const ? "const " : (node.is_volatile ? "volatile " : ""), m_specifier);
+
     return true;
 }
 
@@ -76,6 +77,9 @@ bool idlc::c_specifier_walk::visit_pointer(pointer& node)
 
     if (node.referent->is_const)
         m_specifier += " const";
+
+    if (node.referent->is_volatile)
+        m_specifier += " volatile";
 
     m_specifier += "*";
 
