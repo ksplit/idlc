@@ -23,3 +23,8 @@ server.c
 common.h
 common.c
 trampolines.lds.S
+
+# Documentation (doxygen generated)
+**/doc/*
+**/html/*
+**/latex/*
