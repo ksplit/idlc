@@ -33,16 +33,15 @@ module foo {
     rpc void alloc_sized_with_flags(array<u32, {{ptr->arr_len}}> [alloc<{{sizeof(foo)}}, {{0xCAD}}>(callee)] * arr)
     {}
 
-    rpc_ptr long read(int fd, projection file *file, array<char, {{count}}> [user, alloc_stack(callee), out] *buf, long count) {
+    rpc_ptr long read(int fd, projection file *file, array<char, {{count}}> [user<{{count}}>, alloc(callee), out, dealloc(callee)] *buf, long count) {
        projection <struct file> file {
        }
     }
 
-    rpc_ptr long write(int fd, projection file *file, const array<char, {{count}}> [user, alloc_stack(callee)] *buf, long count) {
+    rpc_ptr long write(int fd, projection file *file, const array<char, {{count}}> [user<{{count}}>, alloc(callee), dealloc(callee)] *buf, long count) {
        projection <struct file> file {
        }
     }
-
 
     rpc_export int can_ioctl(int fd) {
 

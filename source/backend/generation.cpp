@@ -214,6 +214,10 @@ namespace idlc {
                         os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
                     }
                 } else {
+                    if ((side == marshal_side::caller) && p && flags_set(p->get()->pointer_annots.kind, annotation_kind::user_ptr)) {
+                        os << "\t" << specifier << "__" << name << "_ptr;\n";
+                        os << "\t" << specifier << "* __orig_" << ptr_name << " = &" << name << ";\n";
+                    }
                     os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
                 }
                 roots.emplace_back(std::move(ptr_name), pgraph.get());

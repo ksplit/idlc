@@ -154,8 +154,20 @@ namespace idlc {
                     // Use container_of as it abstracts away the arithmetic and also typecasts the pointer
                     this->new_line() << "struct " << offset.struct_type << "* __adjusted = container_of(*" << this->subject()
                         << ", " << "struct " << offset.struct_type << ", " << offset.field << ");\n";
-                }
-                else {
+                } else if (side == marshal_side::caller && flags_set(node.pointer_annots.kind, annotation_kind::user_ptr)) {
+                      this->new_line() << "__maybe_unused const void* __adjusted;\n";
+                      if (flags_set(node.referent->value_annots, annotation_kind::in)) {
+                        this->new_line() << "__" << this->subject() << " = kzalloc(" << node.pointer_annots.size_verbatim << ", DEFAULT_GFP_FLAGS);\n";
+                        this->new_line() << "if (copy_from_user(__" << this->subject() << ", *" << this->subject() << ", " << node.pointer_annots.size_verbatim << ")) {\n";
+                        this->new_line() << "\tprintk(\"copy_from_user failed\");\n";
+                        this->new_line() << "}\n\n";
+                        this->new_line() << "*" << this->subject() << " = __" << this->subject() << ";\n\n";
+                      } else if (flags_set(node.referent->value_annots, annotation_kind::out)) {
+                        this->new_line() << "__" << this->subject() << " = kzalloc(" << node.pointer_annots.size_verbatim << ", DEFAULT_GFP_FLAGS);\n";
+                        this->new_line() << "*" << this->subject() << " = __" << this->subject() << ";\n\n";
+                      }
+                      this->new_line() << "__adjusted = " << "*" << this->subject() << ";\n\n";
+                } else {
                     this->new_line() << "__maybe_unused const void* __adjusted = *" << this->subject() << ";\n";
                 }
 
@@ -408,7 +420,19 @@ namespace idlc {
                 return true;
             }
             else {
-                return marshal_pointer_child(node);
+                auto ret_child = marshal_pointer_child(node);
+                if (flags_set(node.pointer_annots.kind, annotation_kind::user_ptr)) {
+                  switch(side) {
+                    case marshal_side::caller:
+                      if (flags_set(node.referent->value_annots, annotation_kind::out)) {
+                        this->new_line() << "if (copy_to_user(*__orig_" << this->subject() << ", *" << this->subject() << ", " << node.pointer_annots.size_verbatim << ")) {\n";
+                        this->new_line() << "\tprintk(\"copy_to_user failed\");\n";
+                        this->new_line() << "}\n\n";
+                      }
+                      break;
+                  }
+                }
+                return ret_child;
             }                
 
             return true;
