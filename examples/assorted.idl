@@ -43,7 +43,6 @@ module foo {
        }
     }
 
-    rpc_export int can_ioctl(int fd) {
-
+    rpc_export int can_ioctl(volatile int fd) {
     }
 }

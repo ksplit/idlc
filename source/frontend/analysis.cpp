@@ -30,7 +30,7 @@ namespace idlc {
 		passed_type generate_string_type()
 		{
 			return std::make_shared<null_terminated_array>(
-				std::make_shared<value>(primitive::ty_char, annotation_kind::use_default, false)
+				std::make_shared<value>(primitive::ty_char, annotation_kind::use_default, false, false)
 			);
 		}
 
@@ -145,10 +145,11 @@ namespace idlc {
 		{
 			auto type = generate_stem_type(*node.stem);
 			bool is_const {node.is_const};
+			bool is_volatile {node.is_volatile};
 			for (const auto& ptr_node : node.indirs) {
 				const auto annots = ptr_node->attrs;
 				const auto val_annots = annots->kind & annotation_kind::is_val;
-				auto field = std::make_shared<value>(std::move(type), val_annots, is_const);
+				auto field = std::make_shared<value>(std::move(type), val_annots, is_const, is_volatile);
 
 				type = std::make_shared<pointer>(
 					std::move(field),
@@ -165,7 +166,7 @@ namespace idlc {
 			}
 
 			assert((node.attrs & annotation_kind::is_val) == node.attrs);
-			auto field = std::make_shared<value>(std::move(type), node.attrs, is_const);
+			auto field = std::make_shared<value>(std::move(type), node.attrs, is_const, is_volatile);
 
 			return std::move(field);
 		}
