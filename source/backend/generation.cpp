@@ -11,8 +11,8 @@
 #include "../frontend/analysis.h"
 #include "../utility.h"
 #include "c_specifiers.h"
-#include "walks.h"
 #include "helpers.h"
+#include "walks.h"
 
 // TODO: possibly split this module, it's by far the biggest one in the compiler
 // TODO: there is a certain illegal range of ints that cannot be reversibly casted
@@ -25,53 +25,52 @@ namespace idlc {
 
         class visitor_proto_walk : public pgraph_walk<visitor_proto_walk> {
         public:
-            visitor_proto_walk(std::ostream& os) : m_stream {os} {}
+            visitor_proto_walk(std::ostream& os)
+                : m_stream {os}
+            {
+            }
 
             bool visit_projection(projection& node)
             {
                 m_stream << "void " << node.caller_marshal_visitor << "(\n"
-                    << "\tsize_t* __pos,\n"
-                    << "\tstruct fipc_message* __msg,\n"
-                    << "\tstruct ext_registers* __ext,\n";
-                
+                         << "\tsize_t* __pos,\n"
+                         << "\tstruct fipc_message* __msg,\n"
+                         << "\tstruct ext_registers* __ext,\n";
+
                 if (node.def->parent)
                     m_stream << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
-                    
-                m_stream << "\tstruct " << node.real_name
-                    << " const* ptr);\n\n";
+
+                m_stream << "\tstruct " << node.real_name << " const* ptr);\n\n";
 
                 m_stream << "void " << node.callee_unmarshal_visitor << "(\n"
-                    << "\tsize_t* __pos,\n"
-                    << "\tconst struct fipc_message* __msg,\n"
-                    << "\tconst struct ext_registers* __ext,\n";
-                    
+                         << "\tsize_t* __pos,\n"
+                         << "\tconst struct fipc_message* __msg,\n"
+                         << "\tconst struct ext_registers* __ext,\n";
+
                 if (node.def->parent)
                     m_stream << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
-                    
-                m_stream << "\tstruct " << node.real_name
-                    << "* ptr);\n\n";
+
+                m_stream << "\tstruct " << node.real_name << "* ptr);\n\n";
 
                 m_stream << "void " << node.callee_marshal_visitor << "(\n"
-                    << "\tsize_t* __pos,\n"
-                    << "\tstruct fipc_message* __msg,\n"
-                    << "\tstruct ext_registers* __ext,\n";
-                    
+                         << "\tsize_t* __pos,\n"
+                         << "\tstruct fipc_message* __msg,\n"
+                         << "\tstruct ext_registers* __ext,\n";
+
                 if (node.def->parent)
                     m_stream << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
-                    
-                m_stream << "\tstruct " << node.real_name
-                    << " const* ptr);\n\n";
+
+                m_stream << "\tstruct " << node.real_name << " const* ptr);\n\n";
 
                 m_stream << "void " << node.caller_unmarshal_visitor << "(\n"
-                    << "\tsize_t* __pos,\n"
-                    << "\tconst struct fipc_message* __msg,\n"
-                    << "\tconst struct ext_registers* __ext,\n";
-                    
+                         << "\tsize_t* __pos,\n"
+                         << "\tconst struct fipc_message* __msg,\n"
+                         << "\tconst struct ext_registers* __ext,\n";
+
                 if (node.def->parent)
                     m_stream << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
-                    
-                m_stream << "\tstruct " << node.real_name
-                    << "* ptr);\n\n";
+
+                m_stream << "\tstruct " << node.real_name << "* ptr);\n\n";
 
                 return true;
             }
@@ -132,16 +131,16 @@ namespace idlc {
 
             for (const auto& rpc : rpcs) {
                 if (rpc->kind == rpc_def_kind::indirect) {
-                    file << "typedef " << rpc->ret_string << " (*" << rpc->typedef_id << ")("
-                        << rpc->args_string << ");\n";
+                    file << "typedef " << rpc->ret_string << " (*" << rpc->typedef_id << ")(" << rpc->args_string
+                         << ");\n";
 
                     file << "typedef " << rpc->ret_string << " (*" << rpc->impl_typedef_id << ")(" << rpc->typedef_id
-                        << " target, " << rpc->args_string << ");\n\n";
+                         << " target, " << rpc->args_string << ");\n\n";
 
                     file << "LCD_TRAMPOLINE_DATA(" << rpc->trmp_id << ")\n";
                     file << rpc->ret_string << " "
-                        << "LCD_TRAMPOLINE_LINKAGE(" << rpc->trmp_id << ") "
-                        << rpc->trmp_id << "(" << rpc->args_string << ");\n\n";
+                         << "LCD_TRAMPOLINE_LINKAGE(" << rpc->trmp_id << ") " << rpc->trmp_id << "(" << rpc->args_string
+                         << ");\n\n";
                 }
             }
 
@@ -157,10 +156,8 @@ namespace idlc {
             root_vec arguments;
         };
 
-        bool is_return(const value& node)
-        {
-            return !std::get_if<none>(&node.type);
-        }
+        // Check if return statement is needed, or if function is <void>
+        bool is_return(const value& return_value_node) { return !std::get_if<none>(&return_value_node.type); }
 
         annotation_kind get_ptr_annotation(const value& node)
         {
@@ -179,8 +176,7 @@ namespace idlc {
             creates pointers to all the arguments of the RPC. That way the marshaling system can be written to only
             deal with pointers.
         */
-        template<marshal_side side>
-        marshal_roots generate_root_ptrs(rpc_def& rpc, std::ostream& os)
+        template <marshal_side side> marshal_roots generate_root_ptrs(rpc_def& rpc, std::ostream& os)
         {
             const auto n_args = gsl::narrow<gsl::index>(rpc.arg_pgraphs.size());
             root_vec roots;
@@ -203,18 +199,19 @@ namespace idlc {
 
                     if (flags_set(p->get()->pointer_annots.kind, annotation_kind::alloc_stack_callee)) {
                         if (p_array) {
-                            os << "\t" << raw_specifier << " __"  << name << "[" << p_array->get()->size << "];\n";
-                            os << "\t" << specifier << " "  << name << " = __" << name << ";\n";
+                            os << "\t" << raw_specifier << " __" << name << "[" << p_array->get()->size << "];\n";
+                            os << "\t" << specifier << " " << name << " = __" << name << ";\n";
                         } else {
-                            os << "\t" << raw_specifier << " __"  << name << ";\n";
-                            os << "\t" << specifier << " "  << name << " = &__" << name << ";\n";
+                            os << "\t" << raw_specifier << " __" << name << ";\n";
+                            os << "\t" << specifier << " " << name << " = &__" << name << ";\n";
                         }
                         os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
                     } else {
                         os << "\t" << specifier << "* " << ptr_name << " = &" << name << ";\n";
                     }
                 } else {
-                    if ((side == marshal_side::caller) && p && flags_set(p->get()->pointer_annots.kind, annotation_kind::user_ptr)) {
+                    if ((side == marshal_side::caller) && p
+                        && flags_set(p->get()->pointer_annots.kind, annotation_kind::user_ptr)) {
                         os << "\t" << specifier << "__" << name << "_ptr;\n";
                         os << "\t" << specifier << "* __orig_" << ptr_name << " = &" << name << ";\n";
                     }
@@ -247,12 +244,10 @@ namespace idlc {
             return {"ret_ptr", roots};
         }
 
-        // TODO: this is confusing, document it
-        template<marshal_role role, marshal_side side>
-        auto generate_root_ptrs(
-            std::ostream& os,
-            projection& projection,
-            absl::string_view source_var)
+        // Same idea as the "other" generate_root_ptrs, but we have to handle bitfields with some shuffling;
+        // We create a temporary variable, copy out the bitfield, and generate a pointer to *that*
+        template <marshal_role role, marshal_side side>
+        auto generate_root_ptrs(std::ostream& os, projection& projection, absl::string_view source_var)
         {
             constexpr auto is_const_context = role == marshal_role::marshaling;
             std::vector<std::tuple<std::string, value*>> roots;
@@ -270,11 +265,11 @@ namespace idlc {
 
                 const auto& [ast_type, width] = *(*field_vec)[i++];
                 // cannot take address of bitfields. Handle it with plain variables
-                if (width > 0) {
+                if (width) {
                     const auto bitfield_name = concat("__", name);
                     const auto bitfield_ptr_name = concat(bitfield_name, "_ptr");
                     os << "\t" << type->c_specifier << " " << bitfield_name << " = " << source_var << "->" << name
-                        << ";\n";
+                       << ";\n";
 
                     const auto specifier = concat(type->c_specifier, is_const_context ? " const*" : "*");
                     const auto assign = std::get_if<node_ref<static_array>>(&type->type) ? " = " : " = &";
@@ -294,10 +289,7 @@ namespace idlc {
             return roots;
         }
 
-        enum class rpc_side {
-            server,
-            client
-        };
+        enum class rpc_side { server, client };
 
         auto generate_caller_glue_prologue(std::ostream& os, rpc_def& rpc)
         {
@@ -317,7 +309,8 @@ namespace idlc {
 
             // Add verbose printk's while entering
             os << "\tif (verbose_debug) {\n";
-            os << "\t\tprintk(\"%s:%d, entered!\\n\", __func__, __LINE__);\n" << "\t}\n\n";
+            os << "\t\tprintk(\"%s:%d, entered!\\n\", __func__, __LINE__);\n"
+               << "\t}\n\n";
 
             if (rpc.kind == rpc_def_kind::indirect) {
                 // make sure we marshal the target pointer before everything
@@ -349,19 +342,19 @@ namespace idlc {
 
             if (is_return(*rpc.ret_pgraph)) {
                 if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
-                        os << "\t{\n";
-                        os << "\t\tint __ret;\n";
-                        os << "\t\tioremap_len = glue_unpack(__pos, __msg, __ext, uint64_t);\n";
-                        os << "\t\t__ret = lcd_ioremap_phys(ioremap_cptr, ioremap_len, &ioremap_gpa);\n";
-                        os << "\t\tif (__ret) {\n";
-                        os << "\t\t\tLIBLCD_ERR(\"failed to remap bar region\");\n";
-                        os << "\t\t}\n";
-                        os << "\t\t*ret_ptr = lcd_ioremap(gpa_val(ioremap_gpa), ioremap_len);\n";
-                        os << "\t\tif (!*ret_ptr) {\n";
-                        os << "\t\t\tLIBLCD_ERR(\"failed to ioremap virt\");\n";
-                        os << "\t\t}\n";
-                        os << "\t}\n\n";
-                    }
+                    os << "\t{\n";
+                    os << "\t\tint __ret;\n";
+                    os << "\t\tioremap_len = glue_unpack(__pos, __msg, __ext, uint64_t);\n";
+                    os << "\t\t__ret = lcd_ioremap_phys(ioremap_cptr, ioremap_len, &ioremap_gpa);\n";
+                    os << "\t\tif (__ret) {\n";
+                    os << "\t\t\tLIBLCD_ERR(\"failed to remap bar region\");\n";
+                    os << "\t\t}\n";
+                    os << "\t\t*ret_ptr = lcd_ioremap(gpa_val(ioremap_gpa), ioremap_len);\n";
+                    os << "\t\tif (!*ret_ptr) {\n";
+                    os << "\t\t\tLIBLCD_ERR(\"failed to ioremap virt\");\n";
+                    os << "\t\t}\n";
+                    os << "\t}\n\n";
+                }
             }
 
             for (const auto& [name, type] : roots.arguments) {
@@ -383,12 +376,12 @@ namespace idlc {
 
             // Add verbose printk's while returning
             os << "\tif (verbose_debug) {\n";
-            os << "\t\tprintk(\"%s:%d, returned!\\n\", __func__, __LINE__);\n" << "\t}\n";
+            os << "\t\tprintk(\"%s:%d, returned!\\n\", __func__, __LINE__);\n"
+               << "\t}\n";
             os << (is_return(*rpc.ret_pgraph) ? concat("\treturn ret;\n") : "");
         }
 
-        template<rpc_side side>
-        void generate_caller_glue(rpc_def& rpc, std::ostream& os)
+        template <rpc_side side> void generate_caller_glue(rpc_def& rpc, std::ostream& os)
         {
             const auto roots = generate_caller_glue_prologue(os, rpc);
             switch (side) {
@@ -412,7 +405,7 @@ namespace idlc {
 
             if (rpc.kind == rpc_def_kind::indirect) {
                 os << "\t" << rpc.typedef_id << " function_ptr = glue_unpack(__pos, __msg, __ext, " << rpc.typedef_id
-                    << ");\n";
+                   << ");\n";
             }
 
             const auto n_args = gsl::narrow<gsl::index>(rpc.arg_pgraphs.size());
@@ -434,7 +427,8 @@ namespace idlc {
 
             // Add verbose printk's while entering
             os << "\tif (verbose_debug) {\n";
-            os << "\t\tprintk(\"%s:%d, entered!\\n\", __func__, __LINE__);\n" << "\t}\n\n";
+            os << "\t\tprintk(\"%s:%d, entered!\\n\", __func__, __LINE__);\n"
+               << "\t}\n\n";
 
             // Unmarshal cptr from the driver domain
             if (is_return(*rpc.ret_pgraph)) {
@@ -463,18 +457,17 @@ namespace idlc {
                 } else if (rpc.name == std::string("ioremap_nocache")) {
                     phys_addr = "phys_addr";
                 }
-                os << "(void *) " << phys_addr <<";\n\n";
+                os << "(void *) " << phys_addr << ";\n\n";
             } else {
                 auto impl_name = rpc.name;
 
                 if (rpc.kind == rpc_def_kind::indirect) {
-                  impl_name = "function_ptr";
+                    impl_name = "function_ptr";
                 }
                 os << impl_name << "(" << rpc.params_string << ");\n\n";
             }
 
             os << "\t*__pos = 0;\n";
-
 
             // Marshal the resource len back to the caller domain for ioremapping the region
             if (is_return(*rpc.ret_pgraph)) {
@@ -489,11 +482,11 @@ namespace idlc {
 
                     os << "\n\t{\n";
                     os << "\t\tlcd_volunteer_dev_mem(__gpa((uint64_t)*ret_ptr), get_order(" << resource_len
-                        << "), &resource_cptr);\n";
+                       << "), &resource_cptr);\n";
 
                     os << "\t\tcopy_msg_cap_vmfunc(current->lcd, current->vmfunc_lcd, resource_cptr, lcd_resource_cptr)"
-                        << ";\n";
-                        
+                       << ";\n";
+
                     os << "\t\tglue_pack(__pos, __msg, __ext, " << resource_len << ");\n";
                     os << "\t}\n\n";
                 }
@@ -505,7 +498,7 @@ namespace idlc {
                 arg_remarshal.visit_value(*type);
                 os << "\t}\n\n";
             }
-            
+
             if (is_return(*rpc.ret_pgraph)) {
                 // Marshal return pointer only if it's NOT an ioremap annotation
                 if (!flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
@@ -515,19 +508,20 @@ namespace idlc {
                     os << "\t}\n\n";
                 }
             }
-        
+
             os << "\t__msg->regs[0] = *__pos;\n";
 
             // Add verbose printk's while returning
             os << "\tif (verbose_debug) {\n";
-            os << "\t\tprintk(\"%s:%d, returned!\\n\", __func__, __LINE__);\n" << "\t}\n";
+            os << "\t\tprintk(\"%s:%d, returned!\\n\", __func__, __LINE__);\n"
+               << "\t}\n";
         }
 
         void generate_indirect_rpc_callee(std::ostream& os, rpc_def& rpc)
         {
             os << "void " << rpc.callee_id << "(struct fipc_message* __msg, struct ext_registers* __ext)\n{\n";
             generate_callee_glue(rpc, os);
-            os << "}\n\n";            
+            os << "}\n\n";
         }
 
         void generate_rpc_export_callee(std::ostream& os, rpc_def& rpc)
@@ -539,8 +533,8 @@ namespace idlc {
 
         void generate_indirect_rpc_caller(std::ostream& os, rpc_def& rpc)
         {
-            os << rpc.ret_string << " " << rpc.impl_id << "(" << rpc.typedef_id << " target, "
-                << rpc.args_string << ")\n{\n";
+            os << rpc.ret_string << " " << rpc.impl_id << "(" << rpc.typedef_id << " target, " << rpc.args_string
+               << ")\n{\n";
 
             generate_caller_glue<rpc_side::server>(rpc, os);
             os << "}\n\n";
@@ -561,17 +555,14 @@ namespace idlc {
 
         void generate_rpc_export_caller(std::ostream& os, rpc_def& rpc)
         {
-            os << rpc.ret_string << " " << rpc.name << "("
-                << rpc.args_string << ")\n{\n";
+            os << rpc.ret_string << " " << rpc.name << "(" << rpc.args_string << ")\n{\n";
 
             generate_caller_glue<rpc_side::server>(rpc, os);
             os << "}\n";
             os << "EXPORT_SYMBOL(" << rpc.name << ");\n\n";
         }
 
-
-        template<rpc_side side>
-        void generate_dispatch_fn(std::ostream& os, rpc_vec_view rpcs)
+        template <rpc_side side> void generate_dispatch_fn(std::ostream& os, rpc_vec_view rpcs)
         {
             os << "int try_dispatch(enum RPC_ID id, struct fipc_message* __msg, struct ext_registers* __ext)\n";
             os << "{\n";
@@ -599,10 +590,10 @@ namespace idlc {
             for (const auto& rpc : rpcs) {
                 if (rpc->kind == rpc_def_kind::direct && side == rpc_side::client)
                     continue;
-                
+
                 if (rpc->kind == rpc_def_kind::indirect && side == rpc_side::server)
                     continue;
-                
+
                 os << "\tcase " << rpc->enum_id << ":\n";
                 os << "\t\tglue_user_trace(\"" << rpc->name << "\\n\");\n";
                 os << "\t\t" << rpc->callee_id << "(__msg, __ext);\n";
@@ -657,10 +648,11 @@ namespace idlc {
                     break;
 
                 case rpc_def_kind::direct:
-                    file << "void " << rpc->callee_id << "(struct fipc_message* __msg, struct ext_registers* __ext)\n{\n";
+                    file << "void " << rpc->callee_id
+                         << "(struct fipc_message* __msg, struct ext_registers* __ext)\n{\n";
                     generate_callee_glue(*rpc, file);
                     file << "}\n\n";
-                    break;                    
+                    break;
                 case rpc_def_kind::export_sym:
                     generate_rpc_export_caller(file, *rpc);
                     break;
@@ -709,8 +701,7 @@ namespace idlc {
                         param_str += name;
                         is_first = false;
                     }
-                }
-                else {
+                } else {
                     rpc->args_string = "void"; // GCC doesn't like it if we just leave the arguments list empty
                 }
             }
@@ -719,15 +710,14 @@ namespace idlc {
         void generate_caller_marshal_visitor(std::ostream& file, projection& node)
         {
             file << "void " << node.caller_marshal_visitor << "(\n"
-                << "\tsize_t* __pos,\n"
-                << "\tstruct fipc_message* __msg,\n"
-                << "\tstruct ext_registers* __ext,\n";
-                
+                 << "\tsize_t* __pos,\n"
+                 << "\tstruct fipc_message* __msg,\n"
+                 << "\tstruct ext_registers* __ext,\n";
+
             if (node.def->parent)
                 file << "\tstruct " << node.def->parent->ctx_id << " const* ctx,\n";
-                
-            file << "\tstruct " << node.real_name
-                << " const* ptr)\n{\n";
+
+            file << "\tstruct " << node.real_name << " const* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::marshaling, marshal_side::caller>(file, node, "ptr");
             const auto n_fields = node.fields.size();
@@ -753,12 +743,14 @@ namespace idlc {
 
             file << "\t{\n";
             for (const auto& [name, type] : node.fields) {
-                const auto & [_, width] = *field_vec[i++];
+                const auto& [_, width] = *field_vec[i++];
                 auto bitfield_ptr_name = std::string("__") + name + std::string("_ptr");
                 if (!should_walk<marshal_role::unmarshaling, side>(*type))
                     continue;
                 if (width > 0)
-                    file << "\t\t" << "ptr" << "->" << name << " = *" << bitfield_ptr_name << ";\n";
+                    file << "\t\t"
+                         << "ptr"
+                         << "->" << name << " = *" << bitfield_ptr_name << ";\n";
             }
             file << "\t}\n";
         }
@@ -766,15 +758,14 @@ namespace idlc {
         void generate_callee_unmarshal_visitor(std::ostream& file, projection& node)
         {
             file << "void " << node.callee_unmarshal_visitor << "(\n"
-                << "\tsize_t* __pos,\n"
-                << "\tconst struct fipc_message* __msg,\n"
-                << "\tconst struct ext_registers* __ext,\n";
-                
+                 << "\tsize_t* __pos,\n"
+                 << "\tconst struct fipc_message* __msg,\n"
+                 << "\tconst struct ext_registers* __ext,\n";
+
             if (node.def->parent)
                 file << "\tstruct " << node.def->parent->ctx_id << " const* ctx,\n";
-                
-            file << "\tstruct " << node.real_name
-                << "* ptr)\n{\n";
+
+            file << "\tstruct " << node.real_name << "* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::callee>(file, node, "ptr");
             const auto n_fields = node.fields.size();
@@ -793,15 +784,14 @@ namespace idlc {
         void generate_callee_marshal_visitor(std::ostream& file, projection& node)
         {
             file << "void " << node.callee_marshal_visitor << "(\n"
-                << "\tsize_t* __pos,\n"
-                << "\tstruct fipc_message* __msg,\n"
-                << "\tstruct ext_registers* __ext,\n";
-                
+                 << "\tsize_t* __pos,\n"
+                 << "\tstruct fipc_message* __msg,\n"
+                 << "\tstruct ext_registers* __ext,\n";
+
             if (node.def->parent)
                 file << "\tstruct " << node.def->parent->ctx_id << " const* ctx,\n";
-                
-            file << "\tstruct " << node.real_name
-                << " const* ptr)\n{\n";
+
+            file << "\tstruct " << node.real_name << " const* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::marshaling, marshal_side::callee>(file, node, "ptr");
             const auto n_fields = node.fields.size();
@@ -818,15 +808,14 @@ namespace idlc {
         void generate_caller_unmarshal_visitor(std::ostream& file, projection& node)
         {
             file << "void " << node.caller_unmarshal_visitor << "(\n"
-                << "\tsize_t* __pos,\n"
-                << "\tconst struct fipc_message* __msg,\n"
-                << "\tconst struct ext_registers* __ext,\n";
-                
+                 << "\tsize_t* __pos,\n"
+                 << "\tconst struct fipc_message* __msg,\n"
+                 << "\tconst struct ext_registers* __ext,\n";
+
             if (node.def->parent)
                 file << "\tstruct " << node.def->parent->ctx_id << " const* ctx,\n";
-                
-            file << "\tstruct " << node.real_name
-                << "* ptr)\n{\n";
+
+            file << "\tstruct " << node.real_name << "* ptr)\n{\n";
 
             const auto roots = generate_root_ptrs<marshal_role::unmarshaling, marshal_side::caller>(file, node, "ptr");
             const auto n_fields = node.fields.size();
@@ -862,7 +851,8 @@ namespace idlc {
             file << "\tLIBLCD_MSG(\"Weak shared_mem_init does nothing! Override if you want!\");\n";
             file << "}\n";
             file << "#else\n";
-            file << "__attribute__((weak)) void shared_mem_init_callee(struct fipc_message *__msg, struct ext_registers* __ext) {\n";
+            file << "__attribute__((weak)) void shared_mem_init_callee(struct fipc_message *__msg, struct "
+                    "ext_registers* __ext) {\n";
             file << "\tLIBLCD_MSG(\"Weak shared_mem_init_callee does nothing! Override if you want!\");\n";
             file << "}\n";
             file << "#endif\t/* LCD_ISOLATE */\n\n";
@@ -870,9 +860,10 @@ namespace idlc {
 
         class projection_collection_walk : public pgraph_walk<projection_collection_walk> {
         public:
-            projection_collection_walk(projection_vec& projections) :
-                m_projections {projections}
-            {}
+            projection_collection_walk(projection_vec& projections)
+                : m_projections {projections}
+            {
+            }
 
             bool visit_projection(projection& node)
             {

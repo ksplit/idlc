@@ -37,7 +37,7 @@ void idlc::populate_c_type_specifiers(rpc_vec_view rpcs, projection_vec_view pro
     for (const auto& node : rpcs) {
         if (node->ret_pgraph)
             populate_c_type_specifiers(*node->ret_pgraph);
-        
+
         for (const auto& arg : node->arg_pgraphs)
             populate_c_type_specifiers(*arg);
     }
