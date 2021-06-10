@@ -58,7 +58,9 @@ bool idlc::c_specifier_walk::visit_value(value& node)
     if (!traverse(*this, node))
         return false;
 
-    node.c_specifier = concat(node.is_const ? "const " : (node.is_volatile ? "volatile " : ""), m_specifier);
+    // DO NOT INCLUDE CONST HERE
+    // Const-free specifiers are needed to be able to write through otherwise unwritable pointers in unmarshaling
+    node.c_specifier = concat(node.is_volatile ? "volatile " : "", m_specifier);
 
     return true;
 }
