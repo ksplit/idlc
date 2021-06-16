@@ -170,4 +170,12 @@ void idlc::generate_helpers(std::ostream& file)
     file << "{\n";
     file << "\tkfree(visited->values);\n";
     file << "}\n\n";
+
+    file << "static inline bool glue_should_visit(struct glue_visit_list* visited, const void* ptr)\n";
+    file << "{\n";
+    file << "\tif (!ptr)\n";
+    file << "\t\treturn 0;\n\n";
+    file << "\tglue_mark_visited(visited, ptr);\n\n";
+    file << "\treturn 1;\n";
+    file << "}\n\n";
 }

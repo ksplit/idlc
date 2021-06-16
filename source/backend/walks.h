@@ -193,7 +193,7 @@ namespace idlc {
             if (!should_walk<marshal_role::marshaling, side>(*node.referent)) {
                 this->new_line() << "(void)" << this->subject() << ";\n";
             } else {
-                this->new_line() << "if (*" << this->subject() << ") {\n";
+                this->new_line() << "if (glue_should_visit(__visited, *" << this->subject() << ")) {\n";
                 this->marshal("*" + this->subject(), node);
                 this->new_line() << "}\n\n";
             }
@@ -218,7 +218,7 @@ namespace idlc {
 
         bool visit_projection(projection& node)
         {
-            this->new_line() << get_visitor_name(node) << "(__pos, __msg, __ext, "
+            this->new_line() << get_visitor_name(node) << "(__pos, __msg, __ext, __visited, "
                              << ((node.def->parent) ? "ctx, " : "") << this->subject() << ");\n";
 
             return true;
@@ -506,7 +506,7 @@ namespace idlc {
 
         bool visit_projection(projection& node)
         {
-            this->new_line() << get_visitor_name(node) << "(__pos, __msg, __ext, "
+            this->new_line() << get_visitor_name(node) << "(__pos, __msg, __ext, __visited, "
                              << ((node.def->parent) ? "ctx, " : "") << this->subject() << ");\n";
 
             return true;
@@ -656,7 +656,7 @@ namespace idlc {
 
         bool marshal_pointer_child(pointer& node)
         {
-            this->new_line() << "if (*" << this->subject() << ") {\n";
+            this->new_line() << "if (glue_should_visit(__visited, *" << this->subject() << ")) {\n";
             if (node.referent->is_const) {
                 // Since the type itself must include const, but we need to write to it for unmarshaling,
                 // We create a writeable version of the pointer and use it instead

@@ -35,7 +35,8 @@ namespace idlc {
                 m_stream << "void " << node.caller_marshal_visitor << "(\n"
                          << "\tsize_t* __pos,\n"
                          << "\tstruct fipc_message* __msg,\n"
-                         << "\tstruct ext_registers* __ext,\n";
+                         << "\tstruct ext_registers* __ext,\n"
+                         << "\tstruct glue_visit_list* __visited,\n";
 
                 if (node.def->parent)
                     m_stream << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
@@ -45,7 +46,8 @@ namespace idlc {
                 m_stream << "void " << node.callee_unmarshal_visitor << "(\n"
                          << "\tsize_t* __pos,\n"
                          << "\tconst struct fipc_message* __msg,\n"
-                         << "\tconst struct ext_registers* __ext,\n";
+                         << "\tconst struct ext_registers* __ext,\n"
+                         << "\tstruct glue_visit_list* __visited,\n";
 
                 if (node.def->parent)
                     m_stream << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
@@ -55,7 +57,8 @@ namespace idlc {
                 m_stream << "void " << node.callee_marshal_visitor << "(\n"
                          << "\tsize_t* __pos,\n"
                          << "\tstruct fipc_message* __msg,\n"
-                         << "\tstruct ext_registers* __ext,\n";
+                         << "\tstruct ext_registers* __ext,\n"
+                         << "\tstruct glue_visit_list* __visited,\n";
 
                 if (node.def->parent)
                     m_stream << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
@@ -65,7 +68,8 @@ namespace idlc {
                 m_stream << "void " << node.caller_unmarshal_visitor << "(\n"
                          << "\tsize_t* __pos,\n"
                          << "\tconst struct fipc_message* __msg,\n"
-                         << "\tconst struct ext_registers* __ext,\n";
+                         << "\tconst struct ext_registers* __ext,\n"
+                         << "\tstruct glue_visit_list* __visited,\n";
 
                 if (node.def->parent)
                     m_stream << "\tstruct " << node.def->parent->ctx_id << " const* call_ctx,\n";
@@ -295,7 +299,7 @@ namespace idlc {
         {
             os << "\tstruct fipc_message __buffer = {0};\n";
             os << "\tstruct fipc_message *__msg = &__buffer;\n";
-            os << "\tstruct ext_registers* __ext = get_register_page(smp_processor_id());\n";
+            os << "\t__maybe_unused struct ext_registers* __ext = get_register_page(smp_processor_id());\n";
             os << "\tsize_t n_pos = 0;\n";
             os << "\tsize_t* __pos = &n_pos;\n\n";
 
@@ -303,9 +307,9 @@ namespace idlc {
             const auto roots = generate_root_ptrs<marshal_side::caller>(rpc, os);
 
             os << "\t__maybe_unused const struct " << rpc.ctx_id << " call_ctx = {" << rpc.params_string << "};\n";
-            os << "\t__maybe_unused const struct " << rpc.ctx_id << " *ctx = &call_ctx;\n\n";
-
-            os << "\t(void)__ext;\n\n";
+            os << "\t__maybe_unused const struct " << rpc.ctx_id << " *ctx = &call_ctx;\n";
+            os << "\t__maybe_unused struct glue_visit_list __visit_list = glue_create_visit_list();\n\n";
+            os << "\t__maybe_unused struct glue_visit_list* __visited = &__visit_list;\n\n";
 
             // Add verbose printk's while entering
             os << "\tif (verbose_debug) {\n";
@@ -424,6 +428,8 @@ namespace idlc {
 
             os << "\t__maybe_unused struct " << rpc.ctx_id << " call_ctx = {" << rpc.params_string << "};\n";
             os << "\t__maybe_unused struct " << rpc.ctx_id << " *ctx = &call_ctx;\n\n";
+            os << "\t__maybe_unused struct glue_visit_list __visit_list = glue_create_visit_list();\n\n";
+            os << "\t__maybe_unused struct glue_visit_list* __visited = &__visit_list;\n\n";
 
             // Add verbose printk's while entering
             os << "\tif (verbose_debug) {\n";
@@ -712,7 +718,8 @@ namespace idlc {
             file << "void " << node.caller_marshal_visitor << "(\n"
                  << "\tsize_t* __pos,\n"
                  << "\tstruct fipc_message* __msg,\n"
-                 << "\tstruct ext_registers* __ext,\n";
+                 << "\tstruct ext_registers* __ext,\n"
+                 << "\tstruct glue_visit_list* __visited,\n";
 
             if (node.def->parent)
                 file << "\tstruct " << node.def->parent->ctx_id << " const* ctx,\n";
@@ -760,7 +767,8 @@ namespace idlc {
             file << "void " << node.callee_unmarshal_visitor << "(\n"
                  << "\tsize_t* __pos,\n"
                  << "\tconst struct fipc_message* __msg,\n"
-                 << "\tconst struct ext_registers* __ext,\n";
+                 << "\tconst struct ext_registers* __ext,\n"
+                 << "\tstruct glue_visit_list* __visited,\n";
 
             if (node.def->parent)
                 file << "\tstruct " << node.def->parent->ctx_id << " const* ctx,\n";
@@ -786,7 +794,8 @@ namespace idlc {
             file << "void " << node.callee_marshal_visitor << "(\n"
                  << "\tsize_t* __pos,\n"
                  << "\tstruct fipc_message* __msg,\n"
-                 << "\tstruct ext_registers* __ext,\n";
+                 << "\tstruct ext_registers* __ext,\n"
+                 << "\tstruct glue_visit_list* __visited,\n";
 
             if (node.def->parent)
                 file << "\tstruct " << node.def->parent->ctx_id << " const* ctx,\n";
@@ -810,7 +819,8 @@ namespace idlc {
             file << "void " << node.caller_unmarshal_visitor << "(\n"
                  << "\tsize_t* __pos,\n"
                  << "\tconst struct fipc_message* __msg,\n"
-                 << "\tconst struct ext_registers* __ext,\n";
+                 << "\tconst struct ext_registers* __ext,\n"
+                 << "\tstruct glue_visit_list* __visited,\n";
 
             if (node.def->parent)
                 file << "\tstruct " << node.def->parent->ctx_id << " const* ctx,\n";
