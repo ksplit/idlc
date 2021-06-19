@@ -343,6 +343,7 @@ namespace idlc {
         void generate_caller_glue_epilogue(std::ostream& os, rpc_def& rpc, marshal_roots roots)
         {
             os << "\t*__pos = 0;\n";
+            os << "\tglue_clear_visit_list(__visited);\n";
 
             if (is_return(*rpc.ret_pgraph)) {
                 if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
@@ -473,7 +474,8 @@ namespace idlc {
                 os << impl_name << "(" << rpc.params_string << ");\n\n";
             }
 
-            os << "\t*__pos = 0;\n";
+            os << "\t*__pos = 0;\n";            
+            os << "\tglue_clear_visit_list(__visited);\n";
 
             // Marshal the resource len back to the caller domain for ioremapping the region
             if (is_return(*rpc.ret_pgraph)) {
