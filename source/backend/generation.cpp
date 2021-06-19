@@ -308,8 +308,8 @@ namespace idlc {
 
             os << "\t__maybe_unused const struct " << rpc.ctx_id << " call_ctx = {" << rpc.params_string << "};\n";
             os << "\t__maybe_unused const struct " << rpc.ctx_id << " *ctx = &call_ctx;\n";
-            os << "\t__maybe_unused struct glue_visit_list __visit_list = glue_create_visit_list();\n\n";
-            os << "\t__maybe_unused struct glue_visit_list* __visited = &__visit_list;\n\n";
+            os << "\tstruct glue_visit_list __visit_list = glue_create_visit_list();\n\n";
+            os << "\tstruct glue_visit_list* __visited = &__visit_list;\n\n";
 
             // Add verbose printk's while entering
             os << "\tif (verbose_debug) {\n";
@@ -383,6 +383,9 @@ namespace idlc {
             os << "\tif (verbose_debug) {\n";
             os << "\t\tprintk(\"%s:%d, returned!\\n\", __func__, __LINE__);\n"
                << "\t}\n";
+
+            os << "glue_free_visit_list(__visited);\n";
+
             os << (is_return(*rpc.ret_pgraph) ? concat("\treturn ret;\n") : "");
         }
 
@@ -429,8 +432,8 @@ namespace idlc {
 
             os << "\t__maybe_unused struct " << rpc.ctx_id << " call_ctx = {" << rpc.params_string << "};\n";
             os << "\t__maybe_unused struct " << rpc.ctx_id << " *ctx = &call_ctx;\n\n";
-            os << "\t__maybe_unused struct glue_visit_list __visit_list = glue_create_visit_list();\n\n";
-            os << "\t__maybe_unused struct glue_visit_list* __visited = &__visit_list;\n\n";
+            os << "\tstruct glue_visit_list __visit_list = glue_create_visit_list();\n\n";
+            os << "\tstruct glue_visit_list* __visited = &__visit_list;\n\n";
 
             // Add verbose printk's while entering
             os << "\tif (verbose_debug) {\n";
@@ -518,6 +521,7 @@ namespace idlc {
             }
 
             os << "\t__msg->regs[0] = *__pos;\n";
+            os << "\tglue_free_visit_list(__visited);\n";
 
             // Add verbose printk's while returning
             os << "\tif (verbose_debug) {\n";
