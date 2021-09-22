@@ -75,10 +75,10 @@ namespace idlc {
         const auto flags = node.value_annots;
         switch (side) {
         case marshal_side::caller:
-            return flags_set(flags, annotation_kind::in);
+            return flags_set(flags, annotation_bitfield::in);
 
         case marshal_side::callee:
-            return flags_set(flags, annotation_kind::out);
+            return flags_set(flags, annotation_bitfield::out);
         }
 
         std::terminate();
@@ -90,10 +90,10 @@ namespace idlc {
         const auto flags = node.value_annots;
         switch (side) {
         case marshal_side::callee:
-            return flags_set(flags, annotation_kind::in);
+            return flags_set(flags, annotation_bitfield::in);
 
         case marshal_side::caller:
-            return flags_set(flags, annotation_kind::out);
+            return flags_set(flags, annotation_bitfield::out);
         }
 
         std::terminate();
@@ -102,7 +102,7 @@ namespace idlc {
     template <marshal_role role, marshal_side side>
     constexpr bool should_walk(const value& node)
     {
-        if (flags_set(node.value_annots, annotation_kind::unused))
+        if (flags_set(node.value_annots, annotation_bitfield::unused))
             return false;
 
         switch (role) {
@@ -122,16 +122,16 @@ namespace idlc {
         Whether or not they are bound on a side is irrespective of whether we are marshaling or unmarshaling
     */
     template <marshal_side side>
-    static constexpr bool should_bind(const annotation& ann)
+    static constexpr bool should_bind(const annotation_set& ann)
     {
         switch (side) {
         case marshal_side::caller:
-            return flags_set(ann.kind, annotation_kind::bind_caller)
-                | flags_set(ann.kind, annotation_kind::bind_memberof_caller);
+            return flags_set(ann.kind, annotation_bitfield::bind_caller)
+                | flags_set(ann.kind, annotation_bitfield::bind_memberof_caller);
 
         case marshal_side::callee:
-            return flags_set(ann.kind, annotation_kind::bind_callee)
-                | flags_set(ann.kind, annotation_kind::bind_memberof_callee);
+            return flags_set(ann.kind, annotation_bitfield::bind_callee)
+                | flags_set(ann.kind, annotation_bitfield::bind_memberof_callee);
         }
 
         std::terminate();
@@ -150,21 +150,21 @@ namespace idlc {
             if (m_should_marshal) {
                 // Should_bind takes care of the details, so we only check if either of these flags are set
                 // NOTE: adjustment is mandatory! Currently undefined outside of bind, but still
-                if (!is_clear(node.pointer_annots.kind & annotation_kind::is_bind_memberof)) {
+                if (!is_clear(node.pointer_annots.kind & annotation_bitfield::is_bind_memberof)) {
                     const auto& offset = node.pointer_annots.member;
                     // Use container_of as it abstracts away the arithmetic and also typecasts the pointer
                     this->new_line() << "struct " << offset.struct_type << "* __adjusted = container_of(*" << this->subject()
                                      << ", "
                                      << "struct " << offset.struct_type << ", " << offset.field << ");\n";
-                } else if (side == marshal_side::caller && flags_set(node.pointer_annots.kind, annotation_kind::user_ptr)) {
+                } else if (side == marshal_side::caller && flags_set(node.pointer_annots.kind, annotation_bitfield::user_ptr)) {
                     this->new_line() << "__maybe_unused const void* __adjusted;\n";
-                    if (flags_set(node.referent->value_annots, annotation_kind::in)) {
+                    if (flags_set(node.referent->value_annots, annotation_bitfield::in)) {
                         this->new_line() << "__" << this->subject() << " = kzalloc(" << node.pointer_annots.size_verbatim << ", DEFAULT_GFP_FLAGS);\n";
                         this->new_line() << "if (copy_from_user(__" << this->subject() << ", *" << this->subject() << ", " << node.pointer_annots.size_verbatim << ")) {\n";
                         this->new_line() << "\tprintk(\"copy_from_user failed\");\n";
                         this->new_line() << "}\n\n";
                         this->new_line() << "*" << this->subject() << " = __" << this->subject() << ";\n\n";
-                    } else if (flags_set(node.referent->value_annots, annotation_kind::out)) {
+                    } else if (flags_set(node.referent->value_annots, annotation_bitfield::out)) {
                         this->new_line() << "__" << this->subject() << " = kzalloc(" << node.pointer_annots.size_verbatim << ", DEFAULT_GFP_FLAGS);\n";
                         this->new_line() << "*" << this->subject() << " = __" << this->subject() << ";\n\n";
                     }
@@ -176,12 +176,12 @@ namespace idlc {
 
                 if (should_bind<side>(node.pointer_annots)) {
                     this->new_line() << "glue_pack_shadow(__pos, __msg, __ext, __adjusted);\n";
-                } else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
+                } else if (flags_set(node.pointer_annots.kind, annotation_bitfield::shared)) {
                     this->new_line() << "glue_pack(__pos, __msg, __ext, (void*)__adjusted - "
                                      << node.pointer_annots.share_global << ");\n";
 
                     return true; // No need to walk these (yet)
-                } else if (flags_set(node.pointer_annots.kind, annotation_kind::alloc_stack_callee)) {
+                } else if (flags_set(node.pointer_annots.kind, annotation_bitfield::alloc_stack_callee)) {
                     // No need to pack the pointer if it's a stack allocation on the other side
                     return true;
                 } else {
@@ -326,10 +326,10 @@ namespace idlc {
     private:
         bool m_should_marshal {};
 
-        static constexpr bool should_dealloc(const annotation& ann)
+        static constexpr bool should_dealloc(const annotation_set& ann)
         {
             if (side == marshal_side::callee)
-                return flags_set(ann.kind, annotation_kind::dealloc_callee);
+                return flags_set(ann.kind, annotation_bitfield::dealloc_callee);
             return false;
         }
 
@@ -369,10 +369,10 @@ namespace idlc {
         {
         }
 
-        static constexpr bool should_dealloc(const annotation& ann)
+        static constexpr bool should_dealloc(const annotation_set& ann)
         {
             if (side == marshal_side::caller)
-                return flags_set(ann.kind, annotation_kind::dealloc_caller);
+                return flags_set(ann.kind, annotation_bitfield::dealloc_caller);
             return false;
         }
 
@@ -416,10 +416,10 @@ namespace idlc {
                 return true;
             } else {
                 auto ret_child = marshal_pointer_child(node);
-                if (flags_set(node.pointer_annots.kind, annotation_kind::user_ptr)) {
+                if (flags_set(node.pointer_annots.kind, annotation_bitfield::user_ptr)) {
                     switch (side) {
                     case marshal_side::caller:
-                        if (flags_set(node.referent->value_annots, annotation_kind::out)) {
+                        if (flags_set(node.referent->value_annots, annotation_bitfield::out)) {
                             this->new_line() << "if (copy_to_user(*__orig_" << this->subject() << ", *" << this->subject() << ", " << node.pointer_annots.size_verbatim << ")) {\n";
                             this->new_line() << "\tprintk(\"copy_to_user failed\");\n";
                             this->new_line() << "}\n\n";
@@ -535,40 +535,40 @@ namespace idlc {
         absl::string_view m_c_specifier {};
         bool m_should_marshal {};
 
-        static constexpr bool should_alloc(const annotation& ann)
+        static constexpr bool should_alloc(const annotation_set& ann)
         {
             switch (side) {
             case marshal_side::caller:
-                return flags_set(ann.kind, annotation_kind::alloc_caller);
+                return flags_set(ann.kind, annotation_bitfield::alloc_caller);
 
             case marshal_side::callee:
-                return flags_set(ann.kind, annotation_kind::alloc_callee);
+                return flags_set(ann.kind, annotation_bitfield::alloc_callee);
             }
 
             std::terminate();
         }
 
-        static constexpr bool should_alloc_once(const annotation& ann)
+        static constexpr bool should_alloc_once(const annotation_set& ann)
         {
             switch (side) {
             case marshal_side::caller:
-                return flags_set(ann.kind, annotation_kind::alloc_once_caller);
+                return flags_set(ann.kind, annotation_bitfield::alloc_once_caller);
 
             case marshal_side::callee:
-                return flags_set(ann.kind, annotation_kind::alloc_once_callee);
+                return flags_set(ann.kind, annotation_bitfield::alloc_once_callee);
             }
 
             std::terminate();
         }
 
-        static constexpr bool should_alloc_stack(const annotation& ann)
+        static constexpr bool should_alloc_stack(const annotation_set& ann)
         {
             switch (side) {
             case marshal_side::caller:
-                return flags_set(ann.kind, annotation_kind::alloc_stack_caller);
+                return flags_set(ann.kind, annotation_bitfield::alloc_stack_caller);
 
             case marshal_side::callee:
-                return flags_set(ann.kind, annotation_kind::alloc_stack_callee);
+                return flags_set(ann.kind, annotation_bitfield::alloc_stack_callee);
             }
 
             std::terminate();
@@ -593,7 +593,7 @@ namespace idlc {
             if (should_alloc_stack(node.pointer_annots))
                 return true;
 
-            if (!is_clear(node.pointer_annots.kind & annotation_kind::is_bind_memberof)) {
+            if (!is_clear(node.pointer_annots.kind & annotation_bitfield::is_bind_memberof)) {
                 // special case! early return
                 marshal_bind_memberof_pointer(node);
                 return true;
@@ -624,7 +624,7 @@ namespace idlc {
                 this->stream() << "glue_unpack_bind_or_new_shadow(__pos, __msg, __ext, " << m_c_specifier << ", "
                                << "__size, "
                                << "DEFAULT_GFP_FLAGS);\n";
-            } else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
+            } else if (flags_set(node.pointer_annots.kind, annotation_bitfield::shared)) {
                 this->new_line() << subject;
                 this->stream() << "(" << m_c_specifier << ")(glue_unpack(__pos, __msg, __ext, size_t) + "
                                << node.pointer_annots.share_global << ");\n";
@@ -643,9 +643,9 @@ namespace idlc {
             const auto& offset = node.pointer_annots.member;
             this->new_line() << "struct " << offset.struct_type << "* __" << offset.struct_type << " = ";
 
-            if (flags_set(node.pointer_annots.kind, annotation_kind::bind_memberof_callee))
+            if (flags_set(node.pointer_annots.kind, annotation_bitfield::bind_memberof_callee))
                 this->stream() << "glue_unpack_shadow(__pos, __msg, __ext, struct " << offset.struct_type << "*);\n";
-            else if (flags_set(node.pointer_annots.kind, annotation_kind::bind_memberof_caller))
+            else if (flags_set(node.pointer_annots.kind, annotation_bitfield::bind_memberof_caller))
                 this->stream() << "glue_unpack(__pos, __msg, __ext, struct " << offset.struct_type << "*);\n";
             else
                 std::terminate();

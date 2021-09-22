@@ -30,7 +30,7 @@ namespace idlc {
         passed_type generate_string_type()
         {
             return std::make_shared<null_terminated_array>(
-                std::make_shared<value>(primitive::ty_char, annotation_kind::use_default, false, false));
+                std::make_shared<value>(primitive::ty_char, annotation_bitfield::use_default, false, false));
         }
 
         passed_type generate_stem_type(const type_stem& node)
@@ -133,17 +133,17 @@ namespace idlc {
             bool is_volatile {node.is_volatile};
             for (const auto& ptr_node : node.indirs) {
                 const auto annots = ptr_node->attrs;
-                const auto val_annots = annots->kind & annotation_kind::is_val;
+                const auto val_annots = annots->kind & annotation_bitfield::is_val;
                 auto field = std::make_shared<value>(std::move(type), val_annots, is_const, is_volatile);
 
                 type = std::make_shared<pointer>(std::move(field),
-                    annotation {annots->kind & annotation_kind::is_ptr, annots->share_global, annots->size_verbatim,
+                    annotation_set {annots->kind & annotation_bitfield::is_ptr, annots->share_global, annots->size_verbatim,
                         annots->flags_verbatim, annots->member});
 
                 is_const = ptr_node->is_const;
             }
 
-            assert((node.attrs & annotation_kind::is_val) == node.attrs);
+            assert((node.attrs & annotation_bitfield::is_val) == node.attrs);
             auto field = std::make_shared<value>(std::move(type), node.attrs, is_const, is_volatile);
 
             return std::move(field);
@@ -205,25 +205,25 @@ namespace idlc {
             std::vector<gsl::not_null<rpc_def*>> m_defs {};
         };
 
-        bool annotate_pgraph(value& node, annotation_kind default_with);
-        passed_type instantiate_projection(proj_def& node, annotation_kind default_with);
+        bool annotate_pgraph(value& node, annotation_bitfield default_with);
+        passed_type instantiate_projection(proj_def& node, annotation_bitfield default_with);
 
         // TODO: implement error checking, currently focused on generating defaults
         class annotation_walk : public pgraph_walk<annotation_walk> {
         public:
-            annotation_walk(annotation_kind default_with)
+            annotation_walk(annotation_bitfield default_with)
                 : m_default_with {default_with}
             {
                 // We only support propagating a default value annotation
-                assert(is_clear(default_with & annotation_kind::ptr_only));
+                assert(is_clear(default_with & annotation_bitfield::ptr_only));
             }
 
             bool visit_value(value& node)
             {
                 // The core logic of propagating a top-level value annotation until an explicit one is found, and
                 // continuing
-                if (!is_clear(node.value_annots & annotation_kind::io_only)) {
-                    m_default_with = node.value_annots & annotation_kind::io_only;
+                if (!is_clear(node.value_annots & annotation_bitfield::io_only)) {
+                    m_default_with = node.value_annots & annotation_bitfield::io_only;
                 } else {
                     node.value_annots |= m_default_with; // FIXME
                 }
@@ -235,13 +235,13 @@ namespace idlc {
             {
                 // Default if no pointer annotations are set
                 // TODO: what are the correct defaults here?
-                if (is_clear(node.pointer_annots.kind & annotation_kind::ptr_only)) {
-                    if (m_default_with == annotation_kind::in)
-                        node.pointer_annots.kind = annotation_kind::bind_caller;
-                    else if (m_default_with == annotation_kind::out)
-                        node.pointer_annots.kind = annotation_kind::bind_callee;
-                    else if (m_default_with == (annotation_kind::in | annotation_kind::out))
-                        node.pointer_annots.kind = (annotation_kind::bind_callee | annotation_kind::bind_caller);
+                if (is_clear(node.pointer_annots.kind & annotation_bitfield::ptr_only)) {
+                    if (m_default_with == annotation_bitfield::in)
+                        node.pointer_annots.kind = annotation_bitfield::bind_caller;
+                    else if (m_default_with == annotation_bitfield::out)
+                        node.pointer_annots.kind = annotation_bitfield::bind_callee;
+                    else if (m_default_with == (annotation_bitfield::in | annotation_bitfield::out))
+                        node.pointer_annots.kind = (annotation_bitfield::bind_callee | annotation_bitfield::bind_caller);
                 } else {
                     // Annotation already set, ignore
                 }
@@ -271,29 +271,29 @@ namespace idlc {
             }
 
         private:
-            annotation_kind m_default_with {};
+            annotation_bitfield m_default_with {};
         };
 
-        bool annotate_pgraph(value& node, annotation_kind default_with)
+        bool annotate_pgraph(value& node, annotation_bitfield default_with)
         {
             annotation_walk annotator {default_with};
             return annotator.visit_value(node);
         }
 
-        std::string get_instance_name(absl::string_view base_name, annotation_kind default_with)
+        std::string get_instance_name(absl::string_view base_name, annotation_bitfield default_with)
         {
             // double underscore used to reduce odds of collisions
             std::string instance_name {base_name};
             switch (default_with) {
-            case annotation_kind::in:
+            case annotation_bitfield::in:
                 instance_name += "__in";
                 break;
 
-            case annotation_kind::out:
+            case annotation_bitfield::out:
                 instance_name += "__out";
                 break;
 
-            case annotation_kind::in_out:
+            case annotation_bitfield::in_out:
                 instance_name += "__io";
                 break;
 
@@ -304,7 +304,7 @@ namespace idlc {
             return instance_name;
         }
 
-        passed_type instantiate_projection(proj_def& node, node_ptr<projection>& cached, annotation_kind default_with)
+        passed_type instantiate_projection(proj_def& node, node_ptr<projection>& cached, annotation_bitfield default_with)
         {
             if (cached) {
                 // NOTE: It's important that we don't try and modify the cached copy, as it could be a partial one
@@ -324,19 +324,19 @@ namespace idlc {
             return pgraph;
         }
 
-        passed_type instantiate_projection(proj_def& node, annotation_kind default_with)
+        passed_type instantiate_projection(proj_def& node, annotation_bitfield default_with)
         {
             std::cout << "Debug: Non-lowered projection \"" << node.name << "\"\n";
             switch (default_with) {
-            case annotation_kind::in_out:
+            case annotation_bitfield::in_out:
                 std::cout << "Debug: Need \"in/out\" instance\n";
                 return instantiate_projection(node, node.in_out_proj, default_with);
 
-            case annotation_kind::in:
+            case annotation_bitfield::in:
                 std::cout << "Debug: Need \"in\" instance\n";
                 return instantiate_projection(node, node.in_proj, default_with);
 
-            case annotation_kind::out:
+            case annotation_bitfield::out:
                 std::cout << "Debug: Need \"out\" instance\n";
                 return instantiate_projection(node, node.out_proj, default_with);
 
@@ -383,7 +383,7 @@ namespace idlc {
 
         bool annotate_pgraphs(rpc_def& rpc)
         {
-            if (!annotate_pgraph(*rpc.ret_pgraph, annotation_kind::out))
+            if (!annotate_pgraph(*rpc.ret_pgraph, annotation_bitfield::out))
                 return false;
 
             const_walk const_propagator {};
@@ -391,7 +391,7 @@ namespace idlc {
             assert(succeeded);
 
             for (const auto& pgraph : rpc.arg_pgraphs) {
-                if (!annotate_pgraph(*pgraph, annotation_kind::in))
+                if (!annotate_pgraph(*pgraph, annotation_bitfield::in))
                     return false;
 
                 const_walk const_propagator {};

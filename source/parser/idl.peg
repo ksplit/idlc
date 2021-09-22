@@ -363,52 +363,52 @@ naked_proj_decl = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_stru
 	});
 }}
 
-val_attr = tok_kw_unused {{ value = reinterpret_cast<void*>(annotation_kind::unused); }}
-	| tok_kw_in {{ value = reinterpret_cast<void*>(annotation_kind::in); }}
-	| tok_kw_out {{ value = reinterpret_cast<void*>(annotation_kind::out); }}
+val_attr = tok_kw_unused {{ value = reinterpret_cast<void*>(annotation_bitfield::unused); }}
+	| tok_kw_in {{ value = reinterpret_cast<void*>(annotation_bitfield::in); }}
+	| tok_kw_out {{ value = reinterpret_cast<void*>(annotation_bitfield::out); }}
 
-ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in}); }}
-	| tok_kw_out {{ value = share(annotation {annotation_kind::out}); }}
-	| tok_kw_unused {{ value = share(annotation {annotation_kind::unused}); }}
+ptr_attr = tok_kw_in {{ value = share(annotation_set {annotation_bitfield::in}); }}
+	| tok_kw_out {{ value = share(annotation_set {annotation_bitfield::out}); }}
+	| tok_kw_unused {{ value = share(annotation_set {annotation_bitfield::unused}); }}
 	| tok_kw_alloc_once tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::alloc_once_caller});
+		value = share(annotation_set {annotation_bitfield::alloc_once_caller});
 	}}
 	| tok_kw_alloc_once tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::alloc_once_callee});
+		value = share(annotation_set {annotation_bitfield::alloc_once_callee});
 	}}
 	| tok_kw_alloc_stack tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::alloc_stack_caller, nullptr, nullptr});
+		value = share(annotation_set {annotation_bitfield::alloc_stack_caller, nullptr, nullptr});
 	}}
 	| tok_kw_alloc_stack tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::alloc_stack_callee, nullptr, nullptr});
+		value = share(annotation_set {annotation_bitfield::alloc_stack_callee, nullptr, nullptr});
 	}}
 	| tok_kw_alloc tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::alloc_caller});
+		value = share(annotation_set {annotation_bitfield::alloc_caller});
 	}}
 	| tok_kw_alloc tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::alloc_callee});
+		value = share(annotation_set {annotation_bitfield::alloc_callee});
 	}}
 	| tok_kw_alloc tok_space? tok_langle tok_space? size_expr:tok_verbatim_expr tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::alloc_caller, nullptr, to_ptr<ident>(size_expr), nullptr});
+		value = share(annotation_set {annotation_bitfield::alloc_caller, nullptr, to_ptr<ident>(size_expr), nullptr});
 	}}
 	| tok_kw_alloc tok_space? tok_langle tok_space? size_expr:tok_verbatim_expr tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::alloc_callee, nullptr, to_ptr<ident>(size_expr), nullptr});
+		value = share(annotation_set {annotation_bitfield::alloc_callee, nullptr, to_ptr<ident>(size_expr), nullptr});
 	}}
 	| tok_kw_alloc tok_space? tok_langle tok_space? size_expr:tok_verbatim_expr tok_space? tok_comma tok_space? flags_expr:tok_verbatim_expr tok_rangle tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::alloc_caller, nullptr, to_ptr<ident>(size_expr), to_ptr<ident>(flags_expr)});
+		value = share(annotation_set {annotation_bitfield::alloc_caller, nullptr, to_ptr<ident>(size_expr), to_ptr<ident>(flags_expr)});
 	}}
 	| tok_kw_alloc tok_space? tok_langle tok_space? size_expr:tok_verbatim_expr tok_space? tok_comma tok_space? flags_expr:tok_verbatim_expr tok_rangle tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::alloc_callee, nullptr, to_ptr<ident>(size_expr), to_ptr<ident>(flags_expr)});
+		value = share(annotation_set {annotation_bitfield::alloc_callee, nullptr, to_ptr<ident>(size_expr), to_ptr<ident>(flags_expr)});
 	}}
 	| tok_kw_dealloc tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::dealloc_caller});
+		value = share(annotation_set {annotation_bitfield::dealloc_caller});
 	}}
 	| tok_kw_dealloc tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::dealloc_callee});
+		value = share(annotation_set {annotation_bitfield::dealloc_callee});
 	}}
 	| tok_kw_bind_memberof tok_space? tok_langle tok_space? tok_kw_struct tok_space type:tok_ident tok_space? tok_comma tok_space? field:tok_ident_dot tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation {
-			annotation_kind::bind_memberof_caller,
+		value = share(annotation_set {
+			annotation_bitfield::bind_memberof_caller,
 			nullptr,
 			nullptr,
 			nullptr,
@@ -417,8 +417,8 @@ ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in}); }}
 	}}
 	| tok_kw_bind_memberof tok_space? tok_langle tok_space? tok_kw_struct tok_space type:tok_ident tok_space? tok_comma tok_space? field:tok_ident_dot tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
 		std::cout << "[DEBUG] " << to_ptr<ident>(type) << ", " << to_ptr<ident>(field) << "\n";
-		const auto tmp = annotation {
-			annotation_kind::bind_memberof_callee,
+		const auto tmp = annotation_set {
+			annotation_bitfield::bind_memberof_callee,
 			nullptr,
 			nullptr,
 			nullptr,
@@ -430,22 +430,22 @@ ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in}); }}
 		value = share(tmp);
 	}}
 	| tok_kw_bind tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::bind_caller});
+		value = share(annotation_set {annotation_bitfield::bind_caller});
 	}}
 	| tok_kw_bind tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::bind_callee});
+		value = share(annotation_set {annotation_bitfield::bind_callee});
 	}}
 	| tok_kw_ioremap tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::ioremap_caller});
+		value = share(annotation_set {annotation_bitfield::ioremap_caller});
 	}}
 	| tok_kw_ioremap tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::ioremap_callee});
+		value = share(annotation_set {annotation_bitfield::ioremap_callee});
 	}}
 	| tok_kw_shared tok_space? tok_langle tok_space? id:tok_ident tok_space? tok_rangle {{
-		value = share(annotation {annotation_kind::shared, to_ptr<ident>(id)});
+		value = share(annotation_set {annotation_bitfield::shared, to_ptr<ident>(id)});
 	}}
 	| tok_kw_user tok_space? tok_langle tok_space? size_expr:tok_verbatim_expr tok_space? tok_rangle tok_space? {{
-		value = share(annotation {annotation_kind::user_ptr, nullptr, to_ptr<ident>(size_expr), nullptr});
+		value = share(annotation_set {annotation_bitfield::user_ptr, nullptr, to_ptr<ident>(size_expr), nullptr});
   	}}
 	| tok_kw_within tok_space? tok_langle tok_space? pointer_expr:tok_verbatim_expr tok_space? tok_comma tok_space? bounds_expr:tok_verbatim_expr tok_space? tok_rangle
 
@@ -454,18 +454,18 @@ val_attrs = tok_lbrack tok_space? list:val_attr_list tok_space? tok_rbrack {{ va
 ptr_attrs = tok_lbrack tok_space? list:ptr_attr_list tok_space? tok_rbrack {{ value = list; }}
 
 val_attr_list = first:val_attr rest:(tok_space? tok_comma tok_space? val_attr)* {{
-	auto f = to_int<annotation_kind>(first);
+	auto f = to_int<annotation_bitfield>(first);
 	for (const auto r : rest.getValues()) {
-		f |= to_int<annotation_kind>(r);
+		f |= to_int<annotation_bitfield>(r);
 	}
 
 	value = reinterpret_cast<void*>(f);
 }}
 
 ptr_attr_list = first:ptr_attr rest:(tok_space? tok_comma tok_space? ptr_attr)* {{
-	auto f = get_shared<annotation>(first);
+	auto f = get_shared<annotation_set>(first);
 	for (const auto r : rest.getValues()) {
-		const auto& tmp = get_shared<annotation>(r);
+		const auto& tmp = get_shared<annotation_set>(r);
 		f->kind |= tmp->kind;
 		assert(!f->share_global);
 		assert(!f->member.struct_type && !f->member.field);
@@ -584,13 +584,13 @@ type_stem = arr:type_array {{
 	value = share(type_stem {type_none {} });
 }}
 
-indirection_attrs = val:ptr_attrs tok_space? {{ value = val; }} | <void> {{ value = share(annotation {}); }}
+indirection_attrs = val:ptr_attrs tok_space? {{ value = val; }} | <void> {{ value = share(annotation_set {}); }}
 
 indirection = attrs:indirection_attrs tok_star is_c:(tok_space? tok_kw_const)? {{
-	value = share(indirection {get_shared<annotation>(attrs), gsl::narrow_cast<bool>(is_c.getValue())});
+	value = share(indirection {get_shared<annotation_set>(attrs), gsl::narrow_cast<bool>(is_c.getValue())});
 }}
 
-type_spec = is_c:(tok_kw_const tok_space {{	value = $1; }})? is_vol:(tok_kw_volatile tok_space {{	value = $1; }})? stem:type_stem indirs:(tok_space? indirection)* val_annotation_kind:(tok_space? val_attrs)? {{
+type_spec = is_c:(tok_kw_const tok_space {{	value = $1; }})? is_vol:(tok_kw_volatile tok_space {{	value = $1; }})? stem:type_stem indirs:(tok_space? indirection)* val_annotation_bitfield:(tok_space? val_attrs)? {{
 	auto& ivals = indirs.getValues();
 	ref_vec<indirection> a {};
 	a.reserve(ivals.size());
@@ -600,7 +600,7 @@ type_spec = is_c:(tok_kw_const tok_space {{	value = $1; }})? is_vol:(tok_kw_vola
 	value = share(type_spec {
 		get_shared<type_stem>(stem),
 		std::move(a),
-		to_int<annotation_kind>(val_annotation_kind),
+		to_int<annotation_bitfield>(val_annotation_bitfield),
 		gsl::narrow_cast<bool>(is_c.getValue()),
 		gsl::narrow_cast<bool>(is_vol.getValue())
 	});

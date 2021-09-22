@@ -45,13 +45,13 @@ namespace idlc {
 
 	struct value {
 		passed_type type;
-		annotation_kind value_annots;
+		annotation_bitfield value_annots;
 		bool is_const;
 		bool is_volatile;
 
 		std::string c_specifier;
 
-		value(passed_type&& type, annotation_kind value_annots, bool is_const, bool is_volatile) :
+		value(passed_type&& type, annotation_bitfield value_annots, bool is_const, bool is_volatile) :
 			type {std::move(type)},
 			value_annots {value_annots},
 			is_const {is_const},
@@ -109,9 +109,9 @@ namespace idlc {
 
 	struct pointer {
 		node_ptr<value> referent;
-		annotation pointer_annots;
+		annotation_set pointer_annots;
 
-		pointer(node_ptr<value> referent, annotation pointer_annots) :
+		pointer(node_ptr<value> referent, annotation_set pointer_annots) :
 			referent {std::move(referent)},
 			pointer_annots {pointer_annots}
 		{}

@@ -159,13 +159,13 @@ namespace idlc {
         // Check if return statement is needed, or if function is <void>
         bool is_return(const value& return_value_node) { return !std::get_if<none>(&return_value_node.type); }
 
-        annotation_kind get_ptr_annotation(const value& node)
+        annotation_bitfield get_ptr_annotation(const value& node)
         {
             auto p = std::get_if<node_ref<pointer>>(&node.type);
             if (p)
                 return p->get()->pointer_annots.kind;
             else
-                return annotation_kind::use_default;
+                return annotation_bitfield::use_default;
         }
         /*
             Some explanation: C usually has two different ways of accessing variables, depnding on if they're a value
@@ -184,7 +184,7 @@ namespace idlc {
             for (gsl::index i {}; i < n_args; ++i) {
                 const auto& name = rpc.arguments->at(i)->name;
                 const auto& pgraph = rpc.arg_pgraphs.at(i);
-                if (flags_set(pgraph->value_annots, annotation_kind::unused))
+                if (flags_set(pgraph->value_annots, annotation_bitfield::unused))
                     continue;
 
                 const auto& specifier = pgraph->c_specifier;
@@ -197,7 +197,7 @@ namespace idlc {
                     auto p_array = std::get_if<node_ref<static_array>>(&p->get()->referent->type);
                     auto raw_specifier = p->get()->referent->c_specifier;
 
-                    if (flags_set(p->get()->pointer_annots.kind, annotation_kind::alloc_stack_callee)) {
+                    if (flags_set(p->get()->pointer_annots.kind, annotation_bitfield::alloc_stack_callee)) {
                         if (p_array) {
                             os << "\t" << raw_specifier << " __" << name << "[" << p_array->get()->size << "];\n";
                             os << "\t" << specifier << " " << name << " = __" << name << ";\n";
@@ -211,7 +211,7 @@ namespace idlc {
                     }
                 } else {
                     if ((side == marshal_side::caller) && p
-                        && flags_set(p->get()->pointer_annots.kind, annotation_kind::user_ptr)) {
+                        && flags_set(p->get()->pointer_annots.kind, annotation_bitfield::user_ptr)) {
                         os << "\t" << specifier << "__" << name << "_ptr;\n";
                         os << "\t" << specifier << "* __orig_" << ptr_name << " = &" << name << ";\n";
                     }
@@ -221,7 +221,7 @@ namespace idlc {
             }
 
             if (is_return(*rpc.ret_pgraph)) {
-                if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
+                if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_bitfield::ioremap_caller)) {
                     switch (side) {
                     case marshal_side::caller:
                         os << "\tcptr_t ioremap_cptr;\n";
@@ -318,7 +318,7 @@ namespace idlc {
             }
 
             if (is_return(*rpc.ret_pgraph)) {
-                if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
+                if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_bitfield::ioremap_caller)) {
                     os << "\t{\n";
                     os << "\t\tlcd_cptr_alloc(&ioremap_cptr);\n";
                     os << "\t\tglue_pack(__pos, __msg, __ext, cptr_val(ioremap_cptr));\n";
@@ -341,7 +341,7 @@ namespace idlc {
             os << "\t*__pos = 0;\n";
 
             if (is_return(*rpc.ret_pgraph)) {
-                if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
+                if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_bitfield::ioremap_caller)) {
                     os << "\t{\n";
                     os << "\t\tint __ret;\n";
                     os << "\t\tioremap_len = glue_unpack(__pos, __msg, __ext, uint64_t);\n";
@@ -366,7 +366,7 @@ namespace idlc {
 
             if (is_return(*rpc.ret_pgraph)) {
                 // Unmarshal return pointer only if it's NOT an ioremap annotation
-                if (!flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
+                if (!flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_bitfield::ioremap_caller)) {
                     os << "\t{\n";
                     unmarshaling_walk<marshal_side::caller> ret_unmarshal {os, roots.return_value, 2};
                     ret_unmarshal.visit_value(*rpc.ret_pgraph);
@@ -415,7 +415,7 @@ namespace idlc {
                 const auto name = rpc.arguments->at(i)->name;
 
                 auto p = std::get_if<node_ref<pointer>>(&pgraph->type);
-                if (p && flags_set(p->get()->pointer_annots.kind, annotation_kind::alloc_stack_callee))
+                if (p && flags_set(p->get()->pointer_annots.kind, annotation_bitfield::alloc_stack_callee))
                     continue;
                 os << "\t" << type << " " << name << " = 0;\n";
             }
@@ -432,7 +432,7 @@ namespace idlc {
 
             // Unmarshal cptr from the driver domain
             if (is_return(*rpc.ret_pgraph)) {
-                if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
+                if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_bitfield::ioremap_caller)) {
                     os << "\t{\n";
                     os << "\t\tlcd_resource_cptr.cptr = glue_unpack(__pos, __msg, __ext, uint64_t);\n";
                     os << "\t}\n\n";
@@ -450,7 +450,7 @@ namespace idlc {
             if (is_return(*rpc.ret_pgraph))
                 os << "ret = ";
 
-            if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
+            if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_bitfield::ioremap_caller)) {
                 std::string phys_addr;
                 if ((rpc.name == std::string("pci_iomap")) || (rpc.name == std::string("pci_ioremap_bar"))) {
                     phys_addr = "pci_resource_start(pdev, bar)";
@@ -471,7 +471,7 @@ namespace idlc {
 
             // Marshal the resource len back to the caller domain for ioremapping the region
             if (is_return(*rpc.ret_pgraph)) {
-                if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
+                if (flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_bitfield::ioremap_caller)) {
                     ident resource_len = "unknown";
 
                     if ((rpc.name == std::string("pci_iomap")) || (rpc.name == std::string("pci_ioremap_bar"))) {
@@ -501,7 +501,7 @@ namespace idlc {
 
             if (is_return(*rpc.ret_pgraph)) {
                 // Marshal return pointer only if it's NOT an ioremap annotation
-                if (!flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
+                if (!flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_bitfield::ioremap_caller)) {
                     os << "\t{\n";
                     marshaling_walk<marshal_side::callee> ret_marshal {os, roots.return_value, 2};
                     ret_marshal.visit_value(*rpc.ret_pgraph);
