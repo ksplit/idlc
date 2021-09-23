@@ -67,18 +67,6 @@ namespace idlc {
         ident size_verbatim {}; // this really shouldn't be an ident
         ident flags_verbatim {}; // this really shouldn't be an ident ;)
         bind_memberof member {};
-
-        annotation_set(annotation_bitfield kind, ident share_global = nullptr, ident size_verbatim = nullptr,
-            ident flags_verbatim = nullptr, bind_memberof member = {})
-            : kind {kind}
-            , share_global {share_global}
-            , size_verbatim {size_verbatim}
-            , flags_verbatim {flags_verbatim}
-            , member {member}
-        {
-        }
-
-        annotation_set() = default;
     };
 
     constexpr auto operator|(annotation_bitfield a, annotation_bitfield b)

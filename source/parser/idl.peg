@@ -377,10 +377,10 @@ ptr_attr = tok_kw_in {{ value = share(annotation_set {annotation_bitfield::in});
 		value = share(annotation_set {annotation_bitfield::alloc_once_callee});
 	}}
 	| tok_kw_alloc_stack tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation_set {annotation_bitfield::alloc_stack_caller, nullptr, nullptr});
+		value = share(annotation_set {annotation_bitfield::alloc_stack_caller});
 	}}
 	| tok_kw_alloc_stack tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation_set {annotation_bitfield::alloc_stack_callee, nullptr, nullptr});
+		value = share(annotation_set {annotation_bitfield::alloc_stack_callee});
 	}}
 	| tok_kw_alloc tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
 		value = share(annotation_set {annotation_bitfield::alloc_caller});
@@ -389,16 +389,26 @@ ptr_attr = tok_kw_in {{ value = share(annotation_set {annotation_bitfield::in});
 		value = share(annotation_set {annotation_bitfield::alloc_callee});
 	}}
 	| tok_kw_alloc tok_space? tok_langle tok_space? size_expr:tok_verbatim_expr tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation_set {annotation_bitfield::alloc_caller, nullptr, to_ptr<ident>(size_expr), nullptr});
+		annotation_set set {annotation_bitfield::alloc_caller};
+		set.size_verbatim = to_ptr<ident>(size_expr);
+		value = share(set);
 	}}
 	| tok_kw_alloc tok_space? tok_langle tok_space? size_expr:tok_verbatim_expr tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation_set {annotation_bitfield::alloc_callee, nullptr, to_ptr<ident>(size_expr), nullptr});
+		annotation_set set {annotation_bitfield::alloc_callee};
+		set.size_verbatim = to_ptr<ident>(size_expr);
+		value = share(set);
 	}}
 	| tok_kw_alloc tok_space? tok_langle tok_space? size_expr:tok_verbatim_expr tok_space? tok_comma tok_space? flags_expr:tok_verbatim_expr tok_rangle tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation_set {annotation_bitfield::alloc_caller, nullptr, to_ptr<ident>(size_expr), to_ptr<ident>(flags_expr)});
+		annotation_set set {annotation_bitfield::alloc_caller};
+		set.size_verbatim = to_ptr<ident>(size_expr);
+		set.flags_verbatim = to_ptr<ident>(flags_expr);
+		value = share(set);
 	}}
 	| tok_kw_alloc tok_space? tok_langle tok_space? size_expr:tok_verbatim_expr tok_space? tok_comma tok_space? flags_expr:tok_verbatim_expr tok_rangle tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation_set {annotation_bitfield::alloc_callee, nullptr, to_ptr<ident>(size_expr), to_ptr<ident>(flags_expr)});
+		annotation_set set {annotation_bitfield::alloc_callee};
+		set.size_verbatim = to_ptr<ident>(size_expr);
+		set.flags_verbatim = to_ptr<ident>(flags_expr);
+		value = share(set);
 	}}
 	| tok_kw_dealloc tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
 		value = share(annotation_set {annotation_bitfield::dealloc_caller});
@@ -407,27 +417,14 @@ ptr_attr = tok_kw_in {{ value = share(annotation_set {annotation_bitfield::in});
 		value = share(annotation_set {annotation_bitfield::dealloc_callee});
 	}}
 	| tok_kw_bind_memberof tok_space? tok_langle tok_space? tok_kw_struct tok_space type:tok_ident tok_space? tok_comma tok_space? field:tok_ident_dot tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation_set {
-			annotation_bitfield::bind_memberof_caller,
-			nullptr,
-			nullptr,
-			nullptr,
-			{to_ptr<ident>(type), to_ptr<ident>(field)}
-		});
+		annotation_set set {annotation_bitfield::bind_memberof_caller};
+		set.member = {to_ptr<ident>(type), to_ptr<ident>(field)};
+		value = share(set);
 	}}
 	| tok_kw_bind_memberof tok_space? tok_langle tok_space? tok_kw_struct tok_space type:tok_ident tok_space? tok_comma tok_space? field:tok_ident_dot tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		std::cout << "[DEBUG] " << to_ptr<ident>(type) << ", " << to_ptr<ident>(field) << "\n";
-		const auto tmp = annotation_set {
-			annotation_bitfield::bind_memberof_callee,
-			nullptr,
-			nullptr,
-			nullptr,
-			{to_ptr<ident>(type), to_ptr<ident>(field)}
-		};
-
-		std::cout << "[DEBUG] After: " << to_ptr<ident>(type) << ", " << to_ptr<ident>(field) << "\n";
-
-		value = share(tmp);
+		annotation_set set {annotation_bitfield::bind_memberof_callee};
+		set.member = {to_ptr<ident>(type), to_ptr<ident>(field)};
+		value = share(set);
 	}}
 	| tok_kw_bind tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
 		value = share(annotation_set {annotation_bitfield::bind_caller});
@@ -442,10 +439,14 @@ ptr_attr = tok_kw_in {{ value = share(annotation_set {annotation_bitfield::in});
 		value = share(annotation_set {annotation_bitfield::ioremap_callee});
 	}}
 	| tok_kw_shared tok_space? tok_langle tok_space? id:tok_ident tok_space? tok_rangle {{
-		value = share(annotation_set {annotation_bitfield::shared, to_ptr<ident>(id)});
+		annotation_set set {annotation_bitfield::shared};
+		set.share_global = to_ptr<ident>(id);
+		value = share(set);
 	}}
 	| tok_kw_user tok_space? tok_langle tok_space? size_expr:tok_verbatim_expr tok_space? tok_rangle tok_space? {{
-		value = share(annotation_set {annotation_bitfield::user_ptr, nullptr, to_ptr<ident>(size_expr), nullptr});
+		annotation_set set {annotation_bitfield::user_ptr};
+		set.size_verbatim = to_ptr<ident>(size_expr);
+		value = share(set);
   	}}
 	| tok_kw_within tok_space? tok_langle tok_space? pointer_expr:tok_verbatim_expr tok_space? tok_comma tok_space? bounds_expr:tok_verbatim_expr tok_space? tok_rangle
 
@@ -465,6 +466,7 @@ val_attr_list = first:val_attr rest:(tok_space? tok_comma tok_space? val_attr)* 
 ptr_attr_list = first:ptr_attr rest:(tok_space? tok_comma tok_space? ptr_attr)* {{
 	auto f = get_shared<annotation_set>(first);
 	for (const auto r : rest.getValues()) {
+		// package this in an operator overload
 		const auto& tmp = get_shared<annotation_set>(r);
 		f->kind |= tmp->kind;
 		assert(!f->share_global);
