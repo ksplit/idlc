@@ -32,6 +32,7 @@ namespace idlc {
         alloc_stack_caller = 1 << 16,
         alloc_stack_callee = 1 << 17,
         user_ptr = 1 << 18,
+        within_ptr = 1 << 19,
         is_bind_memberof = bind_memberof_caller | bind_memberof_callee,
         is_bind = (bind_callee | bind_caller),
         is_dealloc = (dealloc_callee | dealloc_caller),
@@ -53,20 +54,59 @@ namespace idlc {
         ident field {};
 
         bind_memberof() = default;
+
         bind_memberof(ident type, ident field)
             : struct_type {type}
             , field {field}
         {
         }
+
+        operator bool() const { return field || struct_type; }
     };
 
-    // TODO: clean me up
+    inline bool operator==(const bind_memberof& a, const bind_memberof& b)
+    {
+        return a.struct_type == b.struct_type && a.field == b.field;
+    }
+
+    template <typename type> class set_once {
+    public:
+        set_once() = default;
+
+        set_once(const type& item)
+            : m_item {item}
+        {
+        }
+
+        set_once& operator=(const type& item)
+        {
+            if (m_item)
+                assert(m_item == item || !item);
+            else
+                m_item = item;
+        }
+
+        set_once& operator=(const set_once& item)
+        {
+            *this = item.m_item;
+        }
+
+        auto& get() { return m_item; };
+
+    private:
+        type m_item {};
+    };
+
+    // TODO: clean me up for the love of all that is good and green on this earth
+    // Semantically, some of these fields are of suspect meaning
+    // TODO: remove the notion of verbatims, they were always a workaround
     struct annotation_set {
         annotation_bitfield kind {};
-        ident share_global {};
-        ident size_verbatim {}; // this really shouldn't be an ident
-        ident flags_verbatim {}; // this really shouldn't be an ident ;)
-        bind_memberof member {};
+        set_once<ident> share_global {};
+        set_once<ident> size_verbatim {}; // this really shouldn't be an ident
+        set_once<ident> flags_verbatim {}; // this really shouldn't be an ident ;)
+        set_once<bind_memberof> member {};
+        set_once<ident> parent_pointer {};
     };
 
     constexpr auto operator|(annotation_bitfield a, annotation_bitfield b)
@@ -93,6 +133,17 @@ namespace idlc {
     constexpr auto is_clear(annotation_bitfield a) { return static_cast<std::uintptr_t>(a) == 0; }
 
     constexpr auto flags_set(annotation_bitfield field, annotation_bitfield flags) { return (field & flags) == flags; }
+
+    inline annotation_set& operator&=(annotation_set& f, const annotation_set& tmp) noexcept
+    {
+        f.kind |= tmp.kind;
+
+        f.share_global = tmp.share_global;
+        f.size_verbatim = tmp.size_verbatim;
+        f.flags_verbatim = tmp.flags_verbatim;
+        f.member = tmp.member;
+        f.parent_pointer = tmp.parent_pointer;
+    }
 
     enum class type_primitive {
         ty_invalid,

@@ -448,7 +448,12 @@ ptr_attr = tok_kw_in {{ value = share(annotation_set {annotation_bitfield::in});
 		set.size_verbatim = to_ptr<ident>(size_expr);
 		value = share(set);
   	}}
-	| tok_kw_within tok_space? tok_langle tok_space? pointer_expr:tok_verbatim_expr tok_space? tok_comma tok_space? bounds_expr:tok_verbatim_expr tok_space? tok_rangle
+	| tok_kw_within tok_space? tok_langle tok_space? pointer_expr:tok_verbatim_expr tok_space? tok_comma tok_space? bounds_expr:tok_verbatim_expr tok_space? tok_rangle {{
+		annotation_set set {annotation_bitfield::within_ptr};
+		set.parent_pointer = to_ptr<ident>(pointer_expr);
+		set.size_verbatim = to_ptr<ident>(bounds_expr);
+		value = share(set);
+	}}
 
 val_attrs = tok_lbrack tok_space? list:val_attr_list tok_space? tok_rbrack {{ value = list; }}
 
@@ -465,18 +470,8 @@ val_attr_list = first:val_attr rest:(tok_space? tok_comma tok_space? val_attr)* 
 
 ptr_attr_list = first:ptr_attr rest:(tok_space? tok_comma tok_space? ptr_attr)* {{
 	auto f = get_shared<annotation_set>(first);
-	for (const auto r : rest.getValues()) {
-		// package this in an operator overload
-		const auto& tmp = get_shared<annotation_set>(r);
-		f->kind |= tmp->kind;
-		assert(!f->share_global);
-		assert(!f->member.struct_type && !f->member.field);
-		f->share_global = tmp->share_global;
-		// Overwrite the size! If the annotation has multiple sizes, we take the last one.
-		if (tmp->size_verbatim)
-			f->size_verbatim = tmp->size_verbatim;
-		f->member = tmp->member;
-	}
+	for (const auto r : rest.getValues())
+		*f &= *get_shared<annotation_set>(r);
 
 	value = first;
 }}
