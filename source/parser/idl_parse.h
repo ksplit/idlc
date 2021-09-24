@@ -7,9 +7,9 @@
 #include <gsl/gsl>
 
 #include "../ast/ast.h"
-#include "parser.h"
 #include "parse_globals.h"
-	
+#include "parser.h"
+
 namespace idlc::parser {
 	inline std::shared_ptr<file> parse_file(gsl::czstring<> path)
 	{
@@ -17,7 +17,7 @@ namespace idlc::parser {
 			const auto raw = Parser::parse(std::string {path});
 			const auto id = reinterpret_cast<std::size_t>(raw);
 			const auto ref = std::any_cast<std::shared_ptr<file>>(gsl::at(parser_objs, id));
-			
+
 			// Now that we have the tree root we can cull all the unused nodes
 			parser_objs.clear();
 

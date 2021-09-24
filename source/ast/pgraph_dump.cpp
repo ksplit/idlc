@@ -3,9 +3,9 @@
 #include <cassert>
 #include <iostream>
 
-#include "pgraph_walk.h"
-#include "pgraph.h"
 #include "../utility.h"
+#include "pgraph.h"
+#include "pgraph_walk.h"
 
 namespace idlc {
 	namespace {

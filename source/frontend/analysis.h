@@ -12,9 +12,9 @@
 #include "../string_heap.h"
 
 namespace idlc {
-    using rpc_vec = std::vector<gsl::not_null<rpc_def*>>;
-    using rpc_vec_view = gsl::span<const gsl::not_null<rpc_def*>>;
-    std::optional<rpc_vec> generate_rpc_pgraphs(file& root);
+	using rpc_vec = std::vector<gsl::not_null<rpc_def*>>;
+	using rpc_vec_view = gsl::span<const gsl::not_null<rpc_def*>>;
+	std::optional<rpc_vec> generate_rpc_pgraphs(file& root);
 }
 
 #endif

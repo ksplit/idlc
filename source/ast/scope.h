@@ -3,10 +3,11 @@
 
 #include <algorithm>
 #include <iterator>
-#include <vector>
 #include <variant>
+#include <vector>
 
 #include "../string_heap.h"
+
 namespace idlc {
 	struct proj_def;
 	struct rpc_def;
@@ -23,24 +24,16 @@ namespace idlc {
 			}
 		}
 
-		std::string_view get_path()
-		{
-			return m_path;
-		}
+		std::string_view get_path() { return m_path; }
 
-		void insert(ident name, proj_def* ptr)
+		template <typename definition>
+		void insert(ident name, definition* ptr)
 		{
 			m_names.emplace_back(name);
 			m_symbols.emplace_back(ptr);
 		}
 
-		void insert(ident name, rpc_def* ptr)
-		{
-			m_names.emplace_back(name);
-			m_symbols.emplace_back(ptr);
-		}
-
-		template<typename type>
+		template <typename type>
 		type* get(ident name) const
 		{
 			using namespace std;
