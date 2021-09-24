@@ -1,6 +1,13 @@
 #ifndef IDLC_BACKEND_WALKS_H
 #define IDLC_BACKEND_WALKS_H
 
+#include <string>
+#include <variant>
+
+#include "../ast/ast.h"
+#include "../ast/pgraph.h"
+#include "../ast/pgraph_walk.h"
+
 namespace idlc {
     template <typename derived> class generation_walk : public pgraph_walk<derived> {
     public:
@@ -120,6 +127,9 @@ namespace idlc {
         {
         }
 
+        /* FIXME: completely overhaul annotation sets, annotation bitfields, defaulting, interpretation of annotations
+         * in this and unmarshaling, and eliminate hacks about when walks further into the tree are needed. The latter
+         * will probably need to do some sort of tree-labelling to figure out wich nodes have no marshalable children */
         bool visit_pointer(pointer& node)
         {
             if (m_should_marshal) {
@@ -155,13 +165,23 @@ namespace idlc {
 
                 if (should_bind<side>(node.pointer_annots)) {
                     this->new_line() << "glue_pack_shadow(__pos, __msg, __ext, __adjusted);\n";
+                } else if (flags_set(node.pointer_annots.kind, annotation_bitfield::alloc_stack_callee)) {
+                    // No need to pack the pointer if it's a stack allocation on the other side
+                    return true;
                 } else if (flags_set(node.pointer_annots.kind, annotation_bitfield::shared)) {
                     this->new_line() << "glue_pack(__pos, __msg, __ext, (void*)__adjusted - "
                                      << node.pointer_annots.share_global.get() << ");\n";
 
                     return true; // No need to walk these (yet)
-                } else if (flags_set(node.pointer_annots.kind, annotation_bitfield::alloc_stack_callee)) {
-                    // No need to pack the pointer if it's a stack allocation on the other side
+                } else if (flags_set(node.pointer_annots.kind, annotation_bitfield::within_ptr)) {
+                    // NOTE: this assumes within<> does not need to be walked
+                    assert(std::holds_alternative<primitive>(node.referent->type) || std::holds_alternative<none>(node.referent->type) /*If you've just fired this assert, and your use of within<> was intended, David needs to overhaul the type system, the pointer annotation system, and finally get rid of verbatim tokens*/);
+
+                    // parent_pointer and share_global may represent similar concepts, within<> probably can't co-occur
+                    // with share<>
+                    this->new_line() << "glue_pack(__pos, __msg, __ext, (void*)__adjusted - "
+                                     << node.pointer_annots.parent_pointer.get() << ");\n";
+
                     return true;
                 } else {
                     this->new_line() << "glue_pack(__pos, __msg, __ext, __adjusted);\n";
@@ -584,7 +604,8 @@ namespace idlc {
                 auto alloc_flags = node.pointer_annots.flags_verbatim.get() ? node.pointer_annots.flags_verbatim.get()
                                                                             : "DEFAULT_GFP_FLAGS";
 
-                std::string alloc_size = node.pointer_annots.size_verbatim.get() ? node.pointer_annots.size_verbatim.get() : "";
+                std::string alloc_size
+                    = node.pointer_annots.size_verbatim.get() ? node.pointer_annots.size_verbatim.get() : "";
 
                 // if the size field is empty (i.e., `{{}}`), use referent size
                 if (alloc_size.empty())
@@ -609,6 +630,13 @@ namespace idlc {
                 this->new_line() << subject;
                 this->stream() << "(" << m_c_specifier << ")(glue_unpack(__pos, __msg, __ext, size_t) + "
                                << node.pointer_annots.share_global.get() << ");\n";
+
+                return false;
+            } else if (flags_set(node.pointer_annots.kind, annotation_bitfield::within_ptr)) {
+                this->new_line() << subject;
+                // TODO: Again, within<> probably a logical duplicate of shared<>, not just an actual duplicate
+                this->stream() << "(" << m_c_specifier << ")(glue_unpack(__pos, __msg, __ext, size_t) + "
+                               << node.pointer_annots.parent_pointer.get() << ");\n";
 
                 return false;
             } else {

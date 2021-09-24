@@ -11,6 +11,7 @@ namespace idlc {
     // TODO: clean this up?
     // TODO: I'd prefer strong-typing the val / pointer distinction
     // TODO: bitfield isn't really the sanest choice
+    // FIXME: the entire annotation set system needs an overhaul to better encode caller/callee, mutually exclusive annotations, among other things
     enum class annotation_bitfield {
         use_default,
         alloc_caller = 1 << 0,
@@ -41,7 +42,7 @@ namespace idlc {
         is_alloc_stack = (alloc_stack_callee | alloc_stack_caller),
         is_ioremap = (ioremap_callee | ioremap_caller),
         is_ptr = is_bind | is_dealloc | is_alloc | is_ioremap | is_alloc_once | shared | is_bind_memberof
-            | is_alloc_stack | user_ptr,
+            | is_alloc_stack | within_ptr | user_ptr, // NOTE: if you don't keep this updated, the defaulting pass will overwrite your stuff
         is_val = out | in | unused,
         in_out = out | in,
         io_only = in_out,
@@ -92,6 +93,7 @@ namespace idlc {
         }
 
         auto& get() { return m_item; };
+        const auto& get() const { return m_item; };
 
     private:
         type m_item {};
@@ -125,6 +127,12 @@ namespace idlc {
         return static_cast<annotation_bitfield>(static_cast<std::uintptr_t>(a) & static_cast<std::uintptr_t>(b));
     }
 
+    constexpr auto& operator&=(annotation_bitfield& a, annotation_bitfield b)
+    {
+        a = a & b;
+        return a;
+    }
+
     constexpr auto operator~(annotation_bitfield a)
     {
         return static_cast<annotation_bitfield>(~static_cast<std::uintptr_t>(a));
@@ -137,6 +145,8 @@ namespace idlc {
     inline annotation_set& operator&=(annotation_set& f, const annotation_set& tmp) noexcept
     {
         f.kind |= tmp.kind;
+        if (tmp.kind == annotation_bitfield::within_ptr)
+            asm("nop");
 
         f.share_global = tmp.share_global;
         f.size_verbatim = tmp.size_verbatim;

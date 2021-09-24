@@ -136,9 +136,12 @@ namespace idlc {
                 const auto val_annots = annots->kind & annotation_bitfield::is_val;
                 auto field = std::make_shared<value>(std::move(type), val_annots, is_const, is_volatile);
 
-                type = std::make_shared<pointer>(std::move(field),
-                    annotation_set {annots->kind & annotation_bitfield::is_ptr, annots->share_global, annots->size_verbatim,
-                        annots->flags_verbatim, annots->member});
+                // If we packed this operation up we could avoid most of the fragility of annotation_bitfield
+                auto set = *annots;
+                set.kind &= annotation_bitfield::is_ptr;
+                // FIXME: This is exactly where the bug is happening: every additional field we add must be
+                // handled here, and the operation isn't just a copy
+                type = std::make_shared<pointer>(std::move(field), set);
 
                 is_const = ptr_node->is_const;
             }
@@ -241,7 +244,8 @@ namespace idlc {
                     else if (m_default_with == annotation_bitfield::out)
                         node.pointer_annots.kind = annotation_bitfield::bind_callee;
                     else if (m_default_with == (annotation_bitfield::in | annotation_bitfield::out))
-                        node.pointer_annots.kind = (annotation_bitfield::bind_callee | annotation_bitfield::bind_caller);
+                        node.pointer_annots.kind
+                            = (annotation_bitfield::bind_callee | annotation_bitfield::bind_caller);
                 } else {
                     // Annotation already set, ignore
                 }
@@ -304,7 +308,8 @@ namespace idlc {
             return instance_name;
         }
 
-        passed_type instantiate_projection(proj_def& node, node_ptr<projection>& cached, annotation_bitfield default_with)
+        passed_type instantiate_projection(
+            proj_def& node, node_ptr<projection>& cached, annotation_bitfield default_with)
         {
             if (cached) {
                 // NOTE: It's important that we don't try and modify the cached copy, as it could be a partial one

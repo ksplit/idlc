@@ -41,7 +41,7 @@ module foo {
     rpc_ptr long write(int fd, projection file *file, const array<char, {{count}}> [user<{{count}}>, alloc(callee), dealloc(callee)] *buf, long count) {
        projection <struct file> file {
             array<char, {{ptr->len}}>* head; // already there
-            //void * [within<{{ptr->head}}, {{ptr->len}}>] data;
+            void [bind(caller), within<{{bar}}, {{foo}}>]* data;
             unsigned int len;
        }
     }

@@ -461,9 +461,8 @@ ptr_attrs = tok_lbrack tok_space? list:ptr_attr_list tok_space? tok_rbrack {{ va
 
 val_attr_list = first:val_attr rest:(tok_space? tok_comma tok_space? val_attr)* {{
 	auto f = to_int<annotation_bitfield>(first);
-	for (const auto r : rest.getValues()) {
+	for (const auto r : rest.getValues())
 		f |= to_int<annotation_bitfield>(r);
-	}
 
 	value = reinterpret_cast<void*>(f);
 }}
