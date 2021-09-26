@@ -42,14 +42,10 @@ namespace idlc {
 		is_alloc_once = (alloc_once_callee | alloc_once_caller),
 		is_alloc_stack = (alloc_stack_callee | alloc_stack_caller),
 		is_ioremap = (ioremap_callee | ioremap_caller),
-		is_ptr = is_bind | is_dealloc | is_alloc | is_ioremap | is_alloc_once | shared | is_bind_memberof
-			| is_alloc_stack | within_ptr
-			| user_ptr, // NOTE: if you don't keep this updated, the defaulting pass will overwrite your stuff
-		is_val = out | in | unused,
+		val_only = out | in | unused,
+		ptr_only = ~val_only,
 		in_out = out | in,
 		io_only = in_out,
-		ptr_only = is_ptr,
-		val_only = is_val
 	};
 
 	struct bind_memberof {

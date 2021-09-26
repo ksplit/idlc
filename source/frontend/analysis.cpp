@@ -140,15 +140,15 @@ namespace idlc {
 			bool is_volatile {node.is_volatile};
 			for (const auto& ptr_node : node.indirs) {
 				const auto annots = ptr_node->attrs;
-				const auto val_annots = annots->kind & annotation_bitfield::is_val;
+				const auto val_annots = annots->kind & annotation_bitfield::val_only;
 				auto field = std::make_shared<value>(std::move(type), val_annots, is_const, is_volatile);
 				auto set = *annots;
-				set.kind &= annotation_bitfield::is_ptr;
+				set.kind &= annotation_bitfield::ptr_only;
 				type = std::make_shared<pointer>(std::move(field), set);
 				is_const = ptr_node->is_const;
 			}
 
-			assert((node.attrs & annotation_bitfield::is_val) == node.attrs);
+			assert((node.attrs & annotation_bitfield::val_only) == node.attrs);
 			auto field = std::make_shared<value>(std::move(type), node.attrs, is_const, is_volatile);
 
 			return std::move(field);
