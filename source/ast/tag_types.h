@@ -135,17 +135,11 @@ namespace idlc {
 
 	constexpr auto flags_set(annotation_bitfield field, annotation_bitfield flags) { return (field & flags) == flags; }
 
-	inline annotation_set& operator&=(annotation_set& f, const annotation_set& tmp) noexcept
+	inline annotation_set& operator&=(annotation_set& a, const annotation_set& b) noexcept
 	{
-		f.kind |= tmp.kind;
-		if (tmp.kind == annotation_bitfield::within_ptr)
-			asm("nop");
-
-		f.share_global = tmp.share_global;
-		f.size_verbatim = tmp.size_verbatim;
-		f.flags_verbatim = tmp.flags_verbatim;
-		f.member = tmp.member;
-		f.parent_pointer = tmp.parent_pointer;
+		const auto flags = a.kind | b.kind;
+		a = b;
+		a.kind = flags;
 	}
 
 	enum class type_primitive {
