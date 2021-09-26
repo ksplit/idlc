@@ -30,6 +30,8 @@ namespace idlc {
 	namespace {
 		class string_const_walk : public ast_walk<string_const_walk> {
 		public:
+			using ast_walk::visit_array_size;
+
 			bool visit_type_spec(type_spec& node)
 			{
 				if (std::get_if<type_string>(node.stem.get().get()))
@@ -38,6 +40,21 @@ namespace idlc {
 				return true;
 			}
 		};
+
+		void dump_pgraphs(rpc_vec_view rpcs)
+		{
+			for (const auto& rpc : rpcs) {
+				std::cout << rpc->name << "::__return\n";
+				idlc::dump_pgraph(*rpc->ret_pgraph);
+				std::size_t index {};
+				for (const auto& arg : rpc->arg_pgraphs) {
+					const auto& ast_node = rpc->arguments->at(index);
+					std::cout << rpc->name << "::" << ast_node->name << "\n";
+					idlc::dump_pgraph(*arg);
+					++index;
+				}
+			}
+		}
 	}
 }
 
@@ -53,7 +70,7 @@ int main(int argc, char** argv)
 	if (!file)
 		return 1;
 
-	idlc::dump_ast(*file);
+	//idlc::dump_ast(*file);
 	if (!idlc::bind_all_names(*file)) {
 		std::cout << "Error: Not all names were bound\n";
 		return 1;
@@ -61,24 +78,14 @@ int main(int argc, char** argv)
 
 	idlc::string_const_walk string_walk {};
 	if (!string_walk.visit_file(*file))
-		std::terminate();
+		return 1;
 
 	const auto rpcs = idlc::generate_rpc_pgraphs(*file);
 	if (!rpcs) {
 		std::cout << "Error: pgraph generation failed\n";
 		return 1;
 	}
-
-	for (const auto& rpc : *rpcs) {
-		std::cout << rpc->name << "::__return\n";
-		idlc::dump_pgraph(*rpc->ret_pgraph);
-		std::size_t index {};
-		for (const auto& arg : rpc->arg_pgraphs) {
-			std::cout << rpc->name << "::" << rpc->arguments->at(index)->name << "\n";
-			idlc::dump_pgraph(*arg);
-			++index;
-		}
-	}
-
+	
+	//idlc::dump_pgraphs(*rpcs);
 	idlc::generate(*rpcs);
 }

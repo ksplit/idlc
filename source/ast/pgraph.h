@@ -47,7 +47,7 @@ namespace idlc {
 	struct value {
 		passed_type type; // Not const, but only because we do lowering from a raw proj_def* to the actual node
 		annotation_bitfield value_annots; // needs to be non-const, we do defaulting walks
-		bool is_const; // not entirely convinced that this can't be const, see const_walk
+		bool is_const; // not entirely convinced that this can't be const, see const_propagation_walk
 		bool is_volatile; // we don't use this at all afaik
 
 		std::string c_specifier;

@@ -268,8 +268,6 @@ namespace idlc {
 
 		module_def(ident name, node_ptr<ref_vec<module_item>> items) : name {name}, items {items}, scope {} {}
 	};
-
-	// Nodes that have scopes: module_defs, rpc_defs, proj_defs
 }
 
 #endif

@@ -50,7 +50,7 @@ namespace idlc {
 					return item->definition;
 				}
 				else if constexpr (std::is_same_v<type, node_ref<type_rpc>>) {
-					return std::make_shared<rpc_ptr>(item.get().get()->definition);
+					return std::make_shared<rpc_ptr>(item->definition);
 				}
 				else if constexpr (std::is_same_v<type, node_ref<type_casted>>) {
 					return std::make_shared<casted_type>(
@@ -142,14 +142,9 @@ namespace idlc {
 				const auto annots = ptr_node->attrs;
 				const auto val_annots = annots->kind & annotation_bitfield::is_val;
 				auto field = std::make_shared<value>(std::move(type), val_annots, is_const, is_volatile);
-
-				// If we packed this operation up we could avoid most of the fragility of annotation_bitfield
 				auto set = *annots;
 				set.kind &= annotation_bitfield::is_ptr;
-				// FIXME: This is exactly where the bug is happening: every additional field we add must be
-				// handled here, and the operation isn't just a copy
 				type = std::make_shared<pointer>(std::move(field), set);
-
 				is_const = ptr_node->is_const;
 			}
 
@@ -159,7 +154,7 @@ namespace idlc {
 			return std::move(field);
 		}
 
-		class type_walk : public ast_walk<type_walk> {
+		class pgraph_lowering_walk : public ast_walk<pgraph_lowering_walk> {
 		public:
 			bool visit_rpc_def(rpc_def& node)
 			{
@@ -177,7 +172,7 @@ namespace idlc {
 
 		void create_pgraphs_from_types(rpc_vec_view rpcs)
 		{
-			type_walk walk {};
+			pgraph_lowering_walk walk {};
 			for (const auto& rpc : rpcs) {
 				const auto succeeded = walk.visit_rpc_def(*rpc);
 				assert(succeeded);
@@ -251,9 +246,6 @@ namespace idlc {
 					else if (m_default_with == (annotation_bitfield::in | annotation_bitfield::out))
 						node.pointer_annots.kind
 							= (annotation_bitfield::bind_callee | annotation_bitfield::bind_caller);
-				}
-				else {
-					// Annotation already set, ignore
 				}
 
 				return traverse(*this, node);
@@ -338,18 +330,14 @@ namespace idlc {
 
 		passed_type instantiate_projection(proj_def& node, annotation_bitfield default_with)
 		{
-			std::cout << "Debug: Non-lowered projection \"" << node.name << "\"\n";
 			switch (default_with) {
 			case annotation_bitfield::in_out:
-				std::cout << "Debug: Need \"in/out\" instance\n";
 				return instantiate_projection(node, node.in_out_proj, default_with);
 
 			case annotation_bitfield::in:
-				std::cout << "Debug: Need \"in\" instance\n";
 				return instantiate_projection(node, node.in_proj, default_with);
 
 			case annotation_bitfield::out:
-				std::cout << "Debug: Need \"out\" instance\n";
 				return instantiate_projection(node, node.out_proj, default_with);
 
 			default:
@@ -357,7 +345,7 @@ namespace idlc {
 			}
 		}
 
-		class const_walk : public pgraph_walk<const_walk> {
+		class const_propagation_walk : public pgraph_walk<const_propagation_walk> {
 		public:
 			bool visit_null_terminated_array(null_terminated_array& node)
 			{
@@ -398,7 +386,7 @@ namespace idlc {
 			if (!annotate_pgraph(*rpc.ret_pgraph, annotation_bitfield::out))
 				return false;
 
-			const_walk const_propagator {};
+			const_propagation_walk const_propagator {};
 			const auto succeeded = const_propagator.visit_value(*rpc.ret_pgraph);
 			assert(succeeded);
 
@@ -406,7 +394,7 @@ namespace idlc {
 				if (!annotate_pgraph(*pgraph, annotation_bitfield::in))
 					return false;
 
-				const_walk const_propagator {};
+				const_propagation_walk const_propagator {};
 				const auto succeeded = const_propagator.visit_value(*pgraph);
 				assert(succeeded);
 			}
