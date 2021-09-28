@@ -198,8 +198,14 @@ namespace idlc {
 
 					// parent_pointer and share_global may represent similar concepts, within<> probably can't co-occur
 					// with share<>
-					this->line() << "glue_pack(__pos, __msg, __ext, (void*)__adjusted - "
-								 << node.pointer_annots.parent_pointer.get() << ");\n";
+					this->line() << "const ptrdiff_t __offset = (void*)__adjusted - "
+								 << node.pointer_annots.parent_pointer.get() << ";\n";
+
+					this->line() << "if (__offset >= (" << node.pointer_annots.size_verbatim.get()
+								 << ") || __offset < 0)\n";
+
+					this->line() << "\tglue_user_panic(\"Bounds check failed!\");\n\n";
+					this->line() << "glue_pack(__pos, __msg, __ext, __offset);\n";
 
 					return true;
 				}
@@ -635,7 +641,9 @@ namespace idlc {
 			}
 			else if (flags_set(node.pointer_annots.kind, annotation_bitfield::within_ptr)) {
 				// TODO: Again, within<> probably a logical duplicate of shared<>, not just an actual duplicate
-				this->line() << assignment << "(" << m_c_specifier << ")(glue_unpack(__pos, __msg, __ext, size_t) + "
+				std::cerr << "Warning: within<> pointers must be ordered after their containing pointer\n";
+				this->line() << "size_t __offset = glue_unpack(__pos, __msg, __ext, size_t);\n";
+				this->line() << assignment << "(" << m_c_specifier << ")(__offset + "
 							 << node.pointer_annots.parent_pointer.get() << ");\n";
 
 				return false;
