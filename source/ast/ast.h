@@ -84,10 +84,12 @@ namespace idlc {
 
 	struct type_rpc {
 		const ident name;
+		const bool is_static;
 
 		rpc_def* definition;
+		std::string static_name;
 
-		type_rpc(ident name) : name {name}, definition {} {}
+		type_rpc(ident name, bool is_static) : name {name}, is_static {is_static}, definition {}, static_name {} {}
 	};
 
 	struct type_array {

@@ -100,6 +100,7 @@ tok_kw_user = "user"
 tok_kw_bind_memberof = "bind_memberof"
 tok_kw_casted = "casted"
 tok_kw_within = "within"
+tok_kw_static = "static"
 
 tok_space = lex_blank+
 tok_arrow = "->"
@@ -540,8 +541,8 @@ array_size = n:tok_number {{
 # Literally just an alias for array<char, null>
 type_string = tok_kw_string
 
-type_rpc = tok_kw_rpc_ptr tok_space name:tok_ident {{
-	value = share(type_rpc {to_ptr<ident>(name)});
+type_rpc = tok_kw_rpc_ptr is_static:(tok_space tok_kw_static {{ value = reinterpret_cast<void*>(1); }})? tok_space name:tok_ident {{
+	value = share(type_rpc {to_ptr<ident>(name), is_static.getValue()});
 }}
 
 type_proj = tok_kw_projection tok_space name:tok_ident {{
