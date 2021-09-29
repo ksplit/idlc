@@ -30,8 +30,6 @@ namespace idlc {
 	namespace {
 		class string_const_walk : public ast_walk<string_const_walk> {
 		public:
-			using ast_walk::visit_array_size;
-
 			bool visit_type_spec(type_spec& node)
 			{
 				if (std::get_if<type_string>(node.stem.get().get()))
@@ -39,6 +37,36 @@ namespace idlc {
 
 				return true;
 			}
+		};
+
+		class static_rpc_sanity_walk : public ast_walk<static_rpc_sanity_walk> {
+		public:
+			bool visit_type_rpc(const type_rpc& node)
+			{
+				// TODO: include scope information in error message
+				if (!m_static_allowed && node.is_static) {
+					std::cout << "Error: field of type \"rpc_ptr static " << node.name << "\" is not permitted outside of a projection\n";
+					std::cout << "Note: static rpc_ptr has no meaning in this context\n";
+					return false;
+				}
+
+				return true;
+			}
+
+			bool visit_proj_def(const proj_def& node)
+			{
+				const auto saved_state = m_static_allowed;
+				m_static_allowed = true;
+				if (!traverse(*this, node))
+					return false;
+
+				m_static_allowed = saved_state;
+
+				return true;
+			}
+
+		private:
+			bool m_static_allowed {};
 		};
 
 		void dump_pgraphs(rpc_vec_view rpcs)
@@ -78,6 +106,10 @@ int main(int argc, char** argv)
 
 	idlc::string_const_walk string_walk {};
 	if (!string_walk.visit_file(*file))
+		return 1;
+
+	idlc::static_rpc_sanity_walk static_rpc_walk {};
+	if (!static_rpc_walk.visit_file(*file))
 		return 1;
 
 	const auto rpcs = idlc::generate_rpc_pgraphs(*file);

@@ -126,8 +126,9 @@ namespace idlc {
 
 	struct rpc_ptr {
 		const rpc_def* definition;
+		const bool is_static;
 
-		rpc_ptr(rpc_def* definition) : definition {definition} {}
+		rpc_ptr(rpc_def* definition, bool is_static) : definition {definition}, is_static {is_static} {}
 	};
 
 	using projection_field = std::pair<ident, node_ptr<value>>;

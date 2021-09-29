@@ -47,6 +47,8 @@ module foo {
        }
     }
 
+    //rpc void illegal(rpc_ptr static can_ioctl callback) {}
+
     rpc_export int can_ioctl(volatile int fd) {
     }
 }
