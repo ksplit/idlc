@@ -67,30 +67,22 @@ namespace idlc {
 		{
 			// NOTE: do not remove me!!! See notes in circularity.idl: direct or indirect self-reference requires
 			// a notion of pgraph sharing, which the walk code must account for
-			if (visited(&node)) {
-				std::cout << "short-circuiting projection\n";
-				return true;
-			}
-			else {
-				m_visited.push_back(
-					&node); // NOTE: this must be here, to prevent nested calls from recursing infinitely
+			if (!visited(&node)) {
+				// This *must* be here, to prevent nested calls from recursing infinitely
+				m_visited.push_back(&node);
 				for (auto& [name, item] : node.fields) {
 					if (!pass.visit_value(*item))
 						return false;
 				}
-
-				return true;
 			}
+
+			return true;
 		}
 
 		bool operator()(walk& pass, dyn_array& node) { return pass.visit_value(*node.element); }
-
 		bool operator()(walk& pass, null_terminated_array& node) { return pass.visit_value(*node.element); }
-
 		bool operator()(walk& pass, static_array& node) { return pass.visit_value(*node.element); }
-
 		bool operator()(walk& pass, pointer& node) { return pass.visit_value(*node.referent); }
-
 		bool operator()(walk& pass, rpc_ptr& node) { return true; }
 
 		bool operator()(walk& pass, casted_type& node)

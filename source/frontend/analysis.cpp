@@ -20,6 +20,17 @@
 
 namespace idlc {
 	namespace {
+		class string_const_walk : public ast_walk<string_const_walk> {
+		public:
+			bool visit_type_spec(type_spec& node)
+			{
+				if (std::get_if<type_string>(node.stem.get().get()))
+					node.is_const = true;
+
+				return true;
+			}
+		};
+
 		passed_type generate_string_type();
 		passed_type generate_stem_type(const type_stem& node);
 		passed_type generate_array_type(const type_array& node);
@@ -441,18 +452,56 @@ namespace idlc {
 			create_pgraphs_from_types(rpcs);
 			return annotate_pgraphs(rpcs);
 		}
+
+		class static_rpc_sanity_walk : public ast_walk<static_rpc_sanity_walk> {
+		public:
+			bool visit_type_rpc(const type_rpc& node)
+			{
+				// TODO: include scope information in error message
+				if (!m_static_allowed && node.is_static) {
+					std::cout << "Error: field of type \"rpc_ptr static " << node.name << "\" is not permitted outside of a projection\n";
+					std::cout << "Note: static rpc_ptr has no meaning in this context\n";
+					return false;
+				}
+
+				return true;
+			}
+
+			bool visit_proj_def(const proj_def& node)
+			{
+				const auto saved_state = m_static_allowed;
+				m_static_allowed = true;
+				if (!traverse(*this, node))
+					return false;
+
+				m_static_allowed = saved_state;
+
+				return true;
+			}
+
+		private:
+			bool m_static_allowed {};
+		};
 	}
 }
 
 std::optional<idlc::rpc_vec> idlc::generate_rpc_pgraphs(file& root)
 {
+	string_const_walk string_constness_walker {};
+	if (!string_constness_walker.visit_file(root))
+		return std::nullopt;
+
+	static_rpc_sanity_walk static_rpc_walk {};
+	if (!static_rpc_walk.visit_file(root))
+		return std::nullopt;
+
 	rpc_collection_walk rpc_walk {};
-	auto succeeded = rpc_walk.visit_file(root);
-	assert(succeeded);
+	if (!rpc_walk.visit_file(root))
+		return std::nullopt;
 
 	rpc_context_walk ctx_walk {};
-	succeeded = ctx_walk.visit_file(root);
-	assert(succeeded);
+	if (!ctx_walk.visit_file(root))
+		return std::nullopt;
 
 	auto& rpcs = rpc_walk.get();
 	if (!generate_pgraphs(rpcs))
