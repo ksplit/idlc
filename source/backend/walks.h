@@ -361,15 +361,15 @@ namespace idlc {
 		}
 	};
 
+	template <typename node_type, typename... types>
+	constexpr bool is_one_of = (... || std::is_same_v<node_type, types>);
+
 	auto get_size_expr(const value& node)
 	{
 		const auto visit = [&node](auto&& item) {
 			using node_type = std::decay_t<decltype(item)>;
 			if constexpr (
-				std::is_same_v<
-					node_type,
-					node_ref<
-						null_terminated_array>> || std::is_same_v<node_type, node_ref<dyn_array>> || std::is_same_v<node_type, node_ref<static_array>>)
+				is_one_of<node_type, node_ref<null_terminated_array>, node_ref<dyn_array>, node_ref<static_array>>)
 				return concat("sizeof(", node.c_specifier, ") * glue_peek(__pos, __msg, __ext)");
 			else
 				return concat("sizeof(", node.c_specifier, ")");
