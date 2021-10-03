@@ -641,6 +641,36 @@ namespace idlc {
 			generate_dispatch_fn<rpc_side::client>(file, rpcs);
 		}
 
+		class static_rpc_collector : public pgraph_walk<static_rpc_collector> {
+		public:
+			bool visit_rpc_ptr(rpc_ptr& node)
+			{
+				if (node.static_name)
+					m_static_rpcs.emplace_back(&node);
+
+				return true;
+			}
+
+			auto get() { return m_static_rpcs; }
+
+		private:
+			std::vector<gsl::not_null<const rpc_ptr*>> m_static_rpcs {};
+		};
+
+		auto get_static_rpcs(rpc_vec_view rpcs)
+		{
+			static_rpc_collector collector {};
+			for (const auto& rpc : rpcs) {
+				if (rpc->ret_pgraph)
+					collector.visit_value(*rpc->ret_pgraph);
+
+				for (const auto& argument : rpc->arg_pgraphs)
+					collector.visit_value(*argument);
+			}
+
+			return collector.get();
+		}
+
 		void generate_server(rpc_vec_view rpcs)
 		{
 			std::ofstream file {"server.c"};
@@ -649,6 +679,13 @@ namespace idlc {
 			file << "#include <lcd_config/pre_hook.h>\n\n";
 			file << "#include \"common.h\"\n\n";
 			file << "#include <lcd_config/post_hook.h>\n\n";
+
+			for (const auto& static_rpc : get_static_rpcs(rpcs)) {
+				file << "static " << static_rpc->definition->typedef_id << " " << static_rpc->static_name
+					 << " = NULL;\n";
+			}
+
+			file << "\n";
 			for (const auto& rpc : rpcs) {
 				switch (rpc->kind) {
 				case rpc_def_kind::indirect:

@@ -126,7 +126,7 @@ namespace idlc {
 
 	struct rpc_ptr {
 		const rpc_def* definition;
-		const gsl::czstring<> static_name {};
+		const gsl::czstring<> static_name;
 
 		rpc_ptr(rpc_def* definition, gsl::czstring<> static_name) : definition {definition}, static_name {static_name}
 		{
