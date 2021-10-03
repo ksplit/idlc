@@ -49,9 +49,10 @@ namespace idlc {
 			bool visit_module_def(module_def& node);
 			bool visit_rpc_def(rpc_def& node);
 			bool visit_proj_def(proj_def& node);
+			bool visit_type_rpc(type_rpc& node);
 
 		private:
-			std::vector<ident> path_ {};
+			std::vector<ident> m_scope_path {};
 		};
 	}
 }
@@ -140,36 +141,49 @@ bool idlc::symbol_walk::visit_proj_def(proj_def& node)
 
 bool idlc::scoped_name_walk::visit_proj_def(proj_def& node)
 {
-	for (const auto& item : path_) {
+	for (const auto& item : m_scope_path) {
 		append(node.scoped_name, item, "__"); // double underscore used to reduce odds of collisions
 		// FIXME: scope collisions are still possible!
 	}
 
 	node.scoped_name += node.name;
 
-	return true;
+	return traverse(*this, node);
 }
 
 bool idlc::scoped_name_walk::visit_rpc_def(rpc_def& node)
 {
-	path_.emplace_back(node.name);
-	node.scope.set_path(path_);
+	m_scope_path.emplace_back(node.name);
+	node.scope.set_path(m_scope_path);
 	if (!traverse(*this, node))
 		return false;
 
-	path_.pop_back();
+	m_scope_path.pop_back();
 
 	return true;
 }
 
 bool idlc::scoped_name_walk::visit_module_def(module_def& node)
 {
-	path_.emplace_back(node.name);
-	node.scope.set_path(path_);
+	m_scope_path.emplace_back(node.name);
+	node.scope.set_path(m_scope_path);
 	if (!traverse(*this, node))
 		return false;
 
-	path_.pop_back();
+	m_scope_path.pop_back();
+
+	return true;
+}
+
+bool idlc::scoped_name_walk::visit_type_rpc(type_rpc& node)
+{
+	if (node.is_static) {
+		node.static_name = "__static_rpc_ptr";
+		for (const auto& item : m_scope_path)
+			append(node.static_name, "__", item);
+
+		std::cout << "[debug] " << node.static_name << "\n";
+	}
 
 	return true;
 }

@@ -87,6 +87,7 @@ namespace idlc {
 		const bool is_static;
 
 		rpc_def* definition;
+		std::string static_name;
 
 		type_rpc(ident name, bool is_static) : name {name}, is_static {is_static}, definition {} {}
 	};
@@ -178,6 +179,7 @@ namespace idlc {
 			type {type},
 			fields {fields},
 			kind {kind},
+			scoped_name {},
 			in_proj {},
 			out_proj {},
 			in_out_proj {}
