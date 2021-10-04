@@ -622,7 +622,7 @@ namespace idlc {
 					std::cout << "[debug] noticed " << *node.static_storage_name << "\n";
 					m_static_rpcs.emplace_back(&node);
 				}
-			
+
 				return true;
 			}
 
@@ -636,7 +636,7 @@ namespace idlc {
 			for (const auto& rpc : rpcs) {
 				if (rpc->ret_pgraph)
 					collector.visit_value(*rpc->ret_pgraph);
-				
+
 				for (const auto& argument : rpc->arg_pgraphs)
 					collector.visit_value(*argument);
 			}
@@ -654,10 +654,18 @@ namespace idlc {
 			file << "#include <lcd_config/post_hook.h>\n\n";
 
 			for (const auto& static_rpc : get_static_rpcs(rpcs)) {
-				file << "static " << static_rpc->definition->typedef_id << " " << *static_rpc->static_storage_name << " = NULL;\n";
-			}
+				file << "static " << static_rpc->definition->typedef_id << " " << *static_rpc->static_storage_name
+					 << " = NULL;\n\n";
 
-			file << "\n";
+				file << static_rpc->definition->ret_string << " " << *static_rpc->static_forwarder_name << "("
+					 << static_rpc->definition->args_string << ")\n{\n";
+
+				file << "\treturn " << static_rpc->definition->impl_id << "(" << *static_rpc->static_storage_name
+					 << ", " << static_rpc->definition->params_string << ");\n";
+
+				file << "}\n\n";
+			}
+			
 			for (const auto& rpc : rpcs) {
 				switch (rpc->kind) {
 				case rpc_def_kind::direct:
