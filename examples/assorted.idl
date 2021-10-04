@@ -43,7 +43,7 @@ module foo {
             array<char, {{ptr->len}}>* head; // already there
             void [within<{{bar}}, {{foo}}>]* data;
             unsigned int len;
-            rpc_ptr static read hook; // for example
+            rpc_ptr static can_ioctl hook; // for example
        }
     }
 
