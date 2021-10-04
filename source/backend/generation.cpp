@@ -538,14 +538,17 @@ namespace idlc {
 			os << "}\n\n";
 		}
 
-		void generate_indirect_rpc_caller(std::ostream& os, rpc_def& rpc)
+		void generate_indirect_rpc_implementation(std::ostream& os, rpc_def& rpc)
 		{
 			os << rpc.ret_string << " " << rpc.impl_id << "(" << rpc.typedef_id << " target, " << rpc.args_string
 			   << ")\n{\n";
 
 			generate_caller_glue<rpc_side::server>(rpc, os);
 			os << "}\n\n";
+		}
 
+		void generate_indirect_rpc_trampoline(std::ostream& os, rpc_def& rpc)
+		{
 			os << "LCD_TRAMPOLINE_DATA(" << rpc.trmp_id << ")\n";
 			os << rpc.ret_string;
 			os << " LCD_TRAMPOLINE_LINKAGE(" << rpc.trmp_id << ") ";
@@ -599,9 +602,6 @@ namespace idlc {
 				if (rpc->kind == rpc_def_kind::direct && side == rpc_side::client)
 					continue;
 
-				if (rpc->kind == rpc_def_kind::indirect && side == rpc_side::server)
-					continue;
-
 				os << "\tcase " << rpc->enum_id << ":\n";
 				os << "\t\tglue_user_trace(\"" << rpc->name << "\\n\");\n";
 				os << "\t\t" << rpc->callee_id << "(__msg, __ext);\n";
@@ -629,6 +629,7 @@ namespace idlc {
 					break;
 
 				case rpc_def_kind::indirect:
+					generate_indirect_rpc_implementation(file, *rpc);
 					generate_indirect_rpc_callee(file, *rpc);
 					break;
 
@@ -652,7 +653,9 @@ namespace idlc {
 			for (const auto& rpc : rpcs) {
 				switch (rpc->kind) {
 				case rpc_def_kind::indirect:
-					generate_indirect_rpc_caller(file, *rpc);
+					generate_indirect_rpc_implementation(file, *rpc);
+					generate_indirect_rpc_callee(file, *rpc);
+					generate_indirect_rpc_trampoline(file, *rpc);
 					break;
 
 				case rpc_def_kind::direct:
