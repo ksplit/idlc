@@ -87,7 +87,7 @@ namespace idlc {
 		const bool is_static;
 
 		rpc_def* definition;
-		std::string static_name;
+		std::string scoped_name;
 
 		type_rpc(ident name, bool is_static) : name {name}, is_static {is_static}, definition {} {}
 	};

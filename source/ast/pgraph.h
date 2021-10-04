@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <variant>
 
@@ -126,9 +127,13 @@ namespace idlc {
 
 	struct rpc_ptr {
 		const rpc_def* definition;
-		const gsl::czstring<> static_name {};
+		const std::optional<std::string> static_storage_name;
+		const std::optional<std::string> static_forwarder_name;
 
-		rpc_ptr(rpc_def* definition, gsl::czstring<> static_name) : definition {definition}, static_name {static_name}
+		rpc_ptr(rpc_def* definition, gsl::czstring<> scoped_name) :
+			definition {definition},
+			static_storage_name {scoped_name ? std::make_optional(concat("static_rpc__", scoped_name)) : std::nullopt},
+			static_forwarder_name {scoped_name ? std::make_optional(concat("forward__", scoped_name)) : std::nullopt}
 		{
 		}
 	};

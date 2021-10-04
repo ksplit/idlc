@@ -232,11 +232,11 @@ namespace idlc {
 
 		bool visit_rpc_ptr(rpc_ptr& node)
 		{
-			if (node.static_name)
-				std::cout << "[debug] marshaling " << node.static_name << "\n";
+			if (node.static_storage_name)
+				std::cout << "[debug] marshaling " << *node.static_storage_name << "\n";
 
 			this->line() << "glue_pack(__pos, __msg, __ext, *" << this->subject() << ");\n";
-			
+
 			return true;
 		}
 

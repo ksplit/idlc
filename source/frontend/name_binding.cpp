@@ -178,11 +178,10 @@ bool idlc::scoped_name_walk::visit_module_def(module_def& node)
 bool idlc::scoped_name_walk::visit_type_rpc(type_rpc& node)
 {
 	if (node.is_static) {
-		node.static_name = "__static_rpc_ptr";
 		for (const auto& item : m_scope_path)
-			append(node.static_name, "__", item);
+			append(node.scoped_name, "__", item);
 
-		std::cout << "[debug] " << node.static_name << "\n";
+		std::cout << "[debug] " << node.scoped_name << "\n";
 	}
 
 	return true;
