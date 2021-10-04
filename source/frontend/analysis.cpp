@@ -453,7 +453,7 @@ namespace idlc {
 			return annotate_pgraphs(rpcs);
 		}
 
-		class static_rpc_sanity_walk : public ast_walk<static_rpc_sanity_walk> {
+		class rpc_ptr_sanity_checker : public ast_walk<rpc_ptr_sanity_checker> {
 		public:
 			bool visit_type_rpc(const type_rpc& node)
 			{
@@ -461,6 +461,11 @@ namespace idlc {
 				if (!m_static_allowed && node.is_static) {
 					std::cout << "Error: field of type \"rpc_ptr static " << node.name << "\" is not permitted outside of a projection\n";
 					std::cout << "Note: static rpc_ptr has no meaning in this context\n";
+					return false;
+				}
+
+				if (node.is_static && node.definition->kind != rpc_def_kind::indirect) {
+					std::cout << "[error] rpc pointer types must be declared as rpc_ptr\n";
 					return false;
 				}
 
@@ -491,7 +496,7 @@ std::optional<idlc::rpc_vec> idlc::generate_rpc_pgraphs(file& root)
 	if (!string_constness_walker.visit_file(root))
 		return std::nullopt;
 
-	static_rpc_sanity_walk static_rpc_walk {};
+	rpc_ptr_sanity_checker static_rpc_walk {};
 	if (!static_rpc_walk.visit_file(root))
 		return std::nullopt;
 

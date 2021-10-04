@@ -132,8 +132,8 @@ namespace idlc {
 
 		rpc_ptr(rpc_def* definition, gsl::czstring<> scoped_name) :
 			definition {definition},
-			static_storage_name {scoped_name ? std::make_optional(concat("static_rpc__", scoped_name)) : std::nullopt},
-			static_forwarder_name {scoped_name ? std::make_optional(concat("forward__", scoped_name)) : std::nullopt}
+			static_storage_name {scoped_name ? std::make_optional(concat("static_rpc", scoped_name)) : std::nullopt},
+			static_forwarder_name {scoped_name ? std::make_optional(concat("forward", scoped_name)) : std::nullopt}
 		{
 		}
 	};
@@ -155,7 +155,7 @@ namespace idlc {
 			real_name {real_name},
 			fields {},
 			caller_marshal_visitor {concat("caller_marshal_", name)},
-			callee_unmarshal_visitor {concat("caller_unmarshal_", name)},
+			callee_unmarshal_visitor {concat("callee_unmarshal_", name)},
 			callee_marshal_visitor {concat("callee_marshal_", name)},
 			caller_unmarshal_visitor {concat("caller_unmarshal_", name)} {};
 
