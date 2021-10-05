@@ -652,19 +652,6 @@ namespace idlc {
 			file << "#include <lcd_config/pre_hook.h>\n\n";
 			file << "#include \"common.h\"\n\n";
 			file << "#include <lcd_config/post_hook.h>\n\n";
-
-			for (const auto& static_rpc : get_static_rpcs(rpcs)) {
-				file << "static " << static_rpc->definition->typedef_id << " " << *static_rpc->static_storage_name
-					 << " = NULL;\n\n";
-
-				file << static_rpc->definition->ret_string << " " << *static_rpc->static_forwarder_name << "("
-					 << static_rpc->definition->args_string << ")\n{\n";
-
-				file << "\treturn " << static_rpc->definition->impl_id << "(" << *static_rpc->static_storage_name
-					 << ", " << static_rpc->definition->params_string << ");\n";
-
-				file << "}\n\n";
-			}
 			
 			for (const auto& rpc : rpcs) {
 				switch (rpc->kind) {
@@ -896,6 +883,19 @@ namespace idlc {
 			file << "#include <lcd_config/pre_hook.h>\n\n";
 			file << "#include \"common.h\"\n\n";
 			file << "#include <lcd_config/post_hook.h>\n\n";
+			for (const auto& static_rpc : get_static_rpcs(rpcs)) {
+				file << "static " << static_rpc->definition->typedef_id << " " << *static_rpc->static_storage_name
+					 << " = NULL;\n\n";
+
+				file << static_rpc->definition->ret_string << " " << *static_rpc->static_forwarder_name << "("
+					 << static_rpc->definition->args_string << ")\n{\n";
+
+				file << "\treturn " << static_rpc->definition->impl_id << "(" << *static_rpc->static_storage_name
+					 << ", " << static_rpc->definition->params_string << ");\n";
+
+				file << "}\n\n";
+			}
+
 			for (const auto& projection : projections) {
 				// TODO: make these optional
 				generate_caller_marshal_visitor(file, *projection);

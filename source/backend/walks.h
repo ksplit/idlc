@@ -509,8 +509,15 @@ namespace idlc {
 
 		bool visit_rpc_ptr(rpc_ptr& node)
 		{
-			this->line() << "*" << this->subject() << " = glue_unpack_rpc_ptr(__pos, __msg, __ext, "
-						 << node.definition->name << ");\n";
+			if (!node.static_forwarder_name) {
+				this->line() << "*" << this->subject() << " = glue_unpack_rpc_ptr(__pos, __msg, __ext, "
+							 << node.definition->name << ");\n";
+			}
+			else {
+				std::cout << "[debug] generating static forwarder insertion for " << *node.static_forwarder_name << "\n";
+				this->line() << *node.static_storage_name << " = glue_unpack(__pos, __msg, __ext, void*);\n";
+				this->line() << "*" << this->subject() << " = " << *node.static_forwarder_name << ";\n";
+			}
 
 			return true;
 		}
