@@ -44,9 +44,13 @@ namespace idlc {
         public:
             bool visit_rpc_ptr(rpc_ptr& node)
             {
-                if (is_driver_import || !trampolines_allowed) {
-                    std::cout << "error: trampoline of type " << node.definition->name << " not allowed here.\n";
-                    return false;
+                if (!node.is_static) {
+                    if (is_driver_import || !trampolines_allowed) {
+                        std::cout << "error: trampoline of type " << node.definition->name << " not allowed here.\n";
+                        return false;
+                    }
+                } else if (trampolines_allowed && !is_driver_import) {
+                    std::cout << "warning: trampoline can be used instead of static rpc pointer here\n";
                 }
 
                 return this->traverse(*this, node);
@@ -130,8 +134,7 @@ int main(int argc, char** argv)
     const auto file = idlc::parser::parse_file(gsl::at(args, 1));
     if (!file)
         return 1;
-
-    idlc::dump_ast(*file);
+    
     if (!idlc::bind_all_names(*file)) {
         std::cout << "Error: Not all names were bound\n";
         return 1;
@@ -150,17 +153,6 @@ int main(int argc, char** argv)
     if (!idlc::ensure_trampoline_sanity(*rpcs)) {
         std::cout << "error: trampoline sanity rules violation\n";
         return 1;
-    }
-
-    for (const auto& rpc : *rpcs) {
-        std::cout << rpc->name << "::__return\n";
-        idlc::dump_pgraph(*rpc->ret_pgraph);
-        std::size_t index {};
-        for (const auto& arg : rpc->arg_pgraphs) {
-            std::cout << rpc->name << "::" << rpc->arguments->at(index)->name << "\n";
-            idlc::dump_pgraph(*arg);
-            ++index;
-        }
     }
 
     idlc::generate(*rpcs);

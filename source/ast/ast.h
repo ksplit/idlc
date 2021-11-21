@@ -91,11 +91,13 @@ namespace idlc {
 
 	struct type_rpc {
 		ident name;
+		bool is_static;
 
 		rpc_def* definition;
 
-		type_rpc(ident name) :
+		type_rpc(ident name, bool is_static = false) :
 			name {name},
+			is_static {is_static},
 			definition {}
 		{}
 	};
