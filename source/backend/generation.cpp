@@ -617,8 +617,13 @@ namespace idlc {
                         continue;
 
                     const auto scope = projection->def->parent ? projection->def->parent->name : "global";
-                    file << field->c_specifier << " __static_" << scope << "_" << projection->real_name << "_"
-                         << rpc->definition->name << ";\n";
+                    const auto scoped_name = concat(scope, "__", projection->real_name, "__", rpc->definition->name);
+                    file << field->c_specifier << " __static_" << scoped_name << ";\n\n";
+                    file << rpc->definition->ret_string << " __thunk_" << scoped_name << "("
+                         << rpc->definition->args_string << ")\n{\n";
+
+                    file << "\t__static_" << scoped_name << "(" << rpc->definition->params_string << ");\n";
+                    file << "}\n\n";
                 }
             }
         }
@@ -632,7 +637,6 @@ namespace idlc {
             file << "#include \"common.h\"\n\n";
             file << "#include <lcd_config/post_hook.h>\n\n";
             generate_static_rpcs(file, projections);
-            file << "\n";
             for (const auto& rpc : rpcs) {
                 switch (rpc->kind) {
                 case rpc_def_kind::direct:
