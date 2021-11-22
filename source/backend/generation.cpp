@@ -604,7 +604,26 @@ namespace idlc {
             os << "\t}\n\n\treturn 1;\n}\n\n";
         }
 
-        void generate_client(rpc_vec_view rpcs)
+        void generate_static_rpcs(std::ostream& file, projection_vec_view projections)
+        {
+            for (const auto& projection : projections) {
+                for (const auto& [name, field] : projection->fields) {
+                    const node_ref<rpc_ptr>* maybe_rpc = std::get_if<node_ref<rpc_ptr>>(&field->type);
+                    if (!maybe_rpc)
+                        continue;
+
+                    const auto& rpc = *maybe_rpc;
+                    if (!rpc->is_static)
+                        continue;
+
+                    const auto scope = projection->def->parent ? projection->def->parent->name : "global";
+                    file << field->c_specifier << " __static_" << scope << "_" << projection->real_name << "_"
+                         << rpc->definition->name << ";\n";
+                }
+            }
+        }
+
+        void generate_client(rpc_vec_view rpcs, projection_vec_view projections)
         {
             std::ofstream file {"client.c"};
             file.exceptions(file.badbit | file.failbit);
@@ -612,6 +631,8 @@ namespace idlc {
             file << "#include <lcd_config/pre_hook.h>\n\n";
             file << "#include \"common.h\"\n\n";
             file << "#include <lcd_config/post_hook.h>\n\n";
+            generate_static_rpcs(file, projections);
+            file << "\n";
             for (const auto& rpc : rpcs) {
                 switch (rpc->kind) {
                 case rpc_def_kind::direct:
@@ -900,7 +921,7 @@ namespace idlc {
         create_function_strings(rpcs);
         generate_common_header(rpcs, projections);
         generate_common_source(rpcs, projections);
-        generate_client(rpcs);
+        generate_client(rpcs, projections);
         generate_server(rpcs);
         generate_linker_script(rpcs);
     }
