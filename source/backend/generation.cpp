@@ -289,8 +289,6 @@ namespace idlc {
             return roots;
         }
 
-        enum class rpc_side { server, client };
-
         auto generate_caller_glue_prologue(std::ostream& os, rpc_def& rpc)
         {
             os << "\tstruct fipc_message __buffer = {0};\n";
@@ -336,7 +334,7 @@ namespace idlc {
             return roots;
         }
 
-        void generate_caller_glue_epilogue(std::ostream& os, rpc_def& rpc, marshal_roots roots)
+        template <rpc_side side> void generate_caller_glue_epilogue(std::ostream& os, rpc_def& rpc, marshal_roots roots)
         {
             os << "\t*__pos = 0;\n";
 
@@ -359,7 +357,7 @@ namespace idlc {
 
             for (const auto& [name, type] : roots.arguments) {
                 os << "\t{\n";
-                unmarshaling_walk<marshal_side::caller> arg_unremarshal {os, name, 2};
+                unmarshaling_walk<marshal_side::caller, side> arg_unremarshal {os, name, 2};
                 arg_unremarshal.visit_value(*type);
                 os << "\t}\n\n";
             }
@@ -368,7 +366,7 @@ namespace idlc {
                 // Unmarshal return pointer only if it's NOT an ioremap annotation
                 if (!flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_kind::ioremap_caller)) {
                     os << "\t{\n";
-                    unmarshaling_walk<marshal_side::caller> ret_unmarshal {os, roots.return_value, 2};
+                    unmarshaling_walk<marshal_side::caller, side> ret_unmarshal {os, roots.return_value, 2};
                     ret_unmarshal.visit_value(*rpc.ret_pgraph);
                     os << "\t}\n\n";
                 }
@@ -394,11 +392,11 @@ namespace idlc {
                 break;
             }
 
-            generate_caller_glue_epilogue(os, rpc, roots);
+            generate_caller_glue_epilogue<side>(os, rpc, roots);
         }
 
         // TODO: large and complex, needs splitting
-        void generate_callee_glue(rpc_def& rpc, std::ostream& os)
+        template <rpc_side side> void generate_callee_glue(rpc_def& rpc, std::ostream& os)
         {
             os << "\tsize_t n_pos = 0;\n";
             os << "\tsize_t* __pos = &n_pos;\n\n";
@@ -441,7 +439,7 @@ namespace idlc {
 
             for (const auto& [name, type] : roots.arguments) {
                 os << "\t{\n";
-                unmarshaling_walk<marshal_side::callee> arg_unmarshal {os, name, 2};
+                unmarshaling_walk<marshal_side::callee, side> arg_unmarshal {os, name, 2};
                 arg_unmarshal.visit_value(*type);
                 os << "\t}\n\n";
             }
@@ -517,17 +515,17 @@ namespace idlc {
                << "\t}\n";
         }
 
-        void generate_indirect_rpc_callee(std::ostream& os, rpc_def& rpc)
+        template <rpc_side side> void generate_indirect_rpc_callee(std::ostream& os, rpc_def& rpc)
         {
             os << "void " << rpc.callee_id << "(struct fipc_message* __msg, struct ext_registers* __ext)\n{\n";
-            generate_callee_glue(rpc, os);
+            generate_callee_glue<side>(rpc, os);
             os << "}\n\n";
         }
 
-        void generate_rpc_export_callee(std::ostream& os, rpc_def& rpc)
+        template <rpc_side side> void generate_rpc_export_callee(std::ostream& os, rpc_def& rpc)
         {
             os << "void " << rpc.callee_id << "(struct fipc_message* __msg, struct ext_registers* __ext)\n{\n";
-            generate_callee_glue(rpc, os);
+            generate_callee_glue<side>(rpc, os);
             os << "}\n\n";
         }
 
@@ -616,13 +614,19 @@ namespace idlc {
                     if (!rpc->is_static)
                         continue;
 
+                    // TODO: move scoped name generation to an explicit location
                     const auto scope = projection->def->parent ? projection->def->parent->name : "global";
-                    const auto scoped_name = concat(scope, "__", projection->real_name, "__", rpc->definition->name);
-                    file << field->c_specifier << " __static_" << scoped_name << ";\n\n";
-                    file << rpc->definition->ret_string << " __thunk_" << scoped_name << "("
+                    append(rpc->scoped_name, scope, "__", projection->real_name, "__", rpc->definition->name);
+                    file << field->c_specifier << " __static_" << rpc->scoped_name << ";\n\n";
+                    file << rpc->definition->ret_string << " __thunk_" << rpc->scoped_name << "("
                          << rpc->definition->args_string << ")\n{\n";
 
-                    file << "\t__static_" << scoped_name << "(" << rpc->definition->params_string << ");\n";
+                    file << "\t__static_" << rpc->scoped_name << "(" << rpc->definition->params_string << ");\n";
+                    file << "}\n\n";
+
+                    file << field->c_specifier << " __unpack_" << rpc->scoped_name << "(void* address)\n{\n";
+                    file << "\t__static_" << rpc->scoped_name << " = (" << field->c_specifier << ")address;\n";
+                    file << "\treturn __thunk_" << rpc->scoped_name << ";\n";
                     file << "}\n\n";
                 }
             }
@@ -636,7 +640,6 @@ namespace idlc {
             file << "#include <lcd_config/pre_hook.h>\n\n";
             file << "#include \"common.h\"\n\n";
             file << "#include <lcd_config/post_hook.h>\n\n";
-            generate_static_rpcs(file, projections);
             for (const auto& rpc : rpcs) {
                 switch (rpc->kind) {
                 case rpc_def_kind::direct:
@@ -646,11 +649,11 @@ namespace idlc {
                     break;
 
                 case rpc_def_kind::indirect:
-                    generate_indirect_rpc_callee(file, *rpc);
+                    generate_indirect_rpc_callee<rpc_side::client>(file, *rpc);
                     break;
 
                 case rpc_def_kind::export_sym:
-                    generate_rpc_export_callee(file, *rpc);
+                    generate_rpc_export_callee<rpc_side::client>(file, *rpc);
                     break;
                 }
             }
@@ -675,7 +678,7 @@ namespace idlc {
                 case rpc_def_kind::direct:
                     file << "void " << rpc->callee_id
                          << "(struct fipc_message* __msg, struct ext_registers* __ext)\n{\n";
-                    generate_callee_glue(*rpc, file);
+                    generate_callee_glue<rpc_side::server>(*rpc, file);
                     file << "}\n\n";
                     break;
                 case rpc_def_kind::export_sym:
@@ -780,7 +783,7 @@ namespace idlc {
             file << "\t}\n";
         }
 
-        void generate_callee_unmarshal_visitor(std::ostream& file, projection& node)
+        template <rpc_side side> void generate_callee_unmarshal_visitor(std::ostream& file, projection& node)
         {
             file << "void " << node.callee_unmarshal_visitor << "(\n"
                  << "\tsize_t* __pos,\n"
@@ -796,7 +799,7 @@ namespace idlc {
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
                 file << "\t{\n";
-                unmarshaling_walk<marshal_side::callee> walk {file, name, 2};
+                unmarshaling_walk<marshal_side::callee, side> walk {file, name, 2};
                 walk.visit_value(*type);
                 file << "\t}\n\n";
             }
@@ -830,7 +833,7 @@ namespace idlc {
             file << "}\n\n";
         }
 
-        void generate_caller_unmarshal_visitor(std::ostream& file, projection& node)
+        template <rpc_side side> void generate_caller_unmarshal_visitor(std::ostream& file, projection& node)
         {
             file << "void " << node.caller_unmarshal_visitor << "(\n"
                  << "\tsize_t* __pos,\n"
@@ -846,7 +849,7 @@ namespace idlc {
             const auto n_fields = node.fields.size();
             for (const auto& [name, type] : roots) {
                 file << "\t{\n";
-                unmarshaling_walk<marshal_side::caller> walk {file, name, 2};
+                unmarshaling_walk<marshal_side::caller, side> walk {file, name, 2};
                 walk.visit_value(*type);
                 file << "\t}\n\n";
             }
@@ -863,12 +866,13 @@ namespace idlc {
             file << "#include <lcd_config/pre_hook.h>\n\n";
             file << "#include \"common.h\"\n\n";
             file << "#include <lcd_config/post_hook.h>\n\n";
+            generate_static_rpcs(file, projections);
             for (const auto& projection : projections) {
                 // TODO: make these optional
                 generate_caller_marshal_visitor(file, *projection);
-                generate_callee_unmarshal_visitor(file, *projection);
+                generate_callee_unmarshal_visitor<rpc_side::client>(file, *projection);
                 generate_callee_marshal_visitor(file, *projection);
-                generate_caller_unmarshal_visitor(file, *projection);
+                generate_caller_unmarshal_visitor<rpc_side::client>(file, *projection);
             }
 
             file << "\n#ifdef LCD_ISOLATE\n";

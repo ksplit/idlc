@@ -16,12 +16,14 @@ void idlc::generate_helpers(std::ostream& file)
 
     file << "#define glue_unpack_new_shadow(pos, msg, ext, type, size, flags) ({ \\\n"
          << "\tif (verbose_debug) \\\n"
-         << "\t\tprintk(\"%s:%d, unpack new shadow for type %s | size %llu\\n\", __func__, __LINE__, __stringify(type), (uint64_t) size); \\\n"
+         << "\t\tprintk(\"%s:%d, unpack new shadow for type %s | size %llu\\n\", __func__, __LINE__, "
+            "__stringify(type), (uint64_t) size); \\\n"
          << "\t(type)glue_unpack_new_shadow_impl(glue_unpack(pos, msg, ext, void*), size, flags); })\n\n";
 
     file << "#define glue_unpack_bind_or_new_shadow(pos, msg, ext, type, size, flags) ({ \\\n"
          << "\tif (verbose_debug) \\\n"
-         << "\t\tprintk(\"%s:%d, unpack or bind new shadow for type %s | size %llu\\n\", __func__, __LINE__, __stringify(type), (uint64_t) size); \\\n"
+         << "\t\tprintk(\"%s:%d, unpack or bind new shadow for type %s | size %llu\\n\", __func__, __LINE__, "
+            "__stringify(type), (uint64_t) size); \\\n"
          << "\t(type)glue_unpack_bind_or_new_shadow_impl(glue_unpack(pos, msg, ext, void*), size, flags); })\n\n";
 
     file << "#ifndef LCD_ISOLATE\n";
@@ -33,6 +35,9 @@ void idlc::generate_helpers(std::ostream& file)
     file << "#define glue_unpack_rpc_ptr(pos, msg, ext, name) NULL;"
          << " glue_user_panic(\"Trampolines cannot be used on LCD side\")\n";
     file << "#endif\n\n";
+
+    file << "#define glue_unpack_static_rpc_ptr(pos, msg, ext, name, type) \\\n"
+         << "\tglue_peek(pos, msg, ext) ? __unpack_##name(glue_unpack(pos, msg, ext, void*)) : NULL\n\n";
 
     file << "#define glue_peek(pos, msg, ext) glue_peek_impl(pos, msg, ext)\n";
     file << "#define glue_call_server(pos, msg, rpc_id) \\\n"
@@ -113,18 +118,19 @@ void idlc::generate_helpers(std::ostream& file)
     file << "}\n";
     file << "\n";
 
-    auto glue_unpack_bind_or_new_shadow_impl = "static inline void* glue_unpack_bind_or_new_shadow_impl(const void* ptr, size_t size, gfp_t flags)\n"
-                                               "{\n"
-                                               "\tvoid* shadow = 0;\n"
-                                               "\tif (!ptr)\n"
-                                               "\t\treturn NULL;\n\n"
-                                               "\tshadow = glue_user_map_to_shadow(ptr, false);\n"
-                                               "\tif (!shadow) {\n"
-                                               "\t\tshadow = glue_user_alloc(size, flags);\n"
-                                               "\t\tglue_user_add_shadow(ptr, shadow);\n"
-                                               "\t}\n"
-                                               "\treturn shadow;\n"
-                                               "}\n\n";
+    auto glue_unpack_bind_or_new_shadow_impl
+        = "static inline void* glue_unpack_bind_or_new_shadow_impl(const void* ptr, size_t size, gfp_t flags)\n"
+          "{\n"
+          "\tvoid* shadow = 0;\n"
+          "\tif (!ptr)\n"
+          "\t\treturn NULL;\n\n"
+          "\tshadow = glue_user_map_to_shadow(ptr, false);\n"
+          "\tif (!shadow) {\n"
+          "\t\tshadow = glue_user_alloc(size, flags);\n"
+          "\t\tglue_user_add_shadow(ptr, shadow);\n"
+          "\t}\n"
+          "\treturn shadow;\n"
+          "}\n\n";
 
     file << glue_unpack_bind_or_new_shadow_impl;
 
@@ -133,7 +139,8 @@ void idlc::generate_helpers(std::ostream& file)
     file << "\treturn ptr ? glue_user_map_to_shadow(ptr, true) : NULL;\n";
     file << "}\n";
     file << "\n";
-    file << "static inline void glue_pack_shadow_impl(size_t* pos, struct fipc_message* msg, struct ext_registers* ext, const void* ptr)\n";
+    file << "static inline void glue_pack_shadow_impl(size_t* pos, struct fipc_message* msg, struct ext_registers* "
+            "ext, const void* ptr)\n";
     file << "{\n";
     file << "\tglue_pack(pos, msg, ext, ptr ? glue_user_map_from_shadow(ptr) : NULL);\n";
     file << "}\n";

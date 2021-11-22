@@ -129,9 +129,12 @@ namespace idlc {
         rpc_def* definition;
         bool is_static;
 
+        std::string scoped_name; // present only if is_static
+
         rpc_ptr(gsl::not_null<rpc_def*> definition, bool is_static)
             : definition {definition.get()}
             , is_static {is_static}
+            , scoped_name {}
         {
         }
     };

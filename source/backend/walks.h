@@ -2,8 +2,9 @@
 #define IDLC_BACKEND_WALKS_H
 
 namespace idlc {
-    template <typename derived>
-    class generation_walk : public pgraph_walk<derived> {
+    enum class rpc_side { server, client };
+
+    template <typename derived> class generation_walk : public pgraph_walk<derived> {
     public:
         generation_walk(std::ostream& os, absl::string_view holder, unsigned level)
             : m_stream {os}
@@ -14,23 +15,16 @@ namespace idlc {
 
     protected:
         // identifier of the variable that points to what we're currently marshaling
-        const auto& subject()
-        {
-            return m_marshaled_ptr;
-        }
+        const auto& subject() { return m_marshaled_ptr; }
 
         // TODO: why is the string an rref again?
-        template <typename node_type>
-        bool marshal(std::string&& new_ptr, node_type& type)
+        template <typename node_type> bool marshal(std::string&& new_ptr, node_type& type)
         {
             return marshal(
-                std::move(new_ptr),
-                type,
-                [this](auto&& node) { return this->traverse(this->self(), node); });
+                std::move(new_ptr), type, [this](auto&& node) { return this->traverse(this->self(), node); });
         }
 
-        template <typename node_type, typename walker>
-        bool marshal(std::string&& new_ptr, node_type& type, walker fn)
+        template <typename node_type, typename walker> bool marshal(std::string&& new_ptr, node_type& type, walker fn)
         {
             const auto state = std::make_tuple(m_marshaled_ptr, m_indent_level);
             m_marshaled_ptr = new_ptr;
@@ -43,15 +37,9 @@ namespace idlc {
             return true;
         }
 
-        std::ostream& stream()
-        {
-            return m_stream;
-        }
+        std::ostream& stream() { return m_stream; }
 
-        std::ostream& new_line()
-        {
-            return indent(m_stream, m_indent_level);
-        }
+        std::ostream& new_line() { return indent(m_stream, m_indent_level); }
 
     private:
         std::ostream& m_stream;
@@ -59,18 +47,13 @@ namespace idlc {
         unsigned m_indent_level {};
     };
 
-    enum class marshal_side {
-        caller,
-        callee
-    };
+    enum class marshal_side { caller, callee };
 
-    enum class marshal_role {
-        marshaling,
-        unmarshaling
-    };
+    enum class marshal_context { server, client };
 
-    template <marshal_side side>
-    constexpr bool should_marshal(const value& node)
+    enum class marshal_role { marshaling, unmarshaling };
+
+    template <marshal_side side> constexpr bool should_marshal(const value& node)
     {
         const auto flags = node.value_annots;
         switch (side) {
@@ -84,8 +67,7 @@ namespace idlc {
         std::terminate();
     }
 
-    template <marshal_side side>
-    constexpr bool should_unmarshal(const value& node)
+    template <marshal_side side> constexpr bool should_unmarshal(const value& node)
     {
         const auto flags = node.value_annots;
         switch (side) {
@@ -99,8 +81,7 @@ namespace idlc {
         std::terminate();
     }
 
-    template <marshal_role role, marshal_side side>
-    constexpr bool should_walk(const value& node)
+    template <marshal_role role, marshal_side side> constexpr bool should_walk(const value& node)
     {
         if (flags_set(node.value_annots, annotation_kind::unused))
             return false;
@@ -121,8 +102,7 @@ namespace idlc {
         Bind annotations indicate which side of the call has the shadow copy (statically)
         Whether or not they are bound on a side is irrespective of whether we are marshaling or unmarshaling
     */
-    template <marshal_side side>
-    static constexpr bool should_bind(const annotation& ann)
+    template <marshal_side side> static constexpr bool should_bind(const annotation& ann)
     {
         switch (side) {
         case marshal_side::caller:
@@ -137,8 +117,7 @@ namespace idlc {
         std::terminate();
     }
 
-    template <marshal_side side>
-    class marshaling_walk : public generation_walk<marshaling_walk<side>> {
+    template <marshal_side side> class marshaling_walk : public generation_walk<marshaling_walk<side>> {
     public:
         marshaling_walk(std::ostream& os, absl::string_view holder, unsigned level)
             : generation_walk<marshaling_walk<side>> {os, holder, level}
@@ -153,19 +132,23 @@ namespace idlc {
                 if (!is_clear(node.pointer_annots.kind & annotation_kind::is_bind_memberof)) {
                     const auto& offset = node.pointer_annots.member;
                     // Use container_of as it abstracts away the arithmetic and also typecasts the pointer
-                    this->new_line() << "struct " << offset.struct_type << "* __adjusted = container_of(*" << this->subject()
-                                     << ", "
+                    this->new_line() << "struct " << offset.struct_type << "* __adjusted = container_of(*"
+                                     << this->subject() << ", "
                                      << "struct " << offset.struct_type << ", " << offset.field << ");\n";
-                } else if (side == marshal_side::caller && flags_set(node.pointer_annots.kind, annotation_kind::user_ptr)) {
+                } else if (side == marshal_side::caller
+                    && flags_set(node.pointer_annots.kind, annotation_kind::user_ptr)) {
                     this->new_line() << "__maybe_unused const void* __adjusted;\n";
                     if (flags_set(node.referent->value_annots, annotation_kind::in)) {
-                        this->new_line() << "__" << this->subject() << " = kzalloc(" << node.pointer_annots.size_verbatim << ", DEFAULT_GFP_FLAGS);\n";
-                        this->new_line() << "if (copy_from_user(__" << this->subject() << ", *" << this->subject() << ", " << node.pointer_annots.size_verbatim << ")) {\n";
+                        this->new_line() << "__" << this->subject() << " = kzalloc("
+                                         << node.pointer_annots.size_verbatim << ", DEFAULT_GFP_FLAGS);\n";
+                        this->new_line() << "if (copy_from_user(__" << this->subject() << ", *" << this->subject()
+                                         << ", " << node.pointer_annots.size_verbatim << ")) {\n";
                         this->new_line() << "\tprintk(\"copy_from_user failed\");\n";
                         this->new_line() << "}\n\n";
                         this->new_line() << "*" << this->subject() << " = __" << this->subject() << ";\n\n";
                     } else if (flags_set(node.referent->value_annots, annotation_kind::out)) {
-                        this->new_line() << "__" << this->subject() << " = kzalloc(" << node.pointer_annots.size_verbatim << ", DEFAULT_GFP_FLAGS);\n";
+                        this->new_line() << "__" << this->subject() << " = kzalloc("
+                                         << node.pointer_annots.size_verbatim << ", DEFAULT_GFP_FLAGS);\n";
                         this->new_line() << "*" << this->subject() << " = __" << this->subject() << ";\n\n";
                     }
                     this->new_line() << "__adjusted = "
@@ -313,9 +296,7 @@ namespace idlc {
             this->new_line() << "{\n";
 
             // NOTE: the facade is technically meaningless and must be ignored during marshaling
-            if (!this->marshal("__casted_ptr", node, [this](auto&& type) {
-                    return this->visit_value(*type.referent);
-                }))
+            if (!this->marshal("__casted_ptr", node, [this](auto&& type) { return this->visit_value(*type.referent); }))
                 return false;
 
             this->new_line() << "}\n\n";
@@ -352,7 +333,9 @@ namespace idlc {
         const auto visit = [&node](auto&& item) {
             using node_type = std::decay_t<decltype(item)>;
             if constexpr (
-                std::is_same_v<node_type, node_ref<null_terminated_array>> || std::is_same_v<node_type, node_ref<dyn_array>> || std::is_same_v<node_type, node_ref<static_array>>)
+                std::is_same_v<node_type,
+                    node_ref<
+                        null_terminated_array>> || std::is_same_v<node_type, node_ref<dyn_array>> || std::is_same_v<node_type, node_ref<static_array>>)
                 return concat("sizeof(", node.c_specifier, ") * glue_peek(__pos, __msg, __ext)");
             else
                 return concat("sizeof(", node.c_specifier, ")");
@@ -361,11 +344,11 @@ namespace idlc {
         return std::visit(visit, node.type);
     }
 
-    template <marshal_side side>
-    class unmarshaling_walk : public generation_walk<unmarshaling_walk<side>> {
+    template <marshal_side side, rpc_side context>
+    class unmarshaling_walk : public generation_walk<unmarshaling_walk<side, context>> {
     public:
         unmarshaling_walk(std::ostream& os, absl::string_view holder, unsigned level)
-            : generation_walk<unmarshaling_walk<side>> {os, holder, level}
+            : generation_walk<unmarshaling_walk<side, context>> {os, holder, level}
         {
         }
 
@@ -393,7 +376,8 @@ namespace idlc {
 
         bool visit_primitive(primitive node)
         {
-            this->new_line() << "*" << this->subject() << " = glue_unpack(__pos, __msg, __ext, " << m_c_specifier << ");\n";
+            this->new_line() << "*" << this->subject() << " = glue_unpack(__pos, __msg, __ext, " << m_c_specifier
+                             << ");\n";
             return true;
         }
 
@@ -420,7 +404,10 @@ namespace idlc {
                     switch (side) {
                     case marshal_side::caller:
                         if (flags_set(node.referent->value_annots, annotation_kind::out)) {
-                            this->new_line() << "if (copy_to_user(*__orig_" << this->subject() << ", *" << this->subject() << ", " << node.pointer_annots.size_verbatim << ")) {\n";
+                            this->new_line()
+                                << "if (copy_to_user(*__orig_" << this->subject() << ", *" << this->subject() << ", "
+                                << node.pointer_annots.size_verbatim << ")) {\n";
+
                             this->new_line() << "\tprintk(\"copy_to_user failed\");\n";
                             this->new_line() << "}\n\n";
                         }
@@ -498,8 +485,13 @@ namespace idlc {
 
         bool visit_rpc_ptr(rpc_ptr& node)
         {
-            this->new_line() << "*" << this->subject() << " = glue_unpack_rpc_ptr(__pos, __msg, __ext, "
-                             << node.definition->name << ");\n";
+            if (node.is_static && context == rpc_side::client) {
+                this->new_line() << "*" << this->subject() << " = glue_unpack_static_rpc_ptr(__pos, __msg, __ext, "
+                                 << node.scoped_name << ");\n";
+            } else {
+                this->new_line() << "*" << this->subject() << " = glue_unpack_rpc_ptr(__pos, __msg, __ext, "
+                                 << node.definition->name << ");\n";
+            }
 
             return true;
         }
@@ -520,9 +512,7 @@ namespace idlc {
             this->new_line() << "{\n";
 
             // NOTE: the facade is technically meaningless and must be ignored during marshaling
-            if (!this->marshal("__casted_ptr", node, [this](auto&& type) {
-                    return this->visit_value(*type.referent);
-                }))
+            if (!this->marshal("__casted_ptr", node, [this](auto&& type) { return this->visit_value(*type.referent); }))
                 return false;
 
             this->new_line() << "}\n\n";
@@ -602,7 +592,8 @@ namespace idlc {
             const auto subject = concat("*", this->subject(), " = ");
 
             if (should_alloc(node.pointer_annots)) {
-                auto alloc_flags = node.pointer_annots.flags_verbatim ? node.pointer_annots.flags_verbatim : "DEFAULT_GFP_FLAGS";
+                auto alloc_flags
+                    = node.pointer_annots.flags_verbatim ? node.pointer_annots.flags_verbatim : "DEFAULT_GFP_FLAGS";
                 std::string alloc_size = node.pointer_annots.size_verbatim ? node.pointer_annots.size_verbatim : "";
 
                 // if the size field is empty (i.e., `{{}}`), use referent size
@@ -650,8 +641,8 @@ namespace idlc {
             else
                 std::terminate();
 
-            this->new_line() << "*" << this->subject() << " = &__" << offset.struct_type
-                             << "->" << offset.field << ";\n";
+            this->new_line() << "*" << this->subject() << " = &__" << offset.struct_type << "->" << offset.field
+                             << ";\n";
         }
 
         bool marshal_pointer_child(pointer& node)
@@ -661,8 +652,7 @@ namespace idlc {
                 // Since the type itself must include const, but we need to write to it for unmarshaling,
                 // We create a writeable version of the pointer and use it instead
                 const auto type = concat(node.referent->c_specifier, "*");
-                this->new_line() << "\t" << type << " writable = "
-                                 << concat("(", type, ")*", this->subject()) << ";\n";
+                this->new_line() << "\t" << type << " writable = " << concat("(", type, ")*", this->subject()) << ";\n";
 
                 if (!this->marshal("writable", node))
                     return false;
