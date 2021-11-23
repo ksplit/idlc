@@ -1,0 +1,21 @@
+
+module kernel {
+
+
+static_rpc_ptr void get_quirks(projection device *dev, projection xhci_hcd *xhci_hcd) {
+        projection < struct device > device {
+        }
+        projection < struct xhci_hcd > xhci_hcd {
+        }
+}
+
+rpc_export int xhci_gen_setup( projection hcd [alloc<{{sizeof(hcd) + sizeof(struct xhci_hcd)}}>(callee)] *hcd, static_rpc_ptr  get_quirks get_quirks ) {
+        projection < struct usb_hcd > hcd {
+                int [out] speed;
+        }
+        projection <struct xhci_hcd> xhci_hcd {
+                char sbrn;
+        }
+}
+
+}
