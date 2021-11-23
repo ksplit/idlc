@@ -589,9 +589,6 @@ namespace idlc {
                 if (rpc->kind == rpc_def_kind::direct && side == rpc_side::client)
                     continue;
 
-                if (rpc->kind == rpc_def_kind::indirect && side == rpc_side::server)
-                    continue;
-
                 os << "\tcase " << rpc->enum_id << ":\n";
                 os << "\t\tglue_user_trace(\"" << rpc->name << "\\n\");\n";
                 os << "\t\t" << rpc->callee_id << "(__msg, __ext);\n";
@@ -611,7 +608,7 @@ namespace idlc {
 
             file << "\t" << rpc->definition->impl_id << "(__static_" << rpc->scoped_name << ", "
                  << rpc->definition->params_string << ");\n";
-                 
+
             file << "}\n\n";
 
             file << field.c_specifier << " __unpack_" << rpc->scoped_name << "(void* address)\n{\n";
