@@ -147,7 +147,7 @@ namespace idlc {
 			real_name {real_name},
 			fields {},
 			caller_marshal_visitor {concat("caller_marshal_", name)},
-			callee_unmarshal_visitor {concat("caller_unmarshal_", name)},
+			callee_unmarshal_visitor {concat("callee_unmarshal_", name)},
 			callee_marshal_visitor {concat("callee_marshal_", name)},
 			caller_unmarshal_visitor {concat("caller_unmarshal_", name)} {};
 
@@ -155,7 +155,7 @@ namespace idlc {
 			real_name {real_name},
 			fields {std::move(fields)},
 			caller_marshal_visitor {concat("caller_marshal_", name)},
-			callee_unmarshal_visitor {concat("caller_unmarshal_", name)},
+			callee_unmarshal_visitor {concat("callee_unmarshal_", name)},
 			callee_marshal_visitor {concat("callee_marshal_", name)},
 			caller_unmarshal_visitor {concat("caller_unmarshal_", name)}
 		{

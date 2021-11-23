@@ -77,9 +77,15 @@ namespace idlc {
 				assert(m_item == item || !item);
 			else
 				m_item = item;
+
+			return *this;
 		}
 
-		set_once& operator=(const set_once& item) { *this = item.m_item; }
+		set_once& operator=(const set_once& item)
+		{
+			*this = item.m_item;
+			return *this;
+		}
 
 		auto& get() { return m_item; };
 		const auto& get() const { return m_item; };
