@@ -609,7 +609,9 @@ namespace idlc {
             file << rpc->definition->ret_string << " __thunk_" << rpc->scoped_name << "("
                  << rpc->definition->args_string << ")\n{\n";
 
-            file << "\t__static_" << rpc->scoped_name << "(" << rpc->definition->params_string << ");\n";
+            file << "\t" << rpc->definition->impl_id << "(__static_" << rpc->scoped_name << ", "
+                 << rpc->definition->params_string << ");\n";
+                 
             file << "}\n\n";
 
             file << field.c_specifier << " __unpack_" << rpc->scoped_name << "(void* address)\n{\n";
