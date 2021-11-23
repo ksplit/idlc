@@ -1,8 +1,7 @@
 
 module kernel {
 
-
-static_rpc_ptr void get_quirks(projection device *dev, projection xhci_hcd *xhci_hcd) {
+rpc_ptr void get_quirks(projection device *dev, projection xhci_hcd *xhci_hcd) {
         projection < struct device > device {
         }
         projection < struct xhci_hcd > xhci_hcd {

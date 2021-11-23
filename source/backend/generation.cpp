@@ -602,32 +602,70 @@ namespace idlc {
             os << "\t}\n\n\treturn 1;\n}\n\n";
         }
 
-        void generate_static_rpcs(std::ostream& file, projection_vec_view projections)
+        void generate_static_rpc(std::ostream& file, const value& field)
+        {
+            const auto& rpc = std::get<node_ref<rpc_ptr>>(field.type);
+            file << field.c_specifier << " __static_" << rpc->scoped_name << ";\n\n";
+            file << rpc->definition->ret_string << " __thunk_" << rpc->scoped_name << "("
+                 << rpc->definition->args_string << ")\n{\n";
+
+            file << "\t__static_" << rpc->scoped_name << "(" << rpc->definition->params_string << ");\n";
+            file << "}\n\n";
+
+            file << field.c_specifier << " __unpack_" << rpc->scoped_name << "(void* address)\n{\n";
+            file << "\t__static_" << rpc->scoped_name << " = (" << field.c_specifier << ")address;\n";
+            file << "\treturn __thunk_" << rpc->scoped_name << ";\n";
+            file << "}\n\n";
+        }
+
+        rpc_ptr* try_get_static_rpc(const value& field)
+        {
+            const node_ref<rpc_ptr>* maybe_rpc = std::get_if<node_ref<rpc_ptr>>(&field.type);
+            if (!maybe_rpc)
+                return nullptr;
+
+            auto& rpc = **maybe_rpc;
+            if (!rpc.is_static)
+                return nullptr;
+
+            return &rpc;
+        }
+
+        void generate_static_rpcs(std::ostream& file, rpc_vec_view rpcs, projection_vec_view projections)
         {
             for (const auto& projection : projections) {
                 for (const auto& [name, field] : projection->fields) {
-                    const node_ref<rpc_ptr>* maybe_rpc = std::get_if<node_ref<rpc_ptr>>(&field->type);
+                    const auto maybe_rpc = try_get_static_rpc(*field);
                     if (!maybe_rpc)
-                        continue;
-
-                    const auto& rpc = *maybe_rpc;
-                    if (!rpc->is_static)
                         continue;
 
                     // TODO: move scoped name generation to an explicit location
                     const auto scope = projection->def->parent ? projection->def->parent->name : "global";
-                    append(rpc->scoped_name, scope, "__", projection->real_name, "__", rpc->definition->name);
-                    file << field->c_specifier << " __static_" << rpc->scoped_name << ";\n\n";
-                    file << rpc->definition->ret_string << " __thunk_" << rpc->scoped_name << "("
-                         << rpc->definition->args_string << ")\n{\n";
+                    append(maybe_rpc->scoped_name, scope, "__", projection->real_name, "__", name);
 
-                    file << "\t__static_" << rpc->scoped_name << "(" << rpc->definition->params_string << ");\n";
-                    file << "}\n\n";
+                    generate_static_rpc(file, *field);
+                }
+            }
 
-                    file << field->c_specifier << " __unpack_" << rpc->scoped_name << "(void* address)\n{\n";
-                    file << "\t__static_" << rpc->scoped_name << " = (" << field->c_specifier << ")address;\n";
-                    file << "\treturn __thunk_" << rpc->scoped_name << ";\n";
-                    file << "}\n\n";
+            for (const auto& rpc : rpcs) {
+                const auto scope = rpc->name;
+                if (rpc->ret_pgraph) {
+                    const auto maybe_rpc = try_get_static_rpc(*rpc->ret_pgraph);
+                    if (maybe_rpc) {
+                        append(maybe_rpc->scoped_name, scope, "____retval");
+                        generate_static_rpc(file, *rpc->ret_pgraph);
+                    }
+                }
+
+                auto id = 0;
+                for (const auto& argument : rpc->arg_pgraphs) {
+                    const auto maybe_rpc = try_get_static_rpc(*argument);
+                    if (!maybe_rpc)
+                        continue;
+
+                    append(maybe_rpc->scoped_name, scope, "__", rpc->arguments->at(id)->name);
+                    generate_static_rpc(file, *argument);
+                    ++id;
                 }
             }
         }
@@ -866,7 +904,7 @@ namespace idlc {
             file << "#include <lcd_config/pre_hook.h>\n\n";
             file << "#include \"common.h\"\n\n";
             file << "#include <lcd_config/post_hook.h>\n\n";
-            generate_static_rpcs(file, projections);
+            generate_static_rpcs(file, rpcs, projections);
             for (const auto& projection : projections) {
                 // TODO: make these optional
                 generate_caller_marshal_visitor(file, *projection);
