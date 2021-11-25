@@ -45,14 +45,14 @@ namespace idlc {
 		>;
 
 	struct value {
-		passed_type type;
-		annotation_kind value_annots;
-		bool is_const;
-		bool is_volatile;
+		passed_type type; // Not const, but only because we do lowering from a raw proj_def* to the actual node
+		annotation_bitfield value_annots; // needs to be non-const, we do defaulting walks
+		bool is_const; // not entirely convinced that this can't be const, see const_propagation_walk
+		bool is_volatile; // we don't use this at all afaik
 
 		std::string c_specifier;
 
-		value(passed_type&& type, annotation_kind value_annots, bool is_const, bool is_volatile) :
+		value(passed_type&& type, annotation_bitfield value_annots, bool is_const, bool is_volatile) :
 			type {std::move(type)},
 			value_annots {value_annots},
 			is_const {is_const},
@@ -64,6 +64,7 @@ namespace idlc {
 
 	// NOTE: A non-terminal node is any node that has child nodes
 	// NOTE: we *always* walk non-terminals, to be able to marshal otherwise innaccessible [out] fields
+	// TODO: replace this non-terminal stuff with some kind of reachability analysis
 	// TODO: add support for array non-terminals
 	inline bool is_nonterminal(const value& node)
 	{
@@ -76,7 +77,7 @@ namespace idlc {
 	}
 
 	struct null_terminated_array {
-		node_ptr<value> element;
+		const node_ptr<value> element;
 
 		null_terminated_array(node_ptr<value> element) : element {std::move(element)} {}
 	};
@@ -87,24 +88,24 @@ namespace idlc {
 	// };
 
 	struct dyn_array {
-		node_ptr<value> element;
-		ident size_expr;
+		const node_ptr<value> element;
+		const ident size_expr;
 
 		dyn_array(node_ptr<value> element, ident size) : element {std::move(element)}, size_expr {size} {}
 	};
 
 	struct static_array {
-		node_ptr<value> element;
-		unsigned size;
+		const node_ptr<value> element;
+		const unsigned size;
 
 		static_array(node_ptr<value> element, unsigned size) : element {std::move(element)}, size {size} {}
 	};
 
 	struct pointer {
-		node_ptr<value> referent;
-		annotation pointer_annots;
+		const node_ptr<value> referent;
+		annotation_set pointer_annots;
 
-		pointer(node_ptr<value> referent, annotation pointer_annots) :
+		pointer(node_ptr<value> referent, annotation_set pointer_annots) :
 			referent {std::move(referent)},
 			pointer_annots {pointer_annots}
 		{
@@ -112,8 +113,9 @@ namespace idlc {
 	};
 
 	struct casted_type {
-		node_ptr<value> referent;
-		node_ptr<value> facade; // NOTE: mostly meaningless
+		const node_ptr<value> referent;
+		const node_ptr<value> facade; // NOTE: mostly meaningless, we special-case this in the walk logic to avoid
+									  // marshaling it, kind of hacky
 
 		casted_type(node_ptr<value> facade, node_ptr<value> referent) :
 			facade {std::move(facade)},
@@ -123,8 +125,8 @@ namespace idlc {
 	};
 
 	struct rpc_ptr {
-		rpc_def* definition;
-		bool is_static;
+		const rpc_def* definition;
+		const bool is_static;
 
 		std::string scoped_name; // present only if is_static
 
@@ -138,47 +140,33 @@ namespace idlc {
 
 	using projection_field = std::pair<ident, node_ptr<value>>;
 
-	class projection {
-	public:
-		ident real_name {};
-		std::vector<projection_field> fields {};
+	struct projection {
+		const ident real_name {};
+		const std::vector<projection_field> fields {};
 
-		std::string caller_marshal_visitor {};
-		std::string callee_unmarshal_visitor {};
-		std::string callee_marshal_visitor {};
-		std::string caller_unmarshal_visitor {};
+		const std::string caller_marshal_visitor {};
+		const std::string callee_unmarshal_visitor {};
+		const std::string callee_marshal_visitor {};
+		const std::string caller_unmarshal_visitor {};
 
 		proj_def* def {};
 
 		projection(ident real_name, const std::string& name) :
 			real_name {real_name},
 			fields {},
-			caller_marshal_visitor {},
-			callee_unmarshal_visitor {},
-			callee_marshal_visitor {},
-			caller_unmarshal_visitor {}
-		{
-			populate_names(name);
-		};
+			caller_marshal_visitor {concat("caller_marshal_", name)},
+			callee_unmarshal_visitor {concat("callee_unmarshal_", name)},
+			callee_marshal_visitor {concat("callee_marshal_", name)},
+			caller_unmarshal_visitor {concat("caller_unmarshal_", name)} {};
 
 		projection(ident real_name, const std::string& name, decltype(fields)&& fields) :
 			real_name {real_name},
 			fields {std::move(fields)},
-			caller_marshal_visitor {},
-			callee_unmarshal_visitor {},
-			callee_marshal_visitor {},
-			caller_unmarshal_visitor {}
+			caller_marshal_visitor {concat("caller_marshal_", name)},
+			callee_unmarshal_visitor {concat("callee_unmarshal_", name)},
+			callee_marshal_visitor {concat("callee_marshal_", name)},
+			caller_unmarshal_visitor {concat("caller_unmarshal_", name)}
 		{
-			populate_names(name);
-		}
-
-	private:
-		void populate_names(const std::string& name)
-		{
-			caller_marshal_visitor = concat("caller_marshal_", name);
-			callee_unmarshal_visitor = concat("callee_unmarshal_", name);
-			callee_marshal_visitor = concat("callee_marshal_", name);
-			caller_unmarshal_visitor = concat("caller_unmarshal_", name);
 		}
 	};
 }

@@ -3,9 +3,9 @@
 #include <cassert>
 #include <iostream>
 
-#include "ast_walk.h"
-#include "ast.h"
 #include "../utility.h"
+#include "ast.h"
+#include "ast_walk.h"
 
 namespace idlc {
 	namespace {

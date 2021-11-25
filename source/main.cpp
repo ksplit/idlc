@@ -60,7 +60,7 @@ namespace idlc {
 			bool visit_value(value& node)
 			{
 				const auto old = is_driver_import;
-				is_driver_import = flags_set(node.value_annots, annotation_kind::out);
+				is_driver_import = flags_set(node.value_annots, annotation_bitfield::out);
 				if (!this->traverse(*this, node))
 					return false;
 
@@ -144,7 +144,7 @@ int main(int argc, char** argv)
 
 	idlc::string_const_walk string_walk {};
 	if (!string_walk.visit_file(*file))
-		std::terminate();
+		return 1;
 
 	const auto rpcs = idlc::generate_rpc_pgraphs(*file);
 	if (!rpcs) {

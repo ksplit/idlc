@@ -3,17 +3,17 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 #include <variant>
+#include <vector>
 
 #include <gsl/gsl>
 
 #include "../string_heap.h"
 #include "../utility.h"
-#include "tag_types.h"
-#include "scope.h"
-#include "pgraph.h"
 #include "node_ptrs.h"
+#include "pgraph.h"
+#include "scope.h"
+#include "tag_types.h"
 
 namespace idlc {
 	using ident_vec = std::vector<ident>;
@@ -31,16 +31,17 @@ namespace idlc {
 
 	struct naked_proj_decl;
 	struct var_decl;
-	
+
 	struct rpc_def;
 
-	struct tok_kw_null {}; // Doesn't exist in parse rules, used as marker (represents tok_kw_null)
-	
+	struct tok_kw_null {
+	}; // Doesn't exist in parse rules, used as marker (represents tok_kw_null)
+
 	using file = std::variant<node_ref<driver_file>, node_ref<ref_vec<module_def>>>;
 	// using field_ref = std::variant<node_ref<field_abs_ref>, node_ref<field_rel_ref>>;
 	using array_size = std::variant<unsigned, tok_kw_null, ident>;
 	using proj_field = std::tuple<std::variant<node_ref<var_decl>, node_ref<naked_proj_decl>>, std::uint8_t>;
-	
+
 	using type_stem = std::variant<
 		type_primitive,
 		type_string,
@@ -48,50 +49,42 @@ namespace idlc {
 		node_ref<type_rpc>,
 		node_ref<type_proj>,
 		node_ref<type_array>,
-		node_ref<type_casted>
-	>;
+		node_ref<type_casted>>;
 
-	struct type_none {};
+	struct type_none {
+	};
 
 	struct driver_def {
-		ident name;
-		node_ptr<ident_vec> imports;
+		const ident name;
+		const node_ptr<ident_vec> imports;
 
-		driver_def(ident name, node_ptr<ident_vec> imports) :
-			name {name},
-			imports {imports}
-		{}
+		driver_def(ident name, node_ptr<ident_vec> imports) : name {name}, imports {imports} {}
 	};
 
 	struct driver_file {
-		node_ptr<ident_vec> former;
-		node_ref<driver_def> driver;
-		node_ptr<ident_vec> latter;
+		const node_ptr<ident_vec> former;
+		const node_ref<driver_def> driver;
+		const node_ptr<ident_vec> latter;
 
-		driver_file(node_ptr<ident_vec> former,
-			node_ref<driver_def> driver,
-			node_ptr<ident_vec> latter
-		) :
+		driver_file(node_ptr<ident_vec> former, node_ref<driver_def> driver, node_ptr<ident_vec> latter) :
 			former {former},
 			driver {driver},
 			latter {latter}
-		{}
+		{
+		}
 	};
 
 	struct type_proj {
-		ident name;
+		const ident name;
 
 		proj_def* definition;
 
-		type_proj(ident name) :
-			name {name},
-			definition {}
-		{}
+		type_proj(ident name) : name {name}, definition {} {}
 	};
 
 	struct type_rpc {
-		ident name;
-		bool is_static;
+		const ident name;
+		const bool is_static;
 
 		rpc_def* definition;
 
@@ -103,92 +96,79 @@ namespace idlc {
 	};
 
 	struct type_array {
-		node_ref<type_spec> element;
-		node_ref<array_size> size;
+		const node_ref<type_spec> element;
+		const node_ref<array_size> size;
 
-		type_array(node_ref<type_spec> element, node_ref<array_size> size) :
-			element {element},
-			size {size}
-		{}
+		type_array(node_ref<type_spec> element, node_ref<array_size> size) : element {element}, size {size} {}
 	};
 
 	// Another marker
 	// NOTE: since these don't actually exist in any meaningful sense, their own parse rules don't produce them
-	struct type_string {};
+	struct type_string {
+	};
 
 	struct type_casted {
 		// NOTE: this type is only here for the benefit of making a c-specifier
-		node_ref<type_spec> declared_type;
-		node_ref<type_spec> true_type;
+		const node_ref<type_spec> declared_type;
+		const node_ref<type_spec> true_type;
 
 		type_casted(node_ref<type_spec> declared_type, node_ref<type_spec> true_type) :
 			declared_type {declared_type},
 			true_type {true_type}
-		{}
+		{
+		}
 	};
 
 	struct indirection {
-		node_ref<annotation> attrs; // Contextually, both ptr and value attrs
-		bool is_const;
+		const node_ref<annotation_set> attrs; // Contextually, both ptr and value attrs
+		const bool is_const;
 
-		indirection(node_ref<annotation> attrs, bool is_const) :
-			attrs {attrs},
-			is_const {is_const}
-		{}
+		indirection(node_ref<annotation_set> attrs, bool is_const) : attrs {attrs}, is_const {is_const} {}
 	};
 
 	struct type_spec {
-		node_ref<type_stem> stem;
-		ref_vec<indirection> indirs;
-		annotation_kind attrs; // Will only ever have value attrs in it
-		bool is_const;
-		bool is_volatile;
+		const node_ref<type_stem> stem;
+		const ref_vec<indirection> indirs;
+		const annotation_bitfield attrs; // Will only ever have value attrs in it
+		bool is_const; // HACK: see string_const_walk, this can't be immutable otherwise
+		const bool is_volatile;
 
 		type_spec(
 			node_ref<type_stem> stem,
 			ref_vec<indirection> indirs,
-			annotation_kind attrs,
+			annotation_bitfield attrs,
 			bool is_const,
-			bool is_volatile
-		) :
+			bool is_volatile) :
 			stem {stem},
 			indirs {indirs},
 			attrs {attrs},
 			is_const {is_const},
 			is_volatile {is_volatile}
-		{}
+		{
+		}
 	};
 
 	struct var_decl {
-		node_ref<type_spec> type;
-		ident name;
+		const node_ref<type_spec> type;
+		const ident name;
 
-		var_decl(node_ref<type_spec> type, ident name) :
-			type {type},
-			name {name}
-		{}
+		var_decl(node_ref<type_spec> type, ident name) : type {type}, name {name} {}
 	};
 
 	struct naked_proj_decl {
-		node_ptr<ref_vec<proj_field>> fields;
-		ident name;
+		const node_ptr<ref_vec<proj_field>> fields;
+		const ident name;
 
-		naked_proj_decl(node_ptr<ref_vec<proj_field>> fields, ident name) :
-			fields {fields},
-			name {name}
-		{}
+		naked_proj_decl(node_ptr<ref_vec<proj_field>> fields, ident name) : fields {fields}, name {name} {}
 	};
 
-	enum proj_def_kind {
-		struct_kind,
-		union_kind
-	};
+	enum proj_def_kind { struct_kind, union_kind };
 
 	struct proj_def {
-		ident name;
-		ident type;
-		node_ptr<ref_vec<proj_field>> fields;
-		proj_def_kind kind;
+		const ident name;
+		const ident type;
+		const node_ptr<ref_vec<proj_field>> fields;
+		const proj_def_kind kind;
 
 		std::string scoped_name;
 		std::shared_ptr<projection> in_proj;
@@ -197,12 +177,7 @@ namespace idlc {
 
 		const rpc_def* parent;
 
-		proj_def(
-			ident name,
-			ident type,
-			node_ptr<ref_vec<proj_field>> fields,
-			proj_def_kind kind
-		) :
+		proj_def(ident name, ident type, node_ptr<ref_vec<proj_field>> fields, proj_def_kind kind) :
 			name {name},
 			type {type},
 			fields {fields},
@@ -210,23 +185,25 @@ namespace idlc {
 			in_proj {},
 			out_proj {},
 			in_out_proj {}
-		{}
+		{
+		}
 	};
 
 	using rpc_item = std::variant<node_ref<proj_def>, node_ref<rpc_def>>;
 
-  enum rpc_def_kind {
-    direct,
-    indirect,
-    export_sym,
-  };
+	enum rpc_def_kind {
+		direct,
+		indirect,
+		export_sym,
+	};
 
 	struct rpc_def {
-		node_ref<type_spec> ret_type;
-		ident name;
-		node_ptr<ref_vec<var_decl>> arguments;
-		node_ptr<ref_vec<rpc_item>> items;
-		rpc_def_kind kind;
+		const node_ref<type_spec> ret_type;
+		const ident name;
+		// I don't enjoy it, but the vector has to be indirected as well to play nice with the parser lifetime stuff
+		const node_ptr<ref_vec<var_decl>> arguments;
+		const node_ptr<ref_vec<rpc_item>> items;
+		const rpc_def_kind kind;
 
 		names_scope scope;
 		node_ptr<value> ret_pgraph;
@@ -244,7 +221,6 @@ namespace idlc {
 		std::string ret_string;
 		std::string args_string;
 		std::string params_string;
-
 
 		rpc_def(
 			node_ptr<type_spec> ret_type,
@@ -284,30 +260,19 @@ namespace idlc {
 
 	// TODO: impl
 	// Headers named in these nodes will get included into the generated "common" header
-	struct header_stmt {};
+	struct header_stmt {
+	};
 
-	using module_item = std::variant<
-		header_stmt,
-		node_ref<proj_def>,
-		node_ref<rpc_def>
-	>;
+	using module_item = std::variant<header_stmt, node_ref<proj_def>, node_ref<rpc_def>>;
 
 	struct module_def {
-		ident name;
-		node_ptr<ref_vec<module_item>> items;
+		const ident name;
+		const node_ptr<ref_vec<module_item>> items;
 
 		names_scope scope;
 
-		module_def(ident name, node_ptr<ref_vec<module_item>> items) :
-			name {name},
-			items {items},
-			scope {}
-		{}
+		module_def(ident name, node_ptr<ref_vec<module_item>> items) : name {name}, items {items}, scope {} {}
 	};
-
-	/*
-		Nodes that have scopes: module_defs, rpc_defs, proj_defs
-	*/
 }
 
 #endif

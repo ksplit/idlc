@@ -11,7 +11,7 @@
 namespace idlc {
 	// TODO: treat rpc_def as a pgraph node, logic to visit all pgraphs in an rpc is obnoxious and repetitive
 
-	template<typename walk>
+	template <typename walk>
 	class pgraph_traverse {
 	public:
 		bool operator()(walk& pass, value& node)
@@ -22,10 +22,9 @@ namespace idlc {
 			return true;
 		}
 
-		bool operator()(walk& pass, passed_type& node)
+		bool operator()(walk& pass, const passed_type& node)
 		{
-			const auto visit = [this, &pass](auto&& item) -> bool
-			{
+			const auto visit = [this, &pass](auto&& item) -> bool {
 				using type = std::decay_t<decltype(item)>;
 				if constexpr (std::is_same_v<type, primitive>) {
 					return pass.visit_primitive(item);
@@ -57,7 +56,7 @@ namespace idlc {
 				else if constexpr (std::is_same_v<type, none>) {
 					return pass.visit_none(item);
 				}
-				
+
 				std::terminate();
 			};
 
@@ -73,7 +72,8 @@ namespace idlc {
 				return true;
 			}
 			else {
-				m_visited.push_back(&node); // NOTE: this must be here, to prevent nested calls from recursing infinitely
+				m_visited.push_back(
+					&node); // NOTE: this must be here, to prevent nested calls from recursing infinitely
 				for (auto& [name, item] : node.fields) {
 					if (!pass.visit_value(*item))
 						return false;
@@ -83,118 +83,61 @@ namespace idlc {
 			}
 		}
 
-		bool operator()(walk& pass, dyn_array& node)
-		{
-			return pass.visit_value(*node.element);
-		}
+		bool operator()(walk& pass, dyn_array& node) { return pass.visit_value(*node.element); }
 
-		bool operator()(walk& pass, null_terminated_array& node)
-		{
-			return pass.visit_value(*node.element);
-		}
+		bool operator()(walk& pass, null_terminated_array& node) { return pass.visit_value(*node.element); }
 
-		bool operator()(walk& pass, static_array& node)
-		{
-			return pass.visit_value(*node.element);
-		}
+		bool operator()(walk& pass, static_array& node) { return pass.visit_value(*node.element); }
 
-		bool operator()(walk& pass, pointer& node)
-		{
-			return pass.visit_value(*node.referent);
-		}
+		bool operator()(walk& pass, pointer& node) { return pass.visit_value(*node.referent); }
 
-		bool operator()(walk& pass, rpc_ptr& node)
-		{
-			return true;
-		}
+		bool operator()(walk& pass, rpc_ptr& node) { return true; }
 
 		bool operator()(walk& pass, casted_type& node)
 		{
 			// HACK: this order makes it play nice with the c_specifier walk
 			return pass.visit_value(*node.referent) && pass.visit_value(*node.facade);
 		}
-		
+
 		// TODO: currently the *only* outside client of this is the dump walk, not clear if this is useful
 		// more generally
-		bool visited(projection* ptr)
-		{
-			return std::find(m_visited.begin(), m_visited.end(), ptr) != m_visited.end();
-		}
+		bool visited(projection* ptr) { return std::find(m_visited.begin(), m_visited.end(), ptr) != m_visited.end(); }
 
 	private:
 		std::vector<projection*> m_visited;
 	};
 
-	template<typename derived>
+	template <typename derived>
 	class pgraph_walk {
 	public:
-		bool visit_value(value& node)
-		{
-			return traverse(self(), node);
-		}
+		bool visit_value(value& node) { return traverse(self(), node); }
 
-		bool visit_passed_type(passed_type& node)
-		{
-			return traverse(self(), node);
-		}
+		bool visit_passed_type(const passed_type& node) { return traverse(self(), node); }
 
-		bool visit_projection(projection& node)
-		{
-			return traverse(self(), node);
-		}
+		bool visit_projection(projection& node) { return traverse(self(), node); }
 
-		bool visit_dyn_array(dyn_array& node)
-		{
-			return traverse(self(), node);
-		}
+		bool visit_dyn_array(dyn_array& node) { return traverse(self(), node); }
 
-		bool visit_static_array(static_array& node)
-		{
-			return traverse(self(), node);
-		}
+		bool visit_static_array(static_array& node) { return traverse(self(), node); }
 
-		bool visit_null_terminated_array(null_terminated_array& node)
-		{
-			return traverse(self(), node);
-		}
+		bool visit_null_terminated_array(null_terminated_array& node) { return traverse(self(), node); }
 
-		bool visit_pointer(pointer& node)
-		{
-			return traverse(self(), node);
-		}
+		bool visit_pointer(pointer& node) { return traverse(self(), node); }
 
-		bool visit_rpc_ptr(rpc_ptr& node)
-		{
-			return traverse(self(), node);
-		}
+		bool visit_rpc_ptr(rpc_ptr& node) { return traverse(self(), node); }
 
-		bool visit_primitive(primitive node)
-		{
-			return true;
-		}
+		bool visit_primitive(primitive node) { return true; }
 
-		bool visit_proj_def(proj_def& node)
-		{
-			return true;
-		}
+		bool visit_proj_def(proj_def& node) { return true; }
 
-		bool visit_none(none)
-		{
-			return true;
-		}
+		bool visit_none(none) { return true; }
 
-		bool visit_casted_type(casted_type& node)
-		{
-			return traverse(self(), node);
-		}
+		bool visit_casted_type(casted_type& node) { return traverse(self(), node); }
 
 	protected:
 		pgraph_traverse<derived> traverse {};
-		
-		auto& self()
-		{
-			return *reinterpret_cast<derived*>(this);
-		}
+
+		auto& self() { return *reinterpret_cast<derived*>(this); }
 	};
 }
 
