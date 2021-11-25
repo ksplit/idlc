@@ -6,8 +6,7 @@
 
 #include "../string_heap.h"
 
-namespace idlc::parser
-{
+namespace idlc::parser {
 	extern std::vector<std::any> parser_objs; // Dummy object at index 0 to catch sentinel values
 	extern idlc::string_heap idents;
 }

@@ -1,8 +1,18 @@
-﻿---
 BasedOnStyle: WebKit
-Cpp11BracedListStyle: 'true'
-FixNamespaceComments: 'false'
+FixNamespaceComments: false
+BinPackArguments: false
+Cpp11BracedListStyle: true
+SpaceBeforeCpp11BracedList: true
+UseTab: Always
+TabWidth: 4
+IndentWidth: 4
+BreakBeforeBraces: Stroustrup
 NamespaceIndentation: All
 ColumnLimit: 120
-
-...
+AlwaysBreakTemplateDeclarations: true
+BinPackParameters: false
+AlignAfterOpenBracket: AlwaysBreak
+BreakConstructorInitializers: AfterColon
+AllowAllConstructorInitializersOnNextLine: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+SpaceInEmptyBlock: false
