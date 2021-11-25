@@ -1,4 +1,4 @@
-﻿BasedOnStyle: WebKit
+BasedOnStyle: WebKit
 FixNamespaceComments: false
 BinPackArguments: false
 Cpp11BracedListStyle: true
