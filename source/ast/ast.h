@@ -84,10 +84,15 @@ namespace idlc {
 
 	struct type_rpc {
 		const ident name;
+		const bool is_static;
 
 		rpc_def* definition;
 
-		type_rpc(ident name) : name {name}, definition {} {}
+		type_rpc(ident name, bool is_static = false) :
+			name {name},
+			is_static {is_static},
+			definition {}
+		{}
 	};
 
 	struct type_array {

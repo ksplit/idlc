@@ -9,6 +9,8 @@
 #include "../ast/pgraph_walk.h"
 
 namespace idlc {
+	enum class rpc_side { server, client };
+
 	template <typename derived>
 	class generation_walk : public pgraph_walk<derived> {
 	public:
@@ -198,8 +200,14 @@ namespace idlc {
 
 					// parent_pointer and share_global may represent similar concepts, within<> probably can't co-occur
 					// with share<>
-					this->line() << "glue_pack(__pos, __msg, __ext, (void*)__adjusted - "
-								 << node.pointer_annots.parent_pointer.get() << ");\n";
+					this->line() << "const ptrdiff_t __offset = (void*)__adjusted - "
+								 << node.pointer_annots.parent_pointer.get() << ";\n";
+
+					this->line() << "if (__offset >= (" << node.pointer_annots.size_verbatim.get()
+								 << ") || __offset < 0)\n";
+
+					this->line() << "\tglue_user_panic(\"Bounds check failed!\");\n\n";
+					this->line() << "glue_pack(__pos, __msg, __ext, __offset);\n";
 
 					return true;
 				}
@@ -378,11 +386,11 @@ namespace idlc {
 		return std::visit(visit, node.type);
 	}
 
-	template <marshal_side side>
-	class unmarshaling_walk : public generation_walk<unmarshaling_walk<side>> {
+	template <marshal_side side, rpc_side context>
+	class unmarshaling_walk : public generation_walk<unmarshaling_walk<side, context>> {
 	public:
 		unmarshaling_walk(std::ostream& os, absl::string_view holder, unsigned level) :
-			generation_walk<unmarshaling_walk<side>> {os, holder, level}
+			generation_walk<unmarshaling_walk<side, context>> {os, holder, level}
 		{
 		}
 
@@ -505,8 +513,14 @@ namespace idlc {
 
 		bool visit_rpc_ptr(rpc_ptr& node)
 		{
-			this->line() << "*" << this->subject() << " = glue_unpack_rpc_ptr(__pos, __msg, __ext, "
-						 << node.definition->name << ");\n";
+			if (node.is_static && context == rpc_side::client) {
+				this->line() << "*" << this->subject() << " = glue_unpack_static_rpc_ptr(__pos, __msg, __ext, "
+							 << node.scoped_name << ");\n";
+			}
+			else {
+				this->line() << "*" << this->subject() << " = glue_unpack_rpc_ptr(__pos, __msg, __ext, "
+							 << node.definition->name << ");\n";
+			}
 
 			return true;
 		}
@@ -635,7 +649,9 @@ namespace idlc {
 			}
 			else if (flags_set(node.pointer_annots.kind, annotation_bitfield::within_ptr)) {
 				// TODO: Again, within<> probably a logical duplicate of shared<>, not just an actual duplicate
-				this->line() << assignment << "(" << m_c_specifier << ")(glue_unpack(__pos, __msg, __ext, size_t) + "
+				std::cerr << "Warning: within<> pointers must be ordered after their containing pointer\n";
+				this->line() << "size_t __offset = glue_unpack(__pos, __msg, __ext, size_t);\n";
+				this->line() << assignment << "(" << m_c_specifier << ")(__offset + "
 							 << node.pointer_annots.parent_pointer.get() << ");\n";
 
 				return false;
@@ -674,6 +690,7 @@ namespace idlc {
 				// We create a writeable version of the pointer and use it instead
 				const auto type = concat(node.referent->c_specifier, "*");
 				this->line() << "\t" << type << " writable = " << concat("(", type, ")*", this->subject()) << ";\n";
+
 				if (!this->marshal("writable", node))
 					return false;
 			}

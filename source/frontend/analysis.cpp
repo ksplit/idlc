@@ -50,7 +50,7 @@ namespace idlc {
 					return item->definition;
 				}
 				else if constexpr (std::is_same_v<type, node_ref<type_rpc>>) {
-					return std::make_shared<rpc_ptr>(item->definition);
+					return std::make_shared<rpc_ptr>(item->definition, item->is_static);
 				}
 				else if constexpr (std::is_same_v<type, node_ref<type_casted>>) {
 					return std::make_shared<casted_type>(

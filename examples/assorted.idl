@@ -1,51 +1,23 @@
-// NOTE: see notes in main.cpp as to how we will support this
-module foo {
-	projection < struct net_device > simp_circ {
-        projection simp_circ *a;
-    }
+module kernel {
+	rpc void foo(projection call_proj* c) {
+		projection <struct net_device> call_proj {
+			static_rpc_ptr read [in, out] read;
+		}
+	}
 
-    projection < struct net_device > circ_a {
-        projection circ_b [in] *a;
-        unsigned int arr_len;
-        array<u32, {{ptr->arr_len}}> arr;
-        unsigned int bitfield_me: 4;
-    }
+	rpc_ptr long read(projection file *file) {
+	   projection <struct file> file {
+		   static_rpc_ptr read [out] read;
+	   }
+	}
 
-    projection < struct net_device > circ_b {
-        projection circ_a *a;
-        const signed char* c;
-        projection circ_a [alloc<{{sizeof(int) * 128}}>(callee)]* but_bigger;
-        casted<void*, projection circ_a*> casted_field;
-    }
+	rpc_export int  xhci_gen_setup( projection hcd [alloc<{{sizeof(hcd) + sizeof(struct xhci_hcd)}}>(callee)] *hcd) {
+		projection < struct usb_hcd > hcd {
+			int [out] speed;
+		}
 
-    rpc projection simp_circ* foo(projection circ_a [out]* a, projection circ_b* b, projection call_proj* c) {
-        projection <struct net_device> call_proj {
-            array<int, {{call_ctx->a->arr_len}}> dyn_array;
-        }
-    }
-
-    rpc void bind_member_rpc(array<u32, {{ptr->arr_len}}> [unused, bind_memberof<struct net_device, arr>(callee)]* arr)
-    {}
-
-    rpc void alloc_sized(array<u32, {{ptr->arr_len}}> [alloc<{{sizeof(foo)}}>(callee)] * arr)
-    {}
-
-    rpc void alloc_sized_with_flags(array<u32, {{ptr->arr_len}}> [alloc<{{sizeof(foo)}}, {{0xCAD}}>(callee)] * arr)
-    {}
-
-    rpc_ptr long read(int fd, projection file *file, array<char, {{count}}> [user<{{count}}>, alloc(callee), out, dealloc(callee)] *buf, long count) {
-       projection <struct file> file {
-       }
-    }
-
-    rpc_ptr long write(int fd, projection file *file, const array<char, {{count}}> [user<{{count}}>, alloc(callee), dealloc(callee)] *buf, long count) {
-       projection <struct file> file {
-            array<char, {{ptr->len}}>* head; // already there
-            void [within<{{bar}}, {{foo}}>]* data;
-            unsigned int len;
-       }
-    }
-
-    rpc_export int can_ioctl(volatile int fd) {
-    }
+		projection <struct xhci_hcd> xhci_hcd {
+			char sbrn;
+		}
+	}
 }

@@ -94,58 +94,6 @@ namespace idlc {
 			}
 		}
 
-		void generate_common_header(rpc_vec_view rpcs, projection_vec_view projections)
-		{
-			std::ofstream file {"common.h"};
-			file.exceptions(file.badbit | file.failbit);
-
-			file << "#ifndef COMMON_H\n#define COMMON_H\n\n";
-			file << "#include <liblcd/trampoline.h>\n";
-			file << "#include <libfipc.h>\n";
-			file << "#include <liblcd/boot_info.h>\n";
-			file << "#include <asm/cacheflush.h>\n";
-			file << "#include <lcd_domains/microkernel.h>\n";
-			file << "#include <liblcd/liblcd.h>\n";
-			file << "\n";
-			file << "#include \"glue_user.h\"\n";
-			file << "\n";
-			generate_helpers(file);
-			file << "\n";
-			file << "enum RPC_ID {\n";
-
-			// Add MODULE_{INIT,EXIT} enums that are used to load and teardown
-			// the module
-			file << "\tMODULE_INIT,\n";
-			file << "\tMODULE_EXIT,\n";
-			file << "\tRPC_ID_shared_mem_init,\n";
-
-			for (const auto& rpc : rpcs)
-				file << "\t" << rpc->enum_id << ",\n";
-
-			file << "};\n\n";
-
-			file << "int try_dispatch(enum RPC_ID id, struct fipc_message* __msg, struct ext_registers* __ext);\n\n";
-
-			for (const auto& rpc : rpcs) {
-				if (rpc->kind == rpc_def_kind::indirect) {
-					file << "typedef " << rpc->ret_string << " (*" << rpc->typedef_id << ")(" << rpc->args_string
-						 << ");\n";
-
-					file << "typedef " << rpc->ret_string << " (*" << rpc->impl_typedef_id << ")(" << rpc->typedef_id
-						 << " target, " << rpc->args_string << ");\n\n";
-
-					file << "LCD_TRAMPOLINE_DATA(" << rpc->trmp_id << ")\n";
-					file << rpc->ret_string << " "
-						 << "LCD_TRAMPOLINE_LINKAGE(" << rpc->trmp_id << ") " << rpc->trmp_id << "(" << rpc->args_string
-						 << ");\n\n";
-				}
-			}
-
-			generate_contexts(file, rpcs);
-			generate_visitor_prototypes(file, projections);
-			file << "\n#endif\n";
-		}
-
 		using root_vec = std::vector<std::tuple<std::string, value*>>;
 
 		struct marshal_roots {
@@ -292,8 +240,6 @@ namespace idlc {
 			return roots;
 		}
 
-		enum class rpc_side { server, client };
-
 		auto generate_caller_glue_prologue(std::ostream& os, rpc_def& rpc)
 		{
 			os << "\tstruct fipc_message __buffer = {0};\n";
@@ -339,6 +285,7 @@ namespace idlc {
 			return roots;
 		}
 
+		template <rpc_side side>
 		void generate_caller_glue_epilogue(std::ostream& os, rpc_def& rpc, marshal_roots roots)
 		{
 			os << "\t*__pos = 0;\n";
@@ -362,7 +309,7 @@ namespace idlc {
 
 			for (const auto& [name, type] : roots.arguments) {
 				os << "\t{\n";
-				unmarshaling_walk<marshal_side::caller> arg_unremarshal {os, name, 2};
+				unmarshaling_walk<marshal_side::caller, side> arg_unremarshal {os, name, 2};
 				arg_unremarshal.visit_value(*type);
 				os << "\t}\n\n";
 			}
@@ -371,7 +318,7 @@ namespace idlc {
 				// Unmarshal return pointer only if it's NOT an ioremap annotation
 				if (!flags_set(get_ptr_annotation(*rpc.ret_pgraph), annotation_bitfield::ioremap_caller)) {
 					os << "\t{\n";
-					unmarshaling_walk<marshal_side::caller> ret_unmarshal {os, roots.return_value, 2};
+					unmarshaling_walk<marshal_side::caller, side> ret_unmarshal {os, roots.return_value, 2};
 					ret_unmarshal.visit_value(*rpc.ret_pgraph);
 					os << "\t}\n\n";
 				}
@@ -398,10 +345,11 @@ namespace idlc {
 				break;
 			}
 
-			generate_caller_glue_epilogue(os, rpc, roots);
+			generate_caller_glue_epilogue<side>(os, rpc, roots);
 		}
 
 		// TODO: large and complex, needs splitting
+		template <rpc_side side>
 		void generate_callee_glue(rpc_def& rpc, std::ostream& os)
 		{
 			os << "\tsize_t n_pos = 0;\n";
@@ -421,6 +369,7 @@ namespace idlc {
 				auto p = std::get_if<node_ref<pointer>>(&pgraph->type);
 				if (p && flags_set(p->get()->pointer_annots.kind, annotation_bitfield::alloc_stack_callee))
 					continue;
+					
 				os << "\t" << type << " " << name << " = 0;\n";
 			}
 
@@ -445,7 +394,7 @@ namespace idlc {
 
 			for (const auto& [name, type] : roots.arguments) {
 				os << "\t{\n";
-				unmarshaling_walk<marshal_side::callee> arg_unmarshal {os, name, 2};
+				unmarshaling_walk<marshal_side::callee, side> arg_unmarshal {os, name, 2};
 				arg_unmarshal.visit_value(*type);
 				os << "\t}\n\n";
 			}
@@ -524,17 +473,19 @@ namespace idlc {
 			   << "\t}\n";
 		}
 
+		template <rpc_side side>
 		void generate_indirect_rpc_callee(std::ostream& os, rpc_def& rpc)
 		{
 			os << "void " << rpc.callee_id << "(struct fipc_message* __msg, struct ext_registers* __ext)\n{\n";
-			generate_callee_glue(rpc, os);
+			generate_callee_glue<side>(rpc, os);
 			os << "}\n\n";
 		}
 
+		template <rpc_side side>
 		void generate_rpc_export_callee(std::ostream& os, rpc_def& rpc)
 		{
 			os << "void " << rpc.callee_id << "(struct fipc_message* __msg, struct ext_registers* __ext)\n{\n";
-			generate_callee_glue(rpc, os);
+			generate_callee_glue<side>(rpc, os);
 			os << "}\n\n";
 		}
 
@@ -599,9 +550,6 @@ namespace idlc {
 				if (rpc->kind == rpc_def_kind::direct && side == rpc_side::client)
 					continue;
 
-				if (rpc->kind == rpc_def_kind::indirect && side == rpc_side::server)
-					continue;
-
 				os << "\tcase " << rpc->enum_id << ":\n";
 				os << "\t\tglue_user_trace(\"" << rpc->name << "\\n\");\n";
 				os << "\t\t" << rpc->callee_id << "(__msg, __ext);\n";
@@ -612,7 +560,118 @@ namespace idlc {
 			os << "\t}\n\n\treturn 1;\n}\n\n";
 		}
 
-		void generate_client(rpc_vec_view rpcs)
+		void generate_static_rpc(std::ostream& file, const value& field)
+		{
+			const auto& rpc = std::get<node_ref<rpc_ptr>>(field.type);
+			file << field.c_specifier << " __static_" << rpc->scoped_name << ";\n\n";
+			file << rpc->definition->ret_string << " __thunk_" << rpc->scoped_name << "("
+				 << rpc->definition->args_string << ")\n{\n";
+
+			file << "\t" << rpc->definition->impl_id << "(__static_" << rpc->scoped_name << ", "
+				 << rpc->definition->params_string << ");\n";
+
+			file << "}\n\n";
+
+			file << field.c_specifier << " __unpack_" << rpc->scoped_name << "(void* address)\n{\n";
+			file << "\t__static_" << rpc->scoped_name << " = (" << field.c_specifier << ")address;\n";
+			file << "\treturn __thunk_" << rpc->scoped_name << ";\n";
+			file << "}\n\n";
+		}
+
+		void generate_static_rpc_header(std::ostream& file, const value& field)
+		{
+			const auto& rpc = std::get<node_ref<rpc_ptr>>(field.type);
+			file << rpc->definition->ret_string << " __thunk_" << rpc->scoped_name << "("
+				 << rpc->definition->args_string << ");\n";
+		}
+
+		rpc_ptr* try_get_static_rpc(const value& field)
+		{
+			const node_ref<rpc_ptr>* maybe_rpc = std::get_if<node_ref<rpc_ptr>>(&field.type);
+			if (!maybe_rpc)
+				return nullptr;
+
+			auto& rpc = **maybe_rpc;
+			if (!rpc.is_static)
+				return nullptr;
+
+			return &rpc;
+		}
+
+		void generate_static_rpcs(std::ostream& file, rpc_vec_view rpcs, projection_vec_view projections)
+		{
+			for (const auto& projection : projections) {
+				for (const auto& [name, field] : projection->fields) {
+					const auto maybe_rpc = try_get_static_rpc(*field);
+					if (!maybe_rpc)
+						continue;
+
+					// TODO: move scoped name generation to an explicit location
+					const auto scope = projection->def->parent ? projection->def->parent->name : "global";
+					generate_static_rpc(file, *field);
+				}
+			}
+
+			for (const auto& rpc : rpcs) {
+				const auto scope = rpc->name;
+				if (rpc->ret_pgraph) {
+					const auto maybe_rpc = try_get_static_rpc(*rpc->ret_pgraph);
+					if (maybe_rpc)
+						generate_static_rpc(file, *rpc->ret_pgraph);
+				}
+
+				for (const auto& argument : rpc->arg_pgraphs) {
+					const auto maybe_rpc = try_get_static_rpc(*argument);
+					if (!maybe_rpc)
+						continue;
+
+					generate_static_rpc(file, *argument);
+				}
+			}
+		}
+
+		void generate_static_rpc_headers(std::ostream& file, rpc_vec_view rpcs, projection_vec_view projections)
+		{
+			for (const auto& projection : projections) {
+				for (const auto& [name, field] : projection->fields) {
+					const auto maybe_rpc = try_get_static_rpc(*field);
+					if (!maybe_rpc)
+						continue;
+
+					// TODO: move scoped name generation to an explicit location
+					const auto scope = projection->def->parent ? projection->def->parent->name : "global";
+					append(maybe_rpc->scoped_name, scope, "__", projection->real_name, "__", name);
+
+					generate_static_rpc_header(file, *field);
+				}
+			}
+
+			for (const auto& rpc : rpcs) {
+				const auto scope = rpc->name;
+				if (rpc->ret_pgraph) {
+					const auto maybe_rpc = try_get_static_rpc(*rpc->ret_pgraph);
+					if (maybe_rpc) {
+						append(maybe_rpc->scoped_name, scope, "____retval");
+						generate_static_rpc_header(file, *rpc->ret_pgraph);
+					}
+				}
+
+				auto id = 0;
+				for (const auto& argument : rpc->arg_pgraphs) {
+					const auto maybe_rpc = try_get_static_rpc(*argument);
+					if (!maybe_rpc)
+						continue;
+
+					append(maybe_rpc->scoped_name, scope, "__", rpc->arguments->at(id)->name);
+					generate_static_rpc_header(file, *argument);
+					++id;
+				}
+			}
+
+			file << "\n";
+		}
+
+		void generate_client(rpc_vec_view rpcs, projection_vec_view projections)
 		{
 			std::ofstream file {"client.c"};
 			file.exceptions(file.badbit | file.failbit);
@@ -628,12 +687,8 @@ namespace idlc {
 					file << "}\n\n";
 					break;
 
-				case rpc_def_kind::indirect:
-					generate_indirect_rpc_callee(file, *rpc);
-					break;
-
 				case rpc_def_kind::export_sym:
-					generate_rpc_export_callee(file, *rpc);
+					generate_rpc_export_callee<rpc_side::client>(file, *rpc);
 					break;
 				}
 			}
@@ -651,16 +706,13 @@ namespace idlc {
 			file << "#include <lcd_config/post_hook.h>\n\n";
 			for (const auto& rpc : rpcs) {
 				switch (rpc->kind) {
-				case rpc_def_kind::indirect:
-					generate_indirect_rpc_caller(file, *rpc);
-					break;
-
 				case rpc_def_kind::direct:
 					file << "void " << rpc->callee_id
 						 << "(struct fipc_message* __msg, struct ext_registers* __ext)\n{\n";
-					generate_callee_glue(*rpc, file);
+					generate_callee_glue<rpc_side::server>(*rpc, file);
 					file << "}\n\n";
 					break;
+
 				case rpc_def_kind::export_sym:
 					generate_rpc_export_caller(file, *rpc);
 					break;
@@ -764,6 +816,7 @@ namespace idlc {
 			file << "\t}\n";
 		}
 
+		template <rpc_side side>
 		void generate_callee_unmarshal_visitor(std::ostream& file, projection& node)
 		{
 			file << "void " << node.callee_unmarshal_visitor << "(\n"
@@ -780,7 +833,7 @@ namespace idlc {
 			const auto n_fields = node.fields.size();
 			for (const auto& [name, type] : roots) {
 				file << "\t{\n";
-				unmarshaling_walk<marshal_side::callee> walk {file, name, 2};
+				unmarshaling_walk<marshal_side::callee, side> walk {file, name, 2};
 				walk.visit_value(*type);
 				file << "\t}\n\n";
 			}
@@ -814,6 +867,7 @@ namespace idlc {
 			file << "}\n\n";
 		}
 
+		template <rpc_side side>
 		void generate_caller_unmarshal_visitor(std::ostream& file, projection& node)
 		{
 			file << "void " << node.caller_unmarshal_visitor << "(\n"
@@ -830,7 +884,7 @@ namespace idlc {
 			const auto n_fields = node.fields.size();
 			for (const auto& [name, type] : roots) {
 				file << "\t{\n";
-				unmarshaling_walk<marshal_side::caller> walk {file, name, 2};
+				unmarshaling_walk<marshal_side::caller, side> walk {file, name, 2};
 				walk.visit_value(*type);
 				file << "\t}\n\n";
 			}
@@ -840,6 +894,65 @@ namespace idlc {
 			file << "}\n\n";
 		}
 
+		void generate_common_header(rpc_vec_view rpcs, projection_vec_view projections)
+		{
+			std::ofstream file {"common.h"};
+			file.exceptions(file.badbit | file.failbit);
+
+			file << "#ifndef COMMON_H\n#define COMMON_H\n\n";
+			file << "#include <liblcd/trampoline.h>\n";
+			file << "#include <libfipc.h>\n";
+			file << "#include <liblcd/boot_info.h>\n";
+			file << "#include <asm/cacheflush.h>\n";
+			file << "#include <lcd_domains/microkernel.h>\n";
+			file << "#include <liblcd/liblcd.h>\n";
+			file << "\n";
+			file << "#include \"glue_user.h\"\n";
+			file << "\n";
+			generate_helpers(file);
+			file << "\n";
+			file << "enum RPC_ID {\n";
+
+			// Add MODULE_{INIT,EXIT} enums that are used to load and teardown
+			// the module
+			file << "\tMODULE_INIT,\n";
+			file << "\tMODULE_EXIT,\n";
+			file << "\tRPC_ID_shared_mem_init,\n";
+
+			for (const auto& rpc : rpcs)
+				file << "\t" << rpc->enum_id << ",\n";
+
+			file << "};\n\n";
+
+			file << "int try_dispatch(enum RPC_ID id, struct fipc_message* __msg, struct ext_registers* __ext);\n\n";
+
+			for (const auto& rpc : rpcs) {
+				if (rpc->kind == rpc_def_kind::indirect) {
+					file << "typedef " << rpc->ret_string << " (*" << rpc->typedef_id << ")(" << rpc->args_string
+						 << ");\n";
+
+					file << "typedef " << rpc->ret_string << " (*" << rpc->impl_typedef_id << ")(" << rpc->typedef_id
+						 << " target, " << rpc->args_string << ");\n\n";
+
+					file << rpc->ret_pgraph->c_specifier << " " << rpc->impl_id << "(" << rpc->typedef_id << " impl, "
+						 << rpc->args_string << ");\n";
+
+					file << rpc->ret_pgraph->c_specifier << " " << rpc->callee_id
+						 << "(struct fipc_message* __msg, struct ext_registers* __ext);\n";
+
+					file << "LCD_TRAMPOLINE_DATA(" << rpc->trmp_id << ")\n";
+					file << rpc->ret_string << " "
+						 << "LCD_TRAMPOLINE_LINKAGE(" << rpc->trmp_id << ") " << rpc->trmp_id << "(" << rpc->args_string
+						 << ");\n\n";
+				}
+			}
+
+			generate_static_rpc_headers(file, rpcs, projections);
+			generate_contexts(file, rpcs);
+			generate_visitor_prototypes(file, projections);
+			file << "\n#endif\n";
+		}
+
 		void generate_common_source(rpc_vec_view rpcs, projection_vec_view projections)
 		{
 			std::ofstream file {"common.c"};
@@ -847,12 +960,20 @@ namespace idlc {
 			file << "#include <lcd_config/pre_hook.h>\n\n";
 			file << "#include \"common.h\"\n\n";
 			file << "#include <lcd_config/post_hook.h>\n\n";
+			generate_static_rpcs(file, rpcs, projections);
+			for (const auto& rpc : rpcs) {
+				if (rpc->kind == rpc_def_kind::indirect) {
+					generate_indirect_rpc_callee<rpc_side::client>(file, *rpc);
+					generate_indirect_rpc_caller(file, *rpc);
+				}
+			}
+
 			for (const auto& projection : projections) {
 				// TODO: make these optional
 				generate_caller_marshal_visitor(file, *projection);
-				generate_callee_unmarshal_visitor(file, *projection);
+				generate_callee_unmarshal_visitor<rpc_side::client>(file, *projection);
 				generate_callee_marshal_visitor(file, *projection);
-				generate_caller_unmarshal_visitor(file, *projection);
+				generate_caller_unmarshal_visitor<rpc_side::client>(file, *projection);
 			}
 
 			file << "\n#ifdef LCD_ISOLATE\n";
@@ -906,7 +1027,7 @@ namespace idlc {
 		create_function_strings(rpcs);
 		generate_common_header(rpcs, projections);
 		generate_common_source(rpcs, projections);
-		generate_client(rpcs);
+		generate_client(rpcs, projections);
 		generate_server(rpcs);
 		generate_linker_script(rpcs);
 	}

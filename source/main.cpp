@@ -30,8 +30,6 @@ namespace idlc {
 	namespace {
 		class string_const_walk : public ast_walk<string_const_walk> {
 		public:
-			using ast_walk::visit_array_size;
-
 			bool visit_type_spec(type_spec& node)
 			{
 				if (std::get_if<type_string>(node.stem.get().get()))
@@ -41,19 +39,88 @@ namespace idlc {
 			}
 		};
 
-		void dump_pgraphs(rpc_vec_view rpcs)
+		template <bool trampolines_allowed>
+		class trampoline_sanity_walk : public pgraph_walk<trampoline_sanity_walk<trampolines_allowed>> {
+		public:
+			bool visit_rpc_ptr(rpc_ptr& node)
+			{
+				if (!node.is_static) {
+					if (is_driver_import || !trampolines_allowed) {
+						std::cout << "error: trampoline of type " << node.definition->name << " not allowed here.\n";
+						return false;
+					}
+				}
+				else if (trampolines_allowed && !is_driver_import) {
+					std::cout << "warning: trampoline can be used instead of static rpc pointer here\n";
+				}
+
+				return this->traverse(*this, node);
+			}
+
+			bool visit_value(value& node)
+			{
+				const auto old = is_driver_import;
+				is_driver_import = flags_set(node.value_annots, annotation_bitfield::out);
+				if (!this->traverse(*this, node))
+					return false;
+
+				is_driver_import = old;
+
+				return true;
+			}
+
+		private:
+			bool is_driver_import {};
+		};
+
+		template <bool trampolines_allowed>
+		bool ensure_trampoline_sanity(rpc_def& rpc)
 		{
-			for (const auto& rpc : rpcs) {
-				std::cout << rpc->name << "::__return\n";
-				idlc::dump_pgraph(*rpc->ret_pgraph);
-				std::size_t index {};
-				for (const auto& arg : rpc->arg_pgraphs) {
-					const auto& ast_node = rpc->arguments->at(index);
-					std::cout << rpc->name << "::" << ast_node->name << "\n";
-					idlc::dump_pgraph(*arg);
-					++index;
+			if (rpc.ret_pgraph) {
+				trampoline_sanity_walk<trampolines_allowed> walk {};
+				if (!walk.visit_value(*rpc.ret_pgraph)) {
+					std::cout << "note: in return value of rpc " << rpc.name << "\n";
+					return false;
 				}
 			}
+
+			auto count = 0;
+			for (const auto& argument : rpc.arg_pgraphs) {
+				trampoline_sanity_walk<trampolines_allowed> walk {};
+				if (!walk.visit_value(*argument)) {
+					std::cout << "note in argument " << rpc.arguments->at(count)->name << " of rpc " << rpc.name
+							  << "\n";
+
+					return false;
+				}
+
+				++count;
+			}
+
+			return true;
+		}
+
+		bool ensure_trampoline_sanity(rpc_vec_view rpcs)
+		{
+			trampoline_sanity_walk<true> trmp_exports_only {};
+			trampoline_sanity_walk<false> no_trmps {};
+			for (const auto& rpc : rpcs) {
+				switch (rpc->kind) {
+				case rpc_def_kind::direct:
+					if (!ensure_trampoline_sanity<true>(*rpc))
+						return false;
+
+					break;
+
+				default:
+					if (!ensure_trampoline_sanity<false>(*rpc))
+						return false;
+
+					break;
+				}
+			}
+
+			return true;
 		}
 	}
 }
@@ -70,7 +137,6 @@ int main(int argc, char** argv)
 	if (!file)
 		return 1;
 
-	//idlc::dump_ast(*file);
 	if (!idlc::bind_all_names(*file)) {
 		std::cout << "Error: Not all names were bound\n";
 		return 1;
@@ -85,7 +151,11 @@ int main(int argc, char** argv)
 		std::cout << "Error: pgraph generation failed\n";
 		return 1;
 	}
-	
-	//idlc::dump_pgraphs(*rpcs);
+
+	if (!idlc::ensure_trampoline_sanity(*rpcs)) {
+		std::cout << "error: trampoline sanity rules violation\n";
+		return 1;
+	}
+
 	idlc::generate(*rpcs);
 }

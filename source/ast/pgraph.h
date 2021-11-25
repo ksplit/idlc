@@ -126,8 +126,16 @@ namespace idlc {
 
 	struct rpc_ptr {
 		const rpc_def* definition;
+		const bool is_static;
 
-		rpc_ptr(rpc_def* definition) : definition {definition} {}
+		std::string scoped_name; // present only if is_static
+
+		rpc_ptr(gsl::not_null<rpc_def*> definition, bool is_static) :
+			definition {definition.get()},
+			is_static {is_static},
+			scoped_name {}
+		{
+		}
 	};
 
 	using projection_field = std::pair<ident, node_ptr<value>>;
@@ -147,7 +155,7 @@ namespace idlc {
 			real_name {real_name},
 			fields {},
 			caller_marshal_visitor {concat("caller_marshal_", name)},
-			callee_unmarshal_visitor {concat("caller_unmarshal_", name)},
+			callee_unmarshal_visitor {concat("callee_unmarshal_", name)},
 			callee_marshal_visitor {concat("callee_marshal_", name)},
 			caller_unmarshal_visitor {concat("caller_unmarshal_", name)} {};
 
@@ -155,7 +163,7 @@ namespace idlc {
 			real_name {real_name},
 			fields {std::move(fields)},
 			caller_marshal_visitor {concat("caller_marshal_", name)},
-			callee_unmarshal_visitor {concat("caller_unmarshal_", name)},
+			callee_unmarshal_visitor {concat("callee_unmarshal_", name)},
 			callee_marshal_visitor {concat("callee_marshal_", name)},
 			caller_unmarshal_visitor {concat("caller_unmarshal_", name)}
 		{

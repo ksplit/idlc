@@ -36,6 +36,9 @@ void idlc::generate_helpers(std::ostream& file)
 		 << " glue_user_panic(\"Trampolines cannot be used on LCD side\")\n";
 	file << "#endif\n\n";
 
+	file << "#define glue_unpack_static_rpc_ptr(pos, msg, ext, name, type) \\\n"
+		 << "\tglue_peek(pos, msg, ext) ? __unpack_##name(glue_unpack(pos, msg, ext, void*)) : NULL\n\n";
+
 	file << "#define glue_peek(pos, msg, ext) glue_peek_impl(pos, msg, ext)\n";
 	file << "#define glue_call_server(pos, msg, rpc_id) \\\n"
 		 << "\tmsg->regs[0] = *pos; *pos = 0; glue_user_call_server(msg, rpc_id);\n\n";
