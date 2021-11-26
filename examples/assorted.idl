@@ -1,33 +1,13 @@
 module kernel {
-	rpc void foo(projection call_proj* c) {
-		projection <struct net_device> call_proj {
-			static_rpc_ptr read [out] read;
-		}
-	}
-
-	rpc_ptr long read(projection file *file) {
-	   projection <struct file> file {
-		   static_rpc_ptr read [in, out] read;
-	   }
-	}
-
-	rpc_export int  xhci_gen_setup( projection hcd [alloc<{{sizeof(hcd) + sizeof(struct xhci_hcd)}}>(callee)] *hcd) {
-		projection < struct usb_hcd > hcd {
-			int [out] speed;
-		}
-
-		projection <struct xhci_hcd> xhci_hcd {
-			char sbrn;
-		}
-	}
-
 	rpc_ptr int  hc_driver_add_endpoint( projection hcd*  hcd) {
 		projection < struct usb_hcd > hcd {
 		}
 	}
 
-	rpc_export void  xhci_init_driver( projection hc_driver [alloc(callee), out] * drv,
-			const projection over [alloc(callee)] * over ) {
+	rpc_export void xhci_init_driver(
+		projection hc_driver [alloc(callee), out]* drv,
+		const projection over [alloc(callee)]* over)
+	{
 		projection < struct xhci_driver_overrides > over {
 			unsigned int extra_priv_size;
 		}
