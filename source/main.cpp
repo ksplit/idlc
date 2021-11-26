@@ -102,13 +102,13 @@ namespace idlc {
 		{
 			for (const auto& rpc : rpcs) {
 				switch (rpc->kind) {
-				case rpc_def_kind::export_sym:
 				case rpc_def_kind::direct:
 					if (!ensure_trampoline_sanity<annotation_bitfield::in>(*rpc))
 						return false;
 
 					break;
 
+				case rpc_def_kind::export_sym:
 				case rpc_def_kind::indirect:
 					if (!ensure_trampoline_sanity<annotation_bitfield::out>(*rpc))
 						return false;
