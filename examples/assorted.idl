@@ -20,4 +20,24 @@ module kernel {
 			char sbrn;
 		}
 	}
+
+	rpc_ptr int  hc_driver_add_endpoint( projection hcd*  hcd) {
+		projection < struct usb_hcd > hcd {
+		}
+	}
+
+	rpc_export void  xhci_init_driver( projection hc_driver [alloc(callee), out] * drv,
+			const projection over [alloc(callee)] * over ) {
+		projection < struct xhci_driver_overrides > over {
+			unsigned int extra_priv_size;
+		}
+
+		projection < struct hc_driver > hc_driver {
+			string [alloc(caller), out] *description;
+			string [alloc(caller), out] *product_desc;
+			int flags;
+			long unsigned int hcd_priv_size;
+			rpc_ptr hc_driver_add_endpoint add_endpoint;
+		}
+	}
 }
