@@ -190,13 +190,6 @@ namespace idlc {
 					return true; // No need to walk these (yet)
 				}
 				else if (flags_set(node.pointer_annots.kind, annotation_bitfield::within_ptr)) {
-					// NOTE: this assumes within<> does not need to be walked
-					/*If you've just fired this assert, and your use of within<> was intended, David needs to overhaul
-					 * the type system, the pointer annotation system, and finally get rid of verbatim tokens*/
-					assert(
-						std::holds_alternative<primitive>(node.referent->type)
-						|| std::holds_alternative<none>(node.referent->type));
-
 					// parent_pointer and share_global may represent similar concepts, within<> probably can't co-occur
 					// with share<>
 					this->line() << "const ptrdiff_t __offset = (void*)__adjusted - "
@@ -207,8 +200,6 @@ namespace idlc {
 
 					this->line() << "\tglue_user_panic(\"Bounds check failed!\");\n\n";
 					this->line() << "glue_pack(__pos, __msg, __ext, __offset);\n";
-
-					return true;
 				}
 				else {
 					this->line() << "glue_pack(__pos, __msg, __ext, __adjusted);\n";
@@ -652,8 +643,6 @@ namespace idlc {
 				this->line() << "size_t __offset = glue_unpack(__pos, __msg, __ext, size_t);\n";
 				this->line() << assignment << "(" << m_c_specifier << ")(__offset + "
 							 << node.pointer_annots.parent_pointer.get() << ");\n";
-
-				return false;
 			}
 			else {
 				this->line() << assignment << "glue_unpack(__pos, __msg, __ext, " << m_c_specifier << ");\n";
