@@ -1,13 +1,13 @@
 module kernel {
 	rpc void foo(projection call_proj* c) {
 		projection <struct net_device> call_proj {
-			static_rpc_ptr read [in, out] read;
+			static_rpc_ptr read [out] read;
 		}
 	}
 
 	rpc_ptr long read(projection file *file) {
 	   projection <struct file> file {
-		   static_rpc_ptr read [out] read;
+		   static_rpc_ptr read [in, out] read;
 	   }
 	}
 

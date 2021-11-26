@@ -39,18 +39,16 @@ namespace idlc {
 			}
 		};
 
-		template <bool trampolines_allowed>
-		class trampoline_sanity_walk : public pgraph_walk<trampoline_sanity_walk<trampolines_allowed>> {
+		template <annotation_bitfield allowed_flags>
+		class trampoline_sanity_walk : public pgraph_walk<trampoline_sanity_walk<allowed_flags>> {
 		public:
 			bool visit_rpc_ptr(rpc_ptr& node)
 			{
-				if (!node.is_static) {
-					if (is_driver_import || !trampolines_allowed) {
-						std::cout << "error: trampoline of type " << node.definition->name << " not allowed here.\n";
-						return false;
-					}
+				if (!node.is_static && !is_allowed_context) {
+					std::cout << "error: trampoline of type " << node.definition->name << " not allowed here.\n";
+					return false;
 				}
-				else if (trampolines_allowed && !is_driver_import) {
+				else if (node.is_static && is_allowed_context) {
 					std::cout << "warning: trampoline can be used instead of static rpc pointer here\n";
 				}
 
@@ -59,25 +57,25 @@ namespace idlc {
 
 			bool visit_value(value& node)
 			{
-				const auto old = is_driver_import;
-				is_driver_import = flags_set(node.value_annots, annotation_bitfield::out);
+				const auto old = is_allowed_context;
+				is_allowed_context = (node.value_annots & annotation_bitfield::io_only) == allowed_flags;
 				if (!this->traverse(*this, node))
 					return false;
 
-				is_driver_import = old;
+				is_allowed_context = old;
 
 				return true;
 			}
 
 		private:
-			bool is_driver_import {};
+			bool is_allowed_context {};
 		};
 
-		template <bool trampolines_allowed>
+		template <annotation_bitfield allowed_flags>
 		bool ensure_trampoline_sanity(rpc_def& rpc)
 		{
 			if (rpc.ret_pgraph) {
-				trampoline_sanity_walk<trampolines_allowed> walk {};
+				trampoline_sanity_walk<allowed_flags> walk {};
 				if (!walk.visit_value(*rpc.ret_pgraph)) {
 					std::cout << "note: in return value of rpc " << rpc.name << "\n";
 					return false;
@@ -86,7 +84,7 @@ namespace idlc {
 
 			auto count = 0;
 			for (const auto& argument : rpc.arg_pgraphs) {
-				trampoline_sanity_walk<trampolines_allowed> walk {};
+				trampoline_sanity_walk<allowed_flags> walk {};
 				if (!walk.visit_value(*argument)) {
 					std::cout << "note in argument " << rpc.arguments->at(count)->name << " of rpc " << rpc.name
 							  << "\n";
@@ -102,18 +100,17 @@ namespace idlc {
 
 		bool ensure_trampoline_sanity(rpc_vec_view rpcs)
 		{
-			trampoline_sanity_walk<true> trmp_exports_only {};
-			trampoline_sanity_walk<false> no_trmps {};
 			for (const auto& rpc : rpcs) {
 				switch (rpc->kind) {
+				case rpc_def_kind::export_sym:
 				case rpc_def_kind::direct:
-					if (!ensure_trampoline_sanity<true>(*rpc))
+					if (!ensure_trampoline_sanity<annotation_bitfield::in>(*rpc))
 						return false;
 
 					break;
 
-				default:
-					if (!ensure_trampoline_sanity<false>(*rpc))
+				case rpc_def_kind::indirect:
+					if (!ensure_trampoline_sanity<annotation_bitfield::out>(*rpc))
 						return false;
 
 					break;
