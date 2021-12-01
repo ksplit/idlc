@@ -937,7 +937,7 @@ namespace idlc {
 					file << rpc->ret_pgraph->c_specifier << " " << rpc->impl_id << "(" << rpc->typedef_id << " impl, "
 						 << rpc->args_string << ");\n";
 
-					file << rpc->ret_pgraph->c_specifier << " " << rpc->callee_id
+					file << "void " << rpc->callee_id
 						 << "(struct fipc_message* __msg, struct ext_registers* __ext);\n";
 
 					file << "LCD_TRAMPOLINE_DATA(" << rpc->trmp_id << ")\n";
