@@ -101,6 +101,7 @@ tok_kw_bind_memberof = "bind_memberof"
 tok_kw_casted = "casted"
 tok_kw_static_rpc_ptr = "static_rpc_ptr"
 tok_kw_within = "within"
+tok_kw_bounded = "bounded"
 
 tok_space = lex_blank+
 tok_arrow = "->"
@@ -367,6 +368,11 @@ naked_proj_decl = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_stru
 val_attr = tok_kw_unused {{ value = reinterpret_cast<void*>(annotation_bitfield::unused); }}
 	| tok_kw_in {{ value = reinterpret_cast<void*>(annotation_bitfield::in); }}
 	| tok_kw_out {{ value = reinterpret_cast<void*>(annotation_bitfield::out); }}
+	| tok_kw_bounded tok_space? tok_langle tok_space? bounds_expr:tok_verbatim_expr tok_space? tok_rangle {{
+		annotation_set set {annotation_bitfield::bounded};
+		set.size_verbatim = to_ptr<ident>(bounds_expr);
+		value = share(set);
+	}}
 
 ptr_attr = tok_kw_in {{ value = share(annotation_set {annotation_bitfield::in}); }}
 	| tok_kw_out {{ value = share(annotation_set {annotation_bitfield::out}); }}

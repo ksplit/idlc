@@ -10,6 +10,7 @@ module kernel {
 	{
 		projection < struct xhci_driver_overrides > over {
 			unsigned int extra_priv_size;
+			unsigned int [bounded<{{ptr->extra_priv_size}}>] index;
 		}
 
 		projection < struct hc_driver > hc_driver {
