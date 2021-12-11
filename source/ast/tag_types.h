@@ -35,6 +35,7 @@ namespace idlc {
 		alloc_stack_callee = 1 << 17,
 		user_ptr = 1 << 18,
 		within_ptr = 1 << 19,
+		err_ptr = 1 << 20,
 		is_bind_memberof = bind_memberof_caller | bind_memberof_callee,
 		is_bind = (bind_callee | bind_caller),
 		is_dealloc = (dealloc_callee | dealloc_caller),

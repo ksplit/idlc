@@ -13,7 +13,7 @@ module kernel {
 		}
 
 		projection < struct hc_driver > hc_driver {
-			string [alloc(caller), out] *description;
+			string [alloc(caller), out, err_ptr] *description;
 			string [alloc(caller), out] *product_desc;
 			int flags;
 			long unsigned int hcd_priv_size;

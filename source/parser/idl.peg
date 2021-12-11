@@ -101,6 +101,7 @@ tok_kw_bind_memberof = "bind_memberof"
 tok_kw_casted = "casted"
 tok_kw_static_rpc_ptr = "static_rpc_ptr"
 tok_kw_within = "within"
+tok_kw_err_ptr = "err_ptr"
 
 tok_space = lex_blank+
 tok_arrow = "->"
@@ -455,6 +456,7 @@ ptr_attr = tok_kw_in {{ value = share(annotation_set {annotation_bitfield::in});
 		set.size_verbatim = to_ptr<ident>(bounds_expr);
 		value = share(set);
 	}}
+	| tok_kw_err_ptr {{ value = share(annotation_set {annotation_bitfield::err_ptr}); }}
 
 val_attrs = tok_lbrack tok_space? list:val_attr_list tok_space? tok_rbrack {{ value = list; }}
 
