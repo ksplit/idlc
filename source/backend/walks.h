@@ -220,7 +220,11 @@ namespace idlc {
 				this->line() << "(void)" << this->subject() << ";\n";
 			}
 			else {
-				this->line() << "if (*" << this->subject() << ") {\n";
+				if (!flags_set(node.pointer_annots.kind, annotation_bitfield::err_ptr))
+					this->line() << "if (*" << this->subject() << ") {\n";
+				else
+					this->line() << "if (*" << this->subject() << " && !IS_ERR(*" << this->subject() << ")) {\n";
+
 				this->marshal("*" + this->subject(), node);
 				this->line() << "}\n\n";
 			}
@@ -683,7 +687,11 @@ namespace idlc {
 
 		bool marshal_pointer_child(pointer& node)
 		{
-			this->line() << "if (*" << this->subject() << ") {\n";
+			if (!flags_set(node.pointer_annots.kind, annotation_bitfield::err_ptr))
+				this->line() << "if (*" << this->subject() << ") {\n";
+			else
+				this->line() << "if (*" << this->subject() << " && !IS_ERR(*" << this->subject() << ")) {\n";
+
 			if (node.referent->is_const) {
 				// Since the type itself must include const, but we need to write to it for unmarshaling,
 				// We create a writeable version of the pointer and use it instead
