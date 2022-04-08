@@ -18,7 +18,33 @@ module foo {
         casted<void*, projection circ_a*> casted_field;
     }
 
+    global<{{my_global->foo_lock}}> projection glb_proj* my_global {
+        projection <struct foo_struct> glb_proj {
+            int a;
+        }
+    }
+
     rpc projection simp_circ* foo(projection circ_a [out]* a, projection circ_b* b, projection call_proj* c) {
+        /*
+            // In prolog:
+            your_lock_method(&my_global->foo_lock);
+            get_global___my_global(&my_global);
+
+            // Marshaling ...
+            // RPC ...
+            // Unmarshaling ...
+
+            // In epilog
+            set_global___my_global(&my_global);
+            your_unlock_method(&my_global->foo_lock);
+        */
+        
+        // Hardcode lock types
+
+        spinlock<{{my_global->foo_lock}}> my_global;
+        spinlock<{{my_global->foo_lock}}> my_global2;
+        // among others
+
         projection <struct net_device> call_proj {
             array<int, {{call_ctx->a->arr_len}}> dyn_array;
         }
@@ -33,11 +59,7 @@ module foo {
     rpc void alloc_sized_with_flags(array<u32, {{ptr->arr_len}}> [alloc<{{sizeof(foo)}}, {{0xCAD}}>(callee)] * arr)
     {}
 
-    global projection glb_proj* my_global {
-        projection <struct foo_struct> glb_proj {
-            int a;
-        }
-    }
+    
 
     global unsigned long jiffies {}
 }
