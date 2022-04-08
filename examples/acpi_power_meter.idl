@@ -1,21 +1,20 @@
 module kernel {
-	// member_of 
-	rpc projection ret_device [alloc(caller)] * hwmon_device_register(
-		projection dev [bind_memberof<struct acpi_dev, dev>(caller)] *  dev ) {
+	// FIXME: member_of for 1st param
+	rpc projection ret_device [alloc(caller)] * hwmon_device_register( projection dev *  dev ) {
 		projection < struct device > ret_device {
 		}
 		projection < struct device > dev {
 		}
 	}
 
-	// member_of
-	rpc void sysfs_notify( projection kobj [bind_memberof<struct acpi_dev, dev.kobj>(caller)] *  kobj, char * [unused]  dir,
+	// FIXME: member_of for 1st param
+	rpc void sysfs_notify( projection kobj *  kobj, char * [unused]  dir,
 			string [alloc(callee)] *  attr ) {
 		projection < struct kobject > kobj {
 		}
 	}
 
-	rpc int acpi_bus_get_device( void *  handle, projection device [out, alloc(caller)] * [alloc(callee)] *  device ) {
+	rpc int acpi_bus_get_device( void*  handle, projection device [alloc(callee)] *  device ) {
 		projection < struct acpi_device > device {
 		}
 	}
@@ -38,12 +37,7 @@ module kernel {
 		}
 	}
 
-	rpc_ptr int callback(const projection dmi_system_id * [unused] d) {
-		projection < struct dmi_system_id > dmi_system_id {
-		}
-	}
-
-	rpc int dmi_check_system( array<projection list, null> [alloc(callee)] *list ) {
+	rpc int dmi_check_system( array<projection list, null> [alloc(callee)] list ) {
 		projection < struct dmi_system_id > list {
 			rpc_ptr callback callback;
 			string [alloc(callee)] *ident;	
@@ -55,10 +49,10 @@ module kernel {
 		}
 	}
 
-	// member_of
+	// FIXME: Need member_of for the second parameter
 	rpc projection ret_kobject [alloc(caller)] * kobject_create_and_add(
 			string [alloc(callee)] *  name,
-			projection parent [bind_memberof<struct acpi_dev, dev.kobj>(caller)] *  parent ) {
+			projection parent *  parent ) {
 		projection < struct kobject > ret_kobject {
 		}
 		projection < struct kobject > parent {
@@ -70,8 +64,8 @@ module kernel {
 		}
 	}
 
-	rpc void sysfs_remove_link( projection kobj *  kobj,
-				string *  name ) {
+	// FIXME: member_of for 1st param
+	rpc void sysfs_remove_link( projection kobj *  kobj, string [alloc(callee)] *  name ) {
 		projection < struct kobject > kobj {
 		}
 	}
@@ -109,7 +103,7 @@ module kernel {
 	}
 
 	// FIXME: member_of for 1st param
-	rpc int device_create_file( projection dev [bind_memberof<struct acpi_dev, dev>(caller)] *  dev,
+	rpc int device_create_file( projection dev *  dev,
 			projection attr [alloc(callee)] *  attr ) {
 		projection < struct kobject> kobject{
 		}
@@ -127,38 +121,17 @@ module kernel {
 	}
 
 	// FIXME: the package param is processed as a union on the kernel side
-	rpc unsigned int acpi_extract_package(projection acpi_object * [out] package,
-		projection format [alloc(callee)] *  format, projection buffer [alloc(callee)] * [out] buffer ) {
-		projection < union acpi_object > acpi_object {
-			u32 discrim;
-			projection package package;
+	rpc unsigned int acpi_extract_package(projection acpi_object*  package,
+		projection format [alloc(callee)] *  format, projection buffer * [out] buffer ) {
+		projection < union acpi_object > package {
 		}
-
-		projection <struct package> package {
-			u32 type;
-			u32 count;	/* # of elements in package */
-			projection acpi_object_string *elements;
-		}
-
-		projection < union acpi_object > acpi_object_string {
-			u32 type;
-			projection string string;
-		}
-
-		projection < struct string > string {
-			u32 type;
-			u32 count;
-			string *pointer;
-		}
-
 		projection < struct acpi_buffer > format {
 			long long unsigned int  length;
 			void [alloc(callee)] *  pointer;
 		}
 		projection < struct acpi_buffer > buffer {
 			long long unsigned int [out] length;
-			// TODO: copy buffer data 
-			void [alloc<{{ctx->buffer->length}}>(callee)] * [out] pointer;
+			void* [out] pointer;
 		}
 	}
 
@@ -170,17 +143,17 @@ module kernel {
 			string [alloc(callee)] *bus_id, unsigned char  type, int  data ) {
 	}
 
-	rpc unsigned int acpi_evaluate_object( void * handle,
+	rpc unsigned int acpi_evaluate_object( void*  handle,
 		string [alloc(callee)] *  pathname,
 		projection external_params * [unused]  external_params,
 		projection return_buffer [alloc(callee)] * [out] return_buffer ) {
 		projection < struct acpi_object_list > external_params {
 			unsigned int  count;
+			acpi_object*  pointer;
 		}
 		projection < struct acpi_buffer > return_buffer {
 			long long unsigned int [out] length;
-			// TODO: copy buffer data 
-			void [alloc<{{ctx->return_buffer->length}}>(caller)] * [out] pointer;
+			void [alloc_sized<length>(caller)] *pointer;
 		}
 	}
 
@@ -198,7 +171,6 @@ module kernel {
 
 	rpc_ptr int acpi_op_add(projection acpi_device [alloc(callee)] * device) {
 		projection <struct acpi_device> acpi_device {
-			void [alloc<{{32}}>(callee)] * handle;
 		}
 	}
 
@@ -213,15 +185,15 @@ module kernel {
 	}
 
 	// FIXME: This is marked as out as the function populates driver->drv.foo
-	rpc int acpi_bus_register_driver( projection driver [alloc(callee)] * driver ) {
+	rpc int acpi_bus_register_driver( projection driver [alloc(callee)] * [out] driver ) {
 		projection < struct device_driver> device_driver{
 		}
 		projection < struct acpi_driver > driver {
 			array< char, 80>  name;
 			array< char, 80>  class;
-			array< projection acpi_device_id, null> [alloc(callee)] *ids;
+			array< projection acpi_device_id, null> ids;
 			projection acpi_device_ops ops;
-			//projection device_driver drv;
+			projection device_driver drv;
 			projection owner [alloc(callee)] * owner;
 		}
 
