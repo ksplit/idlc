@@ -11,14 +11,18 @@ module foo {
         unsigned int bitfield_me: 4;
     }
 
+    spinlock my_global_lock;
+
     projection < struct net_device > circ_b {
         projection circ_a *a;
         const signed char* c;
         projection circ_a [alloc<{{sizeof(int) * 128}}>(callee)]* but_bigger;
         casted<void*, projection circ_a*> casted_field;
+
+        my_global_lock { a, c }
     }
 
-    global<{{my_global->foo_lock}}> projection glb_proj* my_global {
+    global projection glb_proj* my_global {
         projection <struct foo_struct> glb_proj {
             int a;
         }
@@ -38,12 +42,6 @@ module foo {
             set_global___my_global(&my_global);
             your_unlock_method(&my_global->foo_lock);
         */
-        
-        // Hardcode lock types
-
-        spinlock<{{my_global->foo_lock}}> my_global;
-        spinlock<{{my_global->foo_lock}}> my_global2;
-        // among others
 
         projection <struct net_device> call_proj {
             array<int, {{call_ctx->a->arr_len}}> dyn_array;

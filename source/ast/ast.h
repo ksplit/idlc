@@ -34,6 +34,7 @@ namespace idlc {
 	
 	struct rpc_def;
 	struct global_def;
+	struct lock_def;
 
 	struct tok_kw_null {}; // Doesn't exist in parse rules, used as marker (represents tok_kw_null)
 	
@@ -285,7 +286,8 @@ namespace idlc {
 		header_stmt,
 		node_ref<proj_def>,
 		node_ref<rpc_def>,
-		node_ref<global_def>
+		node_ref<global_def>,
+		node_ref<lock_def>
 	>;
 
 	struct module_def {
@@ -316,6 +318,17 @@ namespace idlc {
 			scope {},
 			pgraph {}
 		{}
+	};
+
+	enum class lock_type {
+		spinlock
+	};
+
+	struct lock_def {
+		ident name;
+		lock_type type;
+
+		lock_def(ident name, lock_type type) : name {name}, type {type} {}
 	};
 
 	/*

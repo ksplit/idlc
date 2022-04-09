@@ -97,6 +97,7 @@ tok_kw_unused = "unused"
 tok_kw_bind_memberof = "bind_memberof"
 tok_kw_global = "global"
 tok_kw_casted = "casted"
+tok_kw_spinlock = "spinlock"
 
 tok_space = lex_blank+
 tok_arrow = "->"
@@ -281,7 +282,15 @@ module_item = header_stmt {{
 	value = share(module_item {get_shared<rpc_def>(rpc_ptr)});
 }} | glb:global_def {{
 	value = share(module_item {get_shared<global_def>(glb)});
+}} | lck:lock_def {{
+	value = share(module_item {get_shared<lock_def>(lck)});
 }}
+
+lock_def = type:lock_type tok_space name:tok_ident tok_space? tok_semi {{
+	value = share(lock_def {to_ptr<ident>(name), static_cast<lock_type>(reinterpret_cast<std::size_t>(type.getValue()))});
+}}
+
+lock_type = tok_kw_spinlock
 
 header_stmt = tok_kw_header tok_space? tok_path tok_space? tok_semi
 	| tok_kw_header tok_space? tok_string tok_space? tok_semi
@@ -352,6 +361,9 @@ proj_field = vf:var_field {{
 | decl:var_decl tok_space? tok_colon tok_space? width:tok_number tok_space? tok_semi {{
 	value = share(proj_field {get_shared<var_decl>(decl), to_int<std::uint8_t>(width)});
 }}
+| lck:lock_scope {{
+	value = nullptr;
+}}
 
 var_decl = ty:type_spec tok_space? name:tok_ident {{
 	value = share(var_decl {get_shared<type_spec>(ty), to_ptr<ident>(name)});
@@ -362,6 +374,10 @@ naked_proj_decl = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_stru
 		get_shared<ref_vec<proj_field>>(fields),
 		to_ptr<ident>(name)
 	});
+}}
+
+lock_scope = name:tok_ident tok_space? tok_lbrace tok_space? (field:tok_ident tok_space? tok_comma tok_space?)+ (last_field:tok_ident tok_space?) tok_rbrace {{
+	value = nullptr;
 }}
 
 val_attr = tok_kw_unused {{ value = reinterpret_cast<void*>(annotation_kind::unused); }}
