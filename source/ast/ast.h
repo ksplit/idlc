@@ -177,11 +177,6 @@ namespace idlc {
 		{}
 	};
 
-	enum proj_def_kind {
-		struct_kind,
-		union_kind
-	};
-
 	struct proj_def {
 		ident name;
 		ident type;

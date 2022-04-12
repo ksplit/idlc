@@ -101,31 +101,6 @@ namespace idlc {
 			return std::visit(visit, def);
 		}
 
-		auto generate_union_dummy(proj_def& def, const std::string& name)
-		{
-			std::cout << "Warning: Union projections are not yet implemented\n";
-			std::cout << "Warning: Will implement as an empty struct projection \"" << def.name << "\"\n";
-			return std::make_shared<projection>(def.type, std::move(name));
-		}
-
-		auto generate_empty_struct(proj_def& def, const std::string& name)
-		{
-			return std::make_shared<projection>(def.type, std::move(name));
-		}
-
-		auto generate_struct(proj_def& def, const std::string& name)
-		{
-			const auto& field_nodes = *def.fields;
-			decltype(projection::fields) fields {};
-			fields.reserve(field_nodes.size());
-			for (const auto& field : field_nodes) {
-				auto pgraph = generate_field(*field);
-				fields.emplace_back(std::move(pgraph));
-			}
-
-			return std::make_shared<projection>(def.type, std::move(name), std::move(fields));
-		}
-
 		node_ptr<value> generate_value(const type_spec& node)
 		{
 			auto type = generate_stem_type(*node.stem);
@@ -177,14 +152,25 @@ namespace idlc {
 		// TODO: is it necessary to detect if a projection self-references by value?
 		std::shared_ptr<idlc::projection> generate_projection(proj_def& node, const std::string& name)
 		{
-			auto pgraph_node = [&node, &name] {
-				if (!node.fields)
-					return generate_empty_struct(node, std::move(name));
-				else if (node.kind == proj_def_kind::union_kind)
-					return generate_union_dummy(node, std::move(name));
-				else
-					return generate_struct(node, std::move(name));
-			}();
+			node_ptr<projection> pgraph_node {};
+			if (!node.fields) {
+				pgraph_node = std::make_shared<projection>(node.type, projection_kind::struct_kind, std::move(name));
+			}
+			else {
+				const auto& field_nodes = *node.fields;
+				decltype(projection::fields) fields {}; // the type is currently verbose
+				fields.reserve(field_nodes.size());
+				for (const auto& field : field_nodes) {
+					auto pgraph = generate_field(*field);
+					fields.emplace_back(std::move(pgraph));
+				}
+
+				pgraph_node = std::make_shared<projection>(
+					node.type,
+					node.kind,
+					std::move(name),
+					std::move(fields));
+			}
 
 			pgraph_node->def = &node;
 

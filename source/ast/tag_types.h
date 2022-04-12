@@ -127,6 +127,11 @@ namespace idlc {
 		ty_llong,
 		ty_ullong
 	};
+
+	enum proj_def_kind {
+		struct_kind,
+		union_kind
+	};
 }
 
 #endif

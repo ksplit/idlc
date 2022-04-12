@@ -11,6 +11,12 @@ module foo {
         unsigned int bitfield_me: 4;
     }
 
+    projection <union foo_union> unifoo {
+        u32 discrim;
+        projection circ_a* a;
+        projection circ_b* b;
+    }
+
     projection < struct net_device > circ_b {
         projection circ_a *a;
         const signed char* c;
@@ -18,7 +24,16 @@ module foo {
         casted<void*, projection circ_a*> casted_field;
     }
 
-    rpc projection simp_circ* foo(projection circ_a [out]* a, projection circ_b* b, projection call_proj* c) {
+    rpc projection simp_circ* foo(projection unifoo* c, projection circ_a [out]* a, projection circ_b* b) {}
+    rpc void* foo0() {}
+    rpc void foo1() {}
+    rpc projection simp_circ* foo2(projection circ_a [out]* a, projection circ_b* b) {}
+    
+    rpc void [shared<buf>]* foo3(string [dealloc(callee)]* str) {}
+    rpc void foo_callee_dealloc(string [dealloc(callee)]* str) {}
+    rpc void foo_callee_alloc_dealloc(string [alloc(callee), dealloc(callee)]* str) {}
+    rpc void foo_caller_dealloc(string [dealloc(caller)]* str) {}
+    rpc projection simp_circ* foo4(projection circ_a [out]* a, projection circ_b* b, projection call_proj* c) {
         projection <struct net_device> call_proj {
             array<int, {{call_ctx->a->arr_len}}> dyn_array;
         }
