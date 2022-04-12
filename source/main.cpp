@@ -1,14 +1,13 @@
 #include <algorithm>
 #include <fstream>
-#include <string>
 #include <iostream>
+#include <string>
 #include <variant>
 
 #include <gsl/gsl>
 
 #include <absl/strings/string_view.h>
 
-#include "parser/idl_parse.h"
 #include "ast/ast_dump.h"
 #include "ast/pgraph_dump.h"
 #include "ast/pgraph_walk.h"
@@ -16,6 +15,9 @@
 #include "frontend/analysis.h"
 #include "frontend/injection.h"
 #include "backend/generation.h"
+#include "frontend/analysis.h"
+#include "frontend/name_binding.h"
+#include "parser/idl_parse.h"
 #include "utility.h"
 
 // NOTE: we keep the identifier heap around for basically the entire life of the compiler
@@ -43,15 +45,15 @@ namespace idlc {
 
 int main(int argc, char** argv)
 {
-    const gsl::span<gsl::zstring<>> args {argv, gsl::narrow<std::size_t>(argc)};
-    if (argc != 2) {
-        std::cout << "Usage: idlc <idl-file>" << std::endl;
-        return 1;
-    }
+	const gsl::span<gsl::zstring<>> args {argv, gsl::narrow<std::size_t>(argc)};
+	if (argc != 2) {
+		std::cout << "Usage: idlc <idl-file>" << std::endl;
+		return 1;
+	}
 
-    const auto file = idlc::parser::parse_file(gsl::at(args, 1));
-    if (!file)
-        return 1;
+	const auto file = idlc::parser::parse_file(gsl::at(args, 1));
+	if (!file)
+		return 1;
 
 	idlc::dump_ast(*file);
 	idlc::inject_global_rpcs(*file);
@@ -73,7 +75,7 @@ int main(int argc, char** argv)
 	const auto& [rpcs, globals] = *pgraph_nodes;
 	for (const auto& rpc : rpcs) {
 		std::cout << rpc->name << "::__return\n";
-		idlc::dump_pgraph(*rpc->ret_pgraph);		
+		idlc::dump_pgraph(*rpc->ret_pgraph);
 		std::size_t index {};
 		for (const auto& arg : rpc->arg_pgraphs) {
 			std::cout << rpc->name << "::" << rpc->arguments->at(index)->name << "\n";

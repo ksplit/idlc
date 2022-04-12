@@ -4,7 +4,7 @@
 #include <iostream>
 
 namespace idlc {
-	void generate_helpers(std::ostream& file);
+    void generate_helpers(std::ostream& file);
 }
 
 #endif
