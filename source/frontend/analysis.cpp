@@ -86,14 +86,18 @@ namespace idlc {
 		auto generate_field(proj_field& node)
 		{
 			const auto& [def, width] = node;
-			const auto visit = [](auto&& item) -> idlc::projection_field {
+			const auto visit = [](auto&& item) -> std::optional<idlc::projection_field> {
 				using type = std::decay_t<decltype(item)>;
 				if constexpr (std::is_same_v<type, node_ref<naked_proj_decl>>) {
 					std::cout << "Warning: Naked projections are not yet implemented\n";
 					std::cout << "Warning: Unknown how to proceed, aborting\n";
 					std::terminate();
 				} else if constexpr (std::is_same_v<type, node_ref<var_decl>>) {
-					return {item->name, generate_value(*item->type)};
+					return std::make_optional<idlc::projection_field>(item->name, generate_value(*item->type));
+				} else if constexpr (std::is_same_v<type, node_ref<lock_scope>>) {
+					std::cout << "Debug: I am a teapot!\n";
+					std::cout << "Debug: " << item->scoped_name << '\n';
+					return std::nullopt;
 				}
 
 				std::terminate();
@@ -120,8 +124,9 @@ namespace idlc {
 			decltype(projection::fields) fields {};
 			fields.reserve(field_nodes.size());
 			for (const auto& field : field_nodes) {
-				auto pgraph = generate_field(*field);
-				fields.emplace_back(std::move(pgraph));
+				auto maybe_pgraph = generate_field(*field);
+				if (maybe_pgraph)
+					fields.emplace_back(std::move(*maybe_pgraph));
 			}
 
 			return std::make_shared<projection>(def.type, std::move(name), std::move(fields));

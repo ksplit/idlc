@@ -14,6 +14,7 @@ namespace idlc {
             bool visit_rpc_def(rpc_def& node);
             bool visit_module_def(module_def& node);
             bool visit_proj_def(proj_def& node);
+            bool visit_lock_def(lock_def& node);
 
         private:
             names_scope* m_scope {};
@@ -25,6 +26,7 @@ namespace idlc {
             bool visit_rpc_def(rpc_def& node);
             bool visit_type_proj(type_proj& node);
             bool visit_type_rpc(type_rpc& node);
+            bool visit_lock_scope(lock_scope& node);
 
         private:
             std::vector<names_scope*> scopes_ {};
@@ -49,6 +51,7 @@ namespace idlc {
             bool visit_module_def(module_def& node);
             bool visit_rpc_def(rpc_def& node);
             bool visit_proj_def(proj_def& node);
+            bool visit_lock_scope(lock_scope& node);
 
         private:
             std::vector<ident> path_ {};
@@ -106,6 +109,20 @@ bool idlc::bind_walk::visit_type_rpc(type_rpc& node)
     return false;
 }
 
+bool idlc::bind_walk::visit_lock_scope(lock_scope& node)
+{
+    const auto def = try_resolve<lock_def>(node.name);
+    if (def) {
+        node.definition = def;
+        return traverse(*this, node);
+    }
+
+    std::cout << "Error: Could not resolve \"" << node.name << "\"\n";
+    std::cout << "In: " << scopes_.back()->get_path() << "\n";
+
+    return false;
+}
+
 bool idlc::symbol_walk::visit_rpc_def(rpc_def& node)
 {
     // Careful to insert into the outer scope, *not* the inner one
@@ -138,6 +155,12 @@ bool idlc::symbol_walk::visit_proj_def(proj_def& node)
     return true;
 }
 
+bool idlc::symbol_walk::visit_lock_def(lock_def& node)
+{
+    m_scope->insert(node.name, &node);
+    return true;
+}
+
 bool idlc::scoped_name_walk::visit_proj_def(proj_def& node)
 {
     for (const auto& item : path_) {
@@ -146,6 +169,12 @@ bool idlc::scoped_name_walk::visit_proj_def(proj_def& node)
     }
 
     node.scoped_name += node.name;
+
+    path_.emplace_back(node.name);
+    if (!traverse(*this, node))
+        return false;
+
+    path_.pop_back();
 
     return true;
 }
@@ -170,6 +199,18 @@ bool idlc::scoped_name_walk::visit_module_def(module_def& node)
         return false;
 
     path_.pop_back();
+
+    return true;
+}
+
+bool idlc::scoped_name_walk::visit_lock_scope(lock_scope& node)
+{
+    for (const auto& item : path_) {
+        append(node.scoped_name, item, "__"); // double underscore used to reduce odds of collisions
+        // FIXME: scope collisions are still possible!
+    }
+
+    node.scoped_name += node.name;
 
     return true;
 }

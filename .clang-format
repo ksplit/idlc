@@ -4,5 +4,6 @@ Cpp11BracedListStyle: 'true'
 FixNamespaceComments: 'false'
 NamespaceIndentation: All
 ColumnLimit: 120
+UseTab: true
 
 ...

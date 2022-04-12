@@ -367,7 +367,7 @@ proj_field = vf:var_field {{
 	value = share(proj_field {get_shared<var_decl>(decl), to_int<std::uint8_t>(width)});
 }}
 | lck:lock_scope {{
-	value = nullptr;
+	value = share(proj_field {get_shared<lock_scope>(lck), 0});
 }}
 
 var_decl = ty:type_spec tok_space? name:tok_ident {{
@@ -381,8 +381,14 @@ naked_proj_decl = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_stru
 	});
 }}
 
-lock_scope = name:tok_ident tok_space? tok_lbrace tok_space? (field:tok_ident tok_space? tok_comma tok_space?)+ (last_field:tok_ident tok_space?) tok_rbrace {{
-	value = nullptr;
+lock_scope = name:tok_ident tok_space? tok_lbrace tok_space? first:(field:tok_ident tok_space? tok_comma tok_space? {{ value = field; }})+ last:(last_field:tok_ident tok_space? {{ value = last_field; }}) tok_rbrace {{
+	std::vector<ident> fields;
+	for (const auto& name : first.getValues())
+		fields.emplace_back(to_ptr<ident>(name));
+	
+	fields.emplace_back(to_ptr<ident>(last));
+
+	value = share(lock_scope {to_ptr<ident>(name), std::move(fields)});
 }}
 
 val_attr = tok_kw_unused {{ value = reinterpret_cast<void*>(annotation_kind::unused); }}

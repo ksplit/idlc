@@ -10,6 +10,7 @@
 namespace idlc {
 	struct proj_def;
 	struct rpc_def;
+	struct lock_def;
 }
 
 namespace idlc {
@@ -28,13 +29,8 @@ namespace idlc {
 			return m_path;
 		}
 
-		void insert(ident name, proj_def* ptr)
-		{
-			m_names.emplace_back(name);
-			m_symbols.emplace_back(ptr);
-		}
-
-		void insert(ident name, rpc_def* ptr)
+		template<typename node_type>
+		void insert(ident name, node_type* ptr)
 		{
 			m_names.emplace_back(name);
 			m_symbols.emplace_back(ptr);
@@ -52,7 +48,7 @@ namespace idlc {
 
 	private:
 		std::vector<ident> m_names {};
-		std::vector<std::variant<proj_def*, rpc_def*>> m_symbols {};
+		std::vector<std::variant<proj_def*, rpc_def*, lock_def*>> m_symbols {};
 		std::string m_path {};
 	};
 }

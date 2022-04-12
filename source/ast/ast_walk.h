@@ -148,6 +148,12 @@ namespace idlc {
 	}
 
 	template<typename walk>
+	bool traverse(walk&& self, const lock_scope& node)
+	{
+		return true;
+	}
+
+	template<typename walk>
 	bool traverse(walk&& self, const proj_field& node)
 	{
 		const auto& [def, size] = node;
@@ -157,7 +163,9 @@ namespace idlc {
 			if constexpr (std::is_same_v<type, node_ref<var_decl>>)
 				return self.visit_var_decl(*subnode);
 			else if constexpr (std::is_same_v<type, node_ref<naked_proj_decl>>)
-				return self.visit_naked_proj_decl(*subnode);
+				return self.visit_naked_proj_decl(*subnode);\
+			else if constexpr (std::is_same_v<type, node_ref<lock_scope>>)
+				return self.visit_lock_scope(*subnode);
 			
 			std::terminate();
 		};
@@ -381,6 +389,11 @@ namespace idlc {
 		}
 
 		bool visit_lock_def(lock_def& node)
+		{
+			return traverse(self(), node);
+		}
+
+		bool visit_lock_scope(lock_scope& node)
 		{
 			return traverse(self(), node);
 		}
