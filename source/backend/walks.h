@@ -2,14 +2,15 @@
 #define IDLC_BACKEND_WALKS_H
 
 namespace idlc {
-	template<typename derived>
+    template <typename derived>
     class generation_walk : public pgraph_walk<derived> {
     public:
-        generation_walk(std::ostream& os, absl::string_view holder, unsigned level) :
-            m_stream {os},
-            m_marshaled_ptr {holder},
-            m_indent_level {level}
-        {}
+        generation_walk(std::ostream& os, absl::string_view holder, unsigned level)
+            : m_stream {os}
+            , m_marshaled_ptr {holder}
+            , m_indent_level {level}
+        {
+        }
 
     protected:
         // identifier of the variable that points to what we're currently marshaling
@@ -19,17 +20,16 @@ namespace idlc {
         }
 
         // TODO: why is the string an rref again?
-        template<typename node_type>
+        template <typename node_type>
         bool marshal(std::string&& new_ptr, node_type& type)
         {
             return marshal(
                 std::move(new_ptr),
                 type,
-                [this](auto&& node) { return this->traverse(this->self(), node); }
-            );
+                [this](auto&& node) { return this->traverse(this->self(), node); });
         }
 
-        template<typename node_type, typename walker>
+        template <typename node_type, typename walker>
         bool marshal(std::string&& new_ptr, node_type& type, walker fn)
         {
             const auto state = std::make_tuple(m_marshaled_ptr, m_indent_level);
@@ -69,7 +69,7 @@ namespace idlc {
         unmarshaling
     };
 
-    template<marshal_side side>
+    template <marshal_side side>
     constexpr bool should_marshal(const value& node)
     {
         const auto flags = node.value_annots;
@@ -84,7 +84,7 @@ namespace idlc {
         std::terminate();
     }
 
-    template<marshal_side side>
+    template <marshal_side side>
     constexpr bool should_unmarshal(const value& node)
     {
         const auto flags = node.value_annots;
@@ -99,7 +99,7 @@ namespace idlc {
         std::terminate();
     }
 
-    template<marshal_role role, marshal_side side>
+    template <marshal_role role, marshal_side side>
     constexpr bool should_walk(const value& node)
     {
         if (flags_set(node.value_annots, annotation_kind::unused))
@@ -121,7 +121,7 @@ namespace idlc {
         Bind annotations indicate which side of the call has the shadow copy (statically)
         Whether or not they are bound on a side is irrespective of whether we are marshaling or unmarshaling
     */
-    template<marshal_side side>
+    template <marshal_side side>
     static constexpr bool should_bind(const annotation& ann)
     {
         switch (side) {
@@ -137,12 +137,13 @@ namespace idlc {
         std::terminate();
     }
 
-    template<marshal_side side>
+    template <marshal_side side>
     class marshaling_walk : public generation_walk<marshaling_walk<side>> {
     public:
-        marshaling_walk(std::ostream& os, absl::string_view holder, unsigned level) :
-            generation_walk<marshaling_walk<side>> {os, holder, level}
-        {}
+        marshaling_walk(std::ostream& os, absl::string_view holder, unsigned level)
+            : generation_walk<marshaling_walk<side>> {os, holder, level}
+        {
+        }
 
         bool visit_pointer(pointer& node)
         {
@@ -153,35 +154,46 @@ namespace idlc {
                     const auto& offset = node.pointer_annots.member;
                     // Use container_of as it abstracts away the arithmetic and also typecasts the pointer
                     this->new_line() << "struct " << offset.struct_type << "* __adjusted = container_of(*" << this->subject()
-                        << ", " << "struct " << offset.struct_type << ", " << offset.field << ");\n";
-                }
-                else {
+                                     << ", "
+                                     << "struct " << offset.struct_type << ", " << offset.field << ");\n";
+                } else if (side == marshal_side::caller && flags_set(node.pointer_annots.kind, annotation_kind::user_ptr)) {
+                    this->new_line() << "__maybe_unused const void* __adjusted;\n";
+                    if (flags_set(node.referent->value_annots, annotation_kind::in)) {
+                        this->new_line() << "__" << this->subject() << " = kzalloc(" << node.pointer_annots.size_verbatim << ", DEFAULT_GFP_FLAGS);\n";
+                        this->new_line() << "if (copy_from_user(__" << this->subject() << ", *" << this->subject() << ", " << node.pointer_annots.size_verbatim << ")) {\n";
+                        this->new_line() << "\tprintk(\"copy_from_user failed\");\n";
+                        this->new_line() << "}\n\n";
+                        this->new_line() << "*" << this->subject() << " = __" << this->subject() << ";\n\n";
+                    } else if (flags_set(node.referent->value_annots, annotation_kind::out)) {
+                        this->new_line() << "__" << this->subject() << " = kzalloc(" << node.pointer_annots.size_verbatim << ", DEFAULT_GFP_FLAGS);\n";
+                        this->new_line() << "*" << this->subject() << " = __" << this->subject() << ";\n\n";
+                    }
+                    this->new_line() << "__adjusted = "
+                                     << "*" << this->subject() << ";\n\n";
+                } else {
                     this->new_line() << "__maybe_unused const void* __adjusted = *" << this->subject() << ";\n";
                 }
 
                 if (should_bind<side>(node.pointer_annots)) {
                     this->new_line() << "glue_pack_shadow(__pos, __msg, __ext, __adjusted);\n";
-                }
-                else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
+                } else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
                     this->new_line() << "glue_pack(__pos, __msg, __ext, (void*)__adjusted - "
-                        << node.pointer_annots.share_global << ");\n";
+                                     << node.pointer_annots.share_global << ");\n";
 
                     return true; // No need to walk these (yet)
-                }
-                else if (flags_set(node.pointer_annots.kind, annotation_kind::alloc_stack_callee)) {
+                } else if (flags_set(node.pointer_annots.kind, annotation_kind::alloc_stack_callee)) {
                     // No need to pack the pointer if it's a stack allocation on the other side
                     // do nothing for now, and jump to marshaling the members (if any)
-                }
-                else {
+                    return true;
+                } else {
                     this->new_line() << "glue_pack(__pos, __msg, __ext, __adjusted);\n";
                 }
             }
-            
+
             // This is done to absorb any unused variables
             if (!should_walk<marshal_role::marshaling, side>(*node.referent)) {
                 this->new_line() << "(void)" << this->subject() << ";\n";
-            }
-            else {
+            } else {
                 this->new_line() << "if (*" << this->subject() << ") {\n";
                 this->marshal("*" + this->subject(), node);
                 this->new_line() << "}\n\n";
@@ -208,7 +220,7 @@ namespace idlc {
         bool visit_projection(projection& node)
         {
             this->new_line() << get_visitor_name(node) << "(__pos, __msg, __ext, "
-                << ((node.def->parent) ? "ctx, " : "") << this->subject() << ");\n";
+                             << ((node.def->parent) ? "ctx, " : "") << this->subject() << ");\n";
 
             return true;
         }
@@ -222,7 +234,7 @@ namespace idlc {
             if (p)
                 this->new_line() << node.element->c_specifier << " sentinel = { 0 };\n";
 
-            this->new_line() << node.element->c_specifier << " const* array = "	<< this->subject() << ";\n";
+            this->new_line() << node.element->c_specifier << " const* array = " << this->subject() << ";\n";
 
             // XXX: Caution! This assumes the sentinels end with a zero-filled element!
             if (p)
@@ -245,7 +257,7 @@ namespace idlc {
         bool visit_static_array(static_array& node)
         {
             this->new_line() << "size_t i, len = " << node.size << ";\n";
-            this->new_line() << node.element->c_specifier << " const* array = "	<< this->subject() << ";\n";
+            this->new_line() << node.element->c_specifier << " const* array = " << this->subject() << ";\n";
             this->new_line() << "glue_pack(__pos, __msg, __ext, len);\n";
             this->new_line() << "// Warning: see David if this breaks\n";
             this->new_line() << "glue_user_trace(\"Warning: see David if this breaks\");\n";
@@ -266,7 +278,7 @@ namespace idlc {
 
             // HACK: this depends on the root pointer naming convention
             this->new_line() << "size_t i, len = (" << node.size_expr << ");\n";
-            this->new_line() << ptr_type << " array = "	<< this->subject() << ";\n";
+            this->new_line() << ptr_type << " array = " << this->subject() << ";\n";
             this->new_line() << "glue_pack(__pos, __msg, __ext, len);\n";
             this->new_line() << "// Warning: see David if this breaks\n";
             this->new_line() << "glue_user_trace(\"Warning: see David if this breaks\");\n";
@@ -296,15 +308,15 @@ namespace idlc {
 
         bool visit_casted_type(casted_type& node)
         {
-            const auto ref_spec = node.referent->c_specifier;            
+            const auto ref_spec = node.referent->c_specifier;
             this->new_line() << ref_spec << " __casted = (" << ref_spec << ")*" << this->subject() << ";\n";
-            this->new_line() << ref_spec << " const* __casted_ptr = &__casted;\n"; 
+            this->new_line() << ref_spec << " const* __casted_ptr = &__casted;\n";
             this->new_line() << "{\n";
 
             // NOTE: the facade is technically meaningless and must be ignored during marshaling
             if (!this->marshal("__casted_ptr", node, [this](auto&& type) {
-                return this->visit_value(*type.referent);
-            }))
+                    return this->visit_value(*type.referent);
+                }))
                 return false;
 
             this->new_line() << "}\n\n";
@@ -341,9 +353,7 @@ namespace idlc {
         const auto visit = [&node](auto&& item) {
             using node_type = std::decay_t<decltype(item)>;
             if constexpr (
-                std::is_same_v<node_type, node_ref<null_terminated_array>>
-                || std::is_same_v<node_type, node_ref<dyn_array>>
-                || std::is_same_v<node_type, node_ref<static_array>>)
+                std::is_same_v<node_type, node_ref<null_terminated_array>> || std::is_same_v<node_type, node_ref<dyn_array>> || std::is_same_v<node_type, node_ref<static_array>>)
                 return concat("sizeof(", node.c_specifier, ") * glue_peek(__pos, __msg, __ext)");
             else
                 return concat("sizeof(", node.c_specifier, ")");
@@ -352,12 +362,13 @@ namespace idlc {
         return std::visit(visit, node.type);
     }
 
-    template<marshal_side side>
+    template <marshal_side side>
     class unmarshaling_walk : public generation_walk<unmarshaling_walk<side>> {
     public:
-        unmarshaling_walk(std::ostream& os, absl::string_view holder, unsigned level) :
-            generation_walk<unmarshaling_walk<side>> {os, holder, level}
-        {}
+        unmarshaling_walk(std::ostream& os, absl::string_view holder, unsigned level)
+            : generation_walk<unmarshaling_walk<side>> {os, holder, level}
+        {
+        }
 
         static constexpr bool should_dealloc(const annotation& ann)
         {
@@ -365,7 +376,6 @@ namespace idlc {
                 return flags_set(ann.kind, annotation_kind::dealloc_caller);
             return false;
         }
-
 
         bool visit_value(value& node)
         {
@@ -400,16 +410,26 @@ namespace idlc {
                 // NOTE: will return false if no need to walk further (i.e., the pointer is "opaque")
                 if (!marshal_pointer_value(node))
                     return true;
-
             }
 
             if (!should_walk<marshal_role::unmarshaling, side>(*node.referent)) {
                 this->new_line() << "(void)" << this->subject() << ";\n";
                 return true;
+            } else {
+                auto ret_child = marshal_pointer_child(node);
+                if (flags_set(node.pointer_annots.kind, annotation_kind::user_ptr)) {
+                    switch (side) {
+                    case marshal_side::caller:
+                        if (flags_set(node.referent->value_annots, annotation_kind::out)) {
+                            this->new_line() << "if (copy_to_user(*__orig_" << this->subject() << ", *" << this->subject() << ", " << node.pointer_annots.size_verbatim << ")) {\n";
+                            this->new_line() << "\tprintk(\"copy_to_user failed\");\n";
+                            this->new_line() << "}\n\n";
+                        }
+                        break;
+                    }
+                }
+                return ret_child;
             }
-            else {
-                return marshal_pointer_child(node);
-            }                
 
             return true;
         }
@@ -480,7 +500,7 @@ namespace idlc {
         bool visit_rpc_ptr(rpc_ptr& node)
         {
             this->new_line() << "*" << this->subject() << " = glue_unpack_rpc_ptr(__pos, __msg, __ext, "
-                << node.definition->name << ");\n";
+                             << node.definition->name << ");\n";
 
             return true;
         }
@@ -488,22 +508,22 @@ namespace idlc {
         bool visit_projection(projection& node)
         {
             this->new_line() << get_visitor_name(node) << "(__pos, __msg, __ext, "
-                << ((node.def->parent) ? "ctx, " : "") << this->subject() << ");\n";
-            
+                             << ((node.def->parent) ? "ctx, " : "") << this->subject() << ");\n";
+
             return true;
         }
 
         bool visit_casted_type(casted_type& node)
         {
-            const auto ref_spec = node.referent->c_specifier;            
+            const auto ref_spec = node.referent->c_specifier;
             this->new_line() << ref_spec << " __casted = (" << ref_spec << ")*" << this->subject() << ";\n";
-            this->new_line() << ref_spec << "* __casted_ptr = &__casted;\n"; 
+            this->new_line() << ref_spec << "* __casted_ptr = &__casted;\n";
             this->new_line() << "{\n";
 
             // NOTE: the facade is technically meaningless and must be ignored during marshaling
             if (!this->marshal("__casted_ptr", node, [this](auto&& type) {
-                return this->visit_value(*type.referent);
-            }))
+                    return this->visit_value(*type.referent);
+                }))
                 return false;
 
             this->new_line() << "}\n\n";
@@ -573,7 +593,7 @@ namespace idlc {
             // No need to unpack the pointer for stack allocation
             if (should_alloc_stack(node.pointer_annots))
                 return true;
-                
+
             if (!is_clear(node.pointer_annots.kind & annotation_kind::is_bind_memberof)) {
                 // special case! early return
                 marshal_bind_memberof_pointer(node);
@@ -593,27 +613,25 @@ namespace idlc {
                 this->new_line() << "size_t __size = " << alloc_size << ";\n";
                 this->new_line() << subject;
                 this->stream() << "glue_unpack_new_shadow(__pos, __msg, __ext, " << m_c_specifier << ", ("
-                    << "__size" << "), (" << alloc_flags << "));\n";
-            }
-            else if (should_bind<side>(node.pointer_annots)) {
+                               << "__size"
+                               << "), (" << alloc_flags << "));\n";
+            } else if (should_bind<side>(node.pointer_annots)) {
                 this->new_line() << subject;
                 // Should_bind takes care of the details, so we only check if either of these flags are set
                 this->stream() << "glue_unpack_shadow(__pos, __msg, __ext, " << m_c_specifier << ");\n";
-            }
-            else if (should_alloc_once(node.pointer_annots)) {
+            } else if (should_alloc_once(node.pointer_annots)) {
                 this->new_line() << "size_t __size = " << get_size_expr(*node.referent) << ";\n";
                 this->new_line() << subject;
                 this->stream() << "glue_unpack_bind_or_new_shadow(__pos, __msg, __ext, " << m_c_specifier << ", "
-                    << "__size" << ");\n";
-            }
-            else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
+                               << "__size, "
+                               << "DEFAULT_GFP_FLAGS);\n";
+            } else if (flags_set(node.pointer_annots.kind, annotation_kind::shared)) {
                 this->new_line() << subject;
                 this->stream() << "(" << m_c_specifier << ")(glue_unpack(__pos, __msg, __ext, size_t) + "
-                    << node.pointer_annots.share_global << ");\n";
+                               << node.pointer_annots.share_global << ");\n";
 
                 return false;
-            }
-            else {
+            } else {
                 this->new_line() << subject;
                 this->stream() << "glue_unpack(__pos, __msg, __ext, " << m_c_specifier << ");\n";
             }
@@ -634,7 +652,7 @@ namespace idlc {
                 std::terminate();
 
             this->new_line() << "*" << this->subject() << " = &__" << offset.struct_type
-                << "->" << offset.field << ";\n";
+                             << "->" << offset.field << ";\n";
         }
 
         bool marshal_pointer_child(pointer& node)
@@ -645,12 +663,11 @@ namespace idlc {
                 // We create a writeable version of the pointer and use it instead
                 const auto type = concat(node.referent->c_specifier, "*");
                 this->new_line() << "\t" << type << " writable = "
-                    << concat("(", type, ")*", this->subject()) << ";\n";
+                                 << concat("(", type, ")*", this->subject()) << ";\n";
 
                 if (!this->marshal("writable", node))
                     return false;
-            }
-            else {
+            } else {
                 if (!this->marshal(concat("*", this->subject()), node))
                     return false;
             }

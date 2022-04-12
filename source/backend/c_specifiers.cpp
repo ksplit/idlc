@@ -37,7 +37,7 @@ void idlc::populate_c_type_specifiers(rpc_vec_view rpcs, global_vec_view globals
     for (const auto& node : rpcs) {
         if (node->ret_pgraph)
             populate_c_type_specifiers(*node->ret_pgraph);
-        
+
         for (const auto& arg : node->arg_pgraphs)
             populate_c_type_specifiers(*arg);
     }
@@ -61,7 +61,10 @@ bool idlc::c_specifier_walk::visit_value(value& node)
     if (!traverse(*this, node))
         return false;
 
-    node.c_specifier = m_specifier;
+    // DO NOT INCLUDE CONST HERE
+    // Const-free specifiers are needed to be able to write through otherwise unwritable pointers in unmarshaling
+    node.c_specifier = concat(node.is_volatile ? "volatile " : "", m_specifier);
+
     return true;
 }
 
@@ -79,6 +82,9 @@ bool idlc::c_specifier_walk::visit_pointer(pointer& node)
 
     if (node.referent->is_const)
         m_specifier += " const";
+
+    if (node.referent->is_volatile)
+        m_specifier += " volatile";
 
     m_specifier += "*";
 

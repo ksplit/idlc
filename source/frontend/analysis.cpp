@@ -12,12 +12,12 @@
 
 #include <absl/strings/string_view.h>
 
-#include "../string_heap.h"
 #include "../ast/ast.h"
 #include "../ast/ast_walk.h"
 #include "../ast/pgraph.h"
-#include "../ast/pgraph_walk.h"
 #include "../ast/pgraph_dump.h"
+#include "../ast/pgraph_walk.h"
+#include "../string_heap.h"
 
 namespace idlc {
 	namespace {
@@ -31,39 +31,29 @@ namespace idlc {
 		passed_type generate_string_type()
 		{
 			return std::make_shared<null_terminated_array>(
-				std::make_shared<value>(primitive::ty_char, annotation_kind::use_default, false)
-			);
+				std::make_shared<value>(primitive::ty_char, annotation_kind::use_default, false, false));
 		}
 
 		passed_type generate_stem_type(const type_stem& node)
 		{
-			const auto visit = [](auto&& item) -> passed_type
-			{
+			const auto visit = [](auto&& item) -> passed_type {
 				using type = std::decay_t<decltype(item)>;
 				if constexpr (std::is_same_v<type, type_primitive>) {
 					return item;
-				}
-				else if constexpr (std::is_same_v<type, type_string>) {
+				} else if constexpr (std::is_same_v<type, type_string>) {
 					return generate_string_type();
-				}
-				else if constexpr (std::is_same_v<type, node_ref<type_array>>) {
+				} else if constexpr (std::is_same_v<type, node_ref<type_array>>) {
 					return generate_array_type(*item);
-				}
-				else if constexpr (std::is_same_v<type, node_ref<type_proj>>) {
+				} else if constexpr (std::is_same_v<type, node_ref<type_proj>>) {
 					// Importantly, we defer the translation of projections, since we cannot know at this stage
 					// what annotations it should be defaulted with
 					return item->definition;
-				}
-				else if constexpr (std::is_same_v<type, node_ref<type_rpc>>) {
+				} else if constexpr (std::is_same_v<type, node_ref<type_rpc>>) {
 					return std::make_shared<rpc_ptr>(item.get().get()->definition);
-				}
-				else if constexpr (std::is_same_v<type, node_ref<type_casted>>) {
+				} else if constexpr (std::is_same_v<type, node_ref<type_casted>>) {
 					return std::make_shared<casted_type>(
-						generate_value(*item->declared_type),
-						generate_value(*item->true_type)
-					);
-				}
-				else if constexpr (std::is_same_v<type, type_none>) {
+						generate_value(*item->declared_type), generate_value(*item->true_type));
+				} else if constexpr (std::is_same_v<type, type_none>) {
 					return none {};
 				}
 
@@ -77,16 +67,13 @@ namespace idlc {
 
 		passed_type generate_array_type(const type_array& node)
 		{
-			const auto visit = [&node](auto&& item) -> passed_type
-			{
+			const auto visit = [&node](auto&& item) -> passed_type {
 				using type = std::decay_t<decltype(item)>;
 				if constexpr (std::is_same_v<type, tok_kw_null>) {
 					return std::make_shared<null_terminated_array>(generate_value(*node.element));
-				}
-				else if constexpr (std::is_same_v<type, unsigned>) {
+				} else if constexpr (std::is_same_v<type, unsigned>) {
 					return std::make_shared<static_array>(generate_value(*node.element), item);
-				}
-				else if constexpr (std::is_same_v<type, ident>) {
+				} else if constexpr (std::is_same_v<type, ident>) {
 					return std::make_shared<dyn_array>(generate_value(*node.element), item);
 				}
 
@@ -99,15 +86,13 @@ namespace idlc {
 		auto generate_field(proj_field& node)
 		{
 			const auto& [def, width] = node;
-			const auto visit = [](auto&& item) -> idlc::projection_field
-			{
+			const auto visit = [](auto&& item) -> idlc::projection_field {
 				using type = std::decay_t<decltype(item)>;
 				if constexpr (std::is_same_v<type, node_ref<naked_proj_decl>>) {
 					std::cout << "Warning: Naked projections are not yet implemented\n";
 					std::cout << "Warning: Unknown how to proceed, aborting\n";
 					std::terminate();
-				}
-				else if constexpr (std::is_same_v<type, node_ref<var_decl>>) {
+				} else if constexpr (std::is_same_v<type, node_ref<var_decl>>) {
 					return {item->name, generate_value(*item->type)};
 				}
 
@@ -146,27 +131,21 @@ namespace idlc {
 		{
 			auto type = generate_stem_type(*node.stem);
 			bool is_const {node.is_const};
+			bool is_volatile {node.is_volatile};
 			for (const auto& ptr_node : node.indirs) {
 				const auto annots = ptr_node->attrs;
 				const auto val_annots = annots->kind & annotation_kind::is_val;
-				auto field = std::make_shared<value>(std::move(type), val_annots, is_const);
+				auto field = std::make_shared<value>(std::move(type), val_annots, is_const, is_volatile);
 
-				type = std::make_shared<pointer>(
-					std::move(field),
-					annotation {
-						annots->kind & annotation_kind::is_ptr,
-						annots->share_global,
-						annots->size_verbatim,
-						annots->flags_verbatim,
-						annots->member
-					}
-				);
+				type = std::make_shared<pointer>(std::move(field),
+					annotation {annots->kind & annotation_kind::is_ptr, annots->share_global, annots->size_verbatim,
+						annots->flags_verbatim, annots->member});
 
 				is_const = ptr_node->is_const;
 			}
 
 			assert((node.attrs & annotation_kind::is_val) == node.attrs);
-			auto field = std::make_shared<value>(std::move(type), node.attrs, is_const);
+			auto field = std::make_shared<value>(std::move(type), node.attrs, is_const, is_volatile);
 
 			return std::move(field);
 		}
@@ -186,9 +165,7 @@ namespace idlc {
 		}
 
 		// TODO: is it necessary to detect if a projection self-references by value?
-		std::shared_ptr<idlc::projection> generate_projection(
-			proj_def& node,
-			const std::string& name)
+		std::shared_ptr<idlc::projection> generate_projection(proj_def& node, const std::string& name)
 		{
 			auto pgraph_node = [&node, &name] {
 				if (!node.fields)
@@ -212,10 +189,7 @@ namespace idlc {
 				return true;
 			}
 
-			auto& get()
-			{
-				return m_defs;
-			}
+			auto& get() { return m_defs; }
 
 		private:
 			std::vector<gsl::not_null<rpc_def*>> m_defs {};
@@ -227,7 +201,8 @@ namespace idlc {
 		// TODO: implement error checking, currently focused on generating defaults
 		class annotation_walk : public pgraph_walk<annotation_walk> {
 		public:
-			annotation_walk(annotation_kind default_with) : m_default_with {default_with}
+			annotation_walk(annotation_kind default_with)
+				: m_default_with {default_with}
 			{
 				// We only support propagating a default value annotation
 				assert(is_clear(default_with & annotation_kind::ptr_only));
@@ -238,9 +213,8 @@ namespace idlc {
 				// The core logic of propagating a top-level value annotation until an explicit one is found, and
 				// continuing
 				if (!is_clear(node.value_annots & annotation_kind::io_only)) {
-					m_default_with = node.value_annots & annotation_kind::io_only;			
-				}
-				else {
+					m_default_with = node.value_annots & annotation_kind::io_only;
+				} else {
 					node.value_annots |= m_default_with; // FIXME
 				}
 
@@ -258,8 +232,7 @@ namespace idlc {
 						node.pointer_annots.kind = annotation_kind::bind_callee;
 					else if (m_default_with == (annotation_kind::in | annotation_kind::out))
 						node.pointer_annots.kind = (annotation_kind::bind_callee | annotation_kind::bind_caller);
-				}
-				else {
+				} else {
 					// Annotation already set, ignore
 				}
 
@@ -281,8 +254,7 @@ namespace idlc {
 				const auto unlowered = std::get_if<gsl::not_null<proj_def*>>(&node);
 				if (!unlowered) {
 					return traverse(*this, node);
-				}
-				else {
+				} else {
 					node = instantiate_projection(**unlowered, m_default_with);
 					return true;
 				}
@@ -328,7 +300,7 @@ namespace idlc {
 				// NOTE: It's important that we don't try and modify the cached copy, as it could be a partial one
 				return cached;
 			}
-			
+
 			const auto instance_name = get_instance_name(node.scoped_name, default_with);
 			auto pgraph = generate_projection(node, instance_name);
 			cached = pgraph;
@@ -403,7 +375,7 @@ namespace idlc {
 		{
 			if (!annotate_pgraph(*rpc.ret_pgraph, annotation_kind::out))
 				return false;
-			
+
 			const_walk const_propagator {};
 			const auto succeeded = const_propagator.visit_value(*rpc.ret_pgraph);
 			assert(succeeded);

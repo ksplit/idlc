@@ -6,7 +6,7 @@
 #include "../ast/ast.h"
 
 namespace idlc {
-	bool bind_all_names(file& root);
+    bool bind_all_names(file& root);
 }
 
 #endif

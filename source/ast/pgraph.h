@@ -47,13 +47,15 @@ namespace idlc {
 		passed_type type;
 		annotation_kind value_annots;
 		bool is_const;
+		bool is_volatile;
 
 		std::string c_specifier;
 
-		value(passed_type&& type, annotation_kind value_annots, bool is_const) :
+		value(passed_type&& type, annotation_kind value_annots, bool is_const, bool is_volatile) :
 			type {std::move(type)},
 			value_annots {value_annots},
 			is_const {is_const},
+			is_volatile {is_volatile},
 			c_specifier {}
 		{}
 	};
