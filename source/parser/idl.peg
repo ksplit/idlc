@@ -381,7 +381,7 @@ naked_proj_decl = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_stru
 	});
 }}
 
-lock_scope = name:tok_ident tok_space? tok_lbrace tok_space? first:(field:tok_ident tok_space? tok_comma tok_space? {{ value = field; }})+ last:(last_field:tok_ident tok_space? {{ value = last_field; }}) tok_rbrace {{
+lock_scope = name:tok_ident tok_space? tok_lbrace tok_space? first:(field:tok_ident tok_space? tok_comma tok_space? {{ value = field; }})* last:(last_field:tok_ident tok_space? {{ value = last_field; }}) tok_rbrace {{
 	std::vector<ident> fields;
 	for (const auto& name : first.getValues())
 		fields.emplace_back(to_ptr<ident>(name));

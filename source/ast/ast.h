@@ -16,6 +16,15 @@
 #include "tag_types.h"
 
 namespace idlc {
+    template<typename node_type>
+    node_ref<node_type> clone(const node_ref<node_type>& node);
+
+    template<typename node_type>
+    ref_vec<node_type> clone(const ref_vec<node_type>& node);
+
+    template<typename node_type>
+    node_ptr<node_type> clone(const node_ptr<node_type>& node);
+
     using ident_vec = std::vector<ident>;
 
     struct module_def;
@@ -40,17 +49,45 @@ namespace idlc {
     struct tok_kw_null {
     }; // Doesn't exist in parse rules, used as marker (represents tok_kw_null)
 
+    inline tok_kw_null clone(const tok_kw_null&) { return {}; }
+    inline unsigned clone(const unsigned& node) { return node; }
+    inline ident clone(const ident& node) { return node; }
+
     using file = std::variant<node_ref<driver_file>, node_ref<ref_vec<module_def>>>;
     // using field_ref = std::variant<node_ref<field_abs_ref>, node_ref<field_rel_ref>>;
     using array_size = std::variant<unsigned, tok_kw_null, ident>;
     using proj_field
         = std::tuple<std::variant<node_ref<var_decl>, node_ref<naked_proj_decl>, node_ref<lock_scope>>, std::uint8_t>;
 
+    inline auto clone(const proj_field& node)
+    {
+        const auto& [subnode, width] = node;
+        const auto visitor = [](auto&& item) -> std::decay_t<decltype(subnode)> { return clone(item); };
+        return proj_field {std::visit(visitor, subnode), width};
+    }
+
     using type_stem = std::variant<type_primitive, type_string, type_none, node_ref<type_rpc>, node_ref<type_proj>,
         node_ref<type_array>, node_ref<type_casted>>;
 
+    inline auto clone(const type_primitive& node) { return node; }
+
+    // Another marker
+    // NOTE: since these don't actually exist in any meaningful sense, their own parse rules don't produce them
+    struct type_string {
+    };
+    
+    inline type_string clone(const type_string&) { return {}; }
+
     struct type_none {
     };
+
+    inline type_none clone(const type_none&) { return {}; }
+
+    inline auto clone(const array_size& node)
+    {
+        const auto visitor = [](auto&& item) -> array_size { return clone(item); };
+        return std::visit(visitor, node);
+    }
 
     struct driver_def {
         ident name;
@@ -88,6 +125,11 @@ namespace idlc {
         }
     };
 
+    inline auto clone(const type_proj& node)
+    {
+        return node;
+    }
+
     struct type_rpc {
         ident name;
 
@@ -100,6 +142,11 @@ namespace idlc {
         }
     };
 
+    inline auto clone(const type_rpc& node)
+    {
+        return node;
+    }
+
     struct type_array {
         node_ref<type_spec> element;
         node_ref<array_size> size;
@@ -111,10 +158,10 @@ namespace idlc {
         }
     };
 
-    // Another marker
-    // NOTE: since these don't actually exist in any meaningful sense, their own parse rules don't produce them
-    struct type_string {
-    };
+    inline auto clone(const type_array& node)
+    {
+        return type_array {clone(node.element), clone(node.size)};
+    }
 
     struct type_casted {
         // NOTE: this type is only here for the benefit of making a c-specifier
@@ -128,6 +175,11 @@ namespace idlc {
         }
     };
 
+    inline auto clone(const type_casted& node)
+    {
+        return type_casted {clone(node.declared_type), clone(node.true_type)};
+    }
+
     struct indirection {
         node_ref<annotation> attrs; // Contextually, both ptr and value attrs
         bool is_const;
@@ -138,6 +190,16 @@ namespace idlc {
         {
         }
     };
+
+    inline auto clone(const annotation& node)
+    {
+        return node;
+    }
+
+    inline auto clone(const indirection& node)
+    {
+        return indirection {clone(node.attrs), node.is_const};
+    }
 
     struct type_spec {
         node_ref<type_stem> stem;
@@ -157,6 +219,11 @@ namespace idlc {
         }
     };
 
+    inline auto clone(const type_spec& node)
+    {
+        return type_spec {clone(node.stem), clone(node.indirs), node.attrs, node.is_const, node.is_volatile};
+    }
+
     struct var_decl {
         node_ref<type_spec> type;
         ident name;
@@ -168,6 +235,11 @@ namespace idlc {
         }
     };
 
+    inline auto clone(const var_decl& node)
+    {
+        return var_decl {clone(node.type), node.name};
+    }
+
     struct naked_proj_decl {
         node_ptr<ref_vec<proj_field>> fields;
         ident name;
@@ -178,6 +250,11 @@ namespace idlc {
         {
         }
     };
+
+    inline auto clone(const naked_proj_decl& node)
+    {
+        return naked_proj_decl {clone(node.fields), node.name};
+    }
 
     enum proj_def_kind { struct_kind, union_kind };
 
@@ -205,6 +282,11 @@ namespace idlc {
         {
         }
     };
+
+    inline auto clone(const proj_def& node)
+    {
+        return proj_def {node.name, node.type, clone(node.fields), node.kind};
+    }
 
     using rpc_item = std::variant<node_ref<proj_def>, node_ref<rpc_def>>;
 
@@ -323,6 +405,11 @@ namespace idlc {
         }
     };
 
+    inline auto clone(const lock_def& node)
+    {
+        return node;
+    }
+
     struct lock_scope {
         ident name;
         ident_vec fields;
@@ -337,9 +424,42 @@ namespace idlc {
         }
     };
 
+    inline auto clone(const lock_scope& node)
+    {
+        return node;
+    }
+
     /*
         Nodes that have scopes: module_defs, rpc_defs, proj_defs, global_defs
     */
+
+    inline auto clone(const type_stem& node)
+    {
+        const auto visitor = [](auto&& item) -> type_stem { return clone(item); };
+        return std::visit(visitor, node);
+    }
+
+    template<typename node_type>
+    node_ref<node_type> clone(const node_ref<node_type>& node)
+    {
+        return std::make_shared<node_type>(clone(*node));
+    }
+
+    template<typename node_type>
+    node_ptr<node_type> clone(const node_ptr<node_type>& node)
+    {
+        return node ? std::make_shared<node_type>(clone(*node)) : node_ptr<node_type> {};
+    }
+
+    template<typename node_type>
+    ref_vec<node_type> clone(const ref_vec<node_type>& node)
+    {
+        auto copy = node;
+        for (auto& item : copy)
+            item = clone(item);
+        
+        return copy;
+    }
 }
 
 #endif

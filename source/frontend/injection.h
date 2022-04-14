@@ -21,7 +21,7 @@ namespace idlc {
 
 	auto make_blank_proj(const lock_scope& scope)
 	{
-		return make<proj_def>(*scope.parent);
+		return make<proj_def>(clone(*scope.parent));
 	}
 
 	class injected_rpcs_walk : public ast_walk<injected_rpcs_walk> {
