@@ -1,5 +1,7 @@
 #pragma once
 
+#include <set>
+
 #include "../ast/ast_walk.h"
 #include "../ast/ast.h"
 #include "../parser/parse_globals.h"
@@ -19,9 +21,82 @@ namespace idlc {
 		);
 	}
 
-	auto make_blank_proj(const lock_scope& scope)
+	enum class sync_type {
+		get,
+		set
+	};
+
+	auto make_sync_argument(const lock_scope& lock, sync_type type)
 	{
-		return make<proj_def>(clone(*scope.parent));
+		const auto attribute = type == sync_type::get ? annotation_kind::out : annotation_kind::in;
+		return make<ref_vec<var_decl>>(ref_vec<var_decl> {
+			make<var_decl>(
+				make<type_spec>(
+					make<type_stem>(make<type_proj>(lock.parent->name)),
+					ref_vec<indirection> {make<indirection>(
+						make<annotation>(attribute | annotation_kind::bind_caller),
+						false
+					)},
+					annotation_kind::use_default,
+					false,
+					false
+				),
+				parser::idents.intern("data")
+			)
+		});
+	}
+
+	class annotation_erasure_walk : public ast_walk<annotation_erasure_walk> {
+	public:
+		bool visit_value(value& node)
+		{
+			node.value_annots = annotation_kind::use_default;
+			return true;
+		}
+
+		bool visit_indirection(indirection& node)
+		{
+			node.attrs->kind = annotation_kind::use_default;
+			return true;
+		}
+	};
+
+	class type_clone_walk : public ast_walk<type_clone_walk> {
+	public:
+		type_clone_walk(std::set<const proj_def*>& projections) : m_projections {projections} {}
+
+		bool visit_type_proj(type_proj& node)
+		{
+			type_clone_walk subwalk {m_projections};
+			const auto is_known = m_projections.find(node.definition) != m_projections.end();
+			return (is_known || subwalk.visit_proj_def(*node.definition)) && traverse(*this, node);
+		}
+
+		bool visit_proj_def(proj_def& node)
+		{
+			m_projections.insert(&node);
+			return traverse(*this, node);
+		}
+
+	private:
+		std::set<const proj_def*>& m_projections;
+	};
+
+	auto make_clones(const lock_scope& scope)
+	{
+		std::set<const proj_def*> projections;
+		type_clone_walk cloning {projections};
+		cloning.visit_proj_def(*scope.parent);
+		std::cerr << "Debug: need clones for " << projections.size() << " projections\n";
+		const auto clones = make<ref_vec<rpc_item>>();
+		for (const auto proj : projections) {
+			auto proj_clone = clone(*proj);
+			annotation_erasure_walk walk {};
+			walk.visit_proj_def(proj_clone);
+			clones->emplace_back(make<rpc_item>(make<proj_def>(std::move(proj_clone))));
+		}
+
+		return clones;
 	}
 
 	class injected_rpcs_walk : public ast_walk<injected_rpcs_walk> {
@@ -85,38 +160,16 @@ namespace idlc {
 				node.items->emplace_back(make<module_item>(make<rpc_def>(
 					make_void(),
 					parser::idents.intern(concat(lock->parent->type, "__", lock->name, "__lock")),
-					make<ref_vec<var_decl>>(ref_vec<var_decl> {
-						make<var_decl>(
-							make<type_spec>(
-								make<type_stem>(make<type_proj>(lock->parent->name)),
-								ref_vec<indirection>(),
-								annotation_kind::out,
-								false,
-								false
-							),
-							parser::idents.intern("data")
-						)
-					}),
-					make<ref_vec<rpc_item>>(ref_vec<rpc_item> {make<rpc_item>(make_blank_proj(*lock))}),
+					make_sync_argument(*lock, sync_type::get),
+					make_clones(*lock),
 					rpc_def_kind::direct
 				)));
 
 				node.items->emplace_back(make<module_item>(make<rpc_def>(
 					make_void(),
 					parser::idents.intern(concat(lock->parent->type, "__", lock->name, "__unlock")),
-					make<ref_vec<var_decl>>(ref_vec<var_decl> {
-						make<var_decl>(
-							make<type_spec>(
-								make<type_stem>(make<type_proj>(lock->parent->name)),
-								ref_vec<indirection>(),
-								annotation_kind::out,
-								false,
-								false
-							),
-							parser::idents.intern("data")
-						)
-					}),
-					make<ref_vec<rpc_item>>(ref_vec<rpc_item> {make<rpc_item>(make_blank_proj(*lock))}),
+					make_sync_argument(*lock, sync_type::set),
+					make_clones(*lock),
 					rpc_def_kind::direct
 				)));
 			}
@@ -136,7 +189,7 @@ namespace idlc {
 		std::vector<const global_def*> m_defs {};
 		std::vector<const lock_scope*> m_locks {};
 		std::vector<const lock_def*> m_lock_defs {};
-		const proj_def* m_parent {};
+		proj_def* m_parent {};
 	};
 
 	auto inject_global_rpcs(file& root)

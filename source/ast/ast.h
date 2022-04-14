@@ -415,7 +415,7 @@ namespace idlc {
         ident_vec fields;
 
         const lock_def* definition;
-        const proj_def* parent;
+        proj_def* parent;
 
         lock_scope(ident name, ident_vec&& fields)
             : name {name}

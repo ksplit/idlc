@@ -55,6 +55,11 @@ int main(int argc, char** argv)
         return 1;
 
     idlc::dump_ast(*file);
+    if (!idlc::bind_all_names(*file)) {
+        std::cout << "Error: Not all names were bound\n";
+        return 1;
+    }
+
     const auto lock_defs = idlc::inject_global_rpcs(*file);
     for (const auto& lock : lock_defs)
         std::cerr << "Debug: " << lock->name << '\n';
