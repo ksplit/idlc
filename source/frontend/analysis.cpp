@@ -96,7 +96,6 @@ namespace idlc {
 					return std::make_optional<idlc::projection_field>(item->name, generate_value(*item->type));
 				} else if constexpr (std::is_same_v<type, node_ref<lock_scope>>) {
 					std::cout << "Debug: I am a teapot!\n";
-					std::cout << "Debug: " << item->scoped_name << '\n';
 					return std::nullopt;
 				}
 

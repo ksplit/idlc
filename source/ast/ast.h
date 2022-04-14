@@ -327,8 +327,8 @@ namespace idlc {
         ident name;
         ident_vec fields;
 
-        lock_def* definition;
-        std::string scoped_name;
+        const lock_def* definition;
+        const proj_def* parent;
 
         lock_scope(ident name, ident_vec&& fields)
             : name {name}
@@ -338,7 +338,7 @@ namespace idlc {
     };
 
     /*
-            Nodes that have scopes: module_defs, rpc_defs, proj_defs, global_defs
+        Nodes that have scopes: module_defs, rpc_defs, proj_defs, global_defs
     */
 }
 

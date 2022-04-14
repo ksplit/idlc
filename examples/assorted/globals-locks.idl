@@ -18,6 +18,7 @@ module foo {
         const signed char* c;
         projection circ_a [alloc<{{sizeof(int) * 128}}>(callee)]* but_bigger;
         casted<void*, projection circ_a*> casted_field;
+        array<array<char, 8>, 8> test;
 
         my_global_lock { a, c }
     }

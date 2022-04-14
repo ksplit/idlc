@@ -51,7 +51,6 @@ namespace idlc {
             bool visit_module_def(module_def& node);
             bool visit_rpc_def(rpc_def& node);
             bool visit_proj_def(proj_def& node);
-            bool visit_lock_scope(lock_scope& node);
 
         private:
             std::vector<ident> path_ {};
@@ -199,18 +198,6 @@ bool idlc::scoped_name_walk::visit_module_def(module_def& node)
         return false;
 
     path_.pop_back();
-
-    return true;
-}
-
-bool idlc::scoped_name_walk::visit_lock_scope(lock_scope& node)
-{
-    for (const auto& item : path_) {
-        append(node.scoped_name, item, "__"); // double underscore used to reduce odds of collisions
-        // FIXME: scope collisions are still possible!
-    }
-
-    node.scoped_name += node.name;
 
     return true;
 }
