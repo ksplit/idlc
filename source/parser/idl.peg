@@ -21,14 +21,21 @@ code: {{
 	type to_int(const Value& v)
 	{
 		// FIXME: I know, precision bug
-		static_assert(std::is_arithmetic_v<type> || std::is_enum_v<type>);
-		return gsl::narrow<type>(reinterpret_cast<std::uintptr_t>(v.getValue()));
+		static_assert(std::is_arithmetic_v<type>);
+		return gsl::narrow<type>(reinterpret_cast<std::uintptr_t>(v.getValue())); // It is unspecified if this is an identity transform
 	}
 
 	template<typename type>
-	type to_ptr(const Value& v)
+	type to_enum(const Value& v)
 	{
-		return static_cast<type>(const_cast<void*>(v.getValue()));
+		// FIXME: I know, precision bug
+		static_assert(std::is_enum_v<type>);
+		return static_cast<type>(reinterpret_cast<std::uintptr_t>(v.getValue())); // It is unspecified if this is an identity transform
+	}
+
+	ident to_ident(const Value& v)
+	{
+		return static_cast<ident>(const_cast<void*>(v.getValue()));
 	}
 
 	template<typename type>
@@ -210,9 +217,9 @@ include_list = first:include_stmt next:(tok_space? include_stmt)* {{
 	const auto& next_vals = next.getValues();
 	ident_vec paths {};
 	paths.reserve(1 + next_vals.size());
-	paths.emplace_back(to_ptr<ident>(first));
+	paths.emplace_back(to_ident(first));
 	for (const auto& p : next_vals)
-		paths.emplace_back(to_ptr<ident>(p));
+		paths.emplace_back(to_ident(p));
 
 	value = share(std::move(paths));
 }}
@@ -222,7 +229,7 @@ include_stmt = tok_kw_include tok_space? path:tok_path tok_space? tok_semi {{
 }}
 
 driver_def = tok_kw_driver tok_space name:tok_ident tok_space? tok_lbrace imports:(tok_space? import_list)? tok_space? tok_rbrace {{
-	const auto name_val = to_ptr<ident>(name);
+	const auto name_val = to_ident(name);
 	const auto imports_ptr = get_shared<ident_vec>(imports);
 	value = share(driver_def {name_val, imports_ptr});
 }}
@@ -231,9 +238,9 @@ import_list = first:import_stmt next:(tok_space? import_stmt)* {{
 	const auto& next_vals = next.getValues();
 	ident_vec idents {};
 	idents.reserve(1 + next_vals.size());
-	idents.emplace_back(to_ptr<ident>(first));
+	idents.emplace_back(to_ident(first));
 	for (const auto& id : next_vals)
-		idents.emplace_back(to_ptr<ident>(id));
+		idents.emplace_back(to_ident(id));
 
 	value = share(std::move(idents));
 }}
@@ -257,7 +264,7 @@ module_list = first:module_def rest:(tok_space? module_def)* {{
 
 module_def = tok_kw_module tok_space name:tok_ident tok_space? tok_lbrace items:(tok_space? module_item_list)? tok_space? tok_rbrace {{
 	value = share(module_def {
-		to_ptr<ident>(name),
+		to_ident(name),
 		get_shared<ref_vec<module_item>>(items)
 	});
 }}
@@ -292,7 +299,7 @@ module_item = header_stmt {{
 }}
 
 lock_def = type:lock_type tok_space name:tok_ident tok_space? tok_semi {{
-	value = share(lock_def {to_ptr<ident>(name), static_cast<lock_type>(reinterpret_cast<std::size_t>(type.getValue()))});
+	value = share(lock_def {to_ident(name), static_cast<lock_type>(reinterpret_cast<std::size_t>(type.getValue()))});
 }}
 
 lock_type = tok_kw_spinlock
@@ -302,8 +309,8 @@ header_stmt = tok_kw_header tok_space? tok_path tok_space? tok_semi
 
 struct_proj_def = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_struct tok_space? type:tok_ident tok_space? tok_rangle tok_space? name:tok_ident tok_space? tok_lbrace items:(tok_space? proj_field_list)? tok_space? tok_rbrace {{
 	value = share(proj_def {
-		to_ptr<ident>(name),
-		to_ptr<ident>(type),
+		to_ident(name),
+		to_ident(type),
 		get_shared<ref_vec<proj_field>>(items),
 		proj_def_kind::struct_kind
 	});
@@ -311,15 +318,15 @@ struct_proj_def = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_stru
 
 union_proj_def = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_union tok_space? type:tok_ident tok_space? tok_rangle tok_space? name:tok_ident tok_space? tok_lbrace items:(tok_space? proj_field_list)? tok_space? tok_rbrace {{
 	value = share(proj_def {
-		to_ptr<ident>(name),
-		to_ptr<ident>(type),
+		to_ident(name),
+		to_ident(type),
 		get_shared<ref_vec<proj_field>>(items),
 		proj_def_kind::union_kind
 	});
 }}
 
 global_def = tok_kw_global tok_space type:type_spec tok_space? name:tok_ident tok_space? tok_lbrace items:(tok_space? rpc_item_list)? tok_space? tok_rbrace {{
-	value = share(global_def {to_ptr<ident>(name), get_shared<type_spec>(type), get_shared<ref_vec<rpc_item>>(items)});
+	value = share(global_def {to_ident(name), get_shared<type_spec>(type), get_shared<ref_vec<rpc_item>>(items)});
 }}
 
 # field_ref = aref:field_abs_ref {{
@@ -332,9 +339,9 @@ global_def = tok_kw_global tok_space type:type_spec tok_space? name:tok_ident to
 # 	const auto rest_vals = rest.getValues();
 # 	field_rel_ref ref {};
 # 	ref.links.reserve(1 + rest_vals.size());
-# 	ref.links.push_back(to_ptr<ident>(head));
+# 	ref.links.push_back(to_ident(head));
 # 	for (const auto& val : rest_vals)
-# 		ref.links.push_back(to_ptr<ident>(val));
+# 		ref.links.push_back(to_ident(val));
 # 
 # 	value = share(std::move(ref));
 # }}
@@ -371,24 +378,24 @@ proj_field = vf:var_field {{
 }}
 
 var_decl = ty:type_spec tok_space? name:tok_ident {{
-	value = share(var_decl {get_shared<type_spec>(ty), to_ptr<ident>(name)});
+	value = share(var_decl {get_shared<type_spec>(ty), to_ident(name)});
 }}
 
 naked_proj_decl = tok_kw_projection tok_space? tok_langle tok_space? tok_kw_struct tok_space? tok_rangle tok_space? tok_lbrace fields:(tok_space? proj_field_list)? tok_space? tok_rbrace tok_space? name:tok_ident tok_space? tok_semi {{
 	value = share(naked_proj_decl {
 		get_shared<ref_vec<proj_field>>(fields),
-		to_ptr<ident>(name)
+		to_ident(name)
 	});
 }}
 
 lock_scope = name:tok_ident tok_space? tok_lbrace tok_space? first:(field:tok_ident tok_space? tok_comma tok_space? {{ value = field; }})* last:(last_field:tok_ident tok_space? {{ value = last_field; }}) tok_rbrace {{
 	std::vector<ident> fields;
 	for (const auto& name : first.getValues())
-		fields.emplace_back(to_ptr<ident>(name));
+		fields.emplace_back(to_ident(name));
 	
-	fields.emplace_back(to_ptr<ident>(last));
+	fields.emplace_back(to_ident(last));
 
-	value = share(lock_scope {to_ptr<ident>(name), std::move(fields)});
+	value = share(lock_scope {to_ident(name), std::move(fields)});
 }}
 
 val_attr = tok_kw_unused {{ value = reinterpret_cast<void*>(annotation_kind::unused); }}
@@ -417,16 +424,16 @@ ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in}); }}
 		value = share(annotation {annotation_kind::alloc_callee});
 	}}
 	| tok_kw_alloc tok_space? tok_langle tok_space? size_expr:tok_verbatim_expr tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::alloc_caller, nullptr, to_ptr<ident>(size_expr), nullptr});
+		value = share(annotation {annotation_kind::alloc_caller, nullptr, to_ident(size_expr), nullptr});
 	}}
 	| tok_kw_alloc tok_space? tok_langle tok_space? size_expr:tok_verbatim_expr tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::alloc_callee, nullptr, to_ptr<ident>(size_expr), nullptr});
+		value = share(annotation {annotation_kind::alloc_callee, nullptr, to_ident(size_expr), nullptr});
 	}}
 	| tok_kw_alloc tok_space? tok_langle tok_space? size_expr:tok_verbatim_expr tok_space? tok_comma tok_space? flags_expr:tok_verbatim_expr tok_rangle tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::alloc_caller, nullptr, to_ptr<ident>(size_expr), to_ptr<ident>(flags_expr)});
+		value = share(annotation {annotation_kind::alloc_caller, nullptr, to_ident(size_expr), to_ident(flags_expr)});
 	}}
 	| tok_kw_alloc tok_space? tok_langle tok_space? size_expr:tok_verbatim_expr tok_space? tok_comma tok_space? flags_expr:tok_verbatim_expr tok_rangle tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		value = share(annotation {annotation_kind::alloc_callee, nullptr, to_ptr<ident>(size_expr), to_ptr<ident>(flags_expr)});
+		value = share(annotation {annotation_kind::alloc_callee, nullptr, to_ident(size_expr), to_ident(flags_expr)});
 	}}
 	| tok_kw_dealloc tok_space? tok_lpar tok_space? tok_kw_caller tok_space? tok_rpar {{
 		value = share(annotation {annotation_kind::dealloc_caller});
@@ -440,20 +447,20 @@ ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in}); }}
 			nullptr,
 			nullptr,
 			nullptr,
-			{to_ptr<ident>(type), to_ptr<ident>(field)}
+			{to_ident(type), to_ident(field)}
 		});
 	}}
 	| tok_kw_bind_memberof tok_space? tok_langle tok_space? tok_kw_struct tok_space type:tok_ident tok_space? tok_comma tok_space? field:tok_ident_dot tok_space? tok_rangle tok_space? tok_lpar tok_space? tok_kw_callee tok_space? tok_rpar {{
-		std::cout << "[DEBUG] " << to_ptr<ident>(type) << ", " << to_ptr<ident>(field) << "\n";
+		std::cout << "[DEBUG] " << to_ident(type) << ", " << to_ident(field) << "\n";
 		const auto tmp = annotation {
 			annotation_kind::bind_memberof_callee,
 			nullptr,
 			nullptr,
 			nullptr,
-			{to_ptr<ident>(type), to_ptr<ident>(field)}
+			{to_ident(type), to_ident(field)}
 		};
 
-		std::cout << "[DEBUG] After: " << to_ptr<ident>(type) << ", " << to_ptr<ident>(field) << "\n";
+		std::cout << "[DEBUG] After: " << to_ident(type) << ", " << to_ident(field) << "\n";
 
 		value = share(tmp);
 	}}
@@ -470,10 +477,10 @@ ptr_attr = tok_kw_in {{ value = share(annotation {annotation_kind::in}); }}
 		value = share(annotation {annotation_kind::ioremap_callee});
 	}}
 	| tok_kw_shared tok_space? tok_langle tok_space? id:tok_ident tok_space? tok_rangle {{
-		value = share(annotation {annotation_kind::shared, to_ptr<ident>(id)});
+		value = share(annotation {annotation_kind::shared, to_ident(id)});
 	}}
 	| tok_kw_user tok_space? tok_langle tok_space? size_expr:tok_verbatim_expr tok_space? tok_rangle tok_space? {{
-		value = share(annotation {annotation_kind::user_ptr, nullptr, to_ptr<ident>(size_expr), nullptr});
+		value = share(annotation {annotation_kind::user_ptr, nullptr, to_ident(size_expr), nullptr});
   }}
 
 val_attrs = tok_lbrack tok_space? list:val_attr_list tok_space? tok_rbrack {{ value = list; }}
@@ -481,9 +488,9 @@ val_attrs = tok_lbrack tok_space? list:val_attr_list tok_space? tok_rbrack {{ va
 ptr_attrs = tok_lbrack tok_space? list:ptr_attr_list tok_space? tok_rbrack {{ value = list; }}
 
 val_attr_list = first:val_attr rest:(tok_space? tok_comma tok_space? val_attr)* {{
-	auto f = to_int<annotation_kind>(first);
+	auto f = to_enum<annotation_kind>(first);
 	for (const auto r : rest.getValues()) {
-		f |= to_int<annotation_kind>(r);
+		f |= to_enum<annotation_kind>(r);
 	}
 
 	value = reinterpret_cast<void*>(f);
@@ -565,18 +572,18 @@ array_size = n:tok_number {{
 }} | tok_kw_null {{
 	value = share(array_size {tok_kw_null {} });
 }} | ref:tok_verbatim_expr {{
-	value = share(array_size {to_ptr<ident>(ref)});
+	value = share(array_size {to_ident(ref)});
 }}
 
 # Literally just an alias for array<char, null>
 type_string = tok_kw_string
 
 type_rpc = tok_kw_rpc_ptr tok_space name:tok_ident {{
-	value = share(type_rpc {to_ptr<ident>(name)});
+	value = share(type_rpc {to_ident(name)});
 }}
 
 type_proj = tok_kw_projection tok_space name:tok_ident {{
-	value = share(type_proj {to_ptr<ident>(name)});
+	value = share(type_proj {to_ident(name)});
 }}
 
 type_casted = tok_kw_casted tok_space? tok_langle tok_space? decl:type_spec tok_space? tok_comma tok_space? real:type_spec tok_space? tok_rangle {{
@@ -604,7 +611,7 @@ type_stem = arr:type_array {{
 }} | proj:type_proj {{
 	value = share(type_stem {get_shared<type_proj>(proj)});
 }} | arith:type_primitive {{
-	value = share(type_stem {to_int<type_primitive>(arith)});
+	value = share(type_stem {to_enum<type_primitive>(arith)});
 }} | cast:type_casted {{
 	value = share(type_stem {get_shared<type_casted>(cast)});
 }} | tok_kw_void {{
@@ -627,7 +634,7 @@ type_spec = is_c:(tok_kw_const tok_space {{	value = $1; }})? is_vol:(tok_kw_vola
 	value = share(type_spec {
 		get_shared<type_stem>(stem),
 		std::move(a),
-		to_int<annotation_kind>(val_annotation_kind),
+		to_enum<annotation_kind>(val_annotation_kind),
 		gsl::narrow_cast<bool>(is_c.getValue()),
 		gsl::narrow_cast<bool>(is_vol.getValue())
 	});
@@ -636,7 +643,7 @@ type_spec = is_c:(tok_kw_const tok_space {{	value = $1; }})? is_vol:(tok_kw_vola
 rpc_def = tok_kw_rpc tok_space? ret_t:type_spec tok_space? name:tok_ident tok_space? tok_lpar args:(tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace projs:(tok_space? rpc_item_list)? tok_space? tok_rbrace {{
 	value = share(rpc_def {
 		get_shared<type_spec>(ret_t),
-		to_ptr<ident>(name),
+		to_ident(name),
 		get_shared<ref_vec<var_decl>>(args),
 		get_shared<ref_vec<rpc_item>>(projs),
 		rpc_def_kind::direct
@@ -646,7 +653,7 @@ rpc_def = tok_kw_rpc tok_space? ret_t:type_spec tok_space? name:tok_ident tok_sp
 rpc_ptr_def = tok_kw_rpc_ptr tok_space? ret_t:type_spec tok_space? name:tok_ident tok_space? tok_lpar args:(tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace projs:(tok_space? rpc_item_list)? tok_space? tok_rbrace {{
 	value = share(rpc_def {
 		get_shared<type_spec>(ret_t),
-		to_ptr<ident>(name),
+		to_ident(name),
 		get_shared<ref_vec<var_decl>>(args),
 		get_shared<ref_vec<rpc_item>>(projs),
 		rpc_def_kind::indirect
@@ -656,7 +663,7 @@ rpc_ptr_def = tok_kw_rpc_ptr tok_space? ret_t:type_spec tok_space? name:tok_iden
 rpc_export_def = tok_kw_rpc_export tok_space? ret_t:type_spec tok_space? name:tok_ident tok_space? tok_lpar args:(tok_space? argument_list)? tok_space? tok_rpar tok_space? tok_lbrace projs:(tok_space? rpc_item_list)? tok_space? tok_rbrace {{
 	value = share(rpc_def {
 		get_shared<type_spec>(ret_t),
-		to_ptr<ident>(name),
+		to_ident(name),
 		get_shared<ref_vec<var_decl>>(args),
 		get_shared<ref_vec<rpc_item>>(projs),
 		rpc_def_kind::export_sym

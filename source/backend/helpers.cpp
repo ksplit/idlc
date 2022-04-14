@@ -142,4 +142,50 @@ void idlc::generate_helpers(std::ostream& file)
     file << "#else\n";
     file << "void shared_mem_init_callee(struct fipc_message *msg, struct ext_registers* ext);\n";
     file << "#endif\t/* LCD_ISOLATE */\n\n";
+
+    file << "struct glue_visit_list {\n";
+    file << "\tsize_t capacity;\n";
+    file << "\tsize_t size;\n";
+    file << "\tconst void** values;\n";
+    file << "};\n\n";
+
+    file << "static inline void glue_mark_visited(struct glue_visit_list* visited, const void* ptr)\n";
+    file << "{\n";
+    file << "\tif (visited->size + 1 > visited->capacity) {\n";
+    file << "\t\tvisited->capacity *= 2;\n";
+    file << "\t\tvisited->values = krealloc(visited->values, visited->capacity * sizeof(void*), GFP_KERNEL);\n";
+    file << "\t}\n\n";
+    file << "\tvisited->values[visited->size++] = ptr;\n";
+    file << "}\n\n";
+
+    file << "static inline struct glue_visit_list glue_create_visit_list(void)\n";
+    file << "{\n";
+    file << "\tstruct glue_visit_list visited = {0};\n";
+    file << "\tvisited.capacity = 1;\n";
+    file << "\tvisited.values = kzalloc(sizeof(void*), GFP_KERNEL);\n";
+    file << "\treturn visited;\n";
+    file << "}\n\n";
+
+    file << "static inline void glue_free_visit_list(struct glue_visit_list* visited)\n";
+    file << "{\n";
+    file << "\tkfree(visited->values);\n";
+    file << "}\n\n";
+
+    file << "static inline void glue_clear_visit_list(struct glue_visit_list* visited)\n";
+    file << "{\n";
+    file << "\tvisited->size = 0;\n";
+    file << "}\n\n";
+
+    file << "static inline bool glue_should_visit(struct glue_visit_list* visited, const void* ptr)\n";
+    file << "{\n";
+    file << "\tint i;\n";
+    file << "\tif (!ptr)\n";
+    file << "\t\treturn 0;\n\n";
+    file << "\tfor (i = 0; i < visited->size; ++i) {\n";
+    file << "\t\tif (visited->values[i] == ptr)\n";
+    file << "\t\t\treturn 0;\n";
+    file << "\t}\n\n";
+    file << "\tglue_mark_visited(visited, ptr);\n\n";
+    file << "\treturn 1;\n";
+    file << "}\n\n";
 }
