@@ -90,10 +90,27 @@ namespace idlc {
 		std::cerr << "Debug: need clones for " << projections.size() << " projections\n";
 		const auto clones = make<ref_vec<rpc_item>>();
 		for (const auto proj : projections) {
-			auto proj_clone = clone(*proj);
-			annotation_erasure_walk walk {};
-			walk.visit_proj_def(proj_clone);
-			clones->emplace_back(make<rpc_item>(make<proj_def>(std::move(proj_clone))));
+			if (proj != scope.parent) {
+				auto proj_clone = clone(*proj);
+				annotation_erasure_walk walk {};
+				walk.visit_proj_def(proj_clone);
+				clones->emplace_back(make<rpc_item>(make<proj_def>(std::move(proj_clone))));
+			} else {
+				auto fields = make<ref_vec<proj_field>>();
+				for (const auto& field : *proj->fields) {
+					const auto& [type, width] = *field;
+					const auto maybe_var = std::get_if<node_ref<var_decl>>(&type);
+					if (!maybe_var)
+						continue;
+					
+					if (std::find(scope.fields.begin(), scope.fields.end(), (*maybe_var)->name) == scope.fields.end())
+						continue;
+
+					fields->emplace_back(clone(field));
+				}
+
+				clones->emplace_back(make<rpc_item>(make<proj_def>(proj->name, proj->type, std::move(fields), proj->kind)));
+			}
 		}
 
 		return clones;
