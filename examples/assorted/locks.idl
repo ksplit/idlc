@@ -1,0 +1,18 @@
+module my_driver {
+    spinlock widget_lock;
+
+    rpc int create_widget(projection widget_desc* info) {
+        projection <struct widget_desc> widget_desc {
+            projection flag_set* flags;
+            unsigned int special;
+            array<const char, 8> name;
+
+            widget_lock { flags, special }
+        }
+
+        projection <struct flag_set> flag_set {
+            u64 length;
+            int flags;
+        }
+    }
+}
