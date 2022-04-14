@@ -8,7 +8,7 @@
 
 namespace idlc {
 	template<typename type, typename... types>
-	auto make(types... arguments) { return std::make_shared<type>(arguments...); }
+	auto make(types&&... arguments) { return std::make_shared<type>(arguments...); }
 
 	auto make_void()
 	{
@@ -172,14 +172,17 @@ namespace idlc {
 				);
 			}
 
-			for (const auto& lock : m_locks) {
-				std::cerr << "Debug: injecting RPC for lock " << lock->name << " in projection for type " << lock->parent->type << '\n';
+			for (auto lock : m_locks) {
+				std::cerr << "Debug: injecting RPC for lock " << lock->name << " in projection for type "
+					<< lock->parent->type << '\n';
+					
 				node.items->emplace_back(make<module_item>(make<rpc_def>(
 					make_void(),
 					parser::idents.intern(concat(lock->parent->type, "__", lock->name, "__lock")),
 					make_sync_argument(*lock, sync_type::get),
 					make_clones(*lock),
-					rpc_def_kind::direct
+					rpc_def_kind::direct,
+					make<lock_info>(lock->definition, lock_state::lock)
 				)));
 
 				node.items->emplace_back(make<module_item>(make<rpc_def>(
@@ -187,7 +190,8 @@ namespace idlc {
 					parser::idents.intern(concat(lock->parent->type, "__", lock->name, "__unlock")),
 					make_sync_argument(*lock, sync_type::set),
 					make_clones(*lock),
-					rpc_def_kind::direct
+					rpc_def_kind::direct,
+					make<lock_info>(lock->definition, lock_state::unlock)
 				)));
 			}
 

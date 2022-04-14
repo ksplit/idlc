@@ -296,12 +296,26 @@ namespace idlc {
         export_sym,
     };
 
+    enum class lock_state {
+        lock,
+        unlock
+    };
+
+    struct lock_info {
+        const lock_def* lock;
+        lock_state state;
+
+        lock_info(const lock_def* lock, lock_state state) : lock {lock}, state {state} {}
+    };
+
     struct rpc_def {
         node_ref<type_spec> ret_type;
         ident name;
         node_ptr<ref_vec<var_decl>> arguments;
         node_ptr<ref_vec<rpc_item>> items;
         rpc_def_kind kind;
+
+        node_ptr<lock_info> lock;
 
         names_scope scope;
         node_ptr<value> ret_pgraph;
@@ -321,12 +335,13 @@ namespace idlc {
         std::string params_string;
 
         rpc_def(node_ptr<type_spec> ret_type, ident name, node_ptr<ref_vec<var_decl>> arguments,
-            node_ptr<ref_vec<rpc_item>> items, rpc_def_kind kind)
-            : ret_type {ret_type}
-            , name {name}
-            , arguments {arguments}
-            , items {items}
-            , kind {kind}
+            node_ptr<ref_vec<rpc_item>> items, rpc_def_kind kind, node_ptr<lock_info> lock = nullptr)
+            : ret_type {std::move(ret_type)}
+            , name {std::move(name)}
+            , arguments {std::move(arguments)}
+            , items {std::move(items)}
+            , kind {std::move(kind)}
+            , lock {std::move(lock)}
             , scope {}
             , ret_pgraph {}
             , arg_pgraphs {}
