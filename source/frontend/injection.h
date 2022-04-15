@@ -134,6 +134,7 @@ namespace idlc {
 		bool visit_lock_def(lock_def& node)
 		{
 			m_lock_defs.emplace_back(&node);
+			node.parent = m_parent;
 			return true;
 		}
 

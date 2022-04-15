@@ -56,8 +56,10 @@ namespace idlc {
     using file = std::variant<node_ref<driver_file>, node_ref<ref_vec<module_def>>>;
     // using field_ref = std::variant<node_ref<field_abs_ref>, node_ref<field_rel_ref>>;
     using array_size = std::variant<unsigned, tok_kw_null, ident>;
-    using proj_field
-        = std::tuple<std::variant<node_ref<var_decl>, node_ref<naked_proj_decl>, node_ref<lock_scope>>, std::uint8_t>;
+    using proj_field = std::tuple<
+        std::variant<node_ref<var_decl>, node_ref<naked_proj_decl>, node_ref<lock_scope>, node_ref<lock_def>>,
+        std::uint8_t
+    >;
 
     inline auto clone(const proj_field& node)
     {
@@ -270,6 +272,7 @@ namespace idlc {
         std::shared_ptr<projection> in_out_proj;
 
         const rpc_def* parent;
+        names_scope scope;
 
         proj_def(ident name, ident type, node_ptr<ref_vec<proj_field>> fields, proj_def_kind kind)
             : name {name}
@@ -279,6 +282,8 @@ namespace idlc {
             , in_proj {}
             , out_proj {}
             , in_out_proj {}
+            , parent {}
+            , scope {}
         {
         }
     };
@@ -413,9 +418,12 @@ namespace idlc {
         ident name;
         lock_type type;
 
+        proj_def* parent;
+
         lock_def(ident name, lock_type type)
             : name {name}
             , type {type}
+            , parent {}
         {
         }
     };

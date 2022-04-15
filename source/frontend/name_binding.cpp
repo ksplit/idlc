@@ -23,6 +23,7 @@ namespace idlc {
         class bind_walk : public ast_walk<bind_walk> {
         public:
             bool visit_module_def(module_def& node);
+            bool visit_proj_def(proj_def& node);
             bool visit_rpc_def(rpc_def& node);
             bool visit_type_proj(type_proj& node);
             bool visit_type_rpc(type_rpc& node);
@@ -59,6 +60,17 @@ namespace idlc {
 }
 
 bool idlc::bind_walk::visit_module_def(module_def& node)
+{
+    scopes_.emplace_back(&node.scope);
+    if (!traverse(*this, node))
+        return false;
+
+    scopes_.pop_back();
+
+    return true;
+}
+
+bool idlc::bind_walk::visit_proj_def(proj_def& node)
 {
     scopes_.emplace_back(&node.scope);
     if (!traverse(*this, node))
@@ -151,6 +163,13 @@ bool idlc::symbol_walk::visit_module_def(module_def& node)
 bool idlc::symbol_walk::visit_proj_def(proj_def& node)
 {
     m_scope->insert(node.name, &node);
+    const auto old = m_scope;
+    m_scope = &node.scope;
+    if (!traverse(*this, node))
+        return false;
+
+    m_scope = old;
+
     return true;
 }
 

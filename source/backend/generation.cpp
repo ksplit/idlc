@@ -469,8 +469,11 @@ namespace idlc {
                 }
                 os << "(void *) " << phys_addr << ";\n\n";
             } else if (rpc.lock) {
-                os << "/* " << (rpc.lock->state == lock_state::lock ? "lock " : "unlock ") << rpc.lock->lock->name
-                    << " */;\n";
+                os << (rpc.lock->state == lock_state::lock ?
+                        "set_bit(__LINK_STATE_PRESENT, &"
+                        : "clear_bit(__LINK_STATE_START, &")
+                    << (rpc.lock->lock->parent ? concat("data->", rpc.lock->lock->name).c_str() : rpc.lock->lock->name)
+                    << ");\n";
             } else {
                 auto impl_name = rpc.name;
 

@@ -166,6 +166,8 @@ namespace idlc {
 				return self.visit_naked_proj_decl(*subnode);\
 			else if constexpr (std::is_same_v<type, node_ref<lock_scope>>)
 				return self.visit_lock_scope(*subnode);
+			else if constexpr (std::is_same_v<type, node_ref<lock_def>>)
+				return self.visit_lock_def(*subnode);
 			
 			std::terminate();
 		};

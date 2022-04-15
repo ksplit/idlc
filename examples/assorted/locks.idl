@@ -1,5 +1,9 @@
 module my_driver {
-    spinlock widget_lock;
+    rpc void do_a_thing(projection foo* thing) {
+        projection <struct foo> foo {
+            unsigned int [in,out] reg_state : 8;
+        }
+    }
 
     rpc int create_widget(projection widget_desc* info) {
         projection <struct widget_desc> widget_desc {
@@ -7,6 +11,7 @@ module my_driver {
             unsigned int special;
             array<const char, 8> name;
 
+            atomic_lock widget_lock;
             widget_lock { flags, special }
         }
 

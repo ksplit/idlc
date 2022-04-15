@@ -137,6 +137,25 @@ namespace idlc {
 				return true;
 			}
 
+			bool visit_lock_def(lock_def& node)
+			{
+				indent(std::cout, m_indent_level) << "lock_def" << std::endl;
+				++m_indent_level;
+				traverse(*this, node);
+				--m_indent_level;
+				return true;
+			}
+
+			bool visit_lock_scope(lock_scope& node)
+			{
+				indent(std::cout, m_indent_level) << "lock_scope" << std::endl;
+				++m_indent_level;
+				traverse(*this, node);
+				--m_indent_level;
+				return true;
+			}
+
+
 			bool visit_type_none(type_none)
 			{
 				indent(std::cout, m_indent_level) << "type_none" << std::endl;

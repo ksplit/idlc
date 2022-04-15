@@ -108,6 +108,7 @@ tok_kw_bind_memberof = "bind_memberof"
 tok_kw_global = "global"
 tok_kw_casted = "casted"
 tok_kw_spinlock = "spinlock"
+tok_kw_atomic_lock = "atomic_lock"
 
 tok_space = lex_blank+
 tok_arrow = "->"
@@ -302,7 +303,7 @@ lock_def = type:lock_type tok_space name:tok_ident tok_space? tok_semi {{
 	value = share(lock_def {to_ident(name), static_cast<lock_type>(reinterpret_cast<std::size_t>(type.getValue()))});
 }}
 
-lock_type = tok_kw_spinlock
+lock_type = tok_kw_spinlock | tok_kw_atomic_lock
 
 header_stmt = tok_kw_header tok_space? tok_path tok_space? tok_semi
 	| tok_kw_header tok_space? tok_string tok_space? tok_semi
@@ -375,6 +376,9 @@ proj_field = vf:var_field {{
 }}
 | lck:lock_scope {{
 	value = share(proj_field {get_shared<lock_scope>(lck), 0});
+}}
+| lck_def:lock_def {{
+	value = share(proj_field {get_shared<lock_def>(lck_def), 0});
 }}
 
 var_decl = ty:type_spec tok_space? name:tok_ident {{

@@ -97,6 +97,9 @@ namespace idlc {
 				} else if constexpr (std::is_same_v<type, node_ref<lock_scope>>) {
 					std::cout << "Debug: I am a teapot!\n";
 					return std::nullopt;
+				} else if constexpr (std::is_same_v<type, node_ref<lock_def>>) {
+					std::cout << "Debug: I am a teapot!\n";
+					return std::nullopt;
 				}
 
 				std::terminate();
