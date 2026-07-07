@@ -36,6 +36,9 @@ implementations of tracing, shadow tracking, or RPC message delivery), which mus
 The `nullnet_gen` driver in the `nullnet_gen` branch of `lvd-linux` has a mostly complete set of implementations in
 `glue_user.c`, which should be usable as a drop-in implementation in any other LVD driver.
 
+Isolation-specific generated edits are tagged with `/* LPDS */` comments so copied driver or glue sources can be
+scanned quickly for non-upstream additions.
+
 You will also need to implement the KLCD dispatch loop and the LVDs `handle_rpc_calls` dispatcher, an implementation
 of the former of wich you'll find in `nullnet_gen/net_klcd/main.c`.
 

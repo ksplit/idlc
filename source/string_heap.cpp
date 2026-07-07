@@ -4,6 +4,9 @@
 
 #include <absl/strings/string_view.h>
 
+#include <algorithm>
+#include <cstring>
+
 gsl::czstring<> idlc::string_heap::intern(absl::string_view string)
 {
     Expects(string.length() != block_size - 1); // Or else we will never fit the string

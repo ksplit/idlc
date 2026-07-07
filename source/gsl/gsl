@@ -1,0 +1,88 @@
+#pragma once
+
+#include <cstddef>
+#include <stdexcept>
+#include <type_traits>
+#include <utility>
+
+#ifndef Expects
+#define Expects(cond) do { if (!(cond)) throw std::logic_error("Expects(" #cond ") failed"); } while (0)
+#endif
+
+namespace gsl {
+using index = std::ptrdiff_t;
+
+template <typename T = char>
+using zstring = T*;
+template <typename T = const char>
+using czstring = T*;
+
+template <typename T, typename U>
+constexpr T narrow_cast(U value) noexcept {
+    return static_cast<T>(value);
+}
+
+template <typename T, typename U>
+constexpr T narrow(U value) {
+    return static_cast<T>(value);
+}
+
+template <typename T>
+class span {
+public:
+    using element_type = T;
+    using value_type = std::remove_cv_t<T>;
+    using pointer = T*;
+    using reference = T&;
+    using iterator = pointer;
+
+    constexpr span() noexcept : m_data(nullptr), m_size(0) {}
+    constexpr span(pointer data, std::size_t size) noexcept : m_data(data), m_size(size) {}
+
+    template <typename Container,
+              typename = decltype(std::declval<Container&>().data()),
+              typename = decltype(std::declval<Container&>().size())>
+    constexpr span(Container& c) noexcept : m_data(c.data()), m_size(c.size()) {}
+
+    constexpr iterator begin() const noexcept { return m_data; }
+    constexpr iterator end() const noexcept { return m_data + m_size; }
+    constexpr reference operator[](std::size_t i) const noexcept { return m_data[i]; }
+    constexpr std::size_t size() const noexcept { return m_size; }
+    constexpr pointer data() const noexcept { return m_data; }
+
+private:
+    pointer m_data;
+    std::size_t m_size;
+};
+
+template <typename Container>
+decltype(auto) at(Container&& c, std::size_t i) {
+    return std::forward<Container>(c).at(i);
+}
+
+template <typename T>
+decltype(auto) at(span<T> s, std::size_t i) {
+    if (i >= s.size()) throw std::out_of_range("gsl::at");
+    return s[i];
+}
+
+template <typename T>
+class not_null {
+public:
+    using pointer = T;
+
+    not_null(T ptr) : m_ptr(ptr) {
+        if (m_ptr == nullptr) throw std::invalid_argument("not_null");
+    }
+    not_null(const not_null&) = default;
+    not_null& operator=(const not_null&) = default;
+
+    operator T() const noexcept { return m_ptr; }
+    decltype(auto) operator*() const { return *m_ptr; }
+    T operator->() const noexcept { return m_ptr; }
+    T get() const noexcept { return m_ptr; }
+
+private:
+    T m_ptr;
+};
+} // namespace gsl

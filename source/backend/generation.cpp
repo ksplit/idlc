@@ -23,6 +23,13 @@ namespace idlc {
     namespace {
         using projection_vec = std::vector<gsl::not_null<projection*>>;
 
+        void emit_lpds_marker(std::ostream& os, std::size_t indent = 0)
+        {
+            for (std::size_t i {}; i < indent; ++i)
+                os << '\t';
+            os << "/* LPDS */\n";
+        }
+
         class visitor_proto_walk : public pgraph_walk<visitor_proto_walk> {
         public:
             visitor_proto_walk(std::ostream& os)
@@ -32,6 +39,7 @@ namespace idlc {
 
             bool visit_projection(projection& node)
             {
+                emit_lpds_marker(m_stream);
                 m_stream << "void " << node.caller_marshal_visitor << "(\n"
                          << "\tsize_t* __pos,\n"
                          << "\tstruct fipc_message* __msg,\n"
@@ -43,6 +51,7 @@ namespace idlc {
 
                 m_stream << "\tstruct " << node.real_name << " const* ptr);\n\n";
 
+                emit_lpds_marker(m_stream);
                 m_stream << "void " << node.callee_unmarshal_visitor << "(\n"
                          << "\tsize_t* __pos,\n"
                          << "\tconst struct fipc_message* __msg,\n"
@@ -54,6 +63,7 @@ namespace idlc {
 
                 m_stream << "\tstruct " << node.real_name << "* ptr);\n\n";
 
+                emit_lpds_marker(m_stream);
                 m_stream << "void " << node.callee_marshal_visitor << "(\n"
                          << "\tsize_t* __pos,\n"
                          << "\tstruct fipc_message* __msg,\n"
@@ -65,6 +75,7 @@ namespace idlc {
 
                 m_stream << "\tstruct " << node.real_name << " const* ptr);\n\n";
 
+                emit_lpds_marker(m_stream);
                 m_stream << "void " << node.caller_unmarshal_visitor << "(\n"
                          << "\tsize_t* __pos,\n"
                          << "\tconst struct fipc_message* __msg,\n"
@@ -93,6 +104,7 @@ namespace idlc {
         void generate_contexts(std::ostream& file, rpc_vec_view rpcs)
         {
             for (const auto& rpc : rpcs) {
+                emit_lpds_marker(file);
                 file << "struct " << rpc->ctx_id << " {\n";
                 for (gsl::index i {}; i < rpc->arg_pgraphs.size(); ++i)
                     file << "\t" << rpc->arg_pgraphs.at(i)->c_specifier << " " << rpc->arguments->at(i)->name << ";\n";
@@ -116,8 +128,10 @@ namespace idlc {
             file << "\n";
             file << "#include \"glue_user.h\"\n";
             file << "\n";
+            emit_lpds_marker(file);
             generate_helpers(file);
             file << "\n";
+            emit_lpds_marker(file);
             file << "enum RPC_ID {\n";
 
             // Add MODULE_{INIT,EXIT} enums that are used to load and teardown
@@ -131,10 +145,12 @@ namespace idlc {
 
             file << "};\n\n";
 
+            emit_lpds_marker(file);
             file << "int try_dispatch(enum RPC_ID id, struct fipc_message* __msg, struct ext_registers* __ext);\n\n";
 
             for (const auto& rpc : rpcs) {
                 if (rpc->kind == rpc_def_kind::indirect) {
+                    emit_lpds_marker(file);
                     file << "typedef " << rpc->ret_string << " (*" << rpc->typedef_id << ")(" << rpc->args_string
                          << ");\n";
 
@@ -394,10 +410,12 @@ namespace idlc {
             const auto roots = generate_caller_glue_prologue(os, rpc);
             switch (side) {
             case rpc_side::client:
+                emit_lpds_marker(os, 1);
                 os << "\tglue_call_server(__pos, __msg, " << rpc.enum_id << ");\n\n";
                 break;
 
             case rpc_side::server:
+                emit_lpds_marker(os, 1);
                 os << "\tglue_call_client(__pos, __msg, " << rpc.enum_id << ");\n\n";
                 break;
             }
@@ -537,6 +555,7 @@ namespace idlc {
 
         void generate_indirect_rpc_callee(std::ostream& os, rpc_def& rpc)
         {
+            emit_lpds_marker(os);
             os << "void " << rpc.callee_id << "(struct fipc_message* __msg, struct ext_registers* __ext)\n{\n";
             generate_callee_glue(rpc, os);
             os << "}\n\n";
@@ -544,6 +563,7 @@ namespace idlc {
 
         void generate_rpc_export_callee(std::ostream& os, rpc_def& rpc)
         {
+            emit_lpds_marker(os);
             os << "void " << rpc.callee_id << "(struct fipc_message* __msg, struct ext_registers* __ext)\n{\n";
             generate_callee_glue(rpc, os);
             os << "}\n\n";
@@ -551,6 +571,7 @@ namespace idlc {
 
         void generate_indirect_rpc_caller(std::ostream& os, rpc_def& rpc)
         {
+            emit_lpds_marker(os);
             os << rpc.ret_string << " " << rpc.impl_id << "(" << rpc.typedef_id << " target, " << rpc.args_string
                << ")\n{\n";
 
@@ -573,6 +594,7 @@ namespace idlc {
         
         void generate_rpc_export_caller(std::ostream& os, rpc_def& rpc)
         {
+            emit_lpds_marker(os);
             os << rpc.ret_string << " " << rpc.name << "(" << rpc.args_string << ")\n{\n";
 
             generate_caller_glue<rpc_side::server>(rpc, os);
@@ -583,10 +605,12 @@ namespace idlc {
         template<rpc_side side>
         void generate_dispatch_fn(std::ostream& os, rpc_vec_view rpcs, global_vec_view globals)
         {
+            emit_lpds_marker(os);
             os << "int try_dispatch(enum RPC_ID id, struct fipc_message* __msg, struct ext_registers* __ext)\n";
             os << "{\n";
             os << "\tswitch(id) {\n";
             if constexpr (side == rpc_side::client) {
+                emit_lpds_marker(os, 1);
                 os << "\tcase MODULE_INIT:\n";
                 os << "\t\tglue_user_trace(\"MODULE_INIT\");\n";
                 // globals like jiffies are used even before the init function.
@@ -598,6 +622,7 @@ namespace idlc {
                 os << "\t\tshared_mem_init();\n";
                 os << "\t\tbreak;\n\n";
 
+                emit_lpds_marker(os, 1);
                 os << "\tcase MODULE_EXIT:\n";
                 os << "\t\tglue_user_trace(\"MODULE_EXIT\");\n";
                 os << "\t\t__module_lcd_exit();\n";
@@ -605,6 +630,7 @@ namespace idlc {
             }
 
             if constexpr (side == rpc_side::server) {
+                emit_lpds_marker(os, 1);
                 os << "\tcase RPC_ID_shared_mem_init:\n";
                 os << "\t\tglue_user_trace(\"shared_mem_init\\n\");\n";
                 os << "\t\tshared_mem_init_callee(__msg, __ext);\n";
@@ -618,6 +644,7 @@ namespace idlc {
                 if (rpc->kind == rpc_def_kind::indirect && side == rpc_side::server)
                     continue;
 
+                emit_lpds_marker(os, 1);
                 os << "\tcase " << rpc->enum_id << ":\n";
                 os << "\t\tglue_user_trace(\"" << rpc->name << "\\n\");\n";
                 os << "\t\t" << rpc->callee_id << "(__msg, __ext);\n";
@@ -633,20 +660,25 @@ namespace idlc {
             std::ofstream file {"client.c"};
             file.exceptions(file.badbit | file.failbit);
 
+            emit_lpds_marker(file);
             file << "#include <lcd_config/pre_hook.h>\n\n";
             file << "#include \"common.h\"\n\n";
+            emit_lpds_marker(file);
             file << "#include <lcd_config/post_hook.h>\n\n";
 
             // Globals are externs in the client domain. Define the variables and sync it up with the
             // other domain's global
             for (const auto& g : globals) {
-                if (g->pgraph && !std::get_if<none>(&g->pgraph->type))
+                if (g->pgraph && !std::get_if<none>(&g->pgraph->type)) {
+                    emit_lpds_marker(file);
                     file << g->pgraph->c_specifier << " " << g->name << ";\n\n";
+                }
             }
 
             for (const auto& rpc : rpcs) {
                 switch (rpc->kind) {
                 case rpc_def_kind::direct:
+                    emit_lpds_marker(file);
                     file << rpc->ret_string << " " << rpc->name << "(" << rpc->args_string << ")\n{\n";
                     generate_caller_glue<rpc_side::client>(*rpc, file);
                     file << "}\n\n";
@@ -670,11 +702,14 @@ namespace idlc {
             std::ofstream file {"server.c"};
             file.exceptions(file.badbit | file.failbit);
 
+            emit_lpds_marker(file);
             file << "#include <lcd_config/pre_hook.h>\n\n";
             file << "#include \"common.h\"\n\n";
+            emit_lpds_marker(file);
             file << "#include <lcd_config/post_hook.h>\n\n";
 
             for (const auto& global : globals) {
+                emit_lpds_marker(file);
                 file << global->pgraph->c_specifier << " __global_init_var_" << global->name << "(void);\n\n";
             }
 
@@ -685,6 +720,7 @@ namespace idlc {
                     break;
 
                 case rpc_def_kind::direct:
+                    emit_lpds_marker(file);
                     file << "void " << rpc->callee_id
                          << "(struct fipc_message* __msg, struct ext_registers* __ext)\n{\n";
                     generate_callee_glue(*rpc, file);
@@ -697,6 +733,7 @@ namespace idlc {
             }
 
             for (const auto& global : globals) {
+                emit_lpds_marker(file);
                 file << global->pgraph->c_specifier << " __global_init_var_" << global->name << "()\n";
                 file << "{\n";
                 file << "\treturn " << global->name << ";\n";
@@ -711,12 +748,15 @@ namespace idlc {
             std::ofstream file {"trampolines.lds.S"};
             file.exceptions(file.badbit | file.failbit);
 
+            emit_lpds_marker(file);
             file << "#include <liblcd/trampoline_link.h>\n\n";
             file << "SECTIONS{\n";
 
             for (const auto& rpc : rpcs) {
-                if (rpc->kind == rpc_def_kind::indirect)
+                if (rpc->kind == rpc_def_kind::indirect) {
+                    emit_lpds_marker(file, 1);
                     file << "\tLCD_TRAMPOLINE_LINKER_SECTION(" << rpc->trmp_id << ")\n";
+                }
             }
 
             file << "}\n\n";
@@ -753,6 +793,7 @@ namespace idlc {
 
         void generate_caller_marshal_visitor(std::ostream& file, projection& node)
         {
+            emit_lpds_marker(file);
             file << "void " << node.caller_marshal_visitor << "(\n"
                  << "\tsize_t* __pos,\n"
                  << "\tstruct fipc_message* __msg,\n"
@@ -802,6 +843,7 @@ namespace idlc {
 
         void generate_callee_unmarshal_visitor(std::ostream& file, projection& node)
         {
+            emit_lpds_marker(file);
             file << "void " << node.callee_unmarshal_visitor << "(\n"
                  << "\tsize_t* __pos,\n"
                  << "\tconst struct fipc_message* __msg,\n"
@@ -829,6 +871,7 @@ namespace idlc {
 
         void generate_callee_marshal_visitor(std::ostream& file, projection& node)
         {
+            emit_lpds_marker(file);
             file << "void " << node.callee_marshal_visitor << "(\n"
                  << "\tsize_t* __pos,\n"
                  << "\tstruct fipc_message* __msg,\n"
@@ -854,6 +897,7 @@ namespace idlc {
 
         void generate_caller_unmarshal_visitor(std::ostream& file, projection& node)
         {
+            emit_lpds_marker(file);
             file << "void " << node.caller_unmarshal_visitor << "(\n"
                  << "\tsize_t* __pos,\n"
                  << "\tconst struct fipc_message* __msg,\n"
@@ -883,8 +927,10 @@ namespace idlc {
         {
             std::ofstream file {"common.c"};
             file.exceptions(file.badbit | file.failbit);
+            emit_lpds_marker(file);
             file << "#include <lcd_config/pre_hook.h>\n\n";
             file << "#include \"common.h\"\n\n";
+            emit_lpds_marker(file);
             file << "#include <lcd_config/post_hook.h>\n\n";
             for (const auto& projection : projections) {
                 // TODO: make these optional
@@ -894,6 +940,7 @@ namespace idlc {
                 generate_caller_unmarshal_visitor(file, *projection);
             }
 
+            emit_lpds_marker(file);
             file << "\n#ifdef LCD_ISOLATE\n";
             file << "__attribute__((weak)) void shared_mem_init(void) {\n";
             file << "\tLIBLCD_MSG(\"Weak shared_mem_init does nothing! Override if you want!\");\n";

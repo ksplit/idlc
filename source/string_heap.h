@@ -5,6 +5,7 @@
 
 #include <absl/strings/string_view.h>
 
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <vector>
