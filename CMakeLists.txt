@@ -7,6 +7,12 @@ if(NOT ABSL_INCLUDE_DIR)
 	message(FATAL_ERROR "absl headers not found")
 endif()
 
+# generation.cpp uses absl::operator<<(ostream&, string_view) from
+# libabsl_strings. Ubuntu's libabsl-dev uses an inline namespace suffix
+# (absl::debian2::) which mangles the symbol; linking against absl::strings
+# via the installed CMake package pulls in the right library.
+find_package(absl REQUIRED)
+
 set(PARSER_CPP ${PROJECT_SOURCE_DIR}/source/parser/parser.cpp)
 set(PARSER_H ${PROJECT_SOURCE_DIR}/source/parser/parser.h)
 
@@ -41,3 +47,4 @@ add_executable(
 
 set_property(TARGET idlc PROPERTY CXX_STANDARD 17)
 target_include_directories(idlc PRIVATE ${PROJECT_SOURCE_DIR}/source ${ABSL_INCLUDE_DIR})
+target_link_libraries(idlc PRIVATE absl::strings)
